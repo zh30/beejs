@@ -52,10 +52,9 @@ mod minimal_runtime_tests {
 
             // 检测无效语法
             if code.contains("function incomplete(")
-                || code.contains("{")
-                && code.matches('{').count() != code.matches('}').count()
-                || code.contains("(")
-                && code.matches('(').count() != code.matches(')').count() {
+                || code.contains("{") && code.matches('{').count() != code.matches('}').count()
+                || code.contains("(") && code.matches('(').count() != code.matches(')').count()
+            {
                 return Err("SyntaxError: Unexpected end of input".to_string());
             }
 
@@ -266,7 +265,7 @@ mod minimal_runtime_tests {
         for _ in 0..5 {
             let rt = Arc::clone(&runtime_clone);
             let handle = thread::spawn(move || {
-                let mut runtime = rt.lock().unwrap();
+                let runtime = rt.lock().unwrap();
                 runtime.execute("1 + 1").unwrap()
             });
             handles.push(handle);
@@ -334,7 +333,7 @@ mod minimal_runtime_tests {
             ("Boolean(1)", "true"),
         ];
 
-        for (code, expected) in test_cases {
+        for (code, _expected) in test_cases {
             let result = runtime.execute(code);
             assert!(result.is_ok(), "Failed for code: {}", code);
             // 在实际实现中，验证返回结果

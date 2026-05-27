@@ -132,10 +132,10 @@ describe("并发测试 - 资源竞争", () => {
  * 运行并行测试
  *
  * 使用命令:
- * beejs test examples/testing/parallel_tests.test.js
+ * bee test examples/testing/parallel_tests.test.js
  *
  * 或者使用并行执行:
- * BEEJS_PARALLEL_WORKERS=4 beejs test examples/testing/parallel_tests.test.js
+ * BEEJS_PARALLEL_WORKERS=4 bee test examples/testing/parallel_tests.test.js
  *
  * 性能对比:
  * - 顺序执行: ~500ms

@@ -3,7 +3,9 @@
 
 #[cfg(test)]
 mod timer_tests {
-    use beejs::nodejs_core::timers::{get_next_timer_id, TimerType, TimerMetadata, TIMER_METADATA, get_timer_epoch};
+    use beejs::nodejs_core::timers::{
+        get_next_timer_id, get_timer_epoch, TimerMetadata, TimerType, TIMER_METADATA,
+    };
 
     #[test]
     fn test_timer_id_generation() {
@@ -23,12 +25,15 @@ mod timer_tests {
 
         {
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay: 1000,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Timeout,
+                    delay: 1000,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         // Verify storage
@@ -56,12 +61,15 @@ mod timer_tests {
 
         {
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Interval,
-                delay: 500,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Interval,
+                    delay: 500,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         {
@@ -78,12 +86,15 @@ mod timer_tests {
 
         {
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Immediate,
-                delay: 0,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Immediate,
+                    delay: 0,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         {
@@ -101,12 +112,15 @@ mod timer_tests {
         // Add timer
         {
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay: 1000,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Timeout,
+                    delay: 1000,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         // Verify it exists
@@ -134,12 +148,19 @@ mod timer_tests {
         for i in 1..=5 {
             let timer_id = get_next_timer_id();
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: if i % 2 == 0 { TimerType::Interval } else { TimerType::Timeout },
-                delay: i * 100,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: if i % 2 == 0 {
+                        TimerType::Interval
+                    } else {
+                        TimerType::Timeout
+                    },
+                    delay: i * 100,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         // Verify timers exist
@@ -167,12 +188,15 @@ mod timer_tests {
 
         {
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay: 1000,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Timeout,
+                    delay: 1000,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         // Update unref state
@@ -198,11 +222,15 @@ mod timer_tests {
 
         {
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay: 0,
-                is_unrefed: false,
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Timeout,
+                    delay: 0,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
         }
 
         {
@@ -220,12 +248,15 @@ mod timer_tests {
         for (i, delay) in delays.iter().enumerate() {
             let timer_id = get_next_timer_id();
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Timeout,
-                delay: *delay,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Timeout,
+                    delay: *delay,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
 
             // Verify
             let timer_meta = metadata.get(&timer_id).unwrap();

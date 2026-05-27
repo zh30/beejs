@@ -103,7 +103,7 @@ export { main };
                         request: 'launch',
                         name: 'Debug Beejs Script',
                         program: '${workspaceFolder}/test.js',
-                        runtimeExecutable: 'beejs'
+                        runtimeExecutable: 'bee'
                     }
                 ]
             };
@@ -130,7 +130,7 @@ export { main };
     describe('Integration', () => {
         test('should integrate with Beejs runtime', async () => {
             // Test that the extension can communicate with Beejs
-            const beejsPath = 'beejs'; // Should be resolved from PATH or config
+            const beejsPath = 'bee'; // Should be resolved from PATH or config
 
             // TODO: Test actual runtime integration
             expect(beejsPath).to.be.a('string');
@@ -149,7 +149,7 @@ export { main };
         test('should read Beejs settings', async () => {
             const settings = {
                 beejs: {
-                    runtimePath: '/usr/local/bin/beejs',
+                    runtimePath: '/usr/local/bin/bee',
                     debugPort: 9229,
                     enableTypeChecking: true,
                     maxMemory: '512m'
@@ -168,7 +168,7 @@ export { main };
                 return true;
             };
 
-            expect(() => validateConfig({ beejs: { runtimePath: '/path/to/beejs' } })).to.not.throw();
+            expect(() => validateConfig({ beejs: { runtimePath: '/path/to/bee' } })).to.not.throw();
         });
     });
 });

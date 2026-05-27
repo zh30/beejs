@@ -1,10 +1,11 @@
 // Stage 89 Phase 2: 自动恢复机制
 // 提供智能错误恢复、重试策略和自动修复能力
 
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
-use super::types::::{BeejsError, ErrorContext};
+use super::types::BeejsError;
+use rand::Rng;
 use std::time::{Duration, Instant};
 
 /// 重试策略
@@ -56,7 +57,7 @@ impl RetryPolicy {
         let mut delay = self.base_delay;
         if self.exponential_backoff && attempt > 0 {
             delay = Duration::from_secs_f64(
-                self.base_delay.as_secs_f64() * (2.0_f64).powi(attempt as i32 - 1)
+                self.base_delay.as_secs_f64() * (2.0_f64).powi(attempt as i32 - 1),
             );
         }
         if delay > self.max_delay {
@@ -79,13 +80,26 @@ impl RetryPolicy {
 /// 回退策略函数类型
 pub type FallbackStrategyFn = Box<dyn Fn(&BeejsError) -> Option<String> + Send + Sync>;
 /// 自动恢复配置
-#[derive(Debug, Clone)]
 pub struct AutoRecoveryConfig {
     pub retry_policy: RetryPolicy,
     pub enable_fallback: bool,
     pub enable_auto_repair: bool,
     pub fallback_strategy: Option<FallbackStrategyFn>,
     pub recovery_timeout: Duration,
+}
+impl std::fmt::Debug for AutoRecoveryConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AutoRecoveryConfig")
+            .field("retry_policy", &self.retry_policy)
+            .field("enable_fallback", &self.enable_fallback)
+            .field("enable_auto_repair", &self.enable_auto_repair)
+            .field(
+                "fallback_strategy",
+                &self.fallback_strategy.as_ref().map(|_| "CustomStrategyFn"),
+            )
+            .field("recovery_timeout", &self.recovery_timeout)
+            .finish()
+    }
 }
 impl Default for AutoRecoveryConfig {
     fn default() -> Self {
@@ -128,16 +142,16 @@ impl AutoRecovery {
     pub fn new() -> Self {
         Self {
             config: AutoRecoveryConfig::default(),
-            stats: Arc::new(Mutex::new(RecoveryStats::default()))
-            retry_history: Arc::new(Mutex::new(Vec::new()))
+            stats: Arc::new(RwLock::new(RecoveryStats::default())),
+            retry_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
     /// 使用自定义配置创建
     pub fn with_config(config: AutoRecoveryConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(Mutex::new(RecoveryStats::default()))
-            retry_history: Arc::new(Mutex::new(Vec::new()))
+            stats: Arc::new(RwLock::new(RecoveryStats::default())),
+            retry_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
     /// 设置最大重试次数
@@ -192,7 +206,9 @@ impl AutoRecovery {
                         stats.successful_recoveries += 1;
                         stats.last_recovery_time = Some(Instant::now());
                         stats.avg_recovery_time = Duration::from_nanos(
-                            (stats.avg_recovery_time.as_nanos() as u64 + duration.as_nanos() as u64) / 2
+                            (stats.avg_recovery_time.as_nanos() as u64
+                                + duration.as_nanos() as u64)
+                                / 2,
                         );
                     }
                     // 记录重试历史
@@ -221,7 +237,7 @@ impl AutoRecovery {
                     // 记录回退
                     {
                         let mut history = self.retry_history.write().await;
-                        history.push((error.clone(), Instant::now(), start_time.elapsed());
+                        history.push((error.clone(), Instant::now(), start_time.elapsed()));
                     }
                     return Ok(format!("Fallback: {}", fallback_msg));
                 }
@@ -235,22 +251,26 @@ impl AutoRecovery {
         Err(last_error)
     }
     /// 尝试恢复
-    async fn attempt_recovery(&self, error: &BeejsError, attempt: u32) -> Result<String, BeejsError> {
+    async fn attempt_recovery(
+        &self,
+        error: &BeejsError,
+        attempt: u32,
+    ) -> Result<String, BeejsError> {
         // 根据错误类型和尝试次数决定恢复策略
         match error {
-            BeejsError::V8Error(msg) => {
+            BeejsError::V8Error(_msg) => {
                 if attempt <= 2 {
                     // 前两次尝试：重新初始化 V8
-                    self.reinitialize_v8().await.map_err(|e| {
-                        BeejsError::V8Error(format!("Recovery failed: {}", e))
-                    })?;
+                    self.reinitialize_v8()
+                        .await
+                        .map_err(|e| BeejsError::V8Error(format!("Recovery failed: {}", e)))?;
                     Ok(format!("V8 reinitialized (attempt {})", attempt))
                 } else {
                     // 后续尝试：使用简化模式
                     Ok(format!("Switched to simplified mode (attempt {})", attempt))
                 }
             }
-            BeejsError::JsExecutionError(msg) => {
+            BeejsError::JsExecutionError(_msg) => {
                 if attempt <= 1 {
                     // 第一次尝试：验证语法
                     self.validate_syntax().await.map_err(|e| {
@@ -262,12 +282,12 @@ impl AutoRecovery {
                     Ok("Bypassed validation".to_string())
                 }
             }
-            BeejsError::MultiLanguageError(msg) => {
+            BeejsError::MultiLanguageError(_msg) => {
                 // 重新初始化运行时
                 self.reinitialize_language_runtime(error).await?;
                 Ok("Language runtime reinitialized".to_string())
             }
-            BeejsError::PlatformError(msg) => {
+            BeejsError::PlatformError(_msg) => {
                 // 检查平台兼容性
                 self.check_platform_compatibility().await?;
                 Ok("Platform compatibility verified".to_string())
@@ -281,39 +301,34 @@ impl AutoRecovery {
                     Err(BeejsError::RuntimeError(format!(
                         "Failed to recover after {} attempts",
                         attempt
-                    ))
+                    )))
                 }
             }
         }
     }
     /// 重新初始化 V8
     async fn reinitialize_v8(&self) -> Result<(), String> {
-        // 模拟 V8 重新初始化
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        // 当前恢复管理器只记录策略动作；真正的运行时重建由调用方接入。
         Ok(())
     }
     /// 验证语法
     async fn validate_syntax(&self) -> Result<(), String> {
-        // 模拟语法验证
-        tokio::time::sleep(Duration::from_millis(5)).await;
+        // 当前恢复管理器只记录策略动作；真正的语法检查由调用方接入。
         Ok(())
     }
     /// 重新初始化语言运行时
-    async fn reinitialize_language_runtime(&self, error: &BeejsError) -> Result<(), BeejsError> {
-        // 模拟语言运行时重新初始化
-        tokio::time::sleep(Duration::from_millis(20)).await;
+    async fn reinitialize_language_runtime(&self, _error: &BeejsError) -> Result<(), BeejsError> {
+        // 当前恢复管理器只记录策略动作；真正的运行时重建由调用方接入。
         Ok(())
     }
     /// 检查平台兼容性
     async fn check_platform_compatibility(&self) -> Result<(), BeejsError> {
-        // 模拟平台检查
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        // 当前恢复管理器只记录策略动作；真正的平台检查由调用方接入。
         Ok(())
     }
     /// 重置运行时状态
     async fn reset_runtime_state(&self) -> Result<(), BeejsError> {
-        // 模拟状态重置
-        tokio::time::sleep(Duration::from_millis(15)).await;
+        // 当前恢复管理器只记录策略动作；真正的状态重置由调用方接入。
         Ok(())
     }
     /// 获取恢复统计

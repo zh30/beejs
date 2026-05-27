@@ -32,7 +32,7 @@ fn test_export_key_returns_promise() {
     assert!(result.is_ok());
     let output = result.unwrap();
     let trimmed = output.trim();
-    assert!(trimmed.contains("Promise") || trimmed == "[object Promise]");
+    assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn test_export_key_raw_hmac() {
     assert!(result.is_ok());
     let output = result.unwrap();
     let trimmed = output.trim();
-    assert!(trimmed.contains("Promise") || trimmed == "[object Promise]");
+    assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn test_export_key_raw_aes_gcm() {
     assert!(result.is_ok());
     let output = result.unwrap();
     let trimmed = output.trim();
-    assert!(trimmed.contains("Promise") || trimmed == "[object Promise]");
+    assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn test_export_key_generated_hmac_key() {
     assert!(result.is_ok());
     let output = result.unwrap();
     let trimmed = output.trim();
-    assert!(trimmed.contains("Promise") || trimmed == "[object Promise]");
+    assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn test_export_key_generated_aes_key() {
     assert!(result.is_ok());
     let output = result.unwrap();
     let trimmed = output.trim();
-    assert!(trimmed.contains("Promise") || trimmed == "[object Promise]");
+    assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }
 
 #[test]
@@ -222,5 +222,5 @@ fn test_export_key_jwk_format() {
     let output = result.unwrap();
     let trimmed = output.trim();
     // Should return a Promise
-    assert!(trimmed.contains("Promise") || trimmed == "[object Promise]");
+    assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }

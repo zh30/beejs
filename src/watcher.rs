@@ -3,14 +3,14 @@
 // This module provides file watching and hot reload capabilities for development.
 // It monitors JavaScript/TypeScript files for changes and automatically re-executes them.
 
-use notify_debouncer_mini::{DebouncedEventKind, new_debouncer};
 use notify::RecursiveMode;
+use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::sync::mpsc;
-use std::time::Duration;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::time::Duration;
 use std::time::SystemTime;
 
 /// File change event types

@@ -1,8 +1,8 @@
 // Error handling tests for Beejs runtime
 // v0.3.235: Tests for error types, boundary cases, and error messages
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -35,7 +35,9 @@ fn test_syntax_error_message() {
     let error_msg = result.unwrap_err().to_string();
     // 错误消息应该包含有用的信息
     assert!(
-        error_msg.contains("SyntaxError") || error_msg.contains("syntax") || error_msg.contains("error"),
+        error_msg.contains("SyntaxError")
+            || error_msg.contains("syntax")
+            || error_msg.contains("error"),
         "Error message should indicate syntax error, got: {}",
         error_msg
     );
@@ -52,7 +54,9 @@ fn test_reference_error_message() {
     let error_msg = result.unwrap_err().to_string();
     // 错误消息应该包含变量名或引用错误信息
     assert!(
-        error_msg.contains("ReferenceError") || error_msg.contains("reference") || error_msg.contains("is not defined"),
+        error_msg.contains("ReferenceError")
+            || error_msg.contains("reference")
+            || error_msg.contains("is not defined"),
         "Error message should indicate reference error, got: {}",
         error_msg
     );
@@ -102,7 +106,8 @@ fn test_unicode_in_code() {
 fn test_nested_error_propagation() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // 嵌套调用中的错误应该正确传播
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         (function() {
             function f() { throw new Error("test error"); }
             try {
@@ -111,7 +116,8 @@ fn test_nested_error_propagation() {
                 return e.message;
             }
         })()
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "test error");
 }
@@ -121,10 +127,12 @@ fn test_nested_error_propagation() {
 fn test_promise_rejection_handling() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // Promise rejection 应该能处理
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         Promise.reject(new Error("test rejection"))
             .catch(e => e.message)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
 }
 
@@ -170,7 +178,8 @@ fn test_large_number_handling() {
 fn test_recursion_limit() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // 递归应该有一定的限制（V8 默认）
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         (function f(n) {
             try {
                 return f(n + 1);
@@ -178,7 +187,8 @@ fn test_recursion_limit() {
                 return n;
             }
         })(0)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
 }
 
@@ -198,13 +208,15 @@ fn test_json_parse_error() {
     // 测试 JSON 相关的边界情况 - 使用无效的 JSON 字符串
     // 注意: Beejs 的 JSON 实现比较宽容，返回 null 而不是抛出错误
     // 这个测试验证 JSON 处理的正确性
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         (function() {
             // 有效 JSON 解析测试
             const obj = JSON.parse('{"a": 1, "b": [1, 2, 3]}');
             return obj.b.length === 3 ? "valid json works" : "json failed";
         })()
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "valid json works");
 }
@@ -223,13 +235,15 @@ fn test_regex_parse_error() {
 fn test_stack_trace_info() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // 错误应该包含堆栈跟踪信息
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         (function outer() {
             (function inner() {
                 throw new Error("stack test");
             })();
         })();
-    "#);
+    "#,
+    );
     assert!(result.is_err());
 
     let error_msg = result.unwrap_err().to_string();
@@ -246,14 +260,16 @@ fn test_stack_trace_info() {
 fn test_memory_exhaustion_handling() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // 大内存分配应该有合理的错误处理
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         try {
             const huge = new Array(1000000000);
             "created";
         } catch (e) {
             "memory error";
         }
-    "#);
+    "#,
+    );
     // 这个测试可能成功（V8 有自己的限制处理）或内存错误
     assert!(result.is_ok());
 }

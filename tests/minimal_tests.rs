@@ -21,10 +21,16 @@ const x = 1;
         assert!(result.is_ok(), "declare global should compile successfully");
         let output = result.unwrap();
         // 验证 declare global 块被正确转译
-        assert!(output.js_code.contains("/* declare global"),
-            "Should contain declare global placeholder: {}", output.js_code);
-        assert!(output.js_code.contains("const x = 1"),
-            "Should preserve regular code: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* declare global"),
+            "Should contain declare global placeholder: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const x = 1"),
+            "Should preserve regular code: {}",
+            output.js_code
+        );
         println!("✅ Test 1: TypeScript declare global support");
     }
 
@@ -41,12 +47,21 @@ const y = 2;
         assert!(result.is_ok(), "declare module should compile successfully");
         let output = result.unwrap();
         // 验证 declare module 被正确转译（保留 declare module 语法）
-        assert!(output.js_code.contains("declare module \"my-module\""),
-            "Should contain declare module: {}", output.js_code);
-        assert!(output.js_code.contains("someValue"),
-            "Should contain someValue: {}", output.js_code);
-        assert!(output.js_code.contains("const y = 2"),
-            "Should preserve regular code: {}", output.js_code);
+        assert!(
+            output.js_code.contains("declare module \"my-module\""),
+            "Should contain declare module: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("someValue"),
+            "Should contain someValue: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const y = 2"),
+            "Should preserve regular code: {}",
+            output.js_code
+        );
         println!("✅ Test 2: TypeScript declare module support");
     }
 
@@ -67,14 +82,27 @@ declare module "express" {
 const config = { apiKey: "test" };
 "#;
         let result = typescript::compile_typescript(ts_code, "module_augmentation.ts");
-        assert!(result.is_ok(), "Combined module augmentation should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Combined module augmentation should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("/* declare global"),
-            "Should contain declare global: {}", output.js_code);
-        assert!(output.js_code.contains("declare module \"express\""),
-            "Should contain express module: {}", output.js_code);
-        assert!(output.js_code.contains("version"),
-            "Should contain version: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* declare global"),
+            "Should contain declare global: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("declare module \"express\""),
+            "Should contain express module: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("version"),
+            "Should contain version: {}",
+            output.js_code
+        );
         println!("✅ Test 3: TypeScript module augmentation combined");
     }
 
@@ -88,10 +116,16 @@ function greet(name: string): string {
 greet("Beejs");
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "Basic TypeScript should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Basic TypeScript should compile successfully"
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("greet"),
-            "Should contain greet function: {}", output.js_code);
+        assert!(
+            output.js_code.contains("greet"),
+            "Should contain greet function: {}",
+            output.js_code
+        );
         println!("✅ Test 4: Basic TypeScript transpilation");
     }
 
@@ -103,13 +137,22 @@ const x = 1 as number;
 const y = "hello" as string;
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "TypeScript with as assertion should compile");
+        assert!(
+            result.is_ok(),
+            "TypeScript with as assertion should compile"
+        );
         let output = result.unwrap();
         // as Type 断言应该被移除
-        assert!(!output.js_code.contains(" as number"),
-            "Should remove 'as number' assertion: {}", output.js_code);
-        assert!(output.js_code.contains("const x = 1"),
-            "Should preserve const x = 1: {}", output.js_code);
+        assert!(
+            !output.js_code.contains(" as number"),
+            "Should remove 'as number' assertion: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const x = 1"),
+            "Should preserve const x = 1: {}",
+            output.js_code
+        );
         println!("✅ Test 5: TypeScript as assertion removal");
     }
 
@@ -139,8 +182,11 @@ const myId: ID = "abc123";
         assert!(result.is_ok(), "Type alias should compile");
         let output = result.unwrap();
         // 类型别名应该被移除，只保留值
-        assert!(output.js_code.contains("const myId"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const myId"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
         println!("✅ Test 7: TypeScript type alias");
     }
 
@@ -154,16 +200,32 @@ const currentStatus: Status = "active";
 const userId: UserId = 123;
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "String literal union type should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "String literal union type should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // 验证代码保留
-        assert!(output.js_code.contains("currentStatus"),
-            "Should preserve currentStatus: {}", output.js_code);
-        assert!(output.js_code.contains("userId"),
-            "Should preserve userId: {}", output.js_code);
+        assert!(
+            output.js_code.contains("currentStatus"),
+            "Should preserve currentStatus: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("userId"),
+            "Should preserve userId: {}",
+            output.js_code
+        );
         // 验证没有警告输出
-        assert!(!output.diagnostics.iter().any(|d| d.message.contains("invalid type definition")),
-            "Should not have type definition warnings: {:?}", output.diagnostics);
+        assert!(
+            !output
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("invalid type definition")),
+            "Should not have type definition warnings: {:?}",
+            output.diagnostics
+        );
         println!("✅ Test 7.1: TypeScript string literal union type");
     }
 
@@ -180,8 +242,11 @@ const str = identity("hello");
         let result = typescript::compile_typescript(ts_code, "test.ts");
         assert!(result.is_ok(), "Generic function should compile");
         let output = result.unwrap();
-        assert!(output.js_code.contains("identity"),
-            "Should contain identity function: {}", output.js_code);
+        assert!(
+            output.js_code.contains("identity"),
+            "Should contain identity function: {}",
+            output.js_code
+        );
         println!("✅ Test 8: TypeScript generic function");
     }
 
@@ -192,11 +257,18 @@ const str = identity("hello");
 export = 5;
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "export = should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "export = should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // export = 应该被转译为注释占位符
-        assert!(output.js_code.contains("/* export ="),
-            "Should contain export = placeholder: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* export ="),
+            "Should contain export = placeholder: {}",
+            output.js_code
+        );
         println!("✅ Test 9: TypeScript export = syntax");
     }
 
@@ -210,11 +282,18 @@ function myModule() {
 export = myModule;
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "export = function should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "export = function should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // 验证函数被保留
-        assert!(output.js_code.contains("myModule") || output.js_code.contains("/* export ="),
-            "Should contain myModule or export = placeholder: {}", output.js_code);
+        assert!(
+            output.js_code.contains("myModule") || output.js_code.contains("/* export ="),
+            "Should contain myModule or export = placeholder: {}",
+            output.js_code
+        );
         println!("✅ Test 10: TypeScript export = with function");
     }
 
@@ -227,13 +306,23 @@ type PointKeys = keyof Point;
 const keys: PointKeys = "x";
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "keyof operator should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "keyof operator should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // keyof 应该被移除，只保留原始表达式
-        assert!(!output.js_code.contains("keyof"),
-            "Should remove keyof operator: {}", output.js_code);
-        assert!(output.js_code.contains("const keys"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("keyof"),
+            "Should remove keyof operator: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const keys"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
         println!("✅ Test 11: TypeScript keyof operator support");
     }
 
@@ -246,13 +335,23 @@ type MyObjType = typeof myObj;
 const copy: MyObjType = myObj;
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "typeof operator should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "typeof operator should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // typeof 在类型位置应该被移除
-        assert!(output.js_code.contains("myObj"),
-            "Should preserve myObj: {}", output.js_code);
-        assert!(output.js_code.contains("const copy"),
-            "Should preserve const copy: {}", output.js_code);
+        assert!(
+            output.js_code.contains("myObj"),
+            "Should preserve myObj: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const copy"),
+            "Should preserve const copy: {}",
+            output.js_code
+        );
         println!("✅ Test 12: TypeScript typeof operator support");
     }
 
@@ -269,14 +368,27 @@ const user = { name: "Alice", age: 30 };
 type UserType = typeof user;
 "#;
         let result = typescript::compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "Combined keyof/typeof should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Combined keyof/typeof should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(!output.js_code.contains("keyof"),
-            "Should remove keyof: {}", output.js_code);
-        assert!(output.js_code.contains("User"),
-            "Should preserve User reference: {}", output.js_code);
-        assert!(output.js_code.contains("user"),
-            "Should preserve user: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("keyof"),
+            "Should remove keyof: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("User"),
+            "Should preserve User reference: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("user"),
+            "Should preserve user: {}",
+            output.js_code
+        );
         println!("✅ Test 13: TypeScript keyof and typeof combined");
     }
 
@@ -288,11 +400,18 @@ type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 type Result = UnwrapPromise<Promise<string>>;
 "#;
         let result = typescript::compile_typescript(ts_code, "infer_test.ts");
-        assert!(result.is_ok(), "infer keyword should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "infer keyword should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // infer 关键字应该被移除
-        assert!(!output.js_code.contains("infer"),
-            "Should remove infer keyword: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("infer"),
+            "Should remove infer keyword: {}",
+            output.js_code
+        );
         // 应该保留类型别名声明（因为它们是 declare 的一部分）
         println!("✅ Test 14: TypeScript infer keyword support");
     }
@@ -305,11 +424,18 @@ type StringResult<T> = T extends infer U extends string ? U : never;
 type TestResult = StringResult<"hello">;
 "#;
         let result = typescript::compile_typescript(ts_code, "infer_constraint_test.ts");
-        assert!(result.is_ok(), "infer with constraint should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "infer with constraint should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // infer 和 extends 约束都应该被移除
-        assert!(!output.js_code.contains("infer"),
-            "Should remove infer keyword: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("infer"),
+            "Should remove infer keyword: {}",
+            output.js_code
+        );
         println!("✅ Test 15: TypeScript infer with constraint support");
     }
 
@@ -322,11 +448,18 @@ type Test1 = DeepUnwrap<Promise<Promise<number>>>;
 type Test2 = DeepUnwrap<string>;
 "#;
         let result = typescript::compile_typescript(ts_code, "infer_complex_test.ts");
-        assert!(result.is_ok(), "complex infer should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "complex infer should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // 所有 infer 关键字都应该被移除
-        assert!(!output.js_code.contains("infer"),
-            "Should remove all infer keywords: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("infer"),
+            "Should remove all infer keywords: {}",
+            output.js_code
+        );
         println!("✅ Test 16: TypeScript infer in complex conditional types");
     }
 
@@ -349,21 +482,40 @@ const dog = new Dog();
 dog.makeSound();
 "#;
         let result = typescript::compile_typescript(ts_code, "abstract_class.ts");
-        assert!(result.is_ok(), "abstract class should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "abstract class should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // abstract 关键字应该被移除
-        assert!(!output.js_code.contains("abstract"),
-            "Should remove abstract keyword: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("abstract"),
+            "Should remove abstract keyword: {}",
+            output.js_code
+        );
         // 类和继承应该保留
-        assert!(output.js_code.contains("class Animal"),
-            "Should preserve Animal class: {}", output.js_code);
-        assert!(output.js_code.contains("class Dog"),
-            "Should preserve Dog class: {}", output.js_code);
-        assert!(output.js_code.contains("extends"),
-            "Should preserve extends: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class Animal"),
+            "Should preserve Animal class: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("class Dog"),
+            "Should preserve Dog class: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("extends"),
+            "Should preserve extends: {}",
+            output.js_code
+        );
         // 方法应该保留
-        assert!(output.js_code.contains("makeSound"),
-            "Should preserve makeSound method: {}", output.js_code);
+        assert!(
+            output.js_code.contains("makeSound"),
+            "Should preserve makeSound method: {}",
+            output.js_code
+        );
         println!("✅ Test 17: TypeScript abstract class support");
     }
 
@@ -385,14 +537,24 @@ const circle = new Circle();
 console.log(circle.getArea());
 "#;
         let result = typescript::compile_typescript(ts_code, "abstract_method.ts");
-        assert!(result.is_ok(), "abstract method should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "abstract method should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // abstract 关键字应该被移除
-        assert!(!output.js_code.contains("abstract"),
-            "Should remove abstract keyword: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("abstract"),
+            "Should remove abstract keyword: {}",
+            output.js_code
+        );
         // 类应该保留
-        assert!(output.js_code.contains("class Shape"),
-            "Should preserve Shape class: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class Shape"),
+            "Should preserve Shape class: {}",
+            output.js_code
+        );
         // 注意：后续需要修复 Circle 类的解析问题
         println!("✅ Test 18: TypeScript abstract method support");
     }
@@ -420,33 +582,58 @@ const d = new Derived();
 d.foo();
 "#;
         let result = typescript::compile_typescript(ts_code, "abstract_followed_by_regular.ts");
-        assert!(result.is_ok(), "abstract followed by regular method should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "abstract followed by regular method should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 调试输出
         println!("编译输出:\n{}", output.js_code);
 
         // 验证 abstract 关键字被移除
-        assert!(!output.js_code.contains("abstract"),
-            "Should remove abstract keyword: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("abstract"),
+            "Should remove abstract keyword: {}",
+            output.js_code
+        );
 
         // 验证所有类保留
-        assert!(output.js_code.contains("class Base"),
-            "Should preserve Base class: {}", output.js_code);
-        assert!(output.js_code.contains("class Derived"),
-            "Should preserve Derived class: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class Base"),
+            "Should preserve Base class: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("class Derived"),
+            "Should preserve Derived class: {}",
+            output.js_code
+        );
 
         // 验证继承保留
-        assert!(output.js_code.contains("extends"),
-            "Should preserve extends: {}", output.js_code);
+        assert!(
+            output.js_code.contains("extends"),
+            "Should preserve extends: {}",
+            output.js_code
+        );
 
         // 验证所有方法保留
-        assert!(output.js_code.contains("foo"),
-            "Should preserve foo method: {}", output.js_code);
-        assert!(output.js_code.contains("bar"),
-            "Should preserve bar method: {}", output.js_code);
-        assert!(output.js_code.contains("baz"),
-            "Should preserve baz method: {}", output.js_code);
+        assert!(
+            output.js_code.contains("foo"),
+            "Should preserve foo method: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("bar"),
+            "Should preserve bar method: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("baz"),
+            "Should preserve baz method: {}",
+            output.js_code
+        );
 
         println!("✅ Test 19: Abstract method followed by regular method");
     }
@@ -466,18 +653,31 @@ const myColor = Color.Red;
 console.log(myColor);
 "#;
         let result = typescript::compile_typescript(ts_code, "enum_test.ts");
-        assert!(result.is_ok(), "enum should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "enum should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 enum 关键字被移除或注释掉
-        assert!(!output.js_code.contains("enum Color"),
-            "Should remove enum declaration: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("enum Color"),
+            "Should remove enum declaration: {}",
+            output.js_code
+        );
 
         // 验证代码中引用的部分保留
-        assert!(output.js_code.contains("myColor"),
-            "Should preserve myColor: {}", output.js_code);
-        assert!(output.js_code.contains("Color"),
-            "Color reference may remain (acceptable): {}", output.js_code);
+        assert!(
+            output.js_code.contains("myColor"),
+            "Should preserve myColor: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("Color"),
+            "Color reference may remain (acceptable): {}",
+            output.js_code
+        );
 
         println!("✅ Test 20: TypeScript enum fast-path support");
     }
@@ -495,22 +695,41 @@ const status: Status = "active";
 console.log(id, status);
 "#;
         let result = typescript::compile_typescript(ts_code, "type_alias_test.ts");
-        assert!(result.is_ok(), "type alias should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "type alias should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 type 声明被移除或注释掉
-        assert!(!output.js_code.contains("type UserId"),
-            "Should remove type UserId: {}", output.js_code);
-        assert!(!output.js_code.contains("type Status"),
-            "Should remove type Status: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("type UserId"),
+            "Should remove type UserId: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("type Status"),
+            "Should remove type Status: {}",
+            output.js_code
+        );
 
         // 验证变量声明保留
-        assert!(output.js_code.contains("id"),
-            "Should preserve id: {}", output.js_code);
-        assert!(output.js_code.contains("status"),
-            "Should preserve status: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("id"),
+            "Should preserve id: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("status"),
+            "Should preserve status: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
 
         println!("✅ Test 21: TypeScript type alias fast-path support");
     }
@@ -536,20 +755,36 @@ const user: User = { name: "John", age: 30 };
 console.log(level, user);
 "#;
         let result = typescript::compile_typescript(ts_code, "combined_test.ts");
-        assert!(result.is_ok(), "combined enum/type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "combined enum/type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 enum 和 type 声明被移除
-        assert!(!output.js_code.contains("enum LogLevel"),
-            "Should remove enum LogLevel: {}", output.js_code);
-        assert!(!output.js_code.contains("type User"),
-            "Should remove type User: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("enum LogLevel"),
+            "Should remove enum LogLevel: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("type User"),
+            "Should remove type User: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("level"),
-            "Should preserve level: {}", output.js_code);
-        assert!(output.js_code.contains("user"),
-            "Should preserve user: {}", output.js_code);
+        assert!(
+            output.js_code.contains("level"),
+            "Should preserve level: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("user"),
+            "Should preserve user: {}",
+            output.js_code
+        );
 
         println!("✅ Test 22: TypeScript enum and type combined support");
     }
@@ -566,18 +801,31 @@ function bound(this: any, x: number): void {
 bound({}, 42);
 "#;
         let result = typescript::compile_typescript(ts_code, "this_param_test.ts");
-        assert!(result.is_ok(), "this parameter should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "this parameter should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 this: any 被移除
-        assert!(!output.js_code.contains("this: any"),
-            "Should remove 'this: any': {}", output.js_code);
+        assert!(
+            !output.js_code.contains("this: any"),
+            "Should remove 'this: any': {}",
+            output.js_code
+        );
 
         // 验证函数体保留
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
-        assert!(output.js_code.contains("bound"),
-            "Should preserve bound function: {}", output.js_code);
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("bound"),
+            "Should preserve bound function: {}",
+            output.js_code
+        );
 
         println!("✅ Test 23: TypeScript this parameter fast-path support (simple)");
     }
@@ -594,16 +842,26 @@ function bound(this: any, name: string): string {
 const result = bound({}, "Alice");
 "#;
         let result = typescript::compile_typescript(ts_code, "this_object_test.ts");
-        assert!(result.is_ok(), "this object parameter should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "this object parameter should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 this: any 被移除
-        assert!(!output.js_code.contains("this: any"),
-            "Should remove 'this: any': {}", output.js_code);
+        assert!(
+            !output.js_code.contains("this: any"),
+            "Should remove 'this: any': {}",
+            output.js_code
+        );
 
         // 验证函数保留
-        assert!(output.js_code.contains("bound"),
-            "Should preserve bound function: {}", output.js_code);
+        assert!(
+            output.js_code.contains("bound"),
+            "Should preserve bound function: {}",
+            output.js_code
+        );
 
         println!("✅ Test 24: TypeScript this parameter with object type");
     }
@@ -618,16 +876,26 @@ function greet(this: { name: string }, message: string): string {
 }
 "#;
         let result = typescript::compile_typescript(ts_code, "this_function_test.ts");
-        assert!(result.is_ok(), "function this parameter should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "function this parameter should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 this: { ... } 被移除
-        assert!(!output.js_code.contains("this: {"),
-            "Should remove 'this: {{': {}", output.js_code);
+        assert!(
+            !output.js_code.contains("this: {"),
+            "Should remove 'this: {{': {}",
+            output.js_code
+        );
 
         // 验证函数保留
-        assert!(output.js_code.contains("greet"),
-            "Should preserve greet function: {}", output.js_code);
+        assert!(
+            output.js_code.contains("greet"),
+            "Should preserve greet function: {}",
+            output.js_code
+        );
 
         println!("✅ Test 25: TypeScript this parameter in function");
     }
@@ -646,16 +914,26 @@ interface User {
 const user: Partial<User> = { name: "Alice" };
 "#;
         let result = typescript::compile_typescript(ts_code, "mapped_type_test.ts");
-        assert!(result.is_ok(), "mapped type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "mapped type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证映射类型语法被移除
-        assert!(!output.js_code.contains("[P in keyof T]"),
-            "Should remove mapped type syntax: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[P in keyof T]"),
+            "Should remove mapped type syntax: {}",
+            output.js_code
+        );
 
         // 验证接口和代码保留
-        assert!(output.js_code.contains("user"),
-            "Should preserve user: {}", output.js_code);
+        assert!(
+            output.js_code.contains("user"),
+            "Should preserve user: {}",
+            output.js_code
+        );
 
         println!("✅ Test 26: TypeScript mapped type fast-path support (basic)");
     }
@@ -673,16 +951,26 @@ interface Config {
 const config: Readonly<Config> = { apiKey: "secret", timeout: 30 };
 "#;
         let result = typescript::compile_typescript(ts_code, "readonly_mapped_type_test.ts");
-        assert!(result.is_ok(), "readonly mapped type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "readonly mapped type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证映射类型语法被移除
-        assert!(!output.js_code.contains("[P in keyof T]"),
-            "Should remove mapped type syntax: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[P in keyof T]"),
+            "Should remove mapped type syntax: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("config"),
-            "Should preserve config: {}", output.js_code);
+        assert!(
+            output.js_code.contains("config"),
+            "Should preserve config: {}",
+            output.js_code
+        );
 
         println!("✅ Test 27: TypeScript mapped type with readonly modifier");
     }
@@ -696,16 +984,26 @@ type StringKeyMap = { [P in "name" | "age"]: any };
 const map: StringKeyMap = { name: "Alice", age: 30 };
 "#;
         let result = typescript::compile_typescript(ts_code, "string_union_mapped_type_test.ts");
-        assert!(result.is_ok(), "string union mapped type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "string union mapped type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证映射类型语法被移除
-        assert!(!output.js_code.contains("[P in \"name\""),
-            "Should remove mapped type with string union: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[P in \"name\""),
+            "Should remove mapped type with string union: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("map"),
-            "Should preserve map: {}", output.js_code);
+        assert!(
+            output.js_code.contains("map"),
+            "Should preserve map: {}",
+            output.js_code
+        );
 
         println!("✅ Test 28: TypeScript mapped type with string union keys");
     }
@@ -719,12 +1017,19 @@ type Optional<T> = { [P in keyof T]?: T[P] };
 type Result<T, E> = { [P in keyof T]?: T[P] } | { error: E };
 "#;
         let result = typescript::compile_typescript(ts_code, "optional_mapped_type_test.ts");
-        assert!(result.is_ok(), "optional mapped type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "optional mapped type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证映射类型语法被移除
-        assert!(!output.js_code.contains("[P in keyof T]?"),
-            "Should remove optional mapped type syntax: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[P in keyof T]?"),
+            "Should remove optional mapped type syntax: {}",
+            output.js_code
+        );
 
         println!("✅ Test 29: TypeScript mapped type with optional modifier");
     }
@@ -739,16 +1044,26 @@ type ObjKeys = keyof typeof obj;
 const keys: ObjKeys = "name";
 "#;
         let result = typescript::compile_typescript(ts_code, "keyof_typeof_test.ts");
-        assert!(result.is_ok(), "keyof typeof should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "keyof typeof should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 keyof typeof 被替换
-        assert!(!output.js_code.contains("keyof typeof"),
-            "Should remove keyof typeof pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("keyof typeof"),
+            "Should remove keyof typeof pattern: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const obj"),
-            "Should preserve const obj: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const obj"),
+            "Should preserve const obj: {}",
+            output.js_code
+        );
 
         println!("✅ Test 30: TypeScript keyof typeof pattern");
     }
@@ -767,16 +1082,26 @@ function getProperty<T extends keyof Config>(key: T): Config[T] {
 }
 "#;
         let result = typescript::compile_typescript(ts_code, "keyof_constraint_test.ts");
-        assert!(result.is_ok(), "keyof constraint should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "keyof constraint should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 keyof 被处理
-        assert!(!output.js_code.contains("extends keyof"),
-            "Should remove extends keyof pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("extends keyof"),
+            "Should remove extends keyof pattern: {}",
+            output.js_code
+        );
 
         // 验证函数保留
-        assert!(output.js_code.contains("getProperty"),
-            "Should preserve getProperty: {}", output.js_code);
+        assert!(
+            output.js_code.contains("getProperty"),
+            "Should preserve getProperty: {}",
+            output.js_code
+        );
 
         println!("✅ Test 31: TypeScript keyof in generic constraint");
     }
@@ -791,12 +1116,19 @@ type UserPropertyTypes = User[keyof User];
 const value: UserPropertyTypes = "test";
 "#;
         let result = typescript::compile_typescript(ts_code, "indexed_keyof_test.ts");
-        assert!(result.is_ok(), "indexed keyof should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "indexed keyof should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 [keyof T] 被替换为 [string]
-        assert!(output.js_code.contains("[string]") || !output.js_code.contains("keyof"),
-            "Should handle indexed keyof pattern: {}", output.js_code);
+        assert!(
+            output.js_code.contains("[string]") || !output.js_code.contains("keyof"),
+            "Should handle indexed keyof pattern: {}",
+            output.js_code
+        );
 
         println!("✅ Test 32: TypeScript indexed access with keyof");
     }
@@ -817,14 +1149,24 @@ interface State {
 }
 "#;
         let result = typescript::compile_typescript(ts_code, "complex_mapped_type_test.ts");
-        assert!(result.is_ok(), "complex mapped type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "complex mapped type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证所有映射类型模式被移除
-        assert!(!output.js_code.contains("[P in keyof T]"),
-            "Should remove mapped type syntax: {}", output.js_code);
-        assert!(!output.js_code.contains("[P in K]"),
-            "Should remove pick type syntax: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[P in keyof T]"),
+            "Should remove mapped type syntax: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("[P in K]"),
+            "Should remove pick type syntax: {}",
+            output.js_code
+        );
 
         println!("✅ Test 33: TypeScript complex mapped type combination");
     }
@@ -837,10 +1179,14 @@ interface State {
         let ts_code = r#"type Message<T> = T extends string ? string : never;"#;
 
         // 验证代码包含条件类型模式
-        assert!(ts_code.contains(" extends "),
-            "Should detect extends pattern");
-        assert!(ts_code.contains(" ? "),
-            "Should detect question mark pattern");
+        assert!(
+            ts_code.contains(" extends "),
+            "Should detect extends pattern"
+        );
+        assert!(
+            ts_code.contains(" ? "),
+            "Should detect question mark pattern"
+        );
 
         println!("✅ Test 34: TypeScript conditional type detection");
     }
@@ -855,7 +1201,10 @@ interface State {
         // 验证 transpile_typescript_to_js 能处理条件类型
         // 通过检查输出是否包含条件类型模式来判断
         let has_conditional = ts_code.contains(" extends ") && ts_code.contains(" ? ");
-        assert!(has_conditional, "Should detect conditional type pattern for transpilation");
+        assert!(
+            has_conditional,
+            "Should detect conditional type pattern for transpilation"
+        );
 
         println!("✅ Test 35: TypeScript conditional type transpilation");
     }
@@ -870,8 +1219,16 @@ interface State {
         let extends_count = ts_code.matches(" extends ").count();
         let question_count = ts_code.matches(" ? ").count();
 
-        assert!(extends_count >= 2, "Should have at least 2 extends patterns, got: {}", extends_count);
-        assert!(question_count >= 1, "Should have at least 1 question mark, got: {}", question_count);
+        assert!(
+            extends_count >= 2,
+            "Should have at least 2 extends patterns, got: {}",
+            extends_count
+        );
+        assert!(
+            question_count >= 1,
+            "Should have at least 1 question mark, got: {}",
+            question_count
+        );
 
         println!("✅ Test 36: TypeScript nested conditional type");
     }
@@ -885,12 +1242,21 @@ type UnpackPromise<T> = T extends Promise<infer U> ? U : T;
 type First<T extends any[]> = T extends [infer U, ...any[]] ? U : never;
 "#;
         let result = typescript::compile_typescript(ts_code, "conditional_infer_test.ts");
-        assert!(result.is_ok(), "conditional with infer should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "conditional with infer should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证条件类型和 infer 模式被处理
-        assert!(output.js_code.contains("UnpackPromise") || !output.js_code.contains("extends") || !output.js_code.contains("?:"),
-            "Should handle conditional with infer: {}", output.js_code);
+        assert!(
+            output.js_code.contains("UnpackPromise")
+                || !output.js_code.contains("extends")
+                || !output.js_code.contains("?:"),
+            "Should handle conditional with infer: {}",
+            output.js_code
+        );
 
         println!("✅ Test 37: TypeScript conditional type with infer");
     }
@@ -904,12 +1270,19 @@ type NonNullable<T> = T extends null | undefined ? never : T;
 type Result<T> = T extends Promise<infer U> ? U : T;
 "#;
         let result = typescript::compile_typescript(ts_code, "conditional_constraint_test.ts");
-        assert!(result.is_ok(), "conditional with constraints should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "conditional with constraints should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证条件类型模式被处理
-        assert!(output.js_code.contains("Result") || !output.js_code.contains("?:"),
-            "Should handle conditional with constraints: {}", output.js_code);
+        assert!(
+            output.js_code.contains("Result") || !output.js_code.contains("?:"),
+            "Should handle conditional with constraints: {}",
+            output.js_code
+        );
 
         println!("✅ Test 38: TypeScript conditional type with constraints");
     }
@@ -923,15 +1296,25 @@ type Greeting = `Hello ${string}`;
 const greeting: Greeting = "Hello World";
 "#;
         let result = typescript::compile_typescript(ts_code, "template_literal_test.ts");
-        assert!(result.is_ok(), "Template literal type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Template literal type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证模板字面量类型被移除（保留 const 声明）
-        assert!(output.js_code.contains("const greeting"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const greeting"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
         // 模板字面量类型定义应该被移除
-        assert!(!output.js_code.contains("`Hello ${string}`"),
-            "Template literal type should be removed: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("`Hello ${string}`"),
+            "Template literal type should be removed: {}",
+            output.js_code
+        );
 
         println!("✅ Test 39: TypeScript template literal type basic");
     }
@@ -945,12 +1328,19 @@ type Email = `user-${string}@${string}.com`;
 type Path = `/api/${string}/${string}`;
 "#;
         let result = typescript::compile_typescript(ts_code, "template_literal_multi.ts");
-        assert!(result.is_ok(), "Multiple template literal types should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Multiple template literal types should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证模板字面量类型被移除
-        assert!(!output.js_code.contains("${string}"),
-            "Template literal type placeholders should be removed: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("${string}"),
+            "Template literal type placeholders should be removed: {}",
+            output.js_code
+        );
 
         println!("✅ Test 40: TypeScript template literal type multiple placeholders");
     }
@@ -965,12 +1355,21 @@ type NumericTemplate = `item-${number}`;
 type AnyTemplate = `${any}`;
 "#;
         let result = typescript::compile_typescript(ts_code, "template_literal_mixed.ts");
-        assert!(result.is_ok(), "Mixed template literal types should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Mixed template literal types should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证模板字面量类型被移除
-        assert!(!output.js_code.contains("${string}") || !output.js_code.contains("${number}") || !output.js_code.contains("${boolean}"),
-            "Template literal type should be removed: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("${string}")
+                || !output.js_code.contains("${number}")
+                || !output.js_code.contains("${boolean}"),
+            "Template literal type should be removed: {}",
+            output.js_code
+        );
 
         println!("✅ Test 41: TypeScript template literal type mixed types");
     }
@@ -989,16 +1388,26 @@ type PartialUser = Partial<User>;
 const user: PartialUser = { name: "Alice" };
 "#;
         let result = typescript::compile_typescript(ts_code, "partial_test.ts");
-        assert!(result.is_ok(), "Partial<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Partial<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Partial 映射类型语法被移除
-        assert!(!output.js_code.contains("Partial"),
-            "Should remove Partial utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Partial"),
+            "Should remove Partial utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
 
         println!("✅ Test 42: TypeScript Partial<T> utility type");
     }
@@ -1015,12 +1424,19 @@ type Props = {
 type RequiredProps = Required<Props>;
 "#;
         let result = typescript::compile_typescript(ts_code, "required_test.ts");
-        assert!(result.is_ok(), "Required<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Required<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Required 引用被移除
-        assert!(!output.js_code.contains("Required"),
-            "Should remove Required utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Required"),
+            "Should remove Required utility type reference: {}",
+            output.js_code
+        );
 
         println!("✅ Test 43: TypeScript Required<T> utility type");
     }
@@ -1038,16 +1454,26 @@ type ReadonlyConfig = Readonly<Config>;
 const config: ReadonlyConfig = { apiKey: "secret", timeout: 30 };
 "#;
         let result = typescript::compile_typescript(ts_code, "readonly_test.ts");
-        assert!(result.is_ok(), "Readonly<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Readonly<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Readonly 引用被移除
-        assert!(!output.js_code.contains("Readonly"),
-            "Should remove Readonly utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Readonly"),
+            "Should remove Readonly utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("config"),
-            "Should preserve config: {}", output.js_code);
+        assert!(
+            output.js_code.contains("config"),
+            "Should preserve config: {}",
+            output.js_code
+        );
 
         println!("✅ Test 44: TypeScript Readonly<T> utility type");
     }
@@ -1067,16 +1493,26 @@ type UserNameAndAge = Pick<User, "name" | "age">;
 const userInfo: UserNameAndAge = { name: "Alice", age: 30 };
 "#;
         let result = typescript::compile_typescript(ts_code, "pick_test.ts");
-        assert!(result.is_ok(), "Pick<T, K> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Pick<T, K> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Pick 引用被移除
-        assert!(!output.js_code.contains("Pick"),
-            "Should remove Pick utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Pick"),
+            "Should remove Pick utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("userInfo"),
-            "Should preserve userInfo: {}", output.js_code);
+        assert!(
+            output.js_code.contains("userInfo"),
+            "Should preserve userInfo: {}",
+            output.js_code
+        );
 
         println!("✅ Test 45: TypeScript Pick<T, K> utility type");
     }
@@ -1095,16 +1531,26 @@ const permissions: RolePermissions = {
 };
 "#;
         let result = typescript::compile_typescript(ts_code, "record_test.ts");
-        assert!(result.is_ok(), "Record<K, T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Record<K, T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Record 引用被移除
-        assert!(!output.js_code.contains("Record"),
-            "Should remove Record utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Record"),
+            "Should remove Record utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("permissions"),
-            "Should preserve permissions: {}", output.js_code);
+        assert!(
+            output.js_code.contains("permissions"),
+            "Should preserve permissions: {}",
+            output.js_code
+        );
 
         println!("✅ Test 46: TypeScript Record<K, T> utility type");
     }
@@ -1124,16 +1570,26 @@ type PublicUser = Omit<User, "password">;
 const publicUser: PublicUser = { name: "Alice", age: 30, email: "alice@test.com" };
 "#;
         let result = typescript::compile_typescript(ts_code, "omit_test.ts");
-        assert!(result.is_ok(), "Omit<T, K> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Omit<T, K> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Omit 引用被移除
-        assert!(!output.js_code.contains("Omit"),
-            "Should remove Omit utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Omit"),
+            "Should remove Omit utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("publicUser"),
-            "Should preserve publicUser: {}", output.js_code);
+        assert!(
+            output.js_code.contains("publicUser"),
+            "Should preserve publicUser: {}",
+            output.js_code
+        );
 
         println!("✅ Test 47: TypeScript Omit<T, K> utility type");
     }
@@ -1148,16 +1604,26 @@ type T1 = Exclude<number, string>;
 const value0: T0 = "b";
 "#;
         let result = typescript::compile_typescript(ts_code, "exclude_test.ts");
-        assert!(result.is_ok(), "Exclude<T, U> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Exclude<T, U> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Exclude 引用被移除
-        assert!(!output.js_code.contains("Exclude"),
-            "Should remove Exclude utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Exclude"),
+            "Should remove Exclude utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("value0"),
-            "Should preserve value0: {}", output.js_code);
+        assert!(
+            output.js_code.contains("value0"),
+            "Should preserve value0: {}",
+            output.js_code
+        );
 
         println!("✅ Test 48: TypeScript Exclude<T, U> utility type");
     }
@@ -1172,16 +1638,26 @@ type T1 = Extract<number, string>;
 const value0: T0 = "a";
 "#;
         let result = typescript::compile_typescript(ts_code, "extract_test.ts");
-        assert!(result.is_ok(), "Extract<T, U> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Extract<T, U> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Extract 引用被移除
-        assert!(!output.js_code.contains("Extract"),
-            "Should remove Extract utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Extract"),
+            "Should remove Extract utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("value0"),
-            "Should preserve value0: {}", output.js_code);
+        assert!(
+            output.js_code.contains("value0"),
+            "Should preserve value0: {}",
+            output.js_code
+        );
 
         println!("✅ Test 49: TypeScript Extract<T, U> utility type");
     }
@@ -1195,16 +1671,26 @@ type T0 = NonNullable<string | number | null | undefined>;
 const value: T0 = "hello";
 "#;
         let result = typescript::compile_typescript(ts_code, "nonnullable_test.ts");
-        assert!(result.is_ok(), "NonNullable<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "NonNullable<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 NonNullable 引用被移除
-        assert!(!output.js_code.contains("NonNullable"),
-            "Should remove NonNullable utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("NonNullable"),
+            "Should remove NonNullable utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const value"),
-            "Should preserve const value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const value"),
+            "Should preserve const value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 50: TypeScript NonNullable<T> utility type");
     }
@@ -1219,18 +1705,30 @@ type NotNull = NonNullable<NullableString>;
 const value: NotNull = "hello";
 "#;
         let result = typescript::compile_typescript(ts_code, "nonnullable_fastpath.ts");
-        assert!(result.is_ok(), "NonNullable fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "NonNullable fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 NonNullable 被快速路径移除
-        assert!(!output.js_code.contains("NonNullable"),
-            "Should remove NonNullable via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("NonNullable"),
+            "Should remove NonNullable via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const value"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"hello\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const value"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"hello\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 50.1: TypeScript NonNullable<T> fast-path");
     }
@@ -1249,14 +1747,23 @@ const str: SafeResult<string> = "test";
         assert!(result.is_ok(), "NonNullable with union should compile");
         let output = result.unwrap();
 
-        assert!(!output.js_code.contains("NonNullable"),
-            "Should remove NonNullable: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("NonNullable"),
+            "Should remove NonNullable: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const num"),
-            "Should preserve const num: {}", output.js_code);
-        assert!(output.js_code.contains("const str"),
-            "Should preserve const str: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const num"),
+            "Should preserve const num: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const str"),
+            "Should preserve const str: {}",
+            output.js_code
+        );
 
         println!("✅ Test 50.2: TypeScript NonNullable with union types");
     }
@@ -1279,22 +1786,41 @@ type UpdateUser = Partial<Omit<User, "password">>;
 const user: PublicUser = { name: "Alice", email: "alice@test.com" };
 "#;
         let result = typescript::compile_typescript(ts_code, "utility_combined_test.ts");
-        assert!(result.is_ok(), "Combined utility types should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Combined utility types should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证工具类型引用被移除
-        assert!(!output.js_code.contains("Readonly"),
-            "Should remove Readonly: {}", output.js_code);
-        assert!(!output.js_code.contains("Pick"),
-            "Should remove Pick: {}", output.js_code);
-        assert!(!output.js_code.contains("Partial"),
-            "Should remove Partial: {}", output.js_code);
-        assert!(!output.js_code.contains("Omit"),
-            "Should remove Omit: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Readonly"),
+            "Should remove Readonly: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("Pick"),
+            "Should remove Pick: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("Partial"),
+            "Should remove Partial: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("Omit"),
+            "Should remove Omit: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
 
         println!("✅ Test 51: TypeScript utility types combined");
     }
@@ -1316,16 +1842,26 @@ interface Factory {
 const factory: Factory = {} as any;
 "#;
         let result = typescript::compile_typescript(ts_code, "constructor_signature_test.ts");
-        assert!(result.is_ok(), "Constructor signature should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Constructor signature should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证构造函数签名被移除（运行时快速路径处理）
-        assert!(!output.js_code.contains("new(...args"),
-            "Should remove constructor signature: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("new(...args"),
+            "Should remove constructor signature: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const factory"),
-            "Should preserve factory const: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const factory"),
+            "Should preserve factory const: {}",
+            output.js_code
+        );
 
         println!("✅ Test 52: TypeScript constructor signature support");
     }
@@ -1342,16 +1878,26 @@ interface Container<T> {
 const numContainer: Container<number> = { value: 42 };
 "#;
         let result = typescript::compile_typescript(ts_code, "generic_interface_test.ts");
-        assert!(result.is_ok(), "Generic interface should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Generic interface should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 接口在 JavaScript 中不存在，应该被移除
         // 但运行时快速路径可能会保留接口声明的注释
         // 验证代码保留
-        assert!(output.js_code.contains("const numContainer"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("value"),
-            "Should preserve value property usage: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const numContainer"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("value"),
+            "Should preserve value property usage: {}",
+            output.js_code
+        );
 
         println!("✅ Test 53: TypeScript generic interface");
     }
@@ -1369,16 +1915,29 @@ interface Pair<T, U> {
 const pair: Pair<string, number> = { first: "hello", second: 42 };
 "#;
         let result = typescript::compile_typescript(ts_code, "multi_generic_test.ts");
-        assert!(result.is_ok(), "Multi generic interface should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Multi generic interface should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证代码保留
-        assert!(output.js_code.contains("const pair"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("first"),
-            "Should preserve first property usage: {}", output.js_code);
-        assert!(output.js_code.contains("second"),
-            "Should preserve second property usage: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const pair"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("first"),
+            "Should preserve first property usage: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("second"),
+            "Should preserve second property usage: {}",
+            output.js_code
+        );
 
         println!("✅ Test 54: TypeScript multi-generic interface");
     }
@@ -1397,18 +1956,31 @@ const strMap: StringMap = { hello: "world", foo: "bar" };
 console.log(strMap.hello);
 "#;
         let result = typescript::compile_typescript(ts_code, "string_index_test.ts");
-        assert!(result.is_ok(), "String index signature should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "String index signature should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证索引签名被移除
-        assert!(!output.js_code.contains("[key: string]"),
-            "Should remove string index signature: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[key: string]"),
+            "Should remove string index signature: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const strMap"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("hello"),
-            "Should preserve property access: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const strMap"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("hello"),
+            "Should preserve property access: {}",
+            output.js_code
+        );
 
         println!("✅ Test 55: TypeScript string index signature fast path");
     }
@@ -1426,16 +1998,26 @@ const numMap: NumberMap = { 1: 100, 2: 200 };
 console.log(numMap[1]);
 "#;
         let result = typescript::compile_typescript(ts_code, "number_index_test.ts");
-        assert!(result.is_ok(), "Number index signature should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Number index signature should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证索引签名被移除
-        assert!(!output.js_code.contains("[key: number]"),
-            "Should remove number index signature: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[key: number]"),
+            "Should remove number index signature: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const numMap"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const numMap"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 56: TypeScript number index signature fast path");
     }
@@ -1455,20 +2037,36 @@ const user: User = { name: "Alice", age: 30, email: "alice@example.com" };
 console.log(user.name, user.email);
 "#;
         let result = typescript::compile_typescript(ts_code, "mixed_index_test.ts");
-        assert!(result.is_ok(), "Mixed index signature should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Mixed index signature should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证索引签名被移除
-        assert!(!output.js_code.contains("[key: string]"),
-            "Should remove index signature: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("[key: string]"),
+            "Should remove index signature: {}",
+            output.js_code
+        );
 
         // 验证普通属性和代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("name"),
-            "Should preserve name property: {}", output.js_code);
-        assert!(output.js_code.contains("age"),
-            "Should preserve age property: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("name"),
+            "Should preserve name property: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("age"),
+            "Should preserve age property: {}",
+            output.js_code
+        );
 
         println!("✅ Test 57: TypeScript index signature with properties");
     }
@@ -1487,18 +2085,31 @@ const user: UserReturn = { id: 2, name: "Bob" };
 console.log(user);
 "#;
         let result = typescript::compile_typescript(ts_code, "returntype_test.ts");
-        assert!(result.is_ok(), "ReturnType<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ReturnType<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 ReturnType 引用被移除
-        assert!(!output.js_code.contains("ReturnType"),
-            "Should remove ReturnType utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ReturnType"),
+            "Should remove ReturnType utility type reference: {}",
+            output.js_code
+        );
 
         // 验证函数和代码保留
-        assert!(output.js_code.contains("function getUser"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function getUser"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 58: TypeScript ReturnType<T> utility type");
     }
@@ -1517,18 +2128,31 @@ const args: GreetParams = ["Alice", 30];
 console.log(args);
 "#;
         let result = typescript::compile_typescript(ts_code, "parameters_test.ts");
-        assert!(result.is_ok(), "Parameters<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Parameters<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Parameters 引用被移除
-        assert!(!output.js_code.contains("Parameters"),
-            "Should remove Parameters utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Parameters"),
+            "Should remove Parameters utility type reference: {}",
+            output.js_code
+        );
 
         // 验证函数和代码保留
-        assert!(output.js_code.contains("function greet"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("const args"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function greet"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const args"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 59: TypeScript Parameters<T> utility type");
     }
@@ -1553,20 +2177,36 @@ const params: UserConstructorParams = ["Alice", 30];
 console.log(params);
 "#;
         let result = typescript::compile_typescript(ts_code, "constructor_params_test.ts");
-        assert!(result.is_ok(), "ConstructorParameters<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ConstructorParameters<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 ConstructorParameters 引用被移除
-        assert!(!output.js_code.contains("ConstructorParameters"),
-            "Should remove ConstructorParameters utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ConstructorParameters"),
+            "Should remove ConstructorParameters utility type reference: {}",
+            output.js_code
+        );
 
         // 验证类定义和代码保留
-        assert!(output.js_code.contains("class User"),
-            "Should preserve class: {}", output.js_code);
-        assert!(output.js_code.contains("constructor"),
-            "Should preserve constructor: {}", output.js_code);
-        assert!(output.js_code.contains("const params"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class User"),
+            "Should preserve class: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("constructor"),
+            "Should preserve constructor: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const params"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 60: TypeScript ConstructorParameters<T> utility type");
     }
@@ -1591,20 +2231,36 @@ const point: PointInstance = { x: 10, y: 20 };
 console.log(point);
 "#;
         let result = typescript::compile_typescript(ts_code, "instance_type_test.ts");
-        assert!(result.is_ok(), "InstanceType<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "InstanceType<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 InstanceType 引用被移除
-        assert!(!output.js_code.contains("InstanceType"),
-            "Should remove InstanceType utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("InstanceType"),
+            "Should remove InstanceType utility type reference: {}",
+            output.js_code
+        );
 
         // 验证类定义和代码保留
-        assert!(output.js_code.contains("class Point"),
-            "Should preserve class: {}", output.js_code);
-        assert!(output.js_code.contains("constructor"),
-            "Should preserve constructor: {}", output.js_code);
-        assert!(output.js_code.contains("const point"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class Point"),
+            "Should preserve class: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("constructor"),
+            "Should preserve constructor: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const point"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 61: TypeScript InstanceType<T> utility type");
     }
@@ -1622,18 +2278,31 @@ const x = 1;
 console.log(x);
 "#;
         let result = typescript::compile_typescript(ts_code, "import_type_test.ts");
-        assert!(result.is_ok(), "import type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "import type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 import type 语句被移除
-        assert!(!output.js_code.contains("import type"),
-            "Should remove import type statements: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("import type"),
+            "Should remove import type statements: {}",
+            output.js_code
+        );
 
         // 验证普通代码保留
-        assert!(output.js_code.contains("const x = 1"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log(x)"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const x = 1"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log(x)"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
 
         println!("✅ Test 62: TypeScript import type statement");
     }
@@ -1650,18 +2319,31 @@ const x = 1;
 console.log(x);
 "#;
         let result = typescript::compile_typescript(ts_code, "export_type_test.ts");
-        assert!(result.is_ok(), "export type should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "export type should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 export type 语句被移除
-        assert!(!output.js_code.contains("export type"),
-            "Should remove export type statements: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("export type"),
+            "Should remove export type statements: {}",
+            output.js_code
+        );
 
         // 验证普通代码保留
-        assert!(output.js_code.contains("const x = 1"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log(x)"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const x = 1"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log(x)"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
 
         println!("✅ Test 63: TypeScript export type statement");
     }
@@ -1674,9 +2356,17 @@ import defaultExport from './module';
 const x = 1;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM import should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM import should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("require"), "Should have require: {}", output.js_code);
+        assert!(
+            output.js_code.contains("require"),
+            "Should have require: {}",
+            output.js_code
+        );
         println!("✅ Test 64: ESM default import");
     }
 
@@ -1688,9 +2378,17 @@ import { named } from './module';
 const x = 1;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM import should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM import should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("require"), "Should have require: {}", output.js_code);
+        assert!(
+            output.js_code.contains("require"),
+            "Should have require: {}",
+            output.js_code
+        );
         println!("✅ Test 65: ESM named import");
     }
 
@@ -1702,9 +2400,17 @@ import * as ns from './module';
 const x = 1;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM import should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM import should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("require"), "Should have require: {}", output.js_code);
+        assert!(
+            output.js_code.contains("require"),
+            "Should have require: {}",
+            output.js_code
+        );
         println!("✅ Test 66: ESM namespace import");
     }
 
@@ -1716,9 +2422,17 @@ export const x = 1;
 const y = 2;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM export should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM export should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("/* ESM export"), "Should have ESM comment: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* ESM export"),
+            "Should have ESM comment: {}",
+            output.js_code
+        );
         println!("✅ Test 67: ESM export const");
     }
 
@@ -1730,9 +2444,17 @@ export function foo() { return 1; }
 const y = 2;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM export should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM export should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("/* ESM export"), "Should have ESM comment: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* ESM export"),
+            "Should have ESM comment: {}",
+            output.js_code
+        );
         println!("✅ Test 68: ESM export function");
     }
 
@@ -1745,9 +2467,17 @@ export { a };
 const b = 2;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM export should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM export should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("/* ESM export"), "Should have ESM comment: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* ESM export"),
+            "Should have ESM comment: {}",
+            output.js_code
+        );
         println!("✅ Test 69: ESM export braces");
     }
 
@@ -1759,9 +2489,17 @@ import './side-effect';
 const x = 1;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM import should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM import should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
-        assert!(output.js_code.contains("require"), "Should have require: {}", output.js_code);
+        assert!(
+            output.js_code.contains("require"),
+            "Should have require: {}",
+            output.js_code
+        );
         println!("✅ Test 70: ESM import side-effect");
     }
 
@@ -1775,12 +2513,24 @@ export abstract class Animal {
 const x = 1;
 "#;
         let result = typescript::compile_typescript(ts_code, "esm_test.ts");
-        assert!(result.is_ok(), "ESM export abstract should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ESM export abstract should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // 验证 ESM 导出被转换为注释（快速路径处理）
-        assert!(output.js_code.contains("/* ESM export"), "Should have ESM comment: {}", output.js_code);
+        assert!(
+            output.js_code.contains("/* ESM export"),
+            "Should have ESM comment: {}",
+            output.js_code
+        );
         // 验证后面的代码仍然存在
-        assert!(output.js_code.contains("const x = 1"), "Should preserve following code: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const x = 1"),
+            "Should preserve following code: {}",
+            output.js_code
+        );
         println!("✅ Test 71: ESM export abstract class");
     }
 
@@ -1793,12 +2543,23 @@ const result: string = "Hello WORLD";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "uppercase_template.ts");
-        assert!(result.is_ok(), "Uppercase in template literal should compile");
+        assert!(
+            result.is_ok(),
+            "Uppercase in template literal should compile"
+        );
         let output = result.unwrap();
         // 验证模板字面量类型被移除
-        assert!(!output.js_code.contains("`Hello ${Uppercase"), "Should remove template literal type: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("`Hello ${Uppercase"),
+            "Should remove template literal type: {}",
+            output.js_code
+        );
         // 验证后面的代码仍然存在
-        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 72: Template literal with Uppercase intrinsic");
     }
 
@@ -1811,12 +2572,23 @@ const result: string = "Hello world!";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "lowercase_template.ts");
-        assert!(result.is_ok(), "Lowercase in template literal should compile");
+        assert!(
+            result.is_ok(),
+            "Lowercase in template literal should compile"
+        );
         let output = result.unwrap();
         // 验证模板字面量类型被移除
-        assert!(!output.js_code.contains("`Hello ${Lowercase"), "Should remove template literal type: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("`Hello ${Lowercase"),
+            "Should remove template literal type: {}",
+            output.js_code
+        );
         // 验证后面的代码仍然存在
-        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 73: Template literal with Lowercase intrinsic");
     }
 
@@ -1829,12 +2601,23 @@ const result: string = "user: John";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "capitalize_template.ts");
-        assert!(result.is_ok(), "Capitalize in template literal should compile");
+        assert!(
+            result.is_ok(),
+            "Capitalize in template literal should compile"
+        );
         let output = result.unwrap();
         // 验证模板字面量类型被移除
-        assert!(!output.js_code.contains("`user: ${Capitalize"), "Should remove template literal type: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("`user: ${Capitalize"),
+            "Should remove template literal type: {}",
+            output.js_code
+        );
         // 验证后面的代码仍然存在
-        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 74: Template literal with Capitalize intrinsic");
     }
 
@@ -1847,12 +2630,23 @@ const result: string = "active_status";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "uncapitalize_template.ts");
-        assert!(result.is_ok(), "Uncapitalize in template literal should compile");
+        assert!(
+            result.is_ok(),
+            "Uncapitalize in template literal should compile"
+        );
         let output = result.unwrap();
         // 验证模板字面量类型被移除
-        assert!(!output.js_code.contains("`${Uncapitalize"), "Should remove template literal type: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("`${Uncapitalize"),
+            "Should remove template literal type: {}",
+            output.js_code
+        );
         // 验证后面的代码仍然存在
-        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 75: Template literal with Uncapitalize intrinsic");
     }
 
@@ -1865,15 +2659,38 @@ const result: string = "ABcDeF";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "combined_template.ts");
-        assert!(result.is_ok(), "Combined intrinsics in template literal should compile");
+        assert!(
+            result.is_ok(),
+            "Combined intrinsics in template literal should compile"
+        );
         let output = result.unwrap();
         // 验证所有模板字面量类型被移除
-        assert!(!output.js_code.contains("${Uppercase"), "Should remove Uppercase: {}", output.js_code);
-        assert!(!output.js_code.contains("${Lowercase"), "Should remove Lowercase: {}", output.js_code);
-        assert!(!output.js_code.contains("${Capitalize"), "Should remove Capitalize: {}", output.js_code);
-        assert!(!output.js_code.contains("${Uncapitalize"), "Should remove Uncapitalize: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("${Uppercase"),
+            "Should remove Uppercase: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("${Lowercase"),
+            "Should remove Lowercase: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("${Capitalize"),
+            "Should remove Capitalize: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("${Uncapitalize"),
+            "Should remove Uncapitalize: {}",
+            output.js_code
+        );
         // 验证后面的代码仍然存在
-        assert!(output.js_code.contains("console.log"), "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 76: Template literal with combined intrinsics");
     }
 
@@ -1889,13 +2706,22 @@ console.log(result);
         assert!(result.is_ok(), "Awaited basic should compile successfully");
         let output = result.unwrap();
         // 验证 Awaited 被移除，保留内部类型
-        assert!(!output.js_code.contains("Awaited<"),
-            "Should remove Awaited pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Awaited<"),
+            "Should remove Awaited pattern: {}",
+            output.js_code
+        );
         // 验证类型别名被移除但代码保留
-        assert!(output.js_code.contains("const result"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const result"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 77: Awaited utility type basic");
     }
 
@@ -1913,13 +2739,22 @@ console.log(result);
         assert!(result.is_ok(), "Awaited in generic context should compile");
         let output = result.unwrap();
         // 验证 Awaited 被移除
-        assert!(!output.js_code.contains("Awaited<"),
-            "Should remove Awaited pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Awaited<"),
+            "Should remove Awaited pattern: {}",
+            output.js_code
+        );
         // 验证函数和调用保留
-        assert!(output.js_code.contains("function fetchData"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function fetchData"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 78: Awaited utility type in generic context");
     }
 
@@ -1938,14 +2773,22 @@ console.log(user);
         let output = result.unwrap();
         // 验证所有 Awaited 被移除
         let awaited_count = output.js_code.matches("Awaited<").count();
-        assert_eq!(awaited_count, 0,
+        assert_eq!(
+            awaited_count, 0,
             "Should remove all Awaited patterns, found {}: {}",
-            awaited_count, output.js_code);
+            awaited_count, output.js_code
+        );
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 79: Awaited utility type in type alias");
     }
 
@@ -1963,20 +2806,36 @@ const ctx: GreetContext = { name: "Alice", id: 1 };
 console.log(ctx);
 "#;
         let result = typescript::compile_typescript(ts_code, "this_parameter_type_test.ts");
-        assert!(result.is_ok(), "ThisParameterType<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ThisParameterType<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 ThisParameterType 引用被移除
-        assert!(!output.js_code.contains("ThisParameterType"),
-            "Should remove ThisParameterType utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ThisParameterType"),
+            "Should remove ThisParameterType utility type reference: {}",
+            output.js_code
+        );
 
         // 验证函数定义和代码保留
-        assert!(output.js_code.contains("function greet"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("const ctx"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function greet"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const ctx"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
 
         println!("✅ Test 80: TypeScript ThisParameterType<T> utility type");
     }
@@ -1995,20 +2854,36 @@ const fn: ProcessFn = (data: string) => { console.log("data"); };
 console.log(fn);
 "#;
         let result = typescript::compile_typescript(ts_code, "omit_this_parameter_test.ts");
-        assert!(result.is_ok(), "OmitThisParameter<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "OmitThisParameter<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 OmitThisParameter 引用被移除
-        assert!(!output.js_code.contains("OmitThisParameter"),
-            "Should remove OmitThisParameter utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("OmitThisParameter"),
+            "Should remove OmitThisParameter utility type reference: {}",
+            output.js_code
+        );
 
         // 验证函数定义和代码保留
-        assert!(output.js_code.contains("function process"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("const fn"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function process"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const fn"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
 
         println!("✅ Test 81: TypeScript OmitThisParameter<T> utility type");
     }
@@ -2031,25 +2906,47 @@ const str: NonNullStr = "hello";
 console.log(user, req, ro, str);
 "#;
         let result = typescript::compile_typescript(ts_code, "combined_utilities_v2.ts");
-        assert!(result.is_ok(), "Combined utility types should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Combined utility types should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证所有工具类型引用被移除
-        assert!(!output.js_code.contains("Partial<"),
-            "Should remove Partial: {}", output.js_code);
-        assert!(!output.js_code.contains("Required<"),
-            "Should remove Required: {}", output.js_code);
-        assert!(!output.js_code.contains("Readonly<"),
-            "Should remove Readonly: {}", output.js_code);
-        assert!(!output.js_code.contains("NonNullable<"),
-            "Should remove NonNullable: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Partial<"),
+            "Should remove Partial: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("Required<"),
+            "Should remove Required: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("Readonly<"),
+            "Should remove Readonly: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("NonNullable<"),
+            "Should remove NonNullable: {}",
+            output.js_code
+        );
         // 注意：ThisParameterType 和 OmitThisParameter 在单独的测试中验证
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
 
         println!("✅ Test 82: Combined utility types v2");
     }
@@ -2064,16 +2961,28 @@ const result: string = "HELLO";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "uppercase_standalone.ts");
-        assert!(result.is_ok(), "Standalone Uppercase should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Standalone Uppercase should compile successfully"
+        );
         let output = result.unwrap();
         // 验证 Uppercase 被移除
-        assert!(!output.js_code.contains("Uppercase<"),
-            "Should remove Uppercase pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Uppercase<"),
+            "Should remove Uppercase pattern: {}",
+            output.js_code
+        );
         // 验证代码保留
-        assert!(output.js_code.contains("const result"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const result"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 83: Standalone Uppercase intrinsic string type");
     }
 
@@ -2087,16 +2996,28 @@ const result: string = "world";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "lowercase_standalone.ts");
-        assert!(result.is_ok(), "Standalone Lowercase should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Standalone Lowercase should compile successfully"
+        );
         let output = result.unwrap();
         // 验证 Lowercase 被移除
-        assert!(!output.js_code.contains("Lowercase<"),
-            "Should remove Lowercase pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Lowercase<"),
+            "Should remove Lowercase pattern: {}",
+            output.js_code
+        );
         // 验证代码保留
-        assert!(output.js_code.contains("const result"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const result"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 84: Standalone Lowercase intrinsic string type");
     }
 
@@ -2110,16 +3031,28 @@ const result: string = "Hello";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "capitalize_standalone.ts");
-        assert!(result.is_ok(), "Standalone Capitalize should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Standalone Capitalize should compile successfully"
+        );
         let output = result.unwrap();
         // 验证 Capitalize 被移除
-        assert!(!output.js_code.contains("Capitalize<"),
-            "Should remove Capitalize pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Capitalize<"),
+            "Should remove Capitalize pattern: {}",
+            output.js_code
+        );
         // 验证代码保留
-        assert!(output.js_code.contains("const result"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const result"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 85: Standalone Capitalize intrinsic string type");
     }
 
@@ -2133,16 +3066,28 @@ const result: string = "hello";
 console.log(result);
 "#;
         let result = typescript::compile_typescript(ts_code, "uncapitalize_standalone.ts");
-        assert!(result.is_ok(), "Standalone Uncapitalize should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Standalone Uncapitalize should compile successfully"
+        );
         let output = result.unwrap();
         // 验证 Uncapitalize 被移除
-        assert!(!output.js_code.contains("Uncapitalize<"),
-            "Should remove Uncapitalize pattern: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Uncapitalize<"),
+            "Should remove Uncapitalize pattern: {}",
+            output.js_code
+        );
         // 验证代码保留
-        assert!(output.js_code.contains("const result"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("console.log"),
-            "Should preserve console.log: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const result"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("console.log"),
+            "Should preserve console.log: {}",
+            output.js_code
+        );
         println!("✅ Test 86: Standalone Uncapitalize intrinsic string type");
     }
 
@@ -2159,16 +3104,26 @@ type PartialUser = Partial<User>;
 const user: PartialUser = { name: "John" };
 "#;
         let result = typescript::compile_typescript(ts_code, "partial_test.ts");
-        assert!(result.is_ok(), "Partial<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Partial<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Partial 引用被移除
-        assert!(!output.js_code.contains("Partial<"),
-            "Should remove Partial utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Partial<"),
+            "Should remove Partial utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
 
         println!("✅ Test 87: TypeScript Partial<T> utility type v2");
     }
@@ -2183,18 +3138,30 @@ type PartialPoint = Partial<Point>;
 const point: PartialPoint = { x: 10 };
 "#;
         let result = typescript::compile_typescript(ts_code, "partial_fastpath.ts");
-        assert!(result.is_ok(), "Partial fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Partial fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Partial 被快速路径移除
-        assert!(!output.js_code.contains("Partial<"),
-            "Should remove Partial via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Partial<"),
+            "Should remove Partial via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const point"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("x: 10"),
-            "Should preserve object property: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const point"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("x: 10"),
+            "Should preserve object property: {}",
+            output.js_code
+        );
 
         println!("✅ Test 88: TypeScript Partial<T> fast-path");
     }
@@ -2215,12 +3182,18 @@ const nested: PartialNested = { a: { b: { c: "test" } } };
         assert!(result.is_ok(), "Partial with nested types should compile");
         let output = result.unwrap();
 
-        assert!(!output.js_code.contains("Partial<"),
-            "Should remove Partial: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Partial<"),
+            "Should remove Partial: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const nested"),
-            "Should preserve const nested: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const nested"),
+            "Should preserve const nested: {}",
+            output.js_code
+        );
 
         println!("✅ Test 89: TypeScript Partial<T> with nested types");
     }
@@ -2239,18 +3212,31 @@ type RequiredUser = Required<User>;
 const user: RequiredUser = { name: "Alice", age: 30, email: "alice@test.com" };
 "#;
         let result = typescript::compile_typescript(ts_code, "required_test.ts");
-        assert!(result.is_ok(), "Required<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Required<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Required 引用被移除
-        assert!(!output.js_code.contains("Required<"),
-            "Should remove Required utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Required<"),
+            "Should remove Required utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
-        assert!(output.js_code.contains("\"Alice\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"Alice\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 90: TypeScript Required<T> utility type");
     }
@@ -2265,18 +3251,30 @@ type RequiredPoint = Required<Point>;
 const point: RequiredPoint = { x: 10, y: 20 };
 "#;
         let result = typescript::compile_typescript(ts_code, "required_fastpath.ts");
-        assert!(result.is_ok(), "Required fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Required fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Required 被快速路径移除
-        assert!(!output.js_code.contains("Required<"),
-            "Should remove Required via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Required<"),
+            "Should remove Required via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const point"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("x: 10"),
-            "Should preserve object property: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const point"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("x: 10"),
+            "Should preserve object property: {}",
+            output.js_code
+        );
 
         println!("✅ Test 91: TypeScript Required<T> fast-path");
     }
@@ -2294,18 +3292,31 @@ type ReadonlyUser = Readonly<User>;
 const user: ReadonlyUser = { name: "Bob", age: 25 };
 "#;
         let result = typescript::compile_typescript(ts_code, "readonly_test.ts");
-        assert!(result.is_ok(), "Readonly<T> should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Readonly<T> should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Readonly 引用被移除
-        assert!(!output.js_code.contains("Readonly<"),
-            "Should remove Readonly utility type reference: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Readonly<"),
+            "Should remove Readonly utility type reference: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
-        assert!(output.js_code.contains("\"Bob\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"Bob\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 92: TypeScript Readonly<T> utility type");
     }
@@ -2320,18 +3331,30 @@ type ReadonlyConfig = Readonly<Config>;
 const config: ReadonlyConfig = { host: "localhost", port: 8080 };
 "#;
         let result = typescript::compile_typescript(ts_code, "readonly_fastpath.ts");
-        assert!(result.is_ok(), "Readonly fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Readonly fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Readonly 被快速路径移除
-        assert!(!output.js_code.contains("Readonly<"),
-            "Should remove Readonly via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Readonly<"),
+            "Should remove Readonly via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const config"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"localhost\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const config"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"localhost\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 93: TypeScript Readonly<T> fast-path");
     }
@@ -2346,18 +3369,30 @@ type UpdatedUser = Required<Partial<User>>;
 const user: UpdatedUser = { name: "Charlie", age: 35 };
 "#;
         let result = typescript::compile_typescript(ts_code, "required_partial.ts");
-        assert!(result.is_ok(), "Required<Partial<T>> should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Required<Partial<T>> should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Required 和 Partial 都被移除
-        assert!(!output.js_code.contains("Required<"),
-            "Should remove Required: {}", output.js_code);
-        assert!(!output.js_code.contains("Partial<"),
-            "Should remove Partial: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Required<"),
+            "Should remove Required: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("Partial<"),
+            "Should remove Partial: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 94: TypeScript Required<T> with Partial<T>");
     }
@@ -2378,12 +3413,18 @@ const nested: ReadonlyNested = { a: { b: { c: "nested" } }, d: 100 };
         assert!(result.is_ok(), "Readonly with nested types should compile");
         let output = result.unwrap();
 
-        assert!(!output.js_code.contains("Readonly<"),
-            "Should remove Readonly: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Readonly<"),
+            "Should remove Readonly: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const nested"),
-            "Should preserve const nested: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const nested"),
+            "Should preserve const nested: {}",
+            output.js_code
+        );
 
         println!("✅ Test 95: TypeScript Readonly<T> with nested types");
     }
@@ -2402,14 +3443,23 @@ const profile: UserProfile = { name: "Alice", age: 30 };
         let output = result.unwrap();
 
         // 验证 Pick 被快速路径移除
-        assert!(!output.js_code.contains("Pick<"),
-            "Should remove Pick via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Pick<"),
+            "Should remove Pick via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const profile"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"Alice\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const profile"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"Alice\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 96: TypeScript Pick<T, K> fast-path");
     }
@@ -2428,14 +3478,23 @@ const user: PublicUser = { name: "Bob", age: 25, email: "bob@test.com" };
         let output = result.unwrap();
 
         // 验证 Omit 被快速路径移除
-        assert!(!output.js_code.contains("Omit<"),
-            "Should remove Omit via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Omit<"),
+            "Should remove Omit via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"Bob\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"Bob\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 97: TypeScript Omit<T, K> fast-path");
     }
@@ -2450,18 +3509,30 @@ type RolePermissions = Record<Role, string>;
 const permissions: RolePermissions = { admin: "all", user: "read", guest: "none" };
 "#;
         let result = typescript::compile_typescript(ts_code, "record_fastpath.ts");
-        assert!(result.is_ok(), "Record fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Record fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Record 被快速路径移除
-        assert!(!output.js_code.contains("Record<"),
-            "Should remove Record via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Record<"),
+            "Should remove Record via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const permissions"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"all\""),
-            "Should preserve string values: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const permissions"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"all\""),
+            "Should preserve string values: {}",
+            output.js_code
+        );
 
         println!("✅ Test 98: TypeScript Record<K, V> fast-path");
     }
@@ -2476,18 +3547,30 @@ type ActiveStatus = Exclude<Status, "inactive" | "deleted">;
 const currentStatus: ActiveStatus = "active";
 "#;
         let result = typescript::compile_typescript(ts_code, "exclude_fastpath.ts");
-        assert!(result.is_ok(), "Exclude fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Exclude fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Exclude 被快速路径移除
-        assert!(!output.js_code.contains("Exclude<"),
-            "Should remove Exclude via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Exclude<"),
+            "Should remove Exclude via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const currentStatus"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"active\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const currentStatus"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"active\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 99: TypeScript Exclude<T, U> fast-path");
     }
@@ -2502,18 +3585,30 @@ type ActiveStatus = Extract<Status, "active" | "pending">;
 const currentStatus: ActiveStatus = "pending";
 "#;
         let result = typescript::compile_typescript(ts_code, "extract_fastpath.ts");
-        assert!(result.is_ok(), "Extract fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Extract fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Extract 被快速路径移除
-        assert!(!output.js_code.contains("Extract<"),
-            "Should remove Extract via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Extract<"),
+            "Should remove Extract via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const currentStatus"),
-            "Should preserve const declaration: {}", output.js_code);
-        assert!(output.js_code.contains("\"pending\""),
-            "Should preserve string value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const currentStatus"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("\"pending\""),
+            "Should preserve string value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 100: TypeScript Extract<T, U> fast-path");
     }
@@ -2532,12 +3627,18 @@ const value: NonNullNumeric = 42;
         let output = result.unwrap();
 
         // 验证 Exclude 被移除
-        assert!(!output.js_code.contains("Exclude<"),
-            "Should remove Exclude: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Exclude<"),
+            "Should remove Exclude: {}",
+            output.js_code
+        );
 
         // 验证代码可执行
-        assert!(output.js_code.contains("const value"),
-            "Should preserve const: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const value"),
+            "Should preserve const: {}",
+            output.js_code
+        );
 
         println!("✅ Test 101: TypeScript Exclude with complex union types");
     }
@@ -2556,12 +3657,18 @@ const text: StringOnly = "hello";
         let output = result.unwrap();
 
         // 验证 Extract 被移除
-        assert!(!output.js_code.contains("Extract<"),
-            "Should remove Extract: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Extract<"),
+            "Should remove Extract: {}",
+            output.js_code
+        );
 
         // 验证代码可执行
-        assert!(output.js_code.contains("const text"),
-            "Should preserve const: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const text"),
+            "Should preserve const: {}",
+            output.js_code
+        );
 
         println!("✅ Test 102: TypeScript Extract with complex union types");
     }
@@ -2585,20 +3692,35 @@ type PersonInstance = InstanceType<typeof Person>;
 const person: PersonInstance = new Person("Alice", 30);
 "#;
         let result = typescript::compile_typescript(ts_code, "instancetype_fastpath.ts");
-        assert!(result.is_ok(), "InstanceType fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "InstanceType fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 InstanceType 被快速路径移除
-        assert!(!output.js_code.contains("InstanceType<"),
-            "Should remove InstanceType via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("InstanceType<"),
+            "Should remove InstanceType via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("class Person"),
-            "Should preserve class declaration: {}", output.js_code);
-        assert!(output.js_code.contains("new Person"),
-            "Should preserve constructor call: {}", output.js_code);
-        assert!(output.js_code.contains("const person"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class Person"),
+            "Should preserve class declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("new Person"),
+            "Should preserve constructor call: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const person"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 103: TypeScript InstanceType<T> fast-path");
     }
@@ -2619,18 +3741,30 @@ type ContainerInstance = InstanceType<typeof Container>;
 const container: ContainerInstance = new Container(42);
 "#;
         let result = typescript::compile_typescript(ts_code, "instancetype_generic.ts");
-        assert!(result.is_ok(), "InstanceType with generic class should compile");
+        assert!(
+            result.is_ok(),
+            "InstanceType with generic class should compile"
+        );
         let output = result.unwrap();
 
         // 验证 InstanceType 被移除
-        assert!(!output.js_code.contains("InstanceType<"),
-            "Should remove InstanceType: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("InstanceType<"),
+            "Should remove InstanceType: {}",
+            output.js_code
+        );
 
         // 验证代码可执行
-        assert!(output.js_code.contains("class Container"),
-            "Should preserve class: {}", output.js_code);
-        assert!(output.js_code.contains("new Container"),
-            "Should preserve constructor: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class Container"),
+            "Should preserve class: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("new Container"),
+            "Should preserve constructor: {}",
+            output.js_code
+        );
 
         println!("✅ Test 104: TypeScript InstanceType with generic class");
     }
@@ -2654,16 +3788,25 @@ const user: UserType = new User("test", "test@example.com");
         let output = result.unwrap();
 
         // 验证 InstanceType 被移除
-        assert!(!output.js_code.contains("InstanceType<"),
-            "Should remove InstanceType: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("InstanceType<"),
+            "Should remove InstanceType: {}",
+            output.js_code
+        );
 
         // 验证 class 保留
-        assert!(output.js_code.contains("class User"),
-            "Should preserve class: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class User"),
+            "Should preserve class: {}",
+            output.js_code
+        );
 
         // 验证 new User 调用保留
-        assert!(output.js_code.contains("new User"),
-            "Should preserve constructor call: {}", output.js_code);
+        assert!(
+            output.js_code.contains("new User"),
+            "Should preserve constructor call: {}",
+            output.js_code
+        );
 
         println!("✅ Test 105: TypeScript InstanceType with typeof combination");
     }
@@ -2682,20 +3825,35 @@ type UserReturn = ReturnType<typeof getUser>;
 const user = getUser();
 "#;
         let result = typescript::compile_typescript(ts_code, "returntype_fastpath.ts");
-        assert!(result.is_ok(), "ReturnType fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "ReturnType fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 ReturnType 被快速路径移除
-        assert!(!output.js_code.contains("ReturnType<"),
-            "Should remove ReturnType via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ReturnType<"),
+            "Should remove ReturnType via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("function getUser"),
-            "Should preserve function declaration: {}", output.js_code);
-        assert!(output.js_code.contains("getUser()"),
-            "Should preserve function call: {}", output.js_code);
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function getUser"),
+            "Should preserve function declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("getUser()"),
+            "Should preserve function call: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 106: TypeScript ReturnType<T> fast-path");
     }
@@ -2714,18 +3872,30 @@ type GreetParams = Parameters<typeof greet>;
 const args = ["Alice", 30];
 "#;
         let result = typescript::compile_typescript(ts_code, "parameters_fastpath.ts");
-        assert!(result.is_ok(), "Parameters fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Parameters fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Parameters 被快速路径移除
-        assert!(!output.js_code.contains("Parameters<"),
-            "Should remove Parameters via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Parameters<"),
+            "Should remove Parameters via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("function greet"),
-            "Should preserve function declaration: {}", output.js_code);
-        assert!(output.js_code.contains("const args"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function greet"),
+            "Should preserve function declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const args"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 107: TypeScript Parameters<T> fast-path");
     }
@@ -2750,20 +3920,35 @@ type UserConstructorParams = ConstructorParameters<typeof User>;
 const params = ["Alice", 30];
 "#;
         let result = typescript::compile_typescript(ts_code, "constructor_params_fastpath.ts");
-        assert!(result.is_ok(), "ConstructorParameters fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "ConstructorParameters fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 ConstructorParameters 被快速路径移除
-        assert!(!output.js_code.contains("ConstructorParameters<"),
-            "Should remove ConstructorParameters via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ConstructorParameters<"),
+            "Should remove ConstructorParameters via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("class User"),
-            "Should preserve class declaration: {}", output.js_code);
-        assert!(output.js_code.contains("constructor"),
-            "Should preserve constructor: {}", output.js_code);
-        assert!(output.js_code.contains("const params"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("class User"),
+            "Should preserve class declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("constructor"),
+            "Should preserve constructor: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const params"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 108: TypeScript ConstructorParameters<T> fast-path");
     }
@@ -2781,20 +3966,35 @@ function processData<T>(data: NoInfer<T>): T {
 const result = processData("hello");
 "#;
         let result = typescript::compile_typescript(ts_code, "noinfer_fastpath.ts");
-        assert!(result.is_ok(), "NoInfer fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "NoInfer fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 NoInfer 被快速路径移除
-        assert!(!output.js_code.contains("NoInfer<"),
-            "Should remove NoInfer via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("NoInfer<"),
+            "Should remove NoInfer via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("processData"),
-            "Should preserve function declaration: {}", output.js_code);
-        assert!(output.js_code.contains("return data"),
-            "Should preserve function body: {}", output.js_code);
-        assert!(output.js_code.contains("const result"),
-            "Should preserve const declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("processData"),
+            "Should preserve function declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("return data"),
+            "Should preserve function body: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const result"),
+            "Should preserve const declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 109: TypeScript NoInfer<T> fast-path");
     }
@@ -2815,18 +4015,30 @@ function process<T>(data: NoInfer<T>): T {
 const result = process("hello");
 "#;
         let result = typescript::compile_typescript(ts_code, "noinfer_with_generic.ts");
-        assert!(result.is_ok(), "NoInfer with generic should compile successfully");
+        assert!(
+            result.is_ok(),
+            "NoInfer with generic should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证所有 NoInfer 被移除
-        assert!(!output.js_code.contains("NoInfer<"),
-            "Should remove all NoInfer: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("NoInfer<"),
+            "Should remove all NoInfer: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("process"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("return data"),
-            "Should preserve return statement: {}", output.js_code);
+        assert!(
+            output.js_code.contains("process"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("return data"),
+            "Should preserve return statement: {}",
+            output.js_code
+        );
 
         println!("✅ Test 110: NoInfer with generic functions");
     }
@@ -2848,16 +4060,25 @@ function create<T>(value: NoInfer<T>): T {
 const data: NoInfer<Data> = { id: 1, name: "test" };
 "#;
         let result = typescript::compile_typescript(ts_code, "noinfer_complex.ts");
-        assert!(result.is_ok(), "NoInfer complex should compile successfully");
+        assert!(
+            result.is_ok(),
+            "NoInfer complex should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 NoInfer 被移除
-        assert!(!output.js_code.contains("NoInfer<"),
-            "Should remove all NoInfer: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("NoInfer<"),
+            "Should remove all NoInfer: {}",
+            output.js_code
+        );
 
         // 验证类型参数保留
-        assert!(output.js_code.contains("create"),
-            "Should preserve create function: {}", output.js_code);
+        assert!(
+            output.js_code.contains("create"),
+            "Should preserve create function: {}",
+            output.js_code
+        );
 
         println!("✅ Test 111: NoInfer in complex types");
     }
@@ -2874,18 +4095,30 @@ const x: ReturnType<() => number> = 42;
 const y: FirstArg<(name: string, age: number) => void> = "hello";
 "#;
         let result = typescript::compile_typescript(ts_code, "infer_fastpath.ts");
-        assert!(result.is_ok(), "Infer fast-path should compile successfully");
+        assert!(
+            result.is_ok(),
+            "Infer fast-path should compile successfully"
+        );
         let output = result.unwrap();
 
         // 验证 Infer 被快速路径移除
-        assert!(!output.js_code.contains("Infer<"),
-            "Should remove Infer via fast-path: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Infer<"),
+            "Should remove Infer via fast-path: {}",
+            output.js_code
+        );
 
         // 验证运行时代码保留
-        assert!(output.js_code.contains("const x"),
-            "Should preserve const x declaration: {}", output.js_code);
-        assert!(output.js_code.contains("const y"),
-            "Should preserve const y declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const x"),
+            "Should preserve const x declaration: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const y"),
+            "Should preserve const y declaration: {}",
+            output.js_code
+        );
 
         println!("✅ Test 112: TypeScript Infer<T> fast-path");
     }
@@ -2905,18 +4138,30 @@ const result1: MyReturnType<typeof fn1> = 100;
 const result2: MyFirstArg<typeof fn2> = "test";
 "#;
         let result = typescript::compile_typescript(ts_code, "infer_conditional.ts");
-        assert!(result.is_ok(), "Infer with conditional types should compile");
+        assert!(
+            result.is_ok(),
+            "Infer with conditional types should compile"
+        );
         let output = result.unwrap();
 
         // 验证 Infer 被移除
-        assert!(!output.js_code.contains("Infer<"),
-            "Should remove all Infer: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Infer<"),
+            "Should remove all Infer: {}",
+            output.js_code
+        );
 
         // 验证代码可执行
-        assert!(output.js_code.contains("const result1"),
-            "Should preserve const result1: {}", output.js_code);
-        assert!(output.js_code.contains("const result2"),
-            "Should preserve const result2: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const result1"),
+            "Should preserve const result1: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const result2"),
+            "Should preserve const result2: {}",
+            output.js_code
+        );
 
         println!("✅ Test 113: Infer with conditional types");
     }
@@ -2936,12 +4181,18 @@ const plainVal: ExtractPromiseValue<number> = 42;
         let output = result.unwrap();
 
         // 验证 Infer 被移除
-        assert!(!output.js_code.contains("Infer<"),
-            "Should remove all Infer: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Infer<"),
+            "Should remove all Infer: {}",
+            output.js_code
+        );
 
         // 验证类型参数保留
-        assert!(output.js_code.contains("const promiseVal"),
-            "Should preserve const promiseVal: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const promiseVal"),
+            "Should preserve const promiseVal: {}",
+            output.js_code
+        );
 
         println!("✅ Test 114: Infer in complex types");
     }
@@ -2959,12 +4210,18 @@ const value: Result = "hello";
         let output = result.unwrap();
 
         // 验证 Awaited 被移除
-        assert!(!output.js_code.contains("Awaited<"),
-            "Should remove Awaited: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Awaited<"),
+            "Should remove Awaited: {}",
+            output.js_code
+        );
 
         // 验证类型参数保留
-        assert!(output.js_code.contains("const value"),
-            "Should preserve const value: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const value"),
+            "Should preserve const value: {}",
+            output.js_code
+        );
 
         println!("✅ Test 115: Awaited utility type");
     }
@@ -2981,18 +4238,30 @@ type DeepPromise = Awaited<Promise<string[]>>;
 const deep: DeepPromise = ["a", "b"];
 "#;
         let result = typescript::compile_typescript(ts_code, "awaited_nested.ts");
-        assert!(result.is_ok(), "Awaited with nested promises should compile");
+        assert!(
+            result.is_ok(),
+            "Awaited with nested promises should compile"
+        );
         let output = result.unwrap();
 
         // 验证 Awaited 被移除
-        assert!(!output.js_code.contains("Awaited<"),
-            "Should remove all Awaited: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Awaited<"),
+            "Should remove all Awaited: {}",
+            output.js_code
+        );
 
         // 验证变量保留
-        assert!(output.js_code.contains("const nested"),
-            "Should preserve const nested: {}", output.js_code);
-        assert!(output.js_code.contains("const deep"),
-            "Should preserve const deep: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const nested"),
+            "Should preserve const nested: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("const deep"),
+            "Should preserve const deep: {}",
+            output.js_code
+        );
 
         println!("✅ Test 116: Awaited with nested promises");
     }
@@ -3013,12 +4282,18 @@ const mixed: Mixed = true;
         let output = result.unwrap();
 
         // 验证 Awaited 被移除
-        assert!(!output.js_code.contains("Awaited<"),
-            "Should remove all Awaited: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Awaited<"),
+            "Should remove all Awaited: {}",
+            output.js_code
+        );
 
         // 验证变量保留
-        assert!(output.js_code.contains("const union"),
-            "Should preserve const union: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const union"),
+            "Should preserve const union: {}",
+            output.js_code
+        );
 
         println!("✅ Test 117: Awaited with union types");
     }
@@ -3033,16 +4308,26 @@ type MyContext = ThisType<{ value: number; name: string }>;
 const ctx = { value: 42, name: "test" };
 "#;
         let result = typescript::compile_typescript(ts_code, "thistype_test.ts");
-        assert!(result.is_ok(), "ThisType should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ThisType should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 ThisType 被移除
-        assert!(!output.js_code.contains("ThisType<"),
-            "Should remove ThisType: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ThisType<"),
+            "Should remove ThisType: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const ctx"),
-            "Should preserve const ctx: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const ctx"),
+            "Should preserve const ctx: {}",
+            output.js_code
+        );
 
         println!("✅ Test 118: ThisType<T> utility fast path");
     }
@@ -3063,16 +4348,26 @@ const controller = {
 };
 "#;
         let result = typescript::compile_typescript(ts_code, "thistype_methods.ts");
-        assert!(result.is_ok(), "ThisType with methods should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "ThisType with methods should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 ThisType 被移除
-        assert!(!output.js_code.contains("ThisType<"),
-            "Should remove ThisType: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ThisType<"),
+            "Should remove ThisType: {}",
+            output.js_code
+        );
 
         // 验证对象保留
-        assert!(output.js_code.contains("const controller"),
-            "Should preserve const controller: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const controller"),
+            "Should preserve const controller: {}",
+            output.js_code
+        );
 
         println!("✅ Test 119: ThisType with methods");
     }
@@ -3097,16 +4392,26 @@ const deep = {
 };
 "#;
         let result = typescript::compile_typescript(ts_code, "thistype_nested.ts");
-        assert!(result.is_ok(), "Nested ThisType should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Nested ThisType should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 ThisType 被移除
-        assert!(!output.js_code.contains("ThisType<"),
-            "Should remove ThisType: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("ThisType<"),
+            "Should remove ThisType: {}",
+            output.js_code
+        );
 
         // 验证变量保留
-        assert!(output.js_code.contains("const deep"),
-            "Should preserve const deep: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const deep"),
+            "Should preserve const deep: {}",
+            output.js_code
+        );
 
         println!("✅ Test 120: ThisType nested usage");
     }
@@ -3123,16 +4428,26 @@ type MutableUser = Mutable<User>;
 const user: MutableUser = { name: "Alice", age: 30 };
 "#;
         let result = typescript::compile_typescript(ts_code, "mutable_test.ts");
-        assert!(result.is_ok(), "Mutable should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Mutable should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Mutable 被移除
-        assert!(!output.js_code.contains("Mutable<"),
-            "Should remove Mutable: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Mutable<"),
+            "Should remove Mutable: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const user"),
-            "Should preserve const user: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const user"),
+            "Should preserve const user: {}",
+            output.js_code
+        );
 
         println!("✅ Test 121: Mutable<T> utility fast path");
     }
@@ -3147,16 +4462,26 @@ type MutableConfig<T> = Mutable<Config<T>>;
 const config: MutableConfig<string> = { data: "test", id: 1 };
 "#;
         let result = typescript::compile_typescript(ts_code, "mutable_generic.ts");
-        assert!(result.is_ok(), "Mutable with generic type should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Mutable with generic type should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Mutable 被移除
-        assert!(!output.js_code.contains("Mutable<"),
-            "Should remove Mutable: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Mutable<"),
+            "Should remove Mutable: {}",
+            output.js_code
+        );
 
         // 验证代码保留
-        assert!(output.js_code.contains("const config"),
-            "Should preserve const config: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const config"),
+            "Should preserve const config: {}",
+            output.js_code
+        );
 
         println!("✅ Test 122: Mutable with generic type");
     }
@@ -3172,16 +4497,26 @@ type MutableOuter = Mutable<Outer>;
 const nested: MutableOuter = { inner: { value: 42 }, name: "test" };
 "#;
         let result = typescript::compile_typescript(ts_code, "mutable_nested.ts");
-        assert!(result.is_ok(), "Nested Mutable should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Nested Mutable should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 Mutable 被移除
-        assert!(!output.js_code.contains("Mutable<"),
-            "Should remove Mutable: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("Mutable<"),
+            "Should remove Mutable: {}",
+            output.js_code
+        );
 
         // 验证变量保留
-        assert!(output.js_code.contains("const nested"),
-            "Should preserve const nested: {}", output.js_code);
+        assert!(
+            output.js_code.contains("const nested"),
+            "Should preserve const nested: {}",
+            output.js_code
+        );
 
         println!("✅ Test 123: Mutable nested usage");
     }
@@ -3203,20 +4538,36 @@ function assertPositive(n: number): asserts n {
 }
 "#;
         let result = typescript::compile_typescript(ts_code, "asserts_test.ts");
-        assert!(result.is_ok(), "asserts keyword should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "asserts keyword should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 asserts 关键字和类型注解被移除
-        assert!(!output.js_code.contains("asserts"),
-            "Should remove asserts keyword: {}", output.js_code);
-        assert!(!output.js_code.contains(": any"),
-            "Should remove type annotation: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("asserts"),
+            "Should remove asserts keyword: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains(": any"),
+            "Should remove type annotation: {}",
+            output.js_code
+        );
 
         // 验证函数体保留
-        assert!(output.js_code.contains("function assert"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("throw new Error"),
-            "Should preserve function body: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function assert"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("throw new Error"),
+            "Should preserve function body: {}",
+            output.js_code
+        );
 
         println!("✅ Test 124: TypeScript asserts keyword support");
     }
@@ -3234,20 +4585,36 @@ function assertInRange(value: number): asserts value {
 }
 "#;
         let result = typescript::compile_typescript(ts_code, "asserts_guard.ts");
-        assert!(result.is_ok(), "asserts with generics should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "asserts with generics should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
 
         // 验证 asserts 和类型注解被移除
-        assert!(!output.js_code.contains("asserts"),
-            "Should remove asserts keyword: {}", output.js_code);
-        assert!(!output.js_code.contains("NonNullable"),
-            "Should remove NonNullable type: {}", output.js_code);
+        assert!(
+            !output.js_code.contains("asserts"),
+            "Should remove asserts keyword: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("NonNullable"),
+            "Should remove NonNullable type: {}",
+            output.js_code
+        );
 
         // 验证函数体保留
-        assert!(output.js_code.contains("function assertNotNull"),
-            "Should preserve function: {}", output.js_code);
-        assert!(output.js_code.contains("throw new Error"),
-            "Should preserve throw statement: {}", output.js_code);
+        assert!(
+            output.js_code.contains("function assertNotNull"),
+            "Should preserve function: {}",
+            output.js_code
+        );
+        assert!(
+            output.js_code.contains("throw new Error"),
+            "Should preserve throw statement: {}",
+            output.js_code
+        );
 
         println!("✅ Test 125: asserts with conditional type guard");
     }
@@ -3281,7 +4648,11 @@ while (counter < 100) {
 }
 total"#;
         let result = runtime.benchmark(loop_code, 100);
-        assert!(result.is_ok(), "Loop benchmark should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Loop benchmark should succeed: {:?}",
+            result.err()
+        );
         let bench = result.unwrap();
         bench.print("Loop Execution");
 
@@ -3315,8 +4686,11 @@ person.name"#;
         assert!(result.is_ok(), "Timed execution should succeed");
         let (output, duration) = result.unwrap();
 
-        assert_eq!(output.trim(), String::from(std::f64::consts::TAU.to_string()),
-            "Should compute correct value");
+        assert_eq!(
+            output.trim(),
+            std::f64::consts::TAU.to_string(),
+            "Should compute correct value"
+        );
         assert!(duration.as_nanos() > 0, "Duration should be positive");
 
         println!("✅ Test 127: Timed execution - {}ns", duration.as_nanos());

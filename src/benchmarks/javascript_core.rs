@@ -9,12 +9,12 @@
 // - 并发执行性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
 use rusty_v8 as v8;
-use std::time::{Duration, Instant};
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use std::task::Context;
+use std::time::{Duration, Instant};
 
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;
@@ -33,15 +33,11 @@ impl JavaScriptCoreBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "v8_startup_time",
-            MetricType::StartupTime,
-            || {
-                // 创建新的 V8 Isolate
-                let isolate: _ = v8::Isolate::new(v8::CreateParams::default());
-                drop(isolate); // 立即释放
-            },
-        )
+        framework.run_benchmark("v8_startup_time", MetricType::StartupTime, || {
+            // 创建新的 V8 Isolate
+            let isolate: _ = v8::Isolate::new(v8::CreateParams::default());
+            drop(isolate); // 立即释放
+        })
     }
     /// V8 引擎执行性能基准测试
     pub fn v8_execution_benchmark(&self) -> BenchmarkResult {
@@ -201,7 +197,6 @@ impl JavaScriptCoreBenchmark {
             "concurrent_execution_performance",
             MetricType::ExecutionTime,
             || {
-
                 let num_threads: _ = 10;
                 let results: _ = Arc::new(Mutex::new(Vec::new()));
                 let mut handles = vec![];
@@ -214,12 +209,14 @@ impl JavaScriptCoreBenchmark {
                             let mut scope = v8::HandleScope::new(&mut isolate);
                             let context: _ = v8::Context::new(&mut scope);
                             let mut scope = v8::ContextScope::new(&mut scope, context);
-                            let code: _ = v8::String::new(&mut scope, "for(let i=0;i<1000;i++){}").unwrap();
+                            let code: _ =
+                                v8::String::new(&mut scope, "for(let i=0;i<1000;i++){}").unwrap();
                             let script: _ = v8::Script::compile(&mut scope, code, None).unwrap();
                             let _: _ = script.run(&mut scope);
                         }
                         // scope 在这里自动 drop，然后 isolate 可以安全 drop
-                        let result: _ = format!("thread_complete_{:?}", std::thread::current().id());
+                        let result: _ =
+                            format!("thread_complete_{:?}", std::thread::current().id());
                         {
                             let mut vec = results_clone.lock().unwrap();
                             vec.push(result);

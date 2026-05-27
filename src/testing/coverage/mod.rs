@@ -5,14 +5,13 @@
 // - Line coverage
 // - Branch coverage
 // - Function coverage
+use std::fs;
 /// - HTML/JSON/LCOV report generation
 use std::io::Write;
 pub mod tracker;
-pub mod report_generator;
 pub use tracker::*;
-pub use report_generator::*;
 /// Coverage statistics
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct CoverageStats {
     pub total_lines: usize,
     pub covered_lines: usize,
@@ -27,7 +26,7 @@ pub struct CoverageStats {
     pub covered_files: usize,
 }
 /// Single file coverage data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct FileCoverage {
     pub file_path: String,
     pub total_lines: usize,
@@ -43,7 +42,7 @@ pub struct FileCoverage {
     pub uncovered_branches: Vec<(usize, usize)>, // (line, branch_index)
 }
 /// Coverage report
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CoverageReport {
     pub stats: CoverageStats,
     pub files: Vec<FileCoverage>,
@@ -51,7 +50,7 @@ pub struct CoverageReport {
     pub format: CoverageFormat,
 }
 /// Coverage format options
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub enum CoverageFormat {
     Html,
     Json,
@@ -128,16 +127,25 @@ impl CoverageWriter for HtmlCoverageWriter {
         let output_dir: _ = &self.config.output_directory;
         fs::create_dir_all(output_dir)?;
         // Write index.html
-        let index_path: _ = format!("{}/index.html", output_dir));
+        let index_path: _ = format!("{}/index.html", output_dir);
         let mut file = fs::File::create(&index_path)?;
         writeln!(file, "<!DOCTYPE html>")?;
         writeln!(file, "<html>")?;
         writeln!(file, "<head>")?;
         writeln!(file, "    <title>Coverage Report</title>")?;
         writeln!(file, "    <style>")?;
-        writeln!(file, "        body {{ font-family: Arial, sans-serif; margin: 20px; }}")?;
-        writeln!(file, "        table {{ border-collapse: collapse; width: 100%; }}")?;
-        writeln!(file, "        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}")?;
+        writeln!(
+            file,
+            "        body {{ font-family: Arial, sans-serif; margin: 20px; }}"
+        )?;
+        writeln!(
+            file,
+            "        table {{ border-collapse: collapse; width: 100%; }}"
+        )?;
+        writeln!(
+            file,
+            "        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}"
+        )?;
         writeln!(file, "        th {{ background-color: #f2f2f2; }}")?;
         writeln!(file, "        .high {{ background-color: #d4edda; }}")?;
         writeln!(file, "        .medium {{ background-color:fff3cd; }}")?;
@@ -148,18 +156,25 @@ impl CoverageWriter for HtmlCoverageWriter {
         writeln!(file, "    <h1>Code Coverage Report</h1>")?;
         writeln!(file, "    <h2>Summary</h2>")?;
         writeln!(file, "    <table>")?;
-        writeln!(file, "        <tr><th>Metric</th><th>Coverage</th><th>Total</th><th>Covered</th></tr>")?;
-        writeln!(file, "        <tr><td>Lines</td><td>{:.2}%</td><td>{}</td><td>{}</td></tr>",
-            report.stats.line_coverage,
-            report.stats.total_lines,
-            report.stats.covered_lines
+        writeln!(
+            file,
+            "        <tr><th>Metric</th><th>Coverage</th><th>Total</th><th>Covered</th></tr>"
         )?;
-        writeln!(file, "        <tr><td>Branches</td><td>{:.2}%</td><td>{}</td><td>{}</td></tr>",
+        writeln!(
+            file,
+            "        <tr><td>Lines</td><td>{:.2}%</td><td>{}</td><td>{}</td></tr>",
+            report.stats.line_coverage, report.stats.total_lines, report.stats.covered_lines
+        )?;
+        writeln!(
+            file,
+            "        <tr><td>Branches</td><td>{:.2}%</td><td>{}</td><td>{}</td></tr>",
             report.stats.branch_coverage,
             report.stats.total_branches,
             report.stats.covered_branches
         )?;
-        writeln!(file, "        <tr><td>Functions</td><td>{:.2}%</td><td>{}</td><td>{}</td></tr>",
+        writeln!(
+            file,
+            "        <tr><td>Functions</td><td>{:.2}%</td><td>{}</td><td>{}</td></tr>",
             report.stats.function_coverage,
             report.stats.total_functions,
             report.stats.covered_functions
@@ -202,7 +217,7 @@ impl JsonCoverageWriter {
 }
 impl CoverageWriter for JsonCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
-        let output_path: _ = format!("{}/coverage.json", self.config.output_directory));
+        let output_path: _ = format!("{}/coverage.json", self.config.output_directory);
         let content: _ = serde_json::to_string_pretty(report)?;
         fs::write(output_path, content)?;
         Ok(())
@@ -219,23 +234,27 @@ impl TextCoverageWriter {
 }
 impl CoverageWriter for TextCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
-        let output_path: _ = format!("{}/coverage.txt", self.config.output_directory));
+        let output_path: _ = format!("{}/coverage.txt", self.config.output_directory);
         let mut file = fs::File::create(&output_path)?;
         writeln!(file, "Code Coverage Report")?;
         writeln!(file, "===================")?;
         writeln!(file)?;
         writeln!(file, "Summary:")?;
-        writeln!(file, "  Lines: {}/{} ({:.2}%)",
-            report.stats.covered_lines,
-            report.stats.total_lines,
-            report.stats.line_coverage
+        writeln!(
+            file,
+            "  Lines: {}/{} ({:.2}%)",
+            report.stats.covered_lines, report.stats.total_lines, report.stats.line_coverage
         )?;
-        writeln!(file, "  Branches: {}/{} ({:.2}%)",
+        writeln!(
+            file,
+            "  Branches: {}/{} ({:.2}%)",
             report.stats.covered_branches,
             report.stats.total_branches,
             report.stats.branch_coverage
         )?;
-        writeln!(file, "  Functions: {}/{} ({:.2}%)",
+        writeln!(
+            file,
+            "  Functions: {}/{} ({:.2}%)",
             report.stats.covered_functions,
             report.stats.total_functions,
             report.stats.function_coverage
@@ -243,7 +262,9 @@ impl CoverageWriter for TextCoverageWriter {
         writeln!(file)?;
         writeln!(file, "Files:")?;
         for file_coverage in &report.files {
-            writeln!(file, "  {}: {:.2}% line, {:.2}% branch, {:.2}% function",
+            writeln!(
+                file,
+                "  {}: {:.2}% line, {:.2}% branch, {:.2}% function",
                 file_coverage.file_path,
                 file_coverage.line_coverage,
                 file_coverage.branch_coverage,
@@ -283,8 +304,7 @@ impl From<serde_json::Error> for CoverageError {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::fs::File;
+
     #[test]
     fn test_coverage_stats_default() {
         let stats: _ = CoverageStats::default();

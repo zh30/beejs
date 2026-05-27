@@ -4,8 +4,8 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 // use tokio::time::{TokioDuration, TokioInstant}; // Removed - using std::time
-use tracing::{debug, error, info, warn};
 use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 
 /// HPA Controller for managing automatic scaling
 pub struct HPAController {
@@ -22,10 +22,7 @@ pub struct HPAController {
 }
 impl HPAController {
     /// Create a new HPA controller
-    pub fn new(
-        client: kube::Client,
-        config: HPAConfig,
-    ) -> Self {
+    pub fn new(client: kube::Client, config: HPAConfig) -> Self {
         Self {
             client: client.clone(),
             config: config.clone(),
@@ -54,7 +51,11 @@ impl HPAController {
                 info!("Scale action required: {:?}", action);
                 // Check cooldown period
                 if let Some(last_time) = self.last_scale_time {
-                    if last_time.elapsed() < Duration::from_secs(self.config.stabilization_window_seconds.unwrap_or(300)) {
+                    if last_time.elapsed()
+                        < Duration::from_secs(
+                            self.config.stabilization_window_seconds.unwrap_or(300),
+                        )
+                    {
                         debug!("Skipping scale due to cooldown period");
                         continue;
                     }
@@ -158,10 +159,7 @@ impl HPAController {
         }
     }
     /// Apply scale action
-    async fn apply_scale_action(
-        &self,
-        action: &ScaleAction,
-    ) -> Result<(), Error> {
+    async fn apply_scale_action(&self, action: &ScaleAction) -> Result<(), Error> {
         info!("Applying scale action: {}", action.reason);
         // TODO: Implement actual scaling logic
         // This would involve:
@@ -177,7 +175,11 @@ impl HPAController {
             from_replicas: action.current_replicas,
             to_replicas: action.desired_replicas,
             reason: action.reason.clone(),
-            metrics: self.metrics_collector.latest_metrics.clone().expect("metrics not available"),
+            metrics: self
+                .metrics_collector
+                .latest_metrics
+                .clone()
+                .expect("metrics not available"),
         });
         // Keep only last 100 events
         if self.scale_history.len() > 100 {
@@ -190,7 +192,10 @@ impl HPAController {
     }
     /// Get current metrics
     pub fn get_current_metrics(&self) -> Option<&Metrics> {
-        self.metrics_collector.latest_metrics.as_ref().map(|v| v.as_ref())
+        self.metrics_collector
+            .latest_metrics
+            .as_ref()
+            .map(|v| v.as_ref())
     }
 }
 /// Metrics Collector for gathering resource usage metrics
@@ -343,20 +348,22 @@ mod tests {
         };
         let controller: _ = HPAController::new(kube::Client::default(), config);
         // Test scaling up
-        let desired: _ = controller.calculate_desired_replicas(
-            3,
-            85.0, // 85% CPU usage
-            70.0, // 70% target
-            6.0,  // 6 CPU cores total
-        ).unwrap();
+        let desired: _ = controller
+            .calculate_desired_replicas(
+                3, 85.0, // 85% CPU usage
+                70.0, // 70% target
+                6.0,  // 6 CPU cores total
+            )
+            .unwrap();
         assert_eq!(desired, 4); // ceil(3 * 85/70) = ceil(3.64) = 4
-        // Test scaling down
-        let desired: _ = controller.calculate_desired_replicas(
-            5,
-            35.0, // 35% CPU usage
-            70.0, // 70% target
-            10.0, // 10 CPU cores total
-        ).unwrap();
+                                // Test scaling down
+        let desired: _ = controller
+            .calculate_desired_replicas(
+                5, 35.0, // 35% CPU usage
+                70.0, // 70% target
+                10.0, // 10 CPU cores total
+            )
+            .unwrap();
         assert_eq!(desired, 3); // ceil(5 * 35/70) = ceil(2.5) = 3
     }
     #[test]

@@ -39,10 +39,15 @@ pub fn setup_util_api(
     let is_null_key: _ = v8::String::new(scope, "isNull").unwrap();
     util_obj.set(scope, is_null_key.into(), is_null_instance.into());
     // isNullOrUndefined
-    let is_null_undefined_func: _ = v8::FunctionTemplate::new(scope, util_is_null_undefined_callback);
+    let is_null_undefined_func: _ =
+        v8::FunctionTemplate::new(scope, util_is_null_undefined_callback);
     let is_null_undefined_instance: _ = is_null_undefined_func.get_function(scope).unwrap();
     let is_null_undefined_key: _ = v8::String::new(scope, "isNullOrUndefined").unwrap();
-    util_obj.set(scope, is_null_undefined_key.into(), is_null_undefined_instance.into());
+    util_obj.set(
+        scope,
+        is_null_undefined_key.into(),
+        is_null_undefined_instance.into(),
+    );
     // isNumber
     let is_number_func: _ = v8::FunctionTemplate::new(scope, util_is_number_callback);
     let is_number_instance: _ = is_number_func.get_function(scope).unwrap();
@@ -93,27 +98,45 @@ fn util_inspect_callback(
     let options: _ = args.get(1);
     let _show_hidden: _ = if !options.is_undefined() {
         let show_hidden_key: _ = v8::String::new(scope, "showHidden").unwrap();
-        options.to_object(scope).and_then(|obj| {
-            obj.get(scope, show_hidden_key.into())
-        }).map(|v| v.to_boolean(scope).is_true()).unwrap_or(false)
+        options
+            .to_object(scope)
+            .and_then(|obj| obj.get(scope, show_hidden_key.into()))
+            .map(|v| v.to_boolean(scope).is_true())
+            .unwrap_or(false)
     } else {
         false
     };
     let _depth: _ = if !options.is_undefined() {
         let depth_key: _ = v8::String::new(scope, "depth").unwrap();
-        options.to_object(scope).and_then(|obj| {
-            obj.get(scope, depth_key.into())
-        }).unwrap_or(v8::Integer::new(scope, 2).into()).to_integer(scope).unwrap().value() as i32
+        options
+            .to_object(scope)
+            .and_then(|obj| obj.get(scope, depth_key.into()))
+            .unwrap_or(v8::Integer::new(scope, 2).into())
+            .to_integer(scope)
+            .unwrap()
+            .value() as i32
     } else {
         2
     };
     // 简化的inspect实现
     let result: _ = if object.is_string() {
-        format!("'{}'", object.to_string(scope).unwrap().to_rust_string_lossy(scope))
+        format!(
+            "'{}'",
+            object.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        )
     } else if object.is_number() {
-        object.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
+        object
+            .to_number(scope)
+            .unwrap()
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope)
     } else if object.is_boolean() {
-        if object.to_boolean(scope).is_true() { "true".to_string() } else { "false".to_string() }
+        if object.to_boolean(scope).is_true() {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        }
     } else if object.is_null() {
         "null".to_string()
     } else if object.is_undefined() {
@@ -154,9 +177,17 @@ fn util_format_callback(
                         let arg_str: _ = if arg.is_string() {
                             arg.to_string(scope).unwrap().to_rust_string_lossy(scope)
                         } else if arg.is_number() {
-                            arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
+                            arg.to_number(scope)
+                                .unwrap()
+                                .to_string(scope)
+                                .unwrap()
+                                .to_rust_string_lossy(scope)
                         } else if arg.is_boolean() {
-                            if arg.to_boolean(scope).is_true() { "true".to_string() } else { "false".to_string() }
+                            if arg.to_boolean(scope).is_true() {
+                                "true".to_string()
+                            } else {
+                                "false".to_string()
+                            }
                         } else if arg.is_null() {
                             "null".to_string()
                         } else if arg.is_undefined() {
@@ -173,7 +204,13 @@ fn util_format_callback(
                     if arg_index < args.length() {
                         let arg: _ = args.get(arg_index);
                         if arg.is_number() {
-                            result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
+                            result.push_str(
+                                &arg.to_number(scope)
+                                    .unwrap()
+                                    .to_string(scope)
+                                    .unwrap()
+                                    .to_rust_string_lossy(scope),
+                            );
                         } else {
                             result.push_str("NaN");
                         }
@@ -185,7 +222,13 @@ fn util_format_callback(
                     if arg_index < args.length() {
                         let arg: _ = args.get(arg_index);
                         if arg.is_number() {
-                            result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
+                            result.push_str(
+                                &arg.to_number(scope)
+                                    .unwrap()
+                                    .to_string(scope)
+                                    .unwrap()
+                                    .to_rust_string_lossy(scope),
+                            );
                         } else {
                             result.push_str("NaN");
                         }
@@ -229,9 +272,19 @@ fn util_format_callback(
         if arg.is_string() {
             result.push_str(&arg.to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_number() {
-            result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
+            result.push_str(
+                &arg.to_number(scope)
+                    .unwrap()
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope),
+            );
         } else if arg.is_boolean() {
-            result.push_str(if arg.to_boolean(scope).is_true() { "true" } else { "false" });
+            result.push_str(if arg.to_boolean(scope).is_true() {
+                "true"
+            } else {
+                "false"
+            });
         } else {
             result.push_str("[Object]");
         }
@@ -264,7 +317,11 @@ fn util_types_callback(
     let is_native_error_func: _ = v8::FunctionTemplate::new(scope, util_is_native_error_callback);
     let is_native_error_instance: _ = is_native_error_func.get_function(scope).unwrap();
     let is_native_error_key: _ = v8::String::new(scope, "isNativeError").unwrap();
-    types_obj.set(scope, is_native_error_key.into(), is_native_error_instance.into());
+    types_obj.set(
+        scope,
+        is_native_error_key.into(),
+        is_native_error_instance.into(),
+    );
     retval.set(types_obj.into());
 }
 fn util_is_array_callback(
@@ -436,7 +493,13 @@ fn util_debuglog_func_callback(
         if arg.is_string() {
             message.push_str(&arg.to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_number() {
-            message.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
+            message.push_str(
+                &arg.to_number(scope)
+                    .unwrap()
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope),
+            );
         } else {
             message.push_str("[Object]");
         }

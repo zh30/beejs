@@ -44,7 +44,11 @@ fn transfer_to_attached_callback(
 
     // Must be an ArrayBuffer
     if !buffer.is_array_buffer() {
-        let error = v8::String::new(scope, "transferToAttached: first argument must be an ArrayBuffer").unwrap();
+        let error = v8::String::new(
+            scope,
+            "transferToAttached: first argument must be an ArrayBuffer",
+        )
+        .unwrap();
         let exception = v8::Exception::type_error(scope, error);
         scope.throw_exception(exception);
         return;
@@ -62,7 +66,8 @@ fn transfer_to_attached_callback(
 
     // Check if already detached (byte_length would be 0)
     if byte_length == 0 {
-        let error = v8::String::new(scope, "transferToAttached: ArrayBuffer is already detached").unwrap();
+        let error =
+            v8::String::new(scope, "transferToAttached: ArrayBuffer is already detached").unwrap();
         let exception = v8::Exception::type_error(scope, error);
         scope.throw_exception(exception);
         return;
@@ -88,7 +93,11 @@ fn transfer_from_attached_callback(
 
     // Must be an ArrayBuffer
     if !buffer.is_array_buffer() {
-        let error = v8::String::new(scope, "transferFromAttached: first argument must be an ArrayBuffer").unwrap();
+        let error = v8::String::new(
+            scope,
+            "transferFromAttached: first argument must be an ArrayBuffer",
+        )
+        .unwrap();
         let exception = v8::Exception::type_error(scope, error);
         scope.throw_exception(exception);
         return;
@@ -116,7 +125,11 @@ fn detach_array_buffer_callback(
 
     // Must be an ArrayBuffer
     if !buffer.is_array_buffer() {
-        let error = v8::String::new(scope, "detachArrayBuffer: first argument must be an ArrayBuffer").unwrap();
+        let error = v8::String::new(
+            scope,
+            "detachArrayBuffer: first argument must be an ArrayBuffer",
+        )
+        .unwrap();
         let exception = v8::Exception::type_error(scope, error);
         scope.throw_exception(exception);
         return;

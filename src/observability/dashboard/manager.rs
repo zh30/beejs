@@ -9,13 +9,13 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Result, Context, anyhow};
-use tracing::{info, warn, error, debug};
+use anyhow::{anyhow, Context, Result};
 use reqwest::Client as HttpClient;
 use serde_json::{json, Value};
-use std::time::Duration;
 use std::sync::RwLock;
+use std::time::Duration;
 use std::time::SystemTime;
+use tracing::{debug, error, info, warn};
 /// Dashboard Manager - Main entry point for Grafana integration
 pub struct DashboardManager {
     /// Configuration
@@ -98,7 +98,10 @@ impl MetricsCollectorTrait for PrometheusCollector {
             .send()
             .await
             .context("Failed to query Prometheus")?;
-        let data: Value = response.json().await.context("Failed to parse Prometheus response")?;
+        let data: Value = response
+            .json()
+            .await
+            .context("Failed to parse Prometheus response")?;
         let mut metrics = HashMap::new();
         if let Value::Object(obj) = data {
             if let Some(Value::Array(results)) = obj.get("data") {
@@ -162,11 +165,13 @@ impl DashboardManager {
             http_client.clone(),
         )));
         let metrics_collector: _ = Arc::new(Mutex::new(MetricsCollector::new(
-            std::time::Duration::from_secs(config.metrics_interval))));
+            std::time::Duration::from_secs(config.metrics_interval),
+        )));
         // Add default Prometheus collector
         if config.enable_realtime {
-            metrics_collector.add_collector(Box::new(
-                PrometheusCollector::new("http://localhost:9090".to_string())));
+            metrics_collector.add_collector(Box::new(PrometheusCollector::new(
+                "http://localhost:9090".to_string(),
+            )));
         }
         let dashboards: _ = Arc::new(Mutex::new(HashMap::new()));
         // Initialize built-in dashboards
@@ -182,7 +187,7 @@ impl DashboardManager {
     }
     /// Initialize built-in dashboards
     async fn initialize_builtin_dashboards(
-        dashboards: &Arc<RwLock<HashMap<String, Dashboard>>>
+        dashboards: &Arc<RwLock<HashMap<String, Dashboard>>>,
     ) -> Result<()> {
         // Create overview dashboard
         let overview_dashboard: _ = Dashboard::new(
@@ -196,17 +201,9 @@ impl DashboardManager {
         Ok(())
     }
     /// Create a new dashboard
-    pub async fn create_dashboard(
-        &self,
-        title: &str,
-    ) -> Result<String> {
+    pub async fn create_dashboard(&self, title: &str) -> Result<String> {
         debug!("Creating dashboard: {}", title);
-        let dashboard: _ = Dashboard::new(
-            title,
-            title,
-            None,
-            vec!["beejs".to_string()],
-        );
+        let dashboard: _ = Dashboard::new(title, title, None, vec!["beejs".to_string()]);
         let uid: _ = dashboard.uid.clone();
         let mut dashboards = self.dashboards.write().await;
         dashboards.insert(uid.clone(), dashboard);
@@ -224,18 +221,21 @@ impl DashboardManager {
         dashboards.keys().cloned().collect()
     }
     /// Add panel to dashboard
-    pub async fn add_panel(
-        &self,
-        dashboard_uid: &str,
-        panel: PanelConfig,
-    ) -> Result<()> {
-        debug!("Adding panel to dashboard {}: {}", dashboard_uid, panel.title);
+    pub async fn add_panel(&self, dashboard_uid: &str, panel: PanelConfig) -> Result<()> {
+        debug!(
+            "Adding panel to dashboard {}: {}",
+            dashboard_uid, panel.title
+        );
         let mut dashboards = self.dashboards.write().await;
-        let dashboard: _ = dashboards.get_mut(dashboard_uid)
+        let dashboard: _ = dashboards
+            .get_mut(dashboard_uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", dashboard_uid))?;
         dashboard.panels.push(panel);
         dashboard.updated_at = std::time::SystemTime::now();
-        info!("Panel added to dashboard {}: {}", dashboard_uid, panel.title);
+        info!(
+            "Panel added to dashboard {}: {}",
+            dashboard_uid, panel.title
+        );
         Ok(())
     }
     /// Update panel in dashboard
@@ -245,9 +245,13 @@ impl DashboardManager {
         panel_id: &str,
         panel: PanelConfig,
     ) -> Result<()> {
-        debug!("Updating panel in dashboard {}: {}", dashboard_uid, panel_id);
+        debug!(
+            "Updating panel in dashboard {}: {}",
+            dashboard_uid, panel_id
+        );
         let mut dashboards = self.dashboards.write().await;
-        let dashboard: _ = dashboards.get_mut(dashboard_uid)
+        let dashboard: _ = dashboards
+            .get_mut(dashboard_uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", dashboard_uid))?;
         if let Some(pos) = dashboard.panels.iter_mut().position(|p| p.id == panel_id) {
             dashboard.panels[pos] = panel;
@@ -259,19 +263,22 @@ impl DashboardManager {
         Ok(())
     }
     /// Remove panel from dashboard
-    pub async fn remove_panel(
-        &self,
-        dashboard_uid: &str,
-        panel_id: &str,
-    ) -> Result<()> {
-        debug!("Removing panel from dashboard {}: {}", dashboard_uid, panel_id);
+    pub async fn remove_panel(&self, dashboard_uid: &str, panel_id: &str) -> Result<()> {
+        debug!(
+            "Removing panel from dashboard {}: {}",
+            dashboard_uid, panel_id
+        );
         let mut dashboards = self.dashboards.write().await;
-        let dashboard: _ = dashboards.get_mut(dashboard_uid)
+        let dashboard: _ = dashboards
+            .get_mut(dashboard_uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", dashboard_uid))?;
         if let Some(pos) = dashboard.panels.iter().position(|p| p.id == panel_id) {
             dashboard.panels.remove(pos);
             dashboard.updated_at = std::time::SystemTime::now();
-            info!("Panel removed from dashboard {}: {}", dashboard_uid, panel_id);
+            info!(
+                "Panel removed from dashboard {}: {}",
+                dashboard_uid, panel_id
+            );
         } else {
             return Err(anyhow!("Panel not found: {}", panel_id));
         }
@@ -280,7 +287,8 @@ impl DashboardManager {
     /// Export dashboard to Grafana JSON format
     pub async fn export_dashboard(&self, uid: &str) -> Result<Value> {
         let dashboards: _ = self.dashboards.read().await;
-        let dashboard: _ = dashboards.get(uid)
+        let dashboard: _ = dashboards
+            .get(uid)
             .ok_or_else(|| anyhow!("Dashboard not found: {}", uid))?;
         let grafana_dashboard: _ = self.grafana_client.convert_to_grafana_format(dashboard)?;
         Ok(grafana_dashboard)
@@ -289,7 +297,9 @@ impl DashboardManager {
     pub async fn deploy_dashboard(&self, uid: &str) -> Result<()> {
         info!("Deploying dashboard to Grafana: {}", uid);
         let grafana_dashboard: _ = self.export_dashboard(uid).await?;
-        self.grafana_client.create_or_update_dashboard(grafana_dashboard).await?;
+        self.grafana_client
+            .create_or_update_dashboard(grafana_dashboard)
+            .await?;
         info!("Dashboard deployed successfully: {}", uid);
         Ok(())
     }
@@ -332,40 +342,45 @@ impl GrafanaClient {
     }
     /// Convert internal dashboard to Grafana JSON format
     pub fn convert_to_grafana_format(&self, dashboard: &Dashboard) -> Result<Value> {
-        let panels: Vec<Value> = dashboard.panels.iter().enumerate().map(|(idx, panel)| {
-            json!({
-                "id": idx + 1,
-                "title": panel.title,
-                "type": panel.panel_type,
-                "gridPos": {
-                    "h": panel.grid_pos.h,
-                    "w": panel.grid_pos.w,
-                    "x": panel.grid_pos.x,
-                    "y": panel.grid_pos.y
-                },
-                "targets": panel.targets.iter().map(|t| {
-                    json!({
-                        "refId": t.ref_id,
-                        "expr": t.query,
-                        "interval": t.interval,
-                        "legendFormat": t.legend_format
-                    })
-                }).collect::<Vec<_>>(),
-                "fieldConfig": {
-                    "defaults": {
-                        "min": panel.field_config.min,
-                        "max": panel.field_config.max,
-                        "unit": panel.field_config.unit,
-                        "decimals": panel.field_config.decimals,
-                        "thresholds": panel.field_config.thresholds
+        let panels: Vec<Value> = dashboard
+            .panels
+            .iter()
+            .enumerate()
+            .map(|(idx, panel)| {
+                json!({
+                    "id": idx + 1,
+                    "title": panel.title,
+                    "type": panel.panel_type,
+                    "gridPos": {
+                        "h": panel.grid_pos.h,
+                        "w": panel.grid_pos.w,
+                        "x": panel.grid_pos.x,
+                        "y": panel.grid_pos.y
+                    },
+                    "targets": panel.targets.iter().map(|t| {
+                        json!({
+                            "refId": t.ref_id,
+                            "expr": t.query,
+                            "interval": t.interval,
+                            "legendFormat": t.legend_format
+                        })
+                    }).collect::<Vec<_>>(),
+                    "fieldConfig": {
+                        "defaults": {
+                            "min": panel.field_config.min,
+                            "max": panel.field_config.max,
+                            "unit": panel.field_config.unit,
+                            "decimals": panel.field_config.decimals,
+                            "thresholds": panel.field_config.thresholds
+                        }
+                    },
+                    "options": {
+                        "legend": panel.options.legend,
+                        "tooltip": panel.options.tooltip
                     }
-                },
-                "options": {
-                    "legend": panel.options.legend,
-                    "tooltip": panel.options.tooltip
-                }
+                })
             })
-        }).collect();
+            .collect();
         let grafana_dashboard: _ = json!({
             "dashboard": {
                 "id": null,
@@ -393,13 +408,17 @@ impl GrafanaClient {
     /// Create or update dashboard in Grafana
     pub async fn create_or_update_dashboard(&self, dashboard: Value) -> Result<()> {
         let url: _ = format!("{}/api/dashboards/db", self.base_url);
-        let mut request = self.http_client
+        let mut request = self
+            .http_client
             .post(&url)
             .header("Content-Type", "application/json");
         if let Some(ref api_key) = self.api_key {
             request = request.header("Authorization", format!("Bearer {}", api_key));
         }
-        let response: _ = request.json(&dashboard).send().await
+        let response: _ = request
+            .json(&dashboard)
+            .send()
+            .await
             .context("Failed to send dashboard to Grafana")?;
         if !response.status().is_success() {
             let status: _ = response.status();
@@ -415,9 +434,13 @@ impl GrafanaClient {
         if let Some(ref api_key) = self.api_key {
             request = request.header("Authorization", format!("Bearer {}", api_key));
         }
-        let response: _ = request.send().await
+        let response: _ = request
+            .send()
+            .await
             .context("Failed to get dashboard from Grafana")?;
-        let dashboard: Value = response.json().await
+        let dashboard: Value = response
+            .json()
+            .await
             .context("Failed to parse Grafana response")?;
         Ok(dashboard)
     }
@@ -428,7 +451,9 @@ impl GrafanaClient {
         if let Some(ref api_key) = self.api_key {
             request = request.header("Authorization", format!("Bearer {}", api_key));
         }
-        let response: _ = request.send().await
+        let response: _ = request
+            .send()
+            .await
             .context("Failed to delete dashboard from Grafana")?;
         if !response.status().is_success() {
             let status: _ = response.status();
@@ -440,12 +465,7 @@ impl GrafanaClient {
 }
 impl Dashboard {
     /// Create a new dashboard
-    pub fn new(
-        uid: &str,
-        title: &str,
-        description: Option<&str>,
-        tags: Vec<String>,
-    ) -> Self {
+    pub fn new(uid: &str, title: &str, description: Option<&str>, tags: Vec<String>) -> Self {
         let now: _ = std::time::SystemTime::now();
         Self {
             uid: uid.to_string(),
@@ -483,7 +503,10 @@ impl MetricsCollector {
     }
     /// Start metrics collection
     pub async fn start(&self) -> Result<()> {
-        info!("Starting metrics collection with {} collectors", self.collectors.len());
+        info!(
+            "Starting metrics collection with {} collectors",
+            self.collectors.len()
+        );
         let interval: _ = self.interval;
         let metrics: _ = self.metrics.clone();
         let collectors: _ = self.collectors.clone();
@@ -564,7 +587,12 @@ mod tests {
             id: "panel-1".to_string(),
             title: "Test Panel".to_string(),
             panel_type: "graph".to_string(),
-            grid_pos: GridPos { x: 0, y: 0, w: 12, h: 8 },
+            grid_pos: GridPos {
+                x: 0,
+                y: 0,
+                w: 12,
+                h: 8,
+            },
             datasource: "Prometheus".to_string(),
             targets: vec![],
             field_config: FieldConfig {
@@ -575,9 +603,18 @@ mod tests {
                 thresholds: None,
             },
             options: PanelOptions {
-                legend: LegendConfig { show: true, position: "bottom".to_string() },
-                tooltip: TooltipConfig { mode: "multi".to_string(), sort: "none".to_string() },
-                time: TimeRangeConfig { from: "now-1h".to_string(), to: "now".to_string() },
+                legend: LegendConfig {
+                    show: true,
+                    position: "bottom".to_string(),
+                },
+                tooltip: TooltipConfig {
+                    mode: "multi".to_string(),
+                    sort: "none".to_string(),
+                },
+                time: TimeRangeConfig {
+                    from: "now-1h".to_string(),
+                    to: "now".to_string(),
+                },
             },
         };
         let result: _ = manager.add_panel(&uid, panel).await;
@@ -588,17 +625,9 @@ mod tests {
     }
     #[tokio::test]
     async fn test_grafana_client_conversion() {
-        let client: _ = GrafanaClient::new(
-            "http://localhost:3000".to_string(),
-            None,
-            HttpClient::new(),
-        );
-        let dashboard: _ = Dashboard::new(
-            "test-uid",
-            "Test Dashboard",
-            None,
-            vec![],
-        );
+        let client: _ =
+            GrafanaClient::new("http://localhost:3000".to_string(), None, HttpClient::new());
+        let dashboard: _ = Dashboard::new("test-uid", "Test Dashboard", None, vec![]);
         let grafana_dashboard: _ = client.convert_to_grafana_format(&dashboard);
         assert!(grafana_dashboard.is_ok());
         let dashboard_json: _ = grafana_dashboard.unwrap();
@@ -609,7 +638,8 @@ mod tests {
         let mut collector = MetricsCollector::new(std::time::Duration::from_millis(100));
         // Add a mock collector
         collector.add_collector(Box::new(PrometheusCollector::new(
-            "http://localhost:9090".to_string())));
+            "http://localhost:9090".to_string(),
+        )));
         let result: _ = collector.start().await;
         assert!(result.is_ok());
         // Give it a moment to collect

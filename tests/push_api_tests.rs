@@ -1,8 +1,15 @@
 // Push API tests for Beejs runtime
 // v0.3.326: Tests for PushManager, PushSubscription, and PushEvent APIs
 
-use std::process::{Command, Stdio};
 use std::fs;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+
+fn bee_path() -> PathBuf {
+    PathBuf::from(
+        std::env::var("CARGO_BIN_EXE_bee").unwrap_or_else(|_| "./target/debug/bee".to_string()),
+    )
+}
 
 #[cfg(test)]
 mod push_manager_tests {
@@ -20,7 +27,11 @@ mod push_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(output.status.success(), "PushManager should exist: {}", stdout);
+        assert!(
+            output.status.success(),
+            "PushManager should exist: {}",
+            stdout
+        );
         assert!(stdout.contains("SUCCESS"), "Output: {}", stdout);
     }
 
@@ -43,7 +54,11 @@ mod push_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "subscribe should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "subscribe should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -64,7 +79,11 @@ mod push_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "getSubscription should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "getSubscription should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -85,7 +104,11 @@ mod push_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "permissionState should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "permissionState should be a function: {}",
+            stdout
+        );
     }
 }
 
@@ -105,7 +128,11 @@ mod push_subscription_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushSubscription should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -125,7 +152,11 @@ mod push_subscription_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "instance should have getKey: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "instance should have getKey: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -145,7 +176,11 @@ mod push_subscription_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "instance should have toJSON: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "instance should have toJSON: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -165,7 +200,11 @@ mod push_subscription_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "instance should have unsubscribe: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "instance should have unsubscribe: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -185,7 +224,11 @@ mod push_subscription_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "instance should have endpoint: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "instance should have endpoint: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -205,7 +248,11 @@ mod push_subscription_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "instance should have options: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "instance should have options: {}",
+            stdout
+        );
     }
 }
 
@@ -225,7 +272,11 @@ mod push_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushEvent should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushEvent should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -245,7 +296,11 @@ mod push_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushEvent should extend ExtendableEvent: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushEvent should extend ExtendableEvent: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -266,7 +321,11 @@ mod push_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushEvent.data should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushEvent.data should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -287,7 +346,11 @@ mod push_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushEvent.data should be null by default: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushEvent.data should be null by default: {}",
+            stdout
+        );
     }
 }
 
@@ -320,7 +383,11 @@ mod integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "All Push API should be available: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "All Push API should be available: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -349,7 +416,11 @@ mod integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushSubscription instance should have methods: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription instance should have methods: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -382,7 +453,11 @@ mod integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "PushSubscription instance should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription instance should work: {}",
+            stdout
+        );
     }
 }
 
@@ -397,14 +472,14 @@ fn run_script(script: &str) -> std::process::Output {
     fs::write(&temp_file, script).unwrap();
 
     // Run beejs with the script
-    let output = Command::new("./target/release/beejs")
+    let output = Command::new(bee_path())
         .arg("run")
         .arg(&temp_file)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .expect("Failed to run beejs");
+        .expect("Failed to run bee");
 
     // Clean up
     drop(temp_dir);

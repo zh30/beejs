@@ -6,6 +6,26 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+/// Generate a test certificate for integration tests
+pub fn generate_test_certificate() -> (tempfile::TempDir, PathBuf, PathBuf) {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory for certificates");
+
+    // For actual certificate generation, we would use a library like rcgen or openssl
+    // For now, we just create placeholder files
+    let cert_path = temp_dir.path().join("cert.pem");
+    let key_path = temp_dir.path().join("key.pem");
+
+    // Create placeholder certificate files
+    // In production, these would be real certificates
+    let placeholder_cert = b"-----BEGIN CERTIFICATE-----\nplaceholder\n-----END CERTIFICATE-----";
+    let placeholder_key = b"-----BEGIN PRIVATE KEY-----\nplaceholder\n-----END PRIVATE KEY-----";
+
+    fs::write(&cert_path, placeholder_cert).expect("Failed to write placeholder cert");
+    fs::write(&key_path, placeholder_key).expect("Failed to write placeholder key");
+
+    (temp_dir, cert_path, key_path)
+}
+
 #[cfg(test)]
 mod https_server_tests {
     use super::*;
@@ -31,6 +51,8 @@ mod https_server_tests {
 
         assert_eq!(config.port, 8443);
         assert_eq!(config.host, "localhost");
+        assert_eq!(config.cert_path, PathBuf::from("/test/cert.pem"));
+        assert_eq!(config.key_path, PathBuf::from("/test/key.pem"));
         println!("✓ HTTPS config structure is valid");
     }
 
@@ -92,7 +114,7 @@ mod https_server_tests {
         // 3. Application data exchange
 
         // For testing, we verify the expected connection states
-        let expected_states = vec![
+        let expected_states = [
             "TCP_CONNECTING",
             "TLS_HANDSHAKE",
             "TLS_ESTABLISHED",
@@ -125,8 +147,14 @@ mod https_server_tests {
         }
 
         assert_eq!(header_map.get("Host"), Some(&"example.com".to_string()));
-        assert_eq!(header_map.get("User-Agent"), Some(&"Beejs/0.1.0".to_string()));
-        assert_eq!(header_map.get("Connection"), Some(&"keep-alive".to_string()));
+        assert_eq!(
+            header_map.get("User-Agent"),
+            Some(&"Beejs/0.1.0".to_string())
+        );
+        assert_eq!(
+            header_map.get("Connection"),
+            Some(&"keep-alive".to_string())
+        );
 
         println!("✓ HTTPS request headers are properly parsed");
     }
@@ -177,6 +205,9 @@ mod https_server_tests {
 
         assert_eq!(options.port, 443);
         assert_eq!(options.host, "0.0.0.0");
+        assert_eq!(options.cert, PathBuf::from("/etc/ssl/cert.pem"));
+        assert_eq!(options.key, PathBuf::from("/etc/ssl/key.pem"));
+        assert!(!options.tls_verify_client);
         assert!(options.alpn_protocols.contains(&"h2".to_string()));
         assert!(options.alpn_protocols.contains(&"http/1.1".to_string()));
 
@@ -219,8 +250,14 @@ mod https_server_tests {
 
         let performance_factors = vec![
             ("TLS_HANDSHAKE_RTT", "TLS 1.3: 1 RTT, TLS 1.2: 2 RTT"),
-            ("ENCRYPTION_OVERHEAD", "AES-NI hardware acceleration available"),
-            ("SESSION_RESUMPTION", "Session tickets reduce handshake time"),
+            (
+                "ENCRYPTION_OVERHEAD",
+                "AES-NI hardware acceleration available",
+            ),
+            (
+                "SESSION_RESUMPTION",
+                "Session tickets reduce handshake time",
+            ),
             ("CERT_VALIDATION", "OCSP stapling reduces latency"),
         ];
 
@@ -261,7 +298,7 @@ mod https_server_tests {
         // Standard HTTPS port is 443
         let https_default_port = 443;
         // Common alternate HTTPS ports
-        let alternate_ports = vec![8443, 4443, 9443];
+        let alternate_ports = [8443, 4443, 9443];
 
         assert_eq!(https_default_port, 443);
         assert!(alternate_ports.contains(&8443));
@@ -289,11 +326,7 @@ mod https_server_tests {
         }
 
         // Insecure ciphers that should be disabled
-        let insecure_ciphers = vec![
-            "RC4",
-            "3DES",
-            "CBC-MD5",
-        ];
+        let insecure_ciphers = vec!["RC4", "3DES", "CBC-MD5"];
 
         for cipher in &insecure_ciphers {
             assert!(!cipher.is_empty());
@@ -301,24 +334,4 @@ mod https_server_tests {
 
         println!("✓ TLS cipher suites are properly categorized");
     }
-}
-
-/// Generate a test certificate for integration tests
-pub fn generate_test_certificate() -> (tempfile::TempDir, PathBuf, PathBuf) {
-    let temp_dir = TempDir::new().expect("Failed to create temp directory for certificates");
-
-    // For actual certificate generation, we would use a library like rcgen or openssl
-    // For now, we just create placeholder files
-    let cert_path = temp_dir.path().join("cert.pem");
-    let key_path = temp_dir.path().join("key.pem");
-
-    // Create placeholder certificate files
-    // In production, these would be real certificates
-    let placeholder_cert = b"-----BEGIN CERTIFICATE-----\nplaceholder\n-----END CERTIFICATE-----";
-    let placeholder_key = b"-----BEGIN PRIVATE KEY-----\nplaceholder\n-----END PRIVATE KEY-----";
-
-    fs::write(&cert_path, placeholder_cert).expect("Failed to write placeholder cert");
-    fs::write(&key_path, placeholder_key).expect("Failed to write placeholder key");
-
-    (temp_dir, cert_path, key_path)
 }

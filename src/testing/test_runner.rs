@@ -91,7 +91,9 @@ impl TestRunner {
             return result;
         }
         // v0.3.251: Execute test using V8
-        result = self.executor.execute_test(suite_name, test, before_each, after_each);
+        result = self
+            .executor
+            .execute_test(suite_name, test, before_each, after_each);
         result
     }
     /// Run a test suite
@@ -115,7 +117,12 @@ impl TestRunner {
         }
         // Run tests in the suite
         for test in &suite.tests {
-            let result = self.run_test(&suite.name, test, Some(&suite.before_each), Some(&suite.after_each));
+            let result = self.run_test(
+                &suite.name,
+                test,
+                Some(&suite.before_each),
+                Some(&suite.after_each),
+            );
             {
                 let mut locked_stats = stats.lock().unwrap();
                 locked_stats.add_result(&result);
@@ -141,10 +148,7 @@ impl TestRunner {
         results
     }
     /// Run multiple test suites
-    pub fn run_suites(
-        &mut self,
-        suites: Vec<TestSuite>,
-    ) -> (Vec<TestResult>, TestRunnerStats) {
+    pub fn run_suites(&mut self, suites: Vec<TestSuite>) -> (Vec<TestResult>, TestRunnerStats) {
         let stats = Arc::new(Mutex::new(TestRunnerStats::new()));
         let mut all_results = Vec::new();
         for suite in suites {

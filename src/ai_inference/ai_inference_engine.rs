@@ -30,11 +30,7 @@ impl AIInferenceEngine {
         })
     }
     /// 执行 AI 模型推理
-    pub async fn infer(
-        &self,
-        model_id: &str,
-        input: &Tensor,
-    ) -> Result<InferenceResult> {
+    pub async fn infer(&self, model_id: &str, input: &Tensor) -> Result<InferenceResult> {
         let start: _ = Instant::now();
         // 检查缓存
         if let Some(cached_model) = self.model_cache.get(model_id).await? {
@@ -64,10 +60,15 @@ impl AIInferenceEngine {
             })
         } else {
             // 加载模型
-            let model: _ = self.model_loader.load(model_id).await
+            let model: _ = self
+                .model_loader
+                .load(model_id)
+                .await
                 .context(format!("Failed to load model: {}", model_id))?;
             // 缓存模型
-            self.model_cache.put(model_id.to_string(), model.clone()).await?;
+            self.model_cache
+                .put(model_id.to_string(), model.clone())
+                .await?;
             // 执行推理
             let gpu_used: _ = self.gpu_accelerator.is_available();
             let output: _ = if gpu_used {
@@ -179,7 +180,10 @@ impl AIModel {
         }
         // 模拟计算时间
         std::thread::sleep(Duration::from_millis(1));
-        Ok(Tensor::new(input.data().to_vec(), self.output_shape.clone())?)
+        Ok(Tensor::new(
+            input.data().to_vec(),
+            self.output_shape.clone(),
+        )?)
     }
 }
 /// GPU 加速器包装器

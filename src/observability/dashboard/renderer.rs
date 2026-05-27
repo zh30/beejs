@@ -9,12 +9,12 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Result, Context, anyhow};
-use tracing::{info, debug, warn, error};
+use anyhow::{anyhow, Context, Result};
 use serde_json::{json, Value};
+use std::sync::RwLock;
 use std::time::Instant;
 use std::time::SystemTime;
-use std::sync::RwLock;
+use tracing::{debug, error, info, warn};
 /// Chart Renderer - Handles real-time chart rendering
 pub struct ChartRenderer {
     /// Render configuration
@@ -233,7 +233,15 @@ pub struct WebSocketClient {
     /// Client ID
     pub id: String,
     /// WebSocket connection
-    pub connection: Arc<tokio::sync::Mutex<Option<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>>>,
+    pub connection: Arc<
+        tokio::sync::Mutex<
+            Option<
+                tokio_tungstenite::WebSocketStream<
+                    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+                >,
+            >,
+        >,
+    >,
     /// Client metadata
     pub metadata: HashMap<String, Value>,
 }
@@ -343,14 +351,11 @@ impl ChartRenderer {
         Ok(())
     }
     /// Update chart data
-    pub async fn update_chart_data(
-        &self,
-        id: &str,
-        data: ChartData,
-    ) -> Result<()> {
+    pub async fn update_chart_data(&self, id: &str, data: ChartData) -> Result<()> {
         debug!("Updating chart data: {}", id);
         let mut charts = self.charts.write().await;
-        let chart: _ = charts.get_mut(id)
+        let chart: _ = charts
+            .get_mut(id)
             .ok_or_else(|| anyhow!("Chart not found: {}", id))?;
         chart.data = data;
         chart.last_update = std::time::SystemTime::now();
@@ -362,7 +367,8 @@ impl ChartRenderer {
     pub async fn render_chart_svg(&self, id: &str) -> Result<String> {
         let start_time: _ = std::time::Instant::now();
         let charts: _ = self.charts.read().await;
-        let chart: _ = charts.get(id)
+        let chart: _ = charts
+            .get(id)
             .ok_or_else(|| anyhow!("Chart not found: {}", id))?;
         let svg: _ = match chart.chart_type {
             ChartType::LineChart => self.render_line_chart(chart).await?,
@@ -379,8 +385,9 @@ impl ChartRenderer {
         if let Some(chart) = charts.get_mut(id) {
             chart.stats.total_renders += 1;
             chart.stats.last_render_time_ms = render_time;
-            chart.stats.avg_render_time_ms =
-                (chart.stats.avg_render_time_ms * (chart.stats.total_renders - 1) as f64 + render_time)
+            chart.stats.avg_render_time_ms = (chart.stats.avg_render_time_ms
+                * (chart.stats.total_renders - 1) as f64
+                + render_time)
                 / chart.stats.total_renders as f64;
             chart.stats.data_points_rendered = chart.data.x_data.len() as u64;
         }
@@ -407,21 +414,28 @@ impl ChartRenderer {
     <line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="2"/>
   </g>
 "#,
-            config.margin.left, config.height - config.margin.bottom,
-            config.width - config.margin.right, config.height - config.margin.bottom,
+            config.margin.left,
+            config.height - config.margin.bottom,
+            config.width - config.margin.right,
+            config.height - config.margin.bottom,
             config.colors.text,
-            config.margin.left, config.margin.top,
-            config.margin.left, config.height - config.margin.bottom,
+            config.margin.left,
+            config.margin.top,
+            config.margin.left,
+            config.height - config.margin.bottom,
             config.colors.text
         ));
         // Render line
         if !data.x_data.is_empty() && !data.y_data.is_empty() {
             let mut path = String::new();
-            let width: _ = config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
-            let height: _ = config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
+            let width: _ =
+                config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
+            let height: _ =
+                config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
             for (i, (x, y)) in data.x_data.iter().zip(data.y_data.iter()).enumerate() {
                 let px: _ = config.margin.left as f64 + (i as f64 / max_x) * width;
-                let py: _ = config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
+                let py: _ =
+                    config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
                 if i == 0 {
                     path.push_str(&format!("M {} {}", px, py));
                 } else {
@@ -436,11 +450,14 @@ impl ChartRenderer {
         }
         // Render data points
         if config.data_point.show_points {
-            let width: _ = config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
-            let height: _ = config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
+            let width: _ =
+                config.width as f64 - config.margin.left as f64 - config.margin.right as f64;
+            let height: _ =
+                config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64;
             for (i, (x, y)) in data.x_data.iter().zip(data.y_data.iter()).enumerate() {
                 let px: _ = config.margin.left as f64 + (i as f64 / max_x) * width;
-                let py: _ = config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
+                let py: _ =
+                    config.height as f64 - config.margin.bottom as f64 - (y / max_y) * height;
                 svg.push_str(&format!(
                     r#"  <circle cx="{}" cy="{}" r="{}" fill="{}"/>
 "#,
@@ -464,26 +481,34 @@ impl ChartRenderer {
         ));
         // Calculate scales
         let max_y: _ = data.y_data.iter().fold(0.0, f64::max);
-        let bar_width: _ = (config.width as f64 - config.margin.left as f64 - config.margin.right as f64)
-            / data.y_data.len() as f64;
+        let bar_width: _ =
+            (config.width as f64 - config.margin.left as f64 - config.margin.right as f64)
+                / data.y_data.len() as f64;
         // Render bars
         for (i, y) in data.y_data.iter().enumerate() {
             let x: _ = config.margin.left as f64 + i as f64 * bar_width;
-            let bar_height: _ = (y / max_y) * (config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64);
+            let bar_height: _ = (y / max_y)
+                * (config.height as f64 - config.margin.top as f64 - config.margin.bottom as f64);
             let y_pos: _ = config.height as f64 - config.margin.bottom as f64 - bar_height;
             svg.push_str(&format!(
                 r#"  <rect x="{}" y="{}" width="{}" height="{}" fill="{}"/>
 "#,
-                x, y_pos, bar_width - 2.0, bar_height, config.colors.primary
+                x,
+                y_pos,
+                bar_width - 2.0,
+                bar_height,
+                config.colors.primary
             ));
             // Render value labels
             if config.data_point.show_values {
                 svg.push_str(&format!(
                     r#"  <text x="{}" y="{}" fill="{}" text-anchor="middle" font-size="12">{}</text>
 "#,
-                    x + bar_width / 2.0, y_pos - 5.0,
+                    x + bar_width / 2.0,
+                    y_pos - 5.0,
                     config.colors.text,
-                    format!("{}", y)));
+                    format!("{}", y)
+                ));
             }
         }
         svg.push_str("</svg>");
@@ -509,7 +534,9 @@ impl ChartRenderer {
             &config.colors.primary,
             &config.colors.secondary,
             &config.colors.accent,
-            "#ef4444", "#8b5cf6", "#ec4899"
+            "#ef4444",
+            "#8b5cf6",
+            "#ec4899",
         ];
         for (i, value) in data.y_data.iter().enumerate() {
             let slice_angle: _ = (value / total) * std::f64::consts::PI * 2.0;
@@ -518,7 +545,11 @@ impl ChartRenderer {
             let y1: _ = center_y + radius * current_angle.sin();
             let x2: _ = center_x + radius * end_angle.cos();
             let y2: _ = center_y + radius * end_angle.sin();
-            let large_arc: _ = if slice_angle > std::f64::consts::PI { 1 } else { 0 };
+            let large_arc: _ = if slice_angle > std::f64::consts::PI {
+                1
+            } else {
+                0
+            };
             let color: _ = colors[i % colors.len()];
             svg.push_str(&format!(
                 r#"  <path d="M {} {} L {} {} A {} {} 0 {} 1 {} {} Z" fill="{}"/>
@@ -574,7 +605,8 @@ impl ChartRenderer {
   <text x="50%" y="60%" text-anchor="middle" font-size="24" fill="{}">{}</text>
 </svg>
 "#,
-            config.width, config.height,
+            config.width,
+            config.height,
             config.colors.background,
             config.colors.primary,
             format!("{:.2}", value),
@@ -628,7 +660,8 @@ impl ChartRenderer {
     /// Get chart statistics
     pub async fn get_chart_stats(&self, id: &str) -> Result<RenderStats> {
         let charts: _ = self.charts.read().await;
-        let chart: _ = charts.get(id)
+        let chart: _ = charts
+            .get(id)
             .ok_or_else(|| anyhow!("Chart not found: {}", id))?;
         Ok(chart.stats.clone())
     }
@@ -690,7 +723,8 @@ impl GraphRenderer {
     /// Render graph to SVG
     pub async fn render_graph_svg(&self, id: &str) -> Result<String> {
         let graphs: _ = self.graphs.read().await;
-        let graph: _ = graphs.get(id)
+        let graph: _ = graphs
+            .get(id)
             .ok_or_else(|| anyhow!("Graph not found: {}", id))?;
         let svg: _ = match graph.graph_type {
             GraphType::TopologyGraph => self.render_topology_graph(graph).await?,
@@ -713,13 +747,15 @@ impl GraphRenderer {
         for edge in &graph.edges {
             if let (Some(source), Some(target)) = (
                 graph.nodes.iter().find(|n| n.id == edge.source),
-                graph.nodes.iter().find(|n| n.id == edge.target)
+                graph.nodes.iter().find(|n| n.id == edge.target),
             ) {
                 svg.push_str(&format!(
                     r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="{}"/>
 "#,
-                    source.position.x, source.position.y,
-                    target.position.x, target.position.y,
+                    source.position.x,
+                    source.position.y,
+                    target.position.x,
+                    target.position.y,
                     edge.color.as_deref().unwrap_or("#999999"),
                     edge.style.thickness
                 ));
@@ -732,10 +768,14 @@ impl GraphRenderer {
                     svg.push_str(&format!(
                         r#"  <polygon points="{},{} {},{} {},{}" fill="{}"/>
 "#,
-                        target.position.x, target.position.y,
-                        arrow_x - 5.0 * (angle + 0.3).cos(), arrow_y - 5.0 * (angle + 0.3).sin(),
-                        arrow_x - 5.0 * (angle - 0.3).cos(), arrow_y - 5.0 * (angle - 0.3).sin(),
-                        edge.color.as_deref().unwrap_or("#999999")));
+                        target.position.x,
+                        target.position.y,
+                        arrow_x - 5.0 * (angle + 0.3).cos(),
+                        arrow_y - 5.0 * (angle + 0.3).sin(),
+                        arrow_x - 5.0 * (angle - 0.3).cos(),
+                        arrow_y - 5.0 * (angle - 0.3).sin(),
+                        edge.color.as_deref().unwrap_or("#999999")
+                    ));
                 }
             }
         }
@@ -776,7 +816,8 @@ impl GraphRenderer {
     /// Apply layout to graph
     pub async fn apply_layout(&self, id: &str) -> Result<()> {
         let mut graphs = self.graphs.write().await;
-        let graph: _ = graphs.get_mut(id)
+        let graph: _ = graphs
+            .get_mut(id)
             .ok_or_else(|| anyhow!("Graph not found: {}", id))?;
         match graph.layout.layout_type {
             LayoutType::ForceDirected => {
@@ -847,7 +888,10 @@ impl LayoutEngine {
         for (i, node) in graph.nodes.iter().enumerate() {
             let has_incoming: _ = graph.edges.iter().any(|e| e.target == node.id);
             if !has_incoming {
-                levels.entry("level_0".to_string()).or_insert_with(Vec::new).push(i);
+                levels
+                    .entry("level_0".to_string())
+                    .or_insert_with(Vec::new)
+                    .push(i);
             }
         }
         // Assign other nodes to levels
@@ -855,14 +899,15 @@ impl LayoutEngine {
             if levels.values().any(|v| v.contains(&i)) {
                 continue;
             }
-            let max_source_level: _ = graph.edges
+            let max_source_level: _ = graph
+                .edges
                 .iter()
                 .filter(|e| e.target == node.id)
-                .filter_map(|e| {
-                    graph.nodes.iter().position(|n| n.id == e.source)
-                })
+                .filter_map(|e| graph.nodes.iter().position(|n| n.id == e.source))
                 .filter_map(|idx| {
-                    levels.iter().find(|(_, v)| v.contains(&idx))
+                    levels
+                        .iter()
+                        .find(|(_, v)| v.contains(&idx))
                         .map(|(k, _)| k)
                 })
                 .max()
@@ -933,9 +978,14 @@ impl TemplateEngine {
         Ok(())
     }
     /// Render template
-    pub async fn render_template(&self, id: &str, variables: &HashMap<String, Value>) -> Result<String> {
+    pub async fn render_template(
+        &self,
+        id: &str,
+        variables: &HashMap<String, Value>,
+    ) -> Result<String> {
         let templates: _ = self.templates.read().await;
-        let template: _ = templates.get(id)
+        let template: _ = templates
+            .get(id)
             .ok_or_else(|| anyhow!("Template not found: {}", id))?;
         let mut result = template.content.clone();
         // Simple variable substitution
@@ -969,7 +1019,10 @@ mod tests {
             width: 800,
             height: 600,
             margin: MarginConfig {
-                top: 20, right: 20, bottom: 40, left: 40,
+                top: 20,
+                right: 20,
+                bottom: 40,
+                left: 40,
             },
             colors: config.default_colors.clone(),
             animation: config.default_animation.clone(),
@@ -980,11 +1033,10 @@ mod tests {
                 value_format: "{}".to_string(),
             },
         };
-        renderer.create_chart(
-            "test-chart".to_string(),
-            ChartType::LineChart,
-            chart_config
-        ).await.unwrap();
+        renderer
+            .create_chart("test-chart".to_string(), ChartType::LineChart, chart_config)
+            .await
+            .unwrap();
         let chart_data: _ = ChartData {
             x_data: vec![1.0, 2.0, 3.0, 4.0, 5.0],
             y_data: vec![10.0, 20.0, 15.0, 25.0, 30.0],
@@ -992,7 +1044,10 @@ mod tests {
             labels: Vec::new(),
             metadata: HashMap::new(),
         };
-        renderer.update_chart_data("test-chart", chart_data).await.unwrap();
+        renderer
+            .update_chart_data("test-chart", chart_data)
+            .await
+            .unwrap();
         let svg: _ = renderer.render_chart_svg("test-chart").await.unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Test Chart"));
@@ -1006,7 +1061,10 @@ mod tests {
             width: 600,
             height: 600,
             margin: MarginConfig {
-                top: 20, right: 20, bottom: 20, left: 20,
+                top: 20,
+                right: 20,
+                bottom: 20,
+                left: 20,
             },
             colors: config.default_colors.clone(),
             animation: config.default_animation.clone(),
@@ -1017,11 +1075,10 @@ mod tests {
                 value_format: "{}".to_string(),
             },
         };
-        renderer.create_chart(
-            "pie-chart".to_string(),
-            ChartType::PieChart,
-            chart_config
-        ).await.unwrap();
+        renderer
+            .create_chart("pie-chart".to_string(), ChartType::PieChart, chart_config)
+            .await
+            .unwrap();
         let chart_data: _ = ChartData {
             x_data: vec![], // Not used for pie chart
             y_data: vec![30.0, 20.0, 50.0],
@@ -1029,7 +1086,10 @@ mod tests {
             labels: vec!["A".to_string(), "B".to_string(), "C".to_string()],
             metadata: HashMap::new(),
         };
-        renderer.update_chart_data("pie-chart", chart_data).await.unwrap();
+        renderer
+            .update_chart_data("pie-chart", chart_data)
+            .await
+            .unwrap();
         let svg: _ = renderer.render_chart_svg("pie-chart").await.unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("path"));
@@ -1050,7 +1110,10 @@ mod tests {
                 label: "Node 1".to_string(),
                 node_type: "service".to_string(),
                 position: Position { x: 100.0, y: 100.0 },
-                size: Size { width: 50.0, height: 50.0 },
+                size: Size {
+                    width: 50.0,
+                    height: 50.0,
+                },
                 color: "#3b82f6".to_string(),
                 metadata: HashMap::new(),
             },
@@ -1059,31 +1122,35 @@ mod tests {
                 label: "Node 2".to_string(),
                 node_type: "service".to_string(),
                 position: Position { x: 300.0, y: 100.0 },
-                size: Size { width: 50.0, height: 50.0 },
+                size: Size {
+                    width: 50.0,
+                    height: 50.0,
+                },
                 color: "#10b981".to_string(),
                 metadata: HashMap::new(),
             },
         ];
-        let edges: _ = vec![
-            GraphEdge {
-                source: "node1".to_string(),
-                target: "node2".to_string(),
-                label: Some("call".to_string()),
-                weight: Some(1.0),
-                color: None,
-                style: EdgeStyle {
-                    line_style: "solid".to_string(),
-                    arrow_head: true,
-                    thickness: 2.0,
-                },
+        let edges: _ = vec![GraphEdge {
+            source: "node1".to_string(),
+            target: "node2".to_string(),
+            label: Some("call".to_string()),
+            weight: Some(1.0),
+            color: None,
+            style: EdgeStyle {
+                line_style: "solid".to_string(),
+                arrow_head: true,
+                thickness: 2.0,
             },
-        ];
-        renderer.create_graph(
-            "test-graph".to_string(),
-            GraphType::TopologyGraph,
-            nodes,
-            edges
-        ).await.unwrap();
+        }];
+        renderer
+            .create_graph(
+                "test-graph".to_string(),
+                GraphType::TopologyGraph,
+                nodes,
+                edges,
+            )
+            .await
+            .unwrap();
         let svg: _ = renderer.render_graph_svg("test-graph").await.unwrap();
         assert!(svg.contains("<svg"));
         assert!(svg.contains("line"));
@@ -1098,7 +1165,10 @@ mod tests {
                 label: "Node 1".to_string(),
                 node_type: "service".to_string(),
                 position: Position { x: 0.0, y: 0.0 },
-                size: Size { width: 50.0, height: 50.0 },
+                size: Size {
+                    width: 50.0,
+                    height: 50.0,
+                },
                 color: "#3b82f6".to_string(),
                 metadata: HashMap::new(),
             },
@@ -1107,25 +1177,26 @@ mod tests {
                 label: "Node 2".to_string(),
                 node_type: "service".to_string(),
                 position: Position { x: 0.0, y: 0.0 },
-                size: Size { width: 50.0, height: 50.0 },
+                size: Size {
+                    width: 50.0,
+                    height: 50.0,
+                },
                 color: "#10b981".to_string(),
                 metadata: HashMap::new(),
             },
         ];
-        let edges: _ = vec![
-            GraphEdge {
-                source: "n1".to_string(),
-                target: "n2".to_string(),
-                label: None,
-                weight: None,
-                color: None,
-                style: EdgeStyle {
-                    line_style: "solid".to_string(),
-                    arrow_head: false,
-                    thickness: 2.0,
-                },
+        let edges: _ = vec![GraphEdge {
+            source: "n1".to_string(),
+            target: "n2".to_string(),
+            label: None,
+            weight: None,
+            color: None,
+            style: EdgeStyle {
+                line_style: "solid".to_string(),
+                arrow_head: false,
+                thickness: 2.0,
             },
-        ];
+        }];
         let mut graph = GraphInstance {
             id: "test".to_string(),
             graph_type: GraphType::TopologyGraph,
@@ -1172,7 +1243,10 @@ mod tests {
             width: 800,
             height: 600,
             margin: MarginConfig {
-                top: 20, right: 20, bottom: 40, left: 40,
+                top: 20,
+                right: 20,
+                bottom: 40,
+                left: 40,
             },
             colors: config.default_colors.clone(),
             animation: config.default_animation.clone(),
@@ -1183,11 +1257,14 @@ mod tests {
                 value_format: "{}".to_string(),
             },
         };
-        renderer.create_chart(
-            "stats-chart".to_string(),
-            ChartType::LineChart,
-            chart_config
-        ).await.unwrap();
+        renderer
+            .create_chart(
+                "stats-chart".to_string(),
+                ChartType::LineChart,
+                chart_config,
+            )
+            .await
+            .unwrap();
         let chart_data: _ = ChartData {
             x_data: vec![1.0, 2.0, 3.0],
             y_data: vec![10.0, 20.0, 30.0],
@@ -1195,7 +1272,10 @@ mod tests {
             labels: Vec::new(),
             metadata: HashMap::new(),
         };
-        renderer.update_chart_data("stats-chart", chart_data).await.unwrap();
+        renderer
+            .update_chart_data("stats-chart", chart_data)
+            .await
+            .unwrap();
         // Render multiple times to check stats
         renderer.render_chart_svg("stats-chart").await.unwrap();
         renderer.render_chart_svg("stats-chart").await.unwrap();

@@ -1,8 +1,8 @@
 // 热点分析模块
 // 识别性能热点函数和性能瓶颈
 
-use std::time::Duration;
 use std::collections::{BTreeMap, HashMap};
+use std::time::Duration;
 /// 热点函数
 #[derive(Debug, Clone)]
 pub struct Hotspot {
@@ -190,17 +190,10 @@ impl HotspotAnalyzer {
                 &self.memory_usage.get(function_name).unwrap_or(&Vec::new()),
             );
             // 计算热度评分
-            let heat_score: _ = self.calculate_heat_score(
-                &time_stats,
-                &memory_stats,
-                call_count,
-            );
+            let heat_score: _ = self.calculate_heat_score(&time_stats, &memory_stats, call_count);
             // 判断热点类型
-            let hotspot_types: _ = self.determine_hotspot_types(
-                &time_stats,
-                &memory_stats,
-                call_count,
-            );
+            let hotspot_types: _ =
+                self.determine_hotspot_types(&time_stats, &memory_stats, call_count);
             // 生成优化建议
             let suggestions: _ = self.generate_optimization_suggestions(
                 function_name,
@@ -225,7 +218,11 @@ impl HotspotAnalyzer {
             }
         }
         // 按热度评分排序
-        hotspots.sort_by(|a, b| b.heat_score.partial_cmp(&a.heat_score).unwrap_or(std::cmp::Ordering::Equal));
+        hotspots.sort_by(|a, b| {
+            b.heat_score
+                .partial_cmp(&a.heat_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         self.stats.hotspots_detected += hotspots.len() as u64;
         self.stats.total_scan_time += scan_start.elapsed();
         hotspots
@@ -332,10 +329,10 @@ impl HotspotAnalyzer {
         let time_score: _ = (time_stats.avg_time.as_millis() as f64
             / self.config.time_threshold_ms as f64)
             .min(1.0);
-        let memory_score: _ = (memory_stats.avg_memory / self.config.memory_threshold_bytes as f64)
-            .min(1.0);
-        let frequency_score: _ = (call_count as f64 / self.config.frequency_threshold as f64)
-            .min(1.0);
+        let memory_score: _ =
+            (memory_stats.avg_memory / self.config.memory_threshold_bytes as f64).min(1.0);
+        let frequency_score: _ =
+            (call_count as f64 / self.config.frequency_threshold as f64).min(1.0);
         // 加权平均
         time_score * self.config.heat_weights.time_weight
             + memory_score * self.config.heat_weights.memory_weight
@@ -451,15 +448,15 @@ impl HotspotAnalyzer {
             return Duration::from_nanos(0);
         }
         Duration::from_nanos(
-            self.stats.total_scan_time.as_nanos() as u64 / self.stats.scan_count as u64
+            self.stats.total_scan_time.as_nanos() as u64 / self.stats.scan_count as u64,
         )
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, Instant};
-use std::sync::atomic::Ordering;
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
     #[test]
     fn test_hotspot_analyzer_creation() {
         let analyzer: _ = HotspotAnalyzer::with_default_config();
@@ -482,10 +479,9 @@ use std::sync::atomic::Ordering;
             analyzer.record_execution("slow_func", Duration::from_millis(50), 1024);
         }
         let hotspots: _ = analyzer.identify_hotspots();
-        let has_time_hotspot: _ = hotspots.iter().any(|h| {
-            h.function_name == "slow_func"
-                && h.hotspot_type == HotspotType::TimeHotspot
-        });
+        let has_time_hotspot: _ = hotspots
+            .iter()
+            .any(|h| h.function_name == "slow_func" && h.hotspot_type == HotspotType::TimeHotspot);
         assert!(has_time_hotspot);
     }
     #[test]
@@ -497,8 +493,7 @@ use std::sync::atomic::Ordering;
         }
         let hotspots: _ = analyzer.identify_hotspots();
         let has_frequency_hotspot: _ = hotspots.iter().any(|h| {
-            h.function_name == "frequent_func"
-                && h.hotspot_type == HotspotType::FrequencyHotspot
+            h.function_name == "frequent_func" && h.hotspot_type == HotspotType::FrequencyHotspot
         });
         assert!(has_frequency_hotspot);
     }
@@ -523,7 +518,10 @@ use std::sync::atomic::Ordering;
             analyzer.record_execution("slow_func", Duration::from_millis(50), 1024);
         }
         let hotspots: _ = analyzer.identify_hotspots();
-        let hotspot: _ = hotspots.iter().find(|h| h.function_name == "slow_func").unwrap();
+        let hotspot: _ = hotspots
+            .iter()
+            .find(|h| h.function_name == "slow_func")
+            .unwrap();
         assert!(!hotspot.optimization_suggestions.is_empty());
         assert!(hotspot
             .optimization_suggestions
@@ -539,8 +537,7 @@ use std::sync::atomic::Ordering;
         }
         let hotspots: _ = analyzer.identify_hotspots();
         let has_composite: _ = hotspots.iter().any(|h| {
-            h.function_name == "problem_func"
-                && h.hotspot_type == HotspotType::CompositeHotspot
+            h.function_name == "problem_func" && h.hotspot_type == HotspotType::CompositeHotspot
         });
         assert!(has_composite);
     }

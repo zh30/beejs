@@ -1,6 +1,6 @@
 // AI Workload Demo for Beejs Runtime
 // Demonstrates streaming LLM responses using Web Streams API
-// Run with: ./target/release/beejs run examples/ai_workload_demo.js
+// Run with: ./target/release/bee run examples/ai_workload_demo.js
 
 console.log("Beejs AI Workload Demo");
 console.log("======================\n");

@@ -1,7 +1,7 @@
 // TypeScript 编译器实现
 // 将 TypeScript 代码转译为 JavaScript
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -124,74 +124,112 @@ impl TypeContext {
 
     fn register_builtin_types(&mut self) {
         // 字符串类型
-        self.variables.insert("string".to_string(), "string".to_string());
-        self.variables.insert("number".to_string(), "number".to_string());
-        self.variables.insert("boolean".to_string(), "boolean".to_string());
+        self.variables
+            .insert("string".to_string(), "string".to_string());
+        self.variables
+            .insert("number".to_string(), "number".to_string());
+        self.variables
+            .insert("boolean".to_string(), "boolean".to_string());
         self.variables.insert("any".to_string(), "any".to_string());
-        self.variables.insert("void".to_string(), "void".to_string());
-        self.variables.insert("null".to_string(), "null".to_string());
-        self.variables.insert("undefined".to_string(), "undefined".to_string());
-        self.variables.insert("never".to_string(), "never".to_string());
-        self.variables.insert("unknown".to_string(), "unknown".to_string());
-        self.variables.insert("object".to_string(), "object".to_string());
-        self.variables.insert("symbol".to_string(), "symbol".to_string());
-        self.variables.insert("bigint".to_string(), "bigint".to_string());
+        self.variables
+            .insert("void".to_string(), "void".to_string());
+        self.variables
+            .insert("null".to_string(), "null".to_string());
+        self.variables
+            .insert("undefined".to_string(), "undefined".to_string());
+        self.variables
+            .insert("never".to_string(), "never".to_string());
+        self.variables
+            .insert("unknown".to_string(), "unknown".to_string());
+        self.variables
+            .insert("object".to_string(), "object".to_string());
+        self.variables
+            .insert("symbol".to_string(), "symbol".to_string());
+        self.variables
+            .insert("bigint".to_string(), "bigint".to_string());
 
         // Utility Types - 这些是 TypeScript 内置的类型构造器
         // Partial<T> - 所有属性变为可选
-        self.variables.insert("Partial".to_string(), "utility".to_string());
+        self.variables
+            .insert("Partial".to_string(), "utility".to_string());
         // Required<T> - 所有属性变为必需
-        self.variables.insert("Required".to_string(), "utility".to_string());
+        self.variables
+            .insert("Required".to_string(), "utility".to_string());
         // Readonly<T> - 所有属性变为只读
-        self.variables.insert("Readonly".to_string(), "utility".to_string());
+        self.variables
+            .insert("Readonly".to_string(), "utility".to_string());
         // Pick<T, K> - 从 T 中选择指定属性
-        self.variables.insert("Pick".to_string(), "utility".to_string());
+        self.variables
+            .insert("Pick".to_string(), "utility".to_string());
         // Omit<T, K> - 从 T 中移除指定属性
-        self.variables.insert("Omit".to_string(), "utility".to_string());
+        self.variables
+            .insert("Omit".to_string(), "utility".to_string());
         // Record<K, T> - 创建具有指定键和值类型的对象
-        self.variables.insert("Record".to_string(), "utility".to_string());
+        self.variables
+            .insert("Record".to_string(), "utility".to_string());
         // Exclude<T, U> - 从 T 中排除可赋值给 U 的类型
-        self.variables.insert("Exclude".to_string(), "utility".to_string());
+        self.variables
+            .insert("Exclude".to_string(), "utility".to_string());
         // Extract<T, U> - 从 T 中提取可赋值给 U 的类型
-        self.variables.insert("Extract".to_string(), "utility".to_string());
+        self.variables
+            .insert("Extract".to_string(), "utility".to_string());
         // NonNullable<T> - 排除 null 和 undefined
-        self.variables.insert("NonNullable".to_string(), "utility".to_string());
+        self.variables
+            .insert("NonNullable".to_string(), "utility".to_string());
         // ReturnType<T> - 获取函数类型 T 的返回类型
-        self.variables.insert("ReturnType".to_string(), "utility".to_string());
+        self.variables
+            .insert("ReturnType".to_string(), "utility".to_string());
         // Parameters<T> - 获取函数类型 T 的参数类型
-        self.variables.insert("Parameters".to_string(), "utility".to_string());
+        self.variables
+            .insert("Parameters".to_string(), "utility".to_string());
         // ConstructorParameters<T> - 获取构造函数类型 T 的参数类型
-        self.variables.insert("ConstructorParameters".to_string(), "utility".to_string());
+        self.variables
+            .insert("ConstructorParameters".to_string(), "utility".to_string());
         // InstanceType<T> - 获取构造函数类型的实例类型
-        self.variables.insert("InstanceType".to_string(), "utility".to_string());
+        self.variables
+            .insert("InstanceType".to_string(), "utility".to_string());
         // NoInfer<T> - 防止类型推断并强制使用特定类型
-        self.variables.insert("NoInfer".to_string(), "utility".to_string());
+        self.variables
+            .insert("NoInfer".to_string(), "utility".to_string());
         // ThisParameterType<T> - 获取函数类型 T 的 this 参数类型
-        self.variables.insert("ThisParameterType".to_string(), "utility".to_string());
+        self.variables
+            .insert("ThisParameterType".to_string(), "utility".to_string());
         // OmitThisParameter<T> - 移除函数类型 T 的 this 参数
-        self.variables.insert("OmitThisParameter".to_string(), "utility".to_string());
+        self.variables
+            .insert("OmitThisParameter".to_string(), "utility".to_string());
         // Uppercase<StringType> - 字符串大写
-        self.variables.insert("Uppercase".to_string(), "utility".to_string());
+        self.variables
+            .insert("Uppercase".to_string(), "utility".to_string());
         // Lowercase<StringType> - 字符串小写
-        self.variables.insert("Lowercase".to_string(), "utility".to_string());
+        self.variables
+            .insert("Lowercase".to_string(), "utility".to_string());
         // Capitalize<StringType> - 首字母大写
-        self.variables.insert("Capitalize".to_string(), "utility".to_string());
+        self.variables
+            .insert("Capitalize".to_string(), "utility".to_string());
         // Uncapitalize<StringType> - 首字母小写
-        self.variables.insert("Uncapitalize".to_string(), "utility".to_string());
+        self.variables
+            .insert("Uncapitalize".to_string(), "utility".to_string());
         // Infer<T> - 条件类型中推断类型（v0.3.213）
-        self.variables.insert("Infer".to_string(), "utility".to_string());
+        self.variables
+            .insert("Infer".to_string(), "utility".to_string());
         // Awaited<T> - TypeScript 4.5+ 获取 Promise 解析后的类型（v0.3.215）
-        self.variables.insert("Awaited".to_string(), "utility".to_string());
+        self.variables
+            .insert("Awaited".to_string(), "utility".to_string());
         // ThisType<T> - 提供对象方法中 'this' 的类型（v0.3.216）
-        self.variables.insert("ThisType".to_string(), "utility".to_string());
+        self.variables
+            .insert("ThisType".to_string(), "utility".to_string());
         // Mutable<T> - 使所有属性可变（与 Readonly<T> 相反）（v0.3.218）
-        self.variables.insert("Mutable".to_string(), "utility".to_string());
+        self.variables
+            .insert("Mutable".to_string(), "utility".to_string());
         // Trim<T> - 移除字符串类型中的首尾空白（v0.3.222）
-        self.variables.insert("Trim".to_string(), "utility".to_string());
+        self.variables
+            .insert("Trim".to_string(), "utility".to_string());
         // TrimLeft<T> - 移除字符串类型中的左侧空白（v0.3.222）
-        self.variables.insert("TrimLeft".to_string(), "utility".to_string());
+        self.variables
+            .insert("TrimLeft".to_string(), "utility".to_string());
         // TrimRight<T> - 移除字符串类型中的右侧空白（v0.3.222）
-        self.variables.insert("TrimRight".to_string(), "utility".to_string());
+        self.variables
+            .insert("TrimRight".to_string(), "utility".to_string());
     }
 
     fn get_variable_type(&self, name: &str) -> Option<&String> {
@@ -199,7 +237,8 @@ impl TypeContext {
     }
 
     fn add_variable(&mut self, name: &str, type_name: &str) {
-        self.variables.insert(name.to_string(), type_name.to_string());
+        self.variables
+            .insert(name.to_string(), type_name.to_string());
     }
 }
 
@@ -272,20 +311,32 @@ impl TypeScriptCompiler {
 
         for node in statements {
             match node {
-                ASTNode::Statement(ASTStatement::Namespace { name, full_name, body, is_declare }) => {
+                ASTNode::Statement(ASTStatement::Namespace {
+                    name,
+                    full_name,
+                    body,
+                    is_declare,
+                }) => {
                     if let Some(existing_ns) = namespace_map.get_mut(&full_name) {
                         // 同名命名空间已存在，合并 body
-                        if let ASTStatement::Namespace { body: existing_body, .. } = existing_ns {
+                        if let ASTStatement::Namespace {
+                            body: existing_body,
+                            ..
+                        } = existing_ns
+                        {
                             existing_body.extend(body);
                         }
                     } else {
                         // 第一次看到这个命名空间
-                        namespace_map.insert(full_name.clone(), ASTStatement::Namespace {
-                            name,
-                            full_name,
-                            body,
-                            is_declare,
-                        });
+                        namespace_map.insert(
+                            full_name.clone(),
+                            ASTStatement::Namespace {
+                                name,
+                                full_name,
+                                body,
+                                is_declare,
+                            },
+                        );
                     }
                 }
                 _ => {
@@ -399,15 +450,17 @@ impl TypeScriptCompiler {
                 ASTNode::Statement(ASTStatement::ModuleDeclaration { name, body }) => {
                     if let Some(existing_mod) = module_map.get_mut(&name) {
                         // 同名模块已存在，合并 body
-                        if let ASTStatement::ModuleDeclaration { body: existing_body, .. } = existing_mod {
+                        if let ASTStatement::ModuleDeclaration {
+                            body: existing_body,
+                            ..
+                        } = existing_mod
+                        {
                             existing_body.extend(body);
                         }
                     } else {
                         // 第一次看到这个模块
-                        module_map.insert(name.clone(), ASTStatement::ModuleDeclaration {
-                            name,
-                            body,
-                        });
+                        module_map
+                            .insert(name.clone(), ASTStatement::ModuleDeclaration { name, body });
                     }
                 }
                 _ => {
@@ -440,11 +493,11 @@ impl TypeScriptCompiler {
         // 使用 HashMap 按名称分组接口、命名空间、模块
         // value 是 (interface_props, interface_extends, interface_index, namespace_body, is_declare)
         type TripleData = (
-            HashMap<String, String>,  // interface properties
-            Vec<String>,               // interface extends
+            HashMap<String, String>,     // interface properties
+            Vec<String>,                 // interface extends
             Option<Box<IndexSignature>>, // interface index signature
-            Vec<ASTNode>,              // namespace/module body
-            bool,                      // is_declare
+            Vec<ASTNode>,                // namespace/module body
+            bool,                        // is_declare
         );
         let mut triple_map: HashMap<String, TripleData> = HashMap::new();
         let mut remaining_nodes: Vec<ASTNode> = Vec::new();
@@ -459,9 +512,9 @@ impl TypeScriptCompiler {
                     index_signature,
                     constructor_signature: _,
                 } => {
-                    let entry = triple_map.entry(name.clone()).or_insert_with(|| {
-                        (HashMap::new(), Vec::new(), None, Vec::new(), false)
-                    });
+                    let entry = triple_map
+                        .entry(name.clone())
+                        .or_insert_with(|| (HashMap::new(), Vec::new(), None, Vec::new(), false));
                     // 合并接口属性
                     entry.0.extend(properties);
                     // 合并继承列表（去重）
@@ -476,7 +529,12 @@ impl TypeScriptCompiler {
                     }
                 }
                 // 处理命名空间声明
-                ASTNode::Statement(ASTStatement::Namespace { name: _, full_name, body, is_declare }) => {
+                ASTNode::Statement(ASTStatement::Namespace {
+                    name: _,
+                    full_name,
+                    body,
+                    is_declare,
+                }) => {
                     // 使用 full_name 作为 key，支持嵌套命名空间
                     let entry = triple_map.entry(full_name.clone()).or_insert_with(|| {
                         (HashMap::new(), Vec::new(), None, Vec::new(), is_declare)
@@ -622,7 +680,7 @@ impl TypeScriptCompiler {
                     "super" => Token::Super,
                     "from" => Token::From,
                     "as" => Token::As,
-                    "satisfies" => Token::Satisfies,  // v0.3.168
+                    "satisfies" => Token::Satisfies, // v0.3.168
                     "keyof" => Token::Keyof,
                     "typeof" => Token::Typeof,
                     "in" => Token::In,
@@ -631,7 +689,7 @@ impl TypeScriptCompiler {
                     "never" => Token::Never,
                     "unknown" => Token::UnknownType,
                     "is" => Token::Is,
-                    "asserts" => Token::Asserts,  // v0.3.220
+                    "asserts" => Token::Asserts, // v0.3.220
                     _ => Token::Identifier(ident),
                 };
                 tokens.push(token);
@@ -646,16 +704,16 @@ impl TypeScriptCompiler {
                 }
                 // 检查小数部分
                 if pos < chars.len() && chars[pos] == '.' {
-                    pos += 1;  // consume the '.'
+                    pos += 1; // consume the '.'
                     while pos < chars.len() && chars[pos].is_digit(10) {
                         pos += 1;
                     }
                 }
                 // 检查指数部分 (e.g., 1e5, 1.5e-3)
                 if pos < chars.len() && (chars[pos] == 'e' || chars[pos] == 'E') {
-                    pos += 1;  // consume 'e' or 'E'
+                    pos += 1; // consume 'e' or 'E'
                     if pos < chars.len() && (chars[pos] == '+' || chars[pos] == '-') {
-                        pos += 1;  // consume sign
+                        pos += 1; // consume sign
                     }
                     while pos < chars.len() && chars[pos].is_digit(10) {
                         pos += 1;
@@ -670,7 +728,7 @@ impl TypeScriptCompiler {
                 let is_bigint = pos < chars.len() && chars[pos] == 'n' && !has_decimal_or_exponent;
 
                 if is_bigint {
-                    pos += 1;  // consume 'n'
+                    pos += 1; // consume 'n'
                     let bigint: String = chars[start..pos].iter().collect();
                     tokens.push(Token::BigInt(bigint));
                 } else {
@@ -822,7 +880,11 @@ impl TypeScriptCompiler {
                             tokens.push(Token::Comma);
                         } else if c == '.' {
                             // 检查是否是 ...
-                            if pos + 1 < chars.len() && chars[pos + 1] == '.' && pos + 2 < chars.len() && chars[pos + 2] == '.' {
+                            if pos + 1 < chars.len()
+                                && chars[pos + 1] == '.'
+                                && pos + 2 < chars.len()
+                                && chars[pos + 2] == '.'
+                            {
                                 tokens.push(Token::DotDotDot);
                                 pos += 2;
                             } else {
@@ -950,7 +1012,11 @@ impl TypeScriptCompiler {
                                 if sc == '\\' && pos + 1 < chars.len() {
                                     // 处理转义字符
                                     let next_sc = chars[pos + 1];
-                                    if next_sc == '"' || next_sc == '\'' || next_sc == '\\' || next_sc == '$' {
+                                    if next_sc == '"'
+                                        || next_sc == '\''
+                                        || next_sc == '\\'
+                                        || next_sc == '$'
+                                    {
                                         string_content.push(next_sc);
                                     } else if next_sc == 'n' {
                                         string_content.push('\n');
@@ -1110,7 +1176,7 @@ impl TypeScriptCompiler {
             }
             // 处理操作符和符号
             tokens.push(match ch {
-                '@' => Token::At,  // 装饰器符号
+                '@' => Token::At, // 装饰器符号
                 '(' => Token::LParen,
                 ')' => Token::RParen,
                 '{' => Token::LBrace,
@@ -1139,7 +1205,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Plus
                     }
-                },
+                }
                 '-' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         pos += 1;
@@ -1150,7 +1216,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Minus
                     }
-                },
+                }
                 '*' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         pos += 1;
@@ -1161,7 +1227,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Star
                     }
-                },
+                }
                 '/' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         pos += 1;
@@ -1169,7 +1235,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Slash
                     }
-                },
+                }
                 '%' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         pos += 1;
@@ -1177,7 +1243,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Percent
                     }
-                },
+                }
                 '=' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '>' {
                         // 处理 FatArrow (=>)
@@ -1194,7 +1260,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Eq
                     }
-                },
+                }
                 '!' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         if pos + 2 < chars.len() && chars[pos + 2] == '=' {
@@ -1207,7 +1273,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Bang
                     }
-                },
+                }
                 '<' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         pos += 1;
@@ -1215,7 +1281,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Lt
                     }
-                },
+                }
                 '>' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         pos += 1;
@@ -1223,7 +1289,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Gt
                     }
-                },
+                }
                 '&' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '&' {
                         pos += 1;
@@ -1231,7 +1297,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Ampersand
                     }
-                },
+                }
                 '|' => {
                     if pos + 1 < chars.len() && chars[pos + 1] == '|' {
                         pos += 1;
@@ -1239,7 +1305,7 @@ impl TypeScriptCompiler {
                     } else {
                         Token::Pipe
                     }
-                },
+                }
                 _ => Token::UnknownChar(ch.to_string()),
             });
             pos += 1;
@@ -1288,7 +1354,10 @@ impl TypeScriptCompiler {
             spanned_tokens.push(SpannedToken {
                 token: token.clone(),
                 location: SourceLocation { line, column },
-                end_location: SourceLocation { line, column: column.saturating_add(1) },
+                end_location: SourceLocation {
+                    line,
+                    column: column.saturating_add(1),
+                },
             });
         }
 
@@ -1318,14 +1387,16 @@ impl TypeScriptCompiler {
                     self.check_node(stmt, ctx)?;
                 }
             }
-            ASTNode::VariableDeclaration { name, type_annotation, initializer, .. } => {
+            ASTNode::VariableDeclaration {
+                name,
+                type_annotation,
+                initializer,
+                ..
+            } => {
                 // 检查变量类型注解
                 if let Some(ref type_ann) = type_annotation {
                     if !self.is_valid_type(type_ann, ctx) {
-                        self.add_diagnostic(
-                            format!("Type '{}' is not defined", type_ann),
-                            None,
-                        );
+                        self.add_diagnostic(format!("Type '{}' is not defined", type_ann), None);
                     }
                     // 注册变量类型
                     ctx.add_variable(name, type_ann);
@@ -1346,17 +1417,33 @@ impl TypeScriptCompiler {
                     ctx.add_variable(name, "any");
                 }
             }
-            ASTNode::FunctionDeclaration { is_declare: _, name: _, params, return_type, body, is_async, type_params: _ } => {
+            ASTNode::FunctionDeclaration {
+                is_declare: _,
+                name: _,
+                params,
+                return_type,
+                body,
+                is_async,
+                type_params: _,
+            } => {
                 // 为函数参数创建新作用域
                 let prev_vars = ctx.variables.clone();
 
                 // 检查参数类型
                 for param in params {
-                    if let FunctionParameter::Simple { name: param_name, type_annotation, .. } = param {
+                    if let FunctionParameter::Simple {
+                        name: param_name,
+                        type_annotation,
+                        ..
+                    } = param
+                    {
                         if let Some(ref type_ann) = type_annotation {
                             if !self.is_valid_type(type_ann, ctx) {
                                 self.add_diagnostic(
-                                    format!("Parameter '{}' has invalid type '{}'", param_name, type_ann),
+                                    format!(
+                                        "Parameter '{}' has invalid type '{}'",
+                                        param_name, type_ann
+                                    ),
                                     None,
                                 );
                             }
@@ -1394,7 +1481,12 @@ impl TypeScriptCompiler {
 
                 // 检查参数类型
                 for param in params {
-                    if let FunctionParameter::Simple { name: param_name, type_annotation, .. } = param {
+                    if let FunctionParameter::Simple {
+                        name: param_name,
+                        type_annotation,
+                        ..
+                    } = param
+                    {
                         if let Some(ref type_ann) = type_annotation {
                             ctx.add_variable(param_name, type_ann);
                         } else {
@@ -1414,7 +1506,13 @@ impl TypeScriptCompiler {
             ASTNode::PropertyDeclaration { .. } => {
                 // 属性检查
             }
-            ASTNode::InterfaceDeclaration { name, extends: _, properties, index_signature, constructor_signature: _ } => {
+            ASTNode::InterfaceDeclaration {
+                name,
+                extends: _,
+                properties,
+                index_signature,
+                constructor_signature: _,
+            } => {
                 // 注册接口
                 ctx.interfaces.insert(name.clone(), properties.clone());
 
@@ -1423,7 +1521,11 @@ impl TypeScriptCompiler {
                     // 索引签名已解析，类型检查通过
                 }
             }
-            ASTNode::TypeAliasDeclaration { name, type_definition, .. } => {
+            ASTNode::TypeAliasDeclaration {
+                name,
+                type_definition,
+                ..
+            } => {
                 // 验证类型定义
                 if !self.is_valid_type(type_definition, ctx) {
                     self.add_diagnostic(
@@ -1432,7 +1534,8 @@ impl TypeScriptCompiler {
                     );
                 }
                 // 注册类型别名
-                ctx.type_aliases.insert(name.clone(), type_definition.clone());
+                ctx.type_aliases
+                    .insert(name.clone(), type_definition.clone());
             }
             ASTNode::EnumDeclaration { name, members } => {
                 // 注册枚举
@@ -1465,7 +1568,10 @@ impl TypeScriptCompiler {
                             if let Some(actual) = actual_type {
                                 if !self.is_type_compatible(expected, &actual, ctx) {
                                     self.add_diagnostic(
-                                        format!("Type '{}' is not assignable to type '{}'", actual, expected),
+                                        format!(
+                                            "Type '{}' is not assignable to type '{}'",
+                                            actual, expected
+                                        ),
                                         None,
                                     );
                                 }
@@ -1476,7 +1582,8 @@ impl TypeScriptCompiler {
                     // 检查返回类型是否应该是 void
                     if let Some(expected_opt) = ctx.return_type_stack.last() {
                         if let Some(expected) = expected_opt {
-                            if expected != "void" && expected != "undefined" && expected != "never" {
+                            if expected != "void" && expected != "undefined" && expected != "never"
+                            {
                                 self.add_diagnostic(
                                     format!("Expected to return '{}', but got void", expected),
                                     None,
@@ -1489,19 +1596,32 @@ impl TypeScriptCompiler {
             ASTStatement::Expression(expr) => {
                 self.check_expression(expr, ctx)?;
             }
-            ASTStatement::If { test, consequent, alternate } => {
+            ASTStatement::If {
+                test,
+                consequent,
+                alternate,
+            } => {
                 self.check_expression(test, ctx)?;
                 self.check_node(consequent, ctx)?;
                 if let Some(alt) = alternate {
                     self.check_node(alt, ctx)?;
                 }
             }
-            ASTStatement::ForOf { initializer, iterable, body } => {
+            ASTStatement::ForOf {
+                initializer,
+                iterable,
+                body,
+            } => {
                 self.check_node(initializer, ctx)?;
                 self.check_expression(iterable, ctx)?;
                 self.check_node(body, ctx)?;
             }
-            ASTStatement::For { initializer, condition, update, body } => {
+            ASTStatement::For {
+                initializer,
+                condition,
+                update,
+                body,
+            } => {
                 if let Some(init) = initializer {
                     self.check_node(init, ctx)?;
                 }
@@ -1521,7 +1641,11 @@ impl TypeScriptCompiler {
                 self.check_expression(test, ctx)?;
                 self.check_node(body, ctx)?;
             }
-            ASTStatement::Switch { discriminant, cases, .. } => {
+            ASTStatement::Switch {
+                discriminant,
+                cases,
+                ..
+            } => {
                 self.check_expression(discriminant, ctx)?;
                 for case in cases {
                     for stmt in &case.body {
@@ -1529,7 +1653,11 @@ impl TypeScriptCompiler {
                     }
                 }
             }
-            ASTStatement::Try { body, handler, finalizer } => {
+            ASTStatement::Try {
+                body,
+                handler,
+                finalizer,
+            } => {
                 self.check_node(body, ctx)?;
                 if let Some(h) = handler {
                     for stmt in &h.body {
@@ -1545,7 +1673,11 @@ impl TypeScriptCompiler {
             }
             ASTStatement::Break { .. } => {}
             ASTStatement::Continue { .. } => {}
-            ASTStatement::Namespace { body, is_declare: _, .. } => {
+            ASTStatement::Namespace {
+                body,
+                is_declare: _,
+                ..
+            } => {
                 for stmt in body {
                     self.check_node(stmt, ctx)?;
                 }
@@ -1586,7 +1718,9 @@ impl TypeScriptCompiler {
                 self.check_expression(left, _ctx)?;
                 self.check_expression(right, _ctx)?;
             }
-            ASTExpression::CallExpression { callee, arguments, .. } => {
+            ASTExpression::CallExpression {
+                callee, arguments, ..
+            } => {
                 self.check_expression(callee, _ctx)?;
                 for arg in arguments {
                     self.check_expression(arg, _ctx)?;
@@ -1652,7 +1786,12 @@ impl TypeScriptCompiler {
             ASTExpression::SpreadExpression { argument, .. } => {
                 self.check_expression(argument, _ctx)?;
             }
-            ASTExpression::ConditionalExpression { condition, consequent, alternate, .. } => {
+            ASTExpression::ConditionalExpression {
+                condition,
+                consequent,
+                alternate,
+                ..
+            } => {
                 self.check_expression(condition, _ctx)?;
                 self.check_expression(consequent, _ctx)?;
                 self.check_expression(alternate, _ctx)?;
@@ -1686,7 +1825,11 @@ impl TypeScriptCompiler {
                     Ok(None)
                 }
             }
-            ASTExpression::BinaryExpression { left, right, operator } => {
+            ASTExpression::BinaryExpression {
+                left,
+                right,
+                operator,
+            } => {
                 // 根据运算符推断类型
                 match operator.as_str() {
                     "+" => {
@@ -1694,7 +1837,8 @@ impl TypeScriptCompiler {
                         let right_type = self.infer_type(right, ctx)?;
                         // 如果任一操作数是字符串，结果是字符串
                         if left_type.as_ref().map(|t| t == "string").unwrap_or(false)
-                            || right_type.as_ref().map(|t| t == "string").unwrap_or(false) {
+                            || right_type.as_ref().map(|t| t == "string").unwrap_or(false)
+                        {
                             Ok(Some("string".to_string()))
                         } else {
                             Ok(Some("number".to_string()))
@@ -1711,7 +1855,11 @@ impl TypeScriptCompiler {
                         let right_type = self.infer_type(right, ctx)?;
                         // 推断联合类型
                         if left_type.is_some() && right_type.is_some() {
-                            Ok(Some(format!("{} | {}", left_type.unwrap(), right_type.unwrap())))
+                            Ok(Some(format!(
+                                "{} | {}",
+                                left_type.unwrap(),
+                                right_type.unwrap()
+                            )))
                         } else {
                             Ok(None)
                         }
@@ -1751,9 +1899,7 @@ impl TypeScriptCompiler {
                     _ => Ok(Some("any".to_string())),
                 }
             }
-            ASTExpression::MemberExpression { .. } => {
-                Ok(Some("any".to_string()))
-            }
+            ASTExpression::MemberExpression { .. } => Ok(Some("any".to_string())),
             ASTExpression::ArrayExpression { elements } => {
                 // v0.3.162: 增强的数组类型推断
                 Ok(self.infer_array_element_type(elements, ctx))
@@ -1762,27 +1908,25 @@ impl TypeScriptCompiler {
                 // v0.3.162: 增强的对象类型推断
                 Ok(self.infer_object_type(properties, ctx))
             }
-            ASTExpression::ObjectProperty { .. } => {
-                Ok(Some("any".to_string()))
-            }
+            ASTExpression::ObjectProperty { .. } => Ok(Some("any".to_string())),
             ASTExpression::ArrowFunctionExpression { return_type, .. } => {
                 Ok(return_type.clone().or(Some("any".to_string())))
             }
             ASTExpression::FunctionExpression { return_type, .. } => {
                 Ok(return_type.clone().or(Some("any".to_string())))
             }
-            ASTExpression::TemplateLiteral { .. } => {
-                Ok(Some("string".to_string()))
-            }
-            ASTExpression::Unary { operator, .. } => {
-                match operator.as_str() {
-                    "!" => Ok(Some("boolean".to_string())),
-                    "-" | "+" | "~" => Ok(Some("number".to_string())),
-                    "typeof" => Ok(Some("string".to_string())),
-                    _ => Ok(Some("any".to_string())),
-                }
-            }
-            ASTExpression::ConditionalExpression { consequent, alternate, .. } => {
+            ASTExpression::TemplateLiteral { .. } => Ok(Some("string".to_string())),
+            ASTExpression::Unary { operator, .. } => match operator.as_str() {
+                "!" => Ok(Some("boolean".to_string())),
+                "-" | "+" | "~" => Ok(Some("number".to_string())),
+                "typeof" => Ok(Some("string".to_string())),
+                _ => Ok(Some("any".to_string())),
+            },
+            ASTExpression::ConditionalExpression {
+                consequent,
+                alternate,
+                ..
+            } => {
                 // 条件表达式的类型是两个分支的联合类型
                 let true_type = self.infer_type(consequent, ctx)?;
                 let false_type = self.infer_type(alternate, ctx)?;
@@ -1792,21 +1936,11 @@ impl TypeScriptCompiler {
                     _ => Ok(None),
                 }
             }
-            ASTExpression::NewExpression { .. } => {
-                Ok(Some("object".to_string()))
-            }
-            ASTExpression::ThisExpression => {
-                Ok(Some("any".to_string()))
-            }
-            ASTExpression::UpdateExpression { .. } => {
-                Ok(Some("number".to_string()))
-            }
-            ASTExpression::IndexExpression { .. } => {
-                Ok(Some("any".to_string()))
-            }
-            ASTExpression::AssignmentExpression { .. } => {
-                Ok(Some("any".to_string()))
-            }
+            ASTExpression::NewExpression { .. } => Ok(Some("object".to_string())),
+            ASTExpression::ThisExpression => Ok(Some("any".to_string())),
+            ASTExpression::UpdateExpression { .. } => Ok(Some("number".to_string())),
+            ASTExpression::IndexExpression { .. } => Ok(Some("any".to_string())),
+            ASTExpression::AssignmentExpression { .. } => Ok(Some("any".to_string())),
             ASTExpression::Await { expression, .. } => {
                 // await 的类型是 Promise 的泛型参数
                 let inner_type = self.infer_type(expression, ctx)?;
@@ -1822,16 +1956,10 @@ impl TypeScriptCompiler {
                     Ok(None)
                 }
             }
-            ASTExpression::SpreadExpression { .. } => {
-                Ok(Some("any".to_string()))
-            }
-            ASTExpression::SuperExpression => {
-                Ok(Some("any".to_string()))
-            }
+            ASTExpression::SpreadExpression { .. } => Ok(Some("any".to_string())),
+            ASTExpression::SuperExpression => Ok(Some("any".to_string())),
             // 类型断言表达式的类型就是目标类型
-            ASTExpression::TSAsExpression { target_type, .. } => {
-                Ok(Some(target_type.clone()))
-            }
+            ASTExpression::TSAsExpression { target_type, .. } => Ok(Some(target_type.clone())),
             // 尖括号类型断言的类型也是目标类型
             ASTExpression::TSAngleBracketAssertion { target_type, .. } => {
                 Ok(Some(target_type.clone()))
@@ -1845,7 +1973,11 @@ impl TypeScriptCompiler {
 
     /// v0.3.162: 增强的类型推断 - 推断数组元素类型
     /// 分析数组表达式推断元素类型
-    fn infer_array_element_type(&self, elements: &[Option<ASTExpression>], ctx: &TypeContext) -> Option<String> {
+    fn infer_array_element_type(
+        &self,
+        elements: &[Option<ASTExpression>],
+        ctx: &TypeContext,
+    ) -> Option<String> {
         let mut element_types: Vec<String> = Vec::new();
 
         for elem in elements {
@@ -1911,7 +2043,8 @@ impl TypeScriptCompiler {
 
         let type_name = type_name.trim();
         if (type_name.starts_with('"') && type_name.ends_with('"'))
-            || (type_name.starts_with('\'') && type_name.ends_with('\'')) {
+            || (type_name.starts_with('\'') && type_name.ends_with('\''))
+        {
             // 字符串字面量类型是有效的
             return true;
         }
@@ -1921,14 +2054,27 @@ impl TypeScriptCompiler {
         let trimmed = type_name.trim();
         if !trimmed.is_empty()
             && ((trimmed.starts_with('"') && trimmed.ends_with('"'))
-            || (trimmed.starts_with('\'') && trimmed.ends_with('\''))) {
+                || (trimmed.starts_with('\'') && trimmed.ends_with('\'')))
+        {
             return true;
         }
 
         // 检查内置类型
         let builtin_types = [
-            "string", "number", "boolean", "any", "void", "null", "undefined",
-            "never", "unknown", "object", "symbol", "bigint", "true", "false"
+            "string",
+            "number",
+            "boolean",
+            "any",
+            "void",
+            "null",
+            "undefined",
+            "never",
+            "unknown",
+            "object",
+            "symbol",
+            "bigint",
+            "true",
+            "false",
         ];
 
         if builtin_types.contains(&type_name) {
@@ -1985,7 +2131,12 @@ impl TypeScriptCompiler {
         }
 
         // 标识符类型（可能是用户定义的类型）
-        if type_name.chars().next().map(|c| c.is_ascii_uppercase()).unwrap_or(false) {
+        if type_name
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_uppercase())
+            .unwrap_or(false)
+        {
             // 大写开头的标识符被视为有效类型
             return true;
         }
@@ -2014,7 +2165,10 @@ impl TypeScriptCompiler {
             let mut placeholder_content = String::new();
 
             for c in content.chars() {
-                if c == '$' && !in_placeholder && content.chars().nth(content.find(c).unwrap() + 1) == Some('{') {
+                if c == '$'
+                    && !in_placeholder
+                    && content.chars().nth(content.find(c).unwrap() + 1) == Some('{')
+                {
                     // 进入 ${...} 占位符
                     depth = 1;
                     in_placeholder = true;
@@ -2094,7 +2248,9 @@ impl TypeScriptCompiler {
         // 检查联合类型
         if expected.contains('|') {
             let expected_types: Vec<&str> = expected.split('|').map(|s| s.trim()).collect();
-            return expected_types.iter().any(|t| self.is_type_compatible(t, actual, ctx));
+            return expected_types
+                .iter()
+                .any(|t| self.is_type_compatible(t, actual, ctx));
         }
 
         // 检查数组类型
@@ -2191,7 +2347,8 @@ fn generate_vlq_mappings_improved(js_code: &str, _line_positions: &[usize]) -> S
                 col += 1;
                 if ch == ';' || ch == '{' || ch == '}' || ch == '(' || ch == ')' {
                     // Add mapping at significant positions
-                    if col % 10 == 0 { // Roughly every 10 characters
+                    if col % 10 == 0 {
+                        // Roughly every 10 characters
                         mappings.push_str(",");
                         mappings.push_str(&encode_vlq(col as i32));
                         mappings.push_str(",");
@@ -2315,7 +2472,7 @@ fn escape_for_json(s: &str) -> String {
 pub enum Token {
     Identifier(String),
     Number(String),
-    BigInt(String),  // BigInt 字面量，如 123n (v0.3.179)
+    BigInt(String),       // BigInt 字面量，如 123n (v0.3.179)
     String(String, char), // (value, quote_type)
     // 关键字
     Let,
@@ -2336,16 +2493,16 @@ pub enum Token {
     Enum,
     Type,
     Namespace,
-    Global,   // global 关键字（用于 declare global { ... }）
-    Module,   // module 关键字（用于 declare module "name" { ... }）
+    Global, // global 关键字（用于 declare global { ... }）
+    Module, // module 关键字（用于 declare module "name" { ... }）
     Import,
     Export,
-    Declare,   // declare 关键字（用于类型声明）
+    Declare, // declare 关键字（用于类型声明）
     Public,
     Private,
     Protected,
     Static,
-    Abstract,  // abstract 修饰符（用于抽象类和抽象方法）
+    Abstract, // abstract 修饰符（用于抽象类和抽象方法）
     Readonly, // readonly 修饰符（用于映射类型）
     Async,
     Await,
@@ -2361,15 +2518,15 @@ pub enum Token {
     Super,
     From,
     As,
-    Satisfies, // satisfies 操作符 (v0.3.168)
-    Keyof,    // keyof 操作符
-    Typeof,   // typeof 操作符
-    In,       // in 操作符（用于映射类型）
-    Infer,    // infer 关键字（用于条件类型推导）
-    Never,        // never 类型（表示永远不返回的值）
-    UnknownType,  // unknown 类型（类型安全的 top 类型）
-    Is,           // is 关键字（类型谓词，用于类型守卫）
-    Asserts,      // asserts 关键字（类型守卫，用于 asserts 条件） (v0.3.220)
+    Satisfies,           // satisfies 操作符 (v0.3.168)
+    Keyof,               // keyof 操作符
+    Typeof,              // typeof 操作符
+    In,                  // in 操作符（用于映射类型）
+    Infer,               // infer 关键字（用于条件类型推导）
+    Never,               // never 类型（表示永远不返回的值）
+    UnknownType,         // unknown 类型（类型安全的 top 类型）
+    Is,                  // is 关键字（类型谓词，用于类型守卫）
+    Asserts,             // asserts 关键字（类型守卫，用于 asserts 条件） (v0.3.220)
     UnknownChar(String), // 未知字符（用于词法分析 fallback）
     // 符号
     LParen,
@@ -2382,7 +2539,7 @@ pub enum Token {
     SemiColon,
     Comma,
     Dot,
-    DotDotDot,  // 展开运算符 ...
+    DotDotDot, // 展开运算符 ...
     Question,
     QuestionDot,      // ?.
     QuestionQuestion, // ??
@@ -2394,7 +2551,7 @@ pub enum Token {
     MinusMinus,
     Star,
     StarEq,
-    StarStar,  // ** (幂运算)
+    StarStar, // ** (幂运算)
     Slash,
     SlashEq,
     Percent,
@@ -2406,28 +2563,28 @@ pub enum Token {
     NotEqEq,
     Bang,
     Lt,
-    LtEq,      // <=
+    LtEq, // <=
     Gt,
-    GtEq,      // >=
-    Ampersand, // &
-    AmpersanderEq,   // &=
+    GtEq,                 // >=
+    Ampersand,            // &
+    AmpersanderEq,        // &=
     AmpersanderAmpersand, // &&
-    Pipe,      // |
-    PipeEq,    // |=
-    PipePipe,  // ||
-    Caret,     // ^
-    CaretEq,   // ^=
-    LtLt,      // <<
-    LtLtEq,    // <<=
-    GtGt,      // >>
-    GtGtEq,    // >>=
-    GtGtGt,    // >>>
-    GtGtGtEq,  // >>>=
+    Pipe,                 // |
+    PipeEq,               // |=
+    PipePipe,             // ||
+    Caret,                // ^
+    CaretEq,              // ^=
+    LtLt,                 // <<
+    LtLtEq,               // <<=
+    GtGt,                 // >>
+    GtGtEq,               // >>=
+    GtGtGt,               // >>>
+    GtGtGtEq,             // >>>=
     FatArrow,
     TemplateStart,
     TemplateMiddle,
     TemplateEnd,
-    At,  // @ 符号（用于装饰器）
+    At, // @ 符号（用于装饰器）
     Unknown(String),
     Eof,
 }
@@ -2435,8 +2592,8 @@ pub enum Token {
 /// Source location for source map generation (v0.3.139)
 #[derive(Debug, Clone, PartialEq)]
 pub struct SourceLocation {
-    pub line: u32,    // 0-indexed line number
-    pub column: u32,  // 0-indexed column number
+    pub line: u32,   // 0-indexed line number
+    pub column: u32, // 0-indexed column number
 }
 
 #[allow(dead_code)]
@@ -2451,7 +2608,7 @@ impl SourceLocation {
 pub struct SpannedToken {
     pub token: Token,
     pub location: SourceLocation,
-    pub end_location: SourceLocation,  // Location after this token
+    pub end_location: SourceLocation, // Location after this token
 }
 
 /// Lexer state for position tracking (v0.3.146)
@@ -2511,7 +2668,7 @@ pub struct ExportSpecifier {
 pub enum DestructuringPattern {
     /// 数组解构: [a, b, c]
     Array {
-        elements: Vec<Option<DestructuringElement>>,  // None 表示空位
+        elements: Vec<Option<DestructuringElement>>, // None 表示空位
     },
     /// 对象解构: { a, b, c }
     Object {
@@ -2611,7 +2768,7 @@ pub enum ASTNode {
         is_declare: bool,
         name: String,
         is_async: bool,
-        type_params: Option<Vec<String>>,  // 泛型参数列表，如 ['T']
+        type_params: Option<Vec<String>>, // 泛型参数列表，如 ['T']
         params: Vec<FunctionParameter>,
         return_type: Option<String>,
         body: Vec<ASTNode>,
@@ -2632,7 +2789,7 @@ pub enum ASTNode {
         /// 类装饰器列表
         decorators: Vec<Decorator>,
         name: String,
-        extends: Option<String>,  // 父类名称（如果有 extends）
+        extends: Option<String>, // 父类名称（如果有 extends）
         members: Vec<ASTNode>,
     },
     /// 类方法声明
@@ -2640,10 +2797,10 @@ pub enum ASTNode {
         /// 方法装饰器列表
         decorators: Vec<Decorator>,
         name: String,
-        kind: String,  // "method", "get", "set"
+        kind: String, // "method", "get", "set"
         is_async: bool,
         is_static: bool,
-        is_abstract: bool,  // 是否为抽象方法
+        is_abstract: bool, // 是否为抽象方法
         params: Vec<FunctionParameter>,
         body: Vec<ASTNode>,
     },
@@ -2653,7 +2810,7 @@ pub enum ASTNode {
         decorators: Vec<Decorator>,
         name: String,
         is_static: bool,
-        is_abstract: bool,  // 是否为抽象字段
+        is_abstract: bool, // 是否为抽象字段
         initializer: Option<Box<ASTNode>>,
     },
     /// 类计算属性名声明
@@ -2760,19 +2917,19 @@ pub enum ASTExpression {
         value: Box<ASTExpression>,
     },
     ObjectLiteral {
-        properties: Vec<ASTExpression>,  // 使用 ObjectProperty 表达式
+        properties: Vec<ASTExpression>, // 使用 ObjectProperty 表达式
     },
     // v0.3.180: 箭头函数表达式 - 支持默认参数值
     ArrowFunctionExpression {
         // params: Vec<(name, type_annotation, default_value)>
         params: Vec<(String, Option<String>, Option<String>)>,
-        body: Box<ASTNode>,  // 可以是 Expression 或 Block(Vec<ASTNode>)
+        body: Box<ASTNode>, // 可以是 Expression 或 Block(Vec<ASTNode>)
         return_type: Option<String>,
         is_async: bool,
     },
     /// 模板字符串: `Hello ${name}!`
     TemplateLiteral {
-        parts: Vec<ASTExpression>,  // 交替的字符串和表达式
+        parts: Vec<ASTExpression>, // 交替的字符串和表达式
     },
     /// await 表达式: await somePromise
     Await {
@@ -2792,7 +2949,7 @@ pub enum ASTExpression {
     },
     /// 数组表达式: [1, 2, 3]
     ArrayExpression {
-        elements: Vec<Option<ASTExpression>>,  // None 表示空位或解构
+        elements: Vec<Option<ASTExpression>>, // None 表示空位或解构
     },
     /// 展开表达式: ...arr
     SpreadExpression {
@@ -2814,7 +2971,7 @@ pub enum ASTExpression {
         target_type: String,
         is_const: bool,
     },
-    /// TypeScript 尖括号类型断言: <Type>value
+    /// TypeScript 尖括号类型断言: `<Type>value`
     /// 转译时类型信息被移除，直接输出原始表达式
     /// 注意：这是旧式类型断言语法，在 JSX/TSX 中可能与泛型冲突
     TSAngleBracketAssertion {
@@ -2832,7 +2989,7 @@ pub enum ASTExpression {
     /// 用于: const fn = function() {} 或 const fn = async function() {}
     FunctionExpression {
         is_async: bool,
-        type_params: Option<Vec<String>>,  // 泛型参数列表
+        type_params: Option<Vec<String>>, // 泛型参数列表
         params: Vec<FunctionParameter>,
         return_type: Option<String>,
         body: Vec<ASTNode>,
@@ -2850,13 +3007,13 @@ pub enum ASTStatement {
     },
     /// for...of 循环: for (const x of items) { ... }
     ForOf {
-        initializer: Box<ASTNode>,  // VariableDeclaration
+        initializer: Box<ASTNode>, // VariableDeclaration
         iterable: ASTExpression,
         body: Box<ASTNode>,
     },
     /// 传统 for 循环: for (let i = 0; i < 10; i++) { ... }
     For {
-        initializer: Option<Box<ASTNode>>,  // VariableDeclaration 或 Expression
+        initializer: Option<Box<ASTNode>>, // VariableDeclaration 或 Expression
         condition: Option<ASTExpression>,
         update: Option<ASTExpression>,
         body: Box<ASTNode>,
@@ -2951,13 +3108,13 @@ pub enum ASTStatement {
 /// switch case 结构
 #[derive(Debug, Clone)]
 pub struct SwitchCase {
-    pub test: Option<ASTExpression>,  // None 表示 default
+    pub test: Option<ASTExpression>, // None 表示 default
     pub body: Vec<ASTNode>,
 }
 /// catch 子句
 #[derive(Debug, Clone)]
 pub struct CatchClause {
-    pub param: Option<String>,  // 捕获的异常变量名
+    pub param: Option<String>, // 捕获的异常变量名
     pub body: Vec<ASTNode>,
 }
 /// 解析器
@@ -3004,29 +3161,19 @@ impl Parser {
                 }
                 Ok(node)
             }
-            Token::Function | Token::Async => {
-                self.parse_function_declaration(false)
-            }
-            Token::Class => {
-                self.parse_class_declaration()
-            }
+            Token::Function | Token::Async => self.parse_function_declaration(false),
+            Token::Class => self.parse_class_declaration(),
             Token::Abstract => {
                 // abstract class 声明
                 self.parse_class_declaration()
             }
-            Token::Interface => {
-                self.parse_interface_declaration()
-            }
-            Token::Enum => {
-                self.parse_enum_declaration()
-            }
+            Token::Interface => self.parse_interface_declaration(),
+            Token::Enum => self.parse_enum_declaration(),
             Token::Global => {
                 // declare global { ... }
                 self.parse_global_declaration()
             }
-            Token::Type => {
-                self.parse_type_alias_declaration()
-            }
+            Token::Type => self.parse_type_alias_declaration(),
             Token::Declare => {
                 // declare 关键字 - 需要查看后续 token 来确定声明类型
                 // declare 可以用于: namespace, class, function, const, let, var, interface, type, enum, module
@@ -3035,27 +3182,13 @@ impl Parser {
                 self.consume(Token::Declare)?;
                 // 查看下一个 token 来确定声明类型
                 let node = match self.current_token() {
-                    Token::Namespace => {
-                        self.parse_namespace_declaration_internal(is_declare)
-                    }
-                    Token::Class => {
-                        self.parse_class_declaration_internal(is_declare, Vec::new())
-                    }
-                    Token::Function => {
-                        self.parse_function_declaration(is_declare)
-                    }
-                    Token::Interface => {
-                        self.parse_interface_declaration()
-                    }
-                    Token::Type => {
-                        self.parse_type_alias_declaration()
-                    }
-                    Token::Enum => {
-                        self.parse_enum_declaration()
-                    }
-                    Token::Global => {
-                        self.parse_global_declaration()
-                    }
+                    Token::Namespace => self.parse_namespace_declaration_internal(is_declare),
+                    Token::Class => self.parse_class_declaration_internal(is_declare, Vec::new()),
+                    Token::Function => self.parse_function_declaration(is_declare),
+                    Token::Interface => self.parse_interface_declaration(),
+                    Token::Type => self.parse_type_alias_declaration(),
+                    Token::Enum => self.parse_enum_declaration(),
+                    Token::Global => self.parse_global_declaration(),
                     Token::Module => {
                         // declare module "name" { ... }
                         self.parse_module_declaration()
@@ -3074,45 +3207,19 @@ impl Parser {
                 }
                 Ok(node)
             }
-            Token::Namespace => {
-                self.parse_namespace_declaration()
-            }
-            Token::Return => {
-                self.parse_return_statement()
-            }
-            Token::For => {
-                self.parse_for_statement()
-            }
-            Token::If => {
-                self.parse_if_statement()
-            }
-            Token::While => {
-                self.parse_while_statement()
-            }
-            Token::Do => {
-                self.parse_do_while_statement()
-            }
-            Token::Switch => {
-                self.parse_switch_statement()
-            }
-            Token::Try => {
-                self.parse_try_statement()
-            }
-            Token::Throw => {
-                self.parse_throw_statement()
-            }
-            Token::Break => {
-                self.parse_break_statement()
-            }
-            Token::Continue => {
-                self.parse_continue_statement()
-            }
-            Token::Import => {
-                self.parse_import_declaration()
-            }
-            Token::Export => {
-                self.parse_export_declaration()
-            }
+            Token::Namespace => self.parse_namespace_declaration(),
+            Token::Return => self.parse_return_statement(),
+            Token::For => self.parse_for_statement(),
+            Token::If => self.parse_if_statement(),
+            Token::While => self.parse_while_statement(),
+            Token::Do => self.parse_do_while_statement(),
+            Token::Switch => self.parse_switch_statement(),
+            Token::Try => self.parse_try_statement(),
+            Token::Throw => self.parse_throw_statement(),
+            Token::Break => self.parse_break_statement(),
+            Token::Continue => self.parse_continue_statement(),
+            Token::Import => self.parse_import_declaration(),
+            Token::Export => self.parse_export_declaration(),
             Token::At => {
                 // 装饰器语句 - 尝试解析装饰器后面的声明
                 // 保存装饰器列表
@@ -3122,7 +3229,10 @@ impl Parser {
                     Token::Class => self.parse_class_declaration_with_decorators(decorators),
                     _ => {
                         // 尝试作为表达式解析
-                        bail!("Unexpected token after decorator: {:?}", self.current_token());
+                        bail!(
+                            "Unexpected token after decorator: {:?}",
+                            self.current_token()
+                        );
                     }
                 }
             }
@@ -3313,7 +3423,10 @@ impl Parser {
         }
 
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::Statement(ASTStatement::Switch { discriminant, cases }))
+        Ok(ASTNode::Statement(ASTStatement::Switch {
+            discriminant,
+            cases,
+        }))
     }
 
     /// 解析 try...catch...finally 语句
@@ -3358,7 +3471,10 @@ impl Parser {
                 vec![self.parse_statement()?]
             };
 
-            Some(CatchClause { param, body: catch_body })
+            Some(CatchClause {
+                param,
+                body: catch_body,
+            })
         } else {
             None
         };
@@ -3371,7 +3487,11 @@ impl Parser {
             None
         };
 
-        Ok(ASTNode::Statement(ASTStatement::Try { body, handler, finalizer }))
+        Ok(ASTNode::Statement(ASTStatement::Try {
+            body,
+            handler,
+            finalizer,
+        }))
     }
 
     /// 解析 throw 语句
@@ -3458,7 +3578,9 @@ impl Parser {
             }
 
             // 检查是否是解构参数 ([ 或 {)
-            let param = if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
+            let param = if self.current_token_eq(&Token::LBracket)
+                || self.current_token_eq(&Token::LBrace)
+            {
                 // 解析解构模式
                 let pattern = self.parse_destructuring_pattern()?;
 
@@ -3471,7 +3593,10 @@ impl Parser {
                     None
                 };
 
-                FunctionParameter::Destructuring { pattern, default_value }
+                FunctionParameter::Destructuring {
+                    pattern,
+                    default_value,
+                }
             } else {
                 // 解析简单参数
                 // 首先检查是否是访问修饰符（public, private, protected）
@@ -3847,7 +3972,10 @@ impl Parser {
 
     /// 解析变量名和初始化器（用于变量声明）
     /// 如果检测到箭头函数，则调用专门的箭头函数解析
-    fn parse_variable_name_and_initializer(&mut self, _kind: &str) -> Result<(String, Option<Box<ASTNode>>)> {
+    fn parse_variable_name_and_initializer(
+        &mut self,
+        _kind: &str,
+    ) -> Result<(String, Option<Box<ASTNode>>)> {
         // 消耗变量名
         let name_token = if let Token::Identifier(_) = self.current_token() {
             self.advance()
@@ -3950,7 +4078,9 @@ impl Parser {
                                         // 跳过类型（标识符类型）
                                         while check_pos + self.position < n {
                                             match &self.tokens[check_pos + self.position] {
-                                                Token::Identifier(_) | Token::Number(_) | Token::String(_, _) => {
+                                                Token::Identifier(_)
+                                                | Token::Number(_)
+                                                | Token::String(_, _) => {
                                                     check_pos += 1;
                                                     break;
                                                 }
@@ -3964,7 +4094,8 @@ impl Parser {
                                     }
                                 }
                                 if check_pos + self.position < n {
-                                    if let Token::FatArrow = &self.tokens[check_pos + self.position] {
+                                    if let Token::FatArrow = &self.tokens[check_pos + self.position]
+                                    {
                                         return true;
                                     }
                                 }
@@ -4059,7 +4190,10 @@ impl Parser {
             self.consume(Token::Function)?;
             false
         } else {
-            bail!("Expected 'async' or 'function' keyword, got {:?}", self.current_token());
+            bail!(
+                "Expected 'async' or 'function' keyword, got {:?}",
+                self.current_token()
+            );
         };
         let name_token = self.consume_any_identifier()?;
         let name: _ = match name_token {
@@ -4102,7 +4236,9 @@ impl Parser {
         let mut params = Vec::new();
         while !self.current_token_eq(&Token::RParen) {
             // 检查是否是解构参数 ([ 或 {)
-            let param = if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
+            let param = if self.current_token_eq(&Token::LBracket)
+                || self.current_token_eq(&Token::LBrace)
+            {
                 // 解析解构模式
                 let pattern = self.parse_destructuring_pattern()?;
 
@@ -4115,7 +4251,10 @@ impl Parser {
                     None
                 };
 
-                FunctionParameter::Destructuring { pattern, default_value }
+                FunctionParameter::Destructuring {
+                    pattern,
+                    default_value,
+                }
             } else {
                 // 解析简单参数（包括 this 关键字）
                 let param_name_token = self.consume_param_name()?;
@@ -4222,7 +4361,9 @@ impl Parser {
         let _name: Option<String> = None;
         if let Token::Identifier(_) = self.current_token() {
             // 检查后面是否是 (，如果是则这是函数名
-            if self.position + 1 < self.tokens.len() && self.tokens[self.position + 1] == Token::LParen {
+            if self.position + 1 < self.tokens.len()
+                && self.tokens[self.position + 1] == Token::LParen
+            {
                 // 这是一个命名函数表达式 - 消费函数名
                 self.consume_any_identifier()?;
             }
@@ -4266,7 +4407,9 @@ impl Parser {
         let mut params = Vec::new();
         while !self.current_token_eq(&Token::RParen) {
             // 检查是否是解构参数 ([ 或 {)
-            let param = if self.current_token_eq(&Token::LBracket) || self.current_token_eq(&Token::LBrace) {
+            let param = if self.current_token_eq(&Token::LBracket)
+                || self.current_token_eq(&Token::LBrace)
+            {
                 // 解析解构模式
                 let pattern = self.parse_destructuring_pattern()?;
 
@@ -4279,7 +4422,10 @@ impl Parser {
                     None
                 };
 
-                FunctionParameter::Destructuring { pattern, default_value }
+                FunctionParameter::Destructuring {
+                    pattern,
+                    default_value,
+                }
             } else {
                 // 解析简单参数
                 let param_name_token = self.consume_any_identifier()?;
@@ -4384,7 +4530,11 @@ impl Parser {
     /// declare class 的处理方式：
     /// - 声明为类型声明，不生成实际代码
     /// - 或者生成声明语句 declare class X { ... }
-    fn parse_class_declaration_internal(&mut self, is_declare: bool, decorators: Vec<Decorator>) -> Result<ASTNode> {
+    fn parse_class_declaration_internal(
+        &mut self,
+        is_declare: bool,
+        decorators: Vec<Decorator>,
+    ) -> Result<ASTNode> {
         // 检查是否有 abstract 修饰符
         let is_abstract = if self.current_token_eq(&Token::Abstract) {
             self.consume(Token::Abstract)?;
@@ -4405,9 +4555,21 @@ impl Parser {
             let mut depth = 1;
             while depth > 0 && !self.is_at_end() {
                 match self.current_token() {
-                    Token::Lt => { depth += 1; self.advance(); }
-                    Token::Gt => { depth -= 1; if depth > 0 { self.advance(); } else { self.advance(); } }
-                    _ => { self.advance(); }
+                    Token::Lt => {
+                        depth += 1;
+                        self.advance();
+                    }
+                    Token::Gt => {
+                        depth -= 1;
+                        if depth > 0 {
+                            self.advance();
+                        } else {
+                            self.advance();
+                        }
+                    }
+                    _ => {
+                        self.advance();
+                    }
                 }
             }
         }
@@ -4440,11 +4602,21 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::ClassDeclaration { is_declare, is_abstract, decorators, name, extends, members })
+        Ok(ASTNode::ClassDeclaration {
+            is_declare,
+            is_abstract,
+            decorators,
+            name,
+            extends,
+            members,
+        })
     }
 
     /// 解析带有已解析装饰器列表的类声明
-    fn parse_class_declaration_with_decorators(&mut self, decorators: Vec<Decorator>) -> Result<ASTNode> {
+    fn parse_class_declaration_with_decorators(
+        &mut self,
+        decorators: Vec<Decorator>,
+    ) -> Result<ASTNode> {
         self.parse_class_declaration_internal(false, decorators)
     }
 
@@ -4886,7 +5058,7 @@ impl Parser {
                 // v0.3.189: 解析构造函数签名 new(props: Type): ReturnType
                 self.consume(Token::New)?;
                 self.consume(Token::LParen)?; // 消耗 (
-                // 解析参数列表: 参数名: 类型, 参数名: 类型
+                                              // 解析参数列表: 参数名: 类型, 参数名: 类型
                 let mut params = Vec::new();
                 while !self.current_token_eq(&Token::RParen) {
                     // 跳过 rest 参数标记 ...
@@ -4919,11 +5091,12 @@ impl Parser {
                 }
                 self.consume(Token::RParen)?; // 消耗 )
                 self.consume(Token::Colon)?; // 消耗 :
-                // 解析返回类型
+                                             // 解析返回类型
                 let return_type = self.parse_type_annotation();
                 let return_type_str = return_type.unwrap_or_else(|| "any".to_string());
 
-                constructor_signature = Some(format!("new({}) => {}", params.join(", "), return_type_str));
+                constructor_signature =
+                    Some(format!("new({}) => {}", params.join(", "), return_type_str));
             } else {
                 // 解析普通属性 (v0.3.169: 支持 ? 可选修饰符和 readonly 修饰符)
                 // 先检查是否有 readonly 修饰符
@@ -4959,7 +5132,13 @@ impl Parser {
             }
         }
         self.consume(Token::RBrace)?;
-        Ok(ASTNode::InterfaceDeclaration { name, extends, properties, index_signature, constructor_signature })
+        Ok(ASTNode::InterfaceDeclaration {
+            name,
+            extends,
+            properties,
+            index_signature,
+            constructor_signature,
+        })
     }
     fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Enum)?;
@@ -5007,7 +5186,10 @@ impl Parser {
                     current_value = Some(1);
                 }
             }
-            members.push(EnumMember { name: member_name, value: _member_value });
+            members.push(EnumMember {
+                name: member_name,
+                value: _member_value,
+            });
             if self.current_token_eq(&Token::Comma) {
                 self.consume(Token::Comma)?;
             }
@@ -5048,7 +5230,7 @@ impl Parser {
                 // 检查是否有 extends 约束
                 if self.current_token_eq(&Token::Extends) {
                     self.advance(); // 消耗 extends
-                    // 解析约束类型
+                                    // 解析约束类型
                     let _constraint = if let Some(c) = self.parse_type_annotation() {
                         c
                     } else {
@@ -5164,9 +5346,7 @@ impl Parser {
         // 消耗右花括号
         self.consume(Token::RBrace)?;
 
-        Ok(ASTNode::Statement(ASTStatement::GlobalDeclaration {
-            body,
-        }))
+        Ok(ASTNode::Statement(ASTStatement::GlobalDeclaration { body }))
     }
 
     /// 解析模块声明
@@ -5615,7 +5795,8 @@ impl Parser {
                 self.consume(Token::Declare)?;
                 match self.current_token() {
                     Token::Class => {
-                        let declaration = self.parse_class_declaration_internal(is_declare, Vec::new())?;
+                        let declaration =
+                            self.parse_class_declaration_internal(is_declare, Vec::new())?;
                         return Ok(ASTNode::ExportDeclaration {
                             exports: Vec::new(),
                             is_default: false,
@@ -5658,7 +5839,10 @@ impl Parser {
                             is_type_only,
                         });
                     }
-                    _ => bail!("Invalid export declare declaration: {:?}", self.current_token()),
+                    _ => bail!(
+                        "Invalid export declare declaration: {:?}",
+                        self.current_token()
+                    ),
                 }
             }
             Token::Namespace => {
@@ -5712,15 +5896,20 @@ impl Parser {
             while lookahead < self.tokens.len() {
                 match &self.tokens[lookahead] {
                     Token::Lt => {
-                        if depth == 0 { depth = 1; }
-                        else { depth += 1; }
+                        if depth == 0 {
+                            depth = 1;
+                        } else {
+                            depth += 1;
+                        }
                         lookahead += 1;
                     }
                     Token::Gt if depth > 0 => {
                         depth -= 1;
                         if depth == 0 {
                             lookahead += 1;
-                            if lookahead < self.tokens.len() && matches!(self.tokens[lookahead], Token::LParen) {
+                            if lookahead < self.tokens.len()
+                                && matches!(self.tokens[lookahead], Token::LParen)
+                            {
                                 found_type_args = true;
                             }
                             break;
@@ -5731,7 +5920,9 @@ impl Parser {
                         lookahead += 1;
                     }
                     _ => {
-                        if depth == 0 { break; }
+                        if depth == 0 {
+                            break;
+                        }
                         lookahead += 1;
                     }
                 }
@@ -5743,9 +5934,21 @@ impl Parser {
                 let mut depth = 1;
                 while depth > 0 && !self.is_at_end() {
                     match self.current_token() {
-                        Token::Lt => { depth += 1; self.advance(); }
-                        Token::Gt => { depth -= 1; if depth > 0 { self.advance(); } else { self.advance(); } }
-                        _ => { self.advance(); }
+                        Token::Lt => {
+                            depth += 1;
+                            self.advance();
+                        }
+                        Token::Gt => {
+                            depth -= 1;
+                            if depth > 0 {
+                                self.advance();
+                            } else {
+                                self.advance();
+                            }
+                        }
+                        _ => {
+                            self.advance();
+                        }
                     }
                 }
                 // 处理函数调用
@@ -5808,8 +6011,11 @@ impl Parser {
             while lookahead < self.tokens.len() {
                 match &self.tokens[lookahead] {
                     Token::Lt => {
-                        if depth == 0 { depth = 1; }
-                        else { depth += 1; }
+                        if depth == 0 {
+                            depth = 1;
+                        } else {
+                            depth += 1;
+                        }
                         lookahead += 1;
                     }
                     Token::Gt if depth > 0 => {
@@ -5822,16 +6028,38 @@ impl Parser {
                                     Token::LParen => {
                                         found_type_args = true;
                                     }
-                                    Token::SemiColon | Token::RParen | Token::RBrace
-                                    | Token::Comma | Token::FatArrow | Token::Question
-                                    | Token::Plus | Token::Minus | Token::Star | Token::Slash
-                                    | Token::Percent | Token::Caret | Token::Ampersand
-                                    | Token::Pipe | Token::QuestionQuestion | Token::Dot
-                                    | Token::PlusEq | Token::MinusEq | Token::StarEq
-                                    | Token::SlashEq | Token::PercentEq | Token::AmpersanderEq
-                                    | Token::PipeEq | Token::CaretEq | Token::LtEq
-                                    | Token::GtEq | Token::Eq | Token::EqEq | Token::NotEqEq
-                                    | Token::Bang | Token::Colon | Token::RBracket => {
+                                    Token::SemiColon
+                                    | Token::RParen
+                                    | Token::RBrace
+                                    | Token::Comma
+                                    | Token::FatArrow
+                                    | Token::Question
+                                    | Token::Plus
+                                    | Token::Minus
+                                    | Token::Star
+                                    | Token::Slash
+                                    | Token::Percent
+                                    | Token::Caret
+                                    | Token::Ampersand
+                                    | Token::Pipe
+                                    | Token::QuestionQuestion
+                                    | Token::Dot
+                                    | Token::PlusEq
+                                    | Token::MinusEq
+                                    | Token::StarEq
+                                    | Token::SlashEq
+                                    | Token::PercentEq
+                                    | Token::AmpersanderEq
+                                    | Token::PipeEq
+                                    | Token::CaretEq
+                                    | Token::LtEq
+                                    | Token::GtEq
+                                    | Token::Eq
+                                    | Token::EqEq
+                                    | Token::NotEqEq
+                                    | Token::Bang
+                                    | Token::Colon
+                                    | Token::RBracket => {
                                         terminated_without_paren = true;
                                     }
                                     _ => {}
@@ -5845,7 +6073,9 @@ impl Parser {
                         lookahead += 1;
                     }
                     _ => {
-                        if depth == 0 { break; }
+                        if depth == 0 {
+                            break;
+                        }
                         lookahead += 1;
                     }
                 }
@@ -5858,9 +6088,21 @@ impl Parser {
                 let mut depth = 1;
                 while depth > 0 && !self.is_at_end() {
                     match self.current_token() {
-                        Token::Lt => { depth += 1; self.advance(); }
-                        Token::Gt => { depth -= 1; if depth > 0 { self.advance(); } else { self.advance(); } }
-                        _ => { self.advance(); }
+                        Token::Lt => {
+                            depth += 1;
+                            self.advance();
+                        }
+                        Token::Gt => {
+                            depth -= 1;
+                            if depth > 0 {
+                                self.advance();
+                            } else {
+                                self.advance();
+                            }
+                        }
+                        _ => {
+                            self.advance();
+                        }
                     }
                 }
                 // 如果是泛型函数调用，继续处理函数调用
@@ -5888,19 +6130,27 @@ impl Parser {
             // 检查是否是带括号的参数列表
             let params: _ = if let ASTExpression::Identifier(name) = expr {
                 vec![(name, None, None)]
-            } else if let ASTExpression::CallExpression { callee: _, arguments } = &expr {
+            } else if let ASTExpression::CallExpression {
+                callee: _,
+                arguments,
+            } = &expr
+            {
                 // 处理带括号的参数列表，如 (a, b)
                 let mut params = Vec::new();
                 for arg in arguments {
                     if let ASTExpression::Identifier(name) = arg {
                         params.push((name.clone(), None, None));
                     } else {
-                        return Err(anyhow::anyhow!("Arrow function parameters must be identifiers"));
+                        return Err(anyhow::anyhow!(
+                            "Arrow function parameters must be identifiers"
+                        ));
                     }
                 }
                 params
             } else {
-                return Err(anyhow::anyhow!("Arrow function parameter must be identifier or parameter list"));
+                return Err(anyhow::anyhow!(
+                    "Arrow function parameter must be identifier or parameter list"
+                ));
             };
             return self.parse_arrow_function_expression(params);
         }
@@ -5958,7 +6208,8 @@ impl Parser {
                         ("const".to_string(), true)
                     } else {
                         // 解析目标类型
-                        let target_type = self.parse_type_annotation()
+                        let target_type = self
+                            .parse_type_annotation()
                             .unwrap_or_else(|| "unknown".to_string());
                         (target_type, false)
                     };
@@ -5973,7 +6224,8 @@ impl Parser {
                 Token::Satisfies => {
                     self.consume(Token::Satisfies)?;
                     // 解析目标类型
-                    let target_type = self.parse_type_annotation()
+                    let target_type = self
+                        .parse_type_annotation()
                         .unwrap_or_else(|| "unknown".to_string());
                     expr = ASTExpression::TSSatisfiesExpression {
                         expression: Box::new(expr),
@@ -5981,11 +6233,25 @@ impl Parser {
                     };
                 }
                 // 二元运算符
-                Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent |
-                Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
-                Token::Lt | Token::Gt | Token::LtEq | Token::GtEq |
-                Token::Ampersand | Token::Pipe | Token::Caret |
-                Token::LtLt | Token::GtGt | Token::GtGtGt => {
+                Token::Plus
+                | Token::Minus
+                | Token::Star
+                | Token::Slash
+                | Token::Percent
+                | Token::EqEq
+                | Token::EqEqEq
+                | Token::NotEq
+                | Token::NotEqEq
+                | Token::Lt
+                | Token::Gt
+                | Token::LtEq
+                | Token::GtEq
+                | Token::Ampersand
+                | Token::Pipe
+                | Token::Caret
+                | Token::LtLt
+                | Token::GtGt
+                | Token::GtGtGt => {
                     let op: _ = match self.current_token() {
                         Token::Plus => "+",
                         Token::Minus => "-",
@@ -6037,7 +6303,18 @@ impl Parser {
                     };
                 }
                 // 赋值运算符: expr = value, expr += value, etc.
-                Token::Eq | Token::PlusEq | Token::MinusEq | Token::StarEq | Token::SlashEq | Token::PercentEq | Token::AmpersanderEq | Token::PipeEq | Token::CaretEq | Token::LtLtEq | Token::GtGtEq | Token::GtGtGtEq => {
+                Token::Eq
+                | Token::PlusEq
+                | Token::MinusEq
+                | Token::StarEq
+                | Token::SlashEq
+                | Token::PercentEq
+                | Token::AmpersanderEq
+                | Token::PipeEq
+                | Token::CaretEq
+                | Token::LtLtEq
+                | Token::GtGtEq
+                | Token::GtGtGtEq => {
                     self.advance();
                     let right = self.parse_expression()?;
                     expr = ASTExpression::AssignmentExpression {
@@ -6148,7 +6425,10 @@ impl Parser {
     /// 解析箭头函数（当参数名已经解析过时使用）
     /// 这种情况发生在变量声明中: const add = (a: number, b: number) => {}
     /// 此时参数列表已经被消耗了，需要重新解析
-    fn parse_arrow_function_from_assignment_with_name(&mut self, _first_param_name: String) -> Result<ASTExpression> {
+    fn parse_arrow_function_from_assignment_with_name(
+        &mut self,
+        _first_param_name: String,
+    ) -> Result<ASTExpression> {
         // v0.3.180: 使用 3 元素元组支持默认参数
         // 注意：由于我们无法恢复已消耗的 token，这里需要特殊处理
         // 实际上，我们应该在检测到箭头函数时不消耗参数，而是保存状态后重新解析
@@ -6240,37 +6520,38 @@ impl Parser {
     /// 解析 async 箭头函数 (async () => {} 或 async x => {})
     fn parse_async_arrow_function(&mut self) -> Result<ASTExpression> {
         // v0.3.180: 解析参数部分 - 使用 3 元素元组支持默认值
-        let params: Vec<(String, Option<String>, Option<String>)> = if self.current_token_eq(&Token::LParen) {
-            // 带括号的参数列表: async (a, b)
-            self.consume(Token::LParen)?;
-            let mut params = Vec::new();
-            while !self.current_token_eq(&Token::RParen) {
-                let param_name_token = self.consume_any_identifier()?;
-                let param_name: _ = match param_name_token {
-                    Token::Identifier(name) => name,
-                    _ => bail!("Expected parameter name"),
-                };
-                // 跳过类型注解
-                if self.current_token_eq(&Token::Colon) {
-                    self.consume(Token::Colon)?;
-                    self.parse_type_annotation();
+        let params: Vec<(String, Option<String>, Option<String>)> =
+            if self.current_token_eq(&Token::LParen) {
+                // 带括号的参数列表: async (a, b)
+                self.consume(Token::LParen)?;
+                let mut params = Vec::new();
+                while !self.current_token_eq(&Token::RParen) {
+                    let param_name_token = self.consume_any_identifier()?;
+                    let param_name: _ = match param_name_token {
+                        Token::Identifier(name) => name,
+                        _ => bail!("Expected parameter name"),
+                    };
+                    // 跳过类型注解
+                    if self.current_token_eq(&Token::Colon) {
+                        self.consume(Token::Colon)?;
+                        self.parse_type_annotation();
+                    }
+                    // v0.3.180: 暂不支持 async 箭头函数的默认参数（简化处理）
+                    params.push((param_name, None, None));
+                    if self.current_token_eq(&Token::Comma) {
+                        self.consume(Token::Comma)?;
+                    }
                 }
-                // v0.3.180: 暂不支持 async 箭头函数的默认参数（简化处理）
-                params.push((param_name, None, None));
-                if self.current_token_eq(&Token::Comma) {
-                    self.consume(Token::Comma)?;
-                }
-            }
-            self.consume(Token::RParen)?;
-            params
-        } else if let Token::Identifier(ref name) = self.current_token() {
-            // 单个参数无括号: async x => {}
-            let name = name.clone();
-            self.advance();
-            vec![(name, None, None)]
-        } else {
-            bail!("Expected parameter list or identifier after async");
-        };
+                self.consume(Token::RParen)?;
+                params
+            } else if let Token::Identifier(ref name) = self.current_token() {
+                // 单个参数无括号: async x => {}
+                let name = name.clone();
+                self.advance();
+                vec![(name, None, None)]
+            } else {
+                bail!("Expected parameter list or identifier after async");
+            };
 
         // 消耗 FatArrow
         self.consume(Token::FatArrow)?;
@@ -6298,7 +6579,10 @@ impl Parser {
         })
     }
     // v0.3.180: 更新函数签名以支持默认参数值
-    fn parse_arrow_function_expression(&mut self, params: Vec<(String, Option<String>, Option<String>)>) -> Result<ASTExpression> {
+    fn parse_arrow_function_expression(
+        &mut self,
+        params: Vec<(String, Option<String>, Option<String>)>,
+    ) -> Result<ASTExpression> {
         // 消耗 FatArrow token
         self.consume(Token::FatArrow)?;
         // 解析函数体 - 支持表达式和块语句
@@ -6483,7 +6767,10 @@ impl Parser {
                             self.advance();
                             continue;
                         }
-                        bail!("Expected TemplateMiddle or TemplateEnd in template literal, got {:?}", self.current_token());
+                        bail!(
+                            "Expected TemplateMiddle or TemplateEnd in template literal, got {:?}",
+                            self.current_token()
+                        );
                     }
                 }
 
@@ -6523,7 +6810,7 @@ impl Parser {
                 if is_arrow_function {
                     // v0.3.180: 箭头函数参数列表: (params) =>
                     self.advance(); // 消费 (
-                    // 使用 3 元素元组支持默认参数
+                                    // 使用 3 元素元组支持默认参数
                     let mut params: Vec<(String, Option<String>, Option<String>)> = Vec::new();
 
                     // 解析参数列表
@@ -6709,12 +6996,31 @@ impl Parser {
                             Token::Identifier(name) => {
                                 // 检查是否是大写字母开头，或者是常见的类型名
                                 let first_char = name.chars().next();
-                                let is_uppercase = first_char.map(|c| c.is_ascii_uppercase()).unwrap_or(false);
-                                let is_known_type = matches!(name.as_str(),
-                                    "any" | "unknown" | "number" | "string" | "boolean"
-                                    | "void" | "null" | "undefined" | "never" | "object"
-                                    | "symbol" | "bigint" | "Date" | "Array" | "Promise"
-                                    | "Map" | "Set" | "Function" | "Error" | "RegExp");
+                                let is_uppercase =
+                                    first_char.map(|c| c.is_ascii_uppercase()).unwrap_or(false);
+                                let is_known_type = matches!(
+                                    name.as_str(),
+                                    "any"
+                                        | "unknown"
+                                        | "number"
+                                        | "string"
+                                        | "boolean"
+                                        | "void"
+                                        | "null"
+                                        | "undefined"
+                                        | "never"
+                                        | "object"
+                                        | "symbol"
+                                        | "bigint"
+                                        | "Date"
+                                        | "Array"
+                                        | "Promise"
+                                        | "Map"
+                                        | "Set"
+                                        | "Function"
+                                        | "Error"
+                                        | "RegExp"
+                                );
                                 is_uppercase || is_known_type
                             }
                             Token::LParen | Token::LBracket | Token::LBrace => true, // 泛型表达式如 <T[]>
@@ -6734,18 +7040,36 @@ impl Parser {
                     // 找到匹配的 >
                     while lookahead < self.tokens.len() && depth > 0 {
                         match &self.tokens[lookahead] {
-                            Token::Lt => { depth += 1; lookahead += 1; }
-                            Token::Gt => { depth -= 1; lookahead += 1; found_gt = true; }
-                            _ => { lookahead += 1; }
+                            Token::Lt => {
+                                depth += 1;
+                                lookahead += 1;
+                            }
+                            Token::Gt => {
+                                depth -= 1;
+                                lookahead += 1;
+                                found_gt = true;
+                            }
+                            _ => {
+                                lookahead += 1;
+                            }
                         }
                     }
 
                     // 如果找到了 >，检查后面是否是表达式起始
                     if found_gt && depth == 0 && lookahead < self.tokens.len() {
-                        matches!(&self.tokens[lookahead],
-                            Token::Identifier(_) | Token::Number(_) | Token::String(_, _)
-                            | Token::LParen | Token::LBracket | Token::LBrace
-                            | Token::Bang | Token::Plus | Token::Minus | Token::Star)
+                        matches!(
+                            &self.tokens[lookahead],
+                            Token::Identifier(_)
+                                | Token::Number(_)
+                                | Token::String(_, _)
+                                | Token::LParen
+                                | Token::LBracket
+                                | Token::LBrace
+                                | Token::Bang
+                                | Token::Plus
+                                | Token::Minus
+                                | Token::Star
+                        )
                     } else {
                         false
                     }
@@ -6995,11 +7319,11 @@ impl Parser {
         // asserts value is Type - 带类型谓词的断言
         if self.current_token_eq(&Token::Asserts) {
             self.advance(); // 消耗 asserts 关键字
-            // 检查是否是 asserts value is Type
+                            // 检查是否是 asserts value is Type
             if let Token::Identifier(ref param_name) = self.current_token() {
                 let param_name = param_name.clone();
                 self.advance(); // 消耗参数名
-                // 检查是否有 is 关键字
+                                // 检查是否有 is 关键字
                 if self.current_token_eq(&Token::Is) {
                     self.advance(); // 消耗 is 关键字
                     let target_type = if let Some(t) = self.parse_type_annotation() {
@@ -7025,10 +7349,12 @@ impl Parser {
         if let Token::Identifier(ref param_name) = self.current_token() {
             let param_name = param_name.clone();
             // 向前看一个 token 检查是否是 is 关键字
-            if self.position + 1 < self.tokens.len() && matches!(self.tokens[self.position + 1], Token::Is) {
+            if self.position + 1 < self.tokens.len()
+                && matches!(self.tokens[self.position + 1], Token::Is)
+            {
                 self.advance(); // 消耗参数名
                 self.advance(); // 消耗 is 关键字
-                // 解析谓词目标类型
+                                // 解析谓词目标类型
                 let target_type = if let Some(t) = self.parse_type_annotation() {
                     t
                 } else {
@@ -7079,26 +7405,54 @@ impl Parser {
                 first_type.clone()
             };
 
-            return Some(format!("{} extends {} ? {} : {}", first_type, extend_type, true_type, false_type));
+            return Some(format!(
+                "{} extends {} ? {} : {}",
+                first_type, extend_type, true_type, false_type
+            ));
         }
 
         // 处理数组类型和索引访问类型后缀
         let mut result = first_type;
         while self.current_token_eq(&Token::LBracket) {
             // 向前查看：检查是否是空括号 [] (数组类型) 或有内容 (索引访问类型)
-            if self.position + 1 < self.tokens.len() && self.tokens[self.position + 1] == Token::RBracket {
+            if self.position + 1 < self.tokens.len()
+                && self.tokens[self.position + 1] == Token::RBracket
+            {
                 // 数组类型: T[]
                 self.advance(); // 消耗 [
                 self.advance(); // 消耗 ]
                 result = format!("{}[]", result);
-                } else {
-                    // 索引访问类型: T[key] 或 T[key1 | key2]
-                    self.advance();
-                    // 解析索引键（支持联合类型）
-                    let mut index_keys = Vec::new();
+            } else {
+                // 索引访问类型: T[key] 或 T[key1 | key2]
+                self.advance();
+                // 解析索引键（支持联合类型）
+                let mut index_keys = Vec::new();
 
-                    // 解析第一个索引键
-                    let first_key = if let Token::String(ref s, quote) = self.current_token() {
+                // 解析第一个索引键
+                let first_key = if let Token::String(ref s, quote) = self.current_token() {
+                    let s = s.clone();
+                    let quote_char = *quote;
+                    self.advance();
+                    format!("{}{}{}", quote_char, s, quote_char)
+                } else if let Token::Identifier(ref name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    // 解析基本类型作为索引
+                    if let Some(idx_type) = self.parse_basic_type() {
+                        idx_type
+                    } else {
+                        break;
+                    }
+                };
+                index_keys.push(first_key);
+
+                // 检查是否有联合类型: |
+                while self.current_token_eq(&Token::Pipe) {
+                    self.advance(); // 消耗 |
+                                    // 解析下一个索引键
+                    let next_key = if let Token::String(ref s, quote) = self.current_token() {
                         let s = s.clone();
                         let quote_char = *quote;
                         self.advance();
@@ -7112,45 +7466,22 @@ impl Parser {
                         if let Some(idx_type) = self.parse_basic_type() {
                             idx_type
                         } else {
-                            break
+                            break;
                         }
                     };
-                    index_keys.push(first_key);
-
-                    // 检查是否有联合类型: |
-                    while self.current_token_eq(&Token::Pipe) {
-                        self.advance(); // 消耗 |
-                        // 解析下一个索引键
-                        let next_key = if let Token::String(ref s, quote) = self.current_token() {
-                            let s = s.clone();
-                            let quote_char = *quote;
-                            self.advance();
-                            format!("{}{}{}", quote_char, s, quote_char)
-                        } else if let Token::Identifier(ref name) = self.current_token() {
-                            let name = name.clone();
-                            self.advance();
-                            name
-                        } else {
-                            // 解析基本类型作为索引
-                            if let Some(idx_type) = self.parse_basic_type() {
-                                idx_type
-                            } else {
-                                break
-                            }
-                        };
-                        index_keys.push(next_key);
-                    }
-
-                    self.consume(Token::RBracket).ok()?;
-                    // 如果只有一个键，直接使用；如果有多个，合并为联合类型
-                    let index_key = if index_keys.len() == 1 {
-                        index_keys[0].clone()
-                    } else {
-                        index_keys.join(" | ")
-                    };
-                    result = format!("{}[{}]", result, index_key);
+                    index_keys.push(next_key);
                 }
+
+                self.consume(Token::RBracket).ok()?;
+                // 如果只有一个键，直接使用；如果有多个，合并为联合类型
+                let index_key = if index_keys.len() == 1 {
+                    index_keys[0].clone()
+                } else {
+                    index_keys.join(" | ")
+                };
+                result = format!("{}[{}]", result, index_key);
             }
+        }
 
         // 处理 & 和 | 操作符
         let mut types = vec![result];
@@ -7326,9 +7657,9 @@ impl Parser {
         // 检测映射类型语法: { [P in KeyType]: ValueType } 或 { readonly [P in KeyType]: ValueType }
         // 检测是否有 `[` 或 `readonly [`
         let has_lbracket = self.current_token_eq(&Token::LBracket);
-        let has_readonly_lbracket = self.current_token_eq(&Token::Readonly) &&
-            self.position + 2 < self.tokens.len() &&
-            matches!(self.tokens[self.position + 1], Token::LBracket);
+        let has_readonly_lbracket = self.current_token_eq(&Token::Readonly)
+            && self.position + 2 < self.tokens.len()
+            && matches!(self.tokens[self.position + 1], Token::LBracket);
 
         let is_mapped_type = if has_lbracket {
             // 检查是否是映射类型 (有 `in` 关键字) 而不是索引签名 (有 `:` 紧随 `[identifier]`)
@@ -7421,7 +7752,11 @@ impl Parser {
                             self.consume(Token::Colon).ok()?;
                             self.parse_type_annotation();
                         }
-                        properties.push(format!("{}: {}", name, method_params.unwrap_or_else(|| "any".to_string())));
+                        properties.push(format!(
+                            "{}: {}",
+                            name,
+                            method_params.unwrap_or_else(|| "any".to_string())
+                        ));
                         // 处理分号或逗号分隔符
                         if self.current_token_eq(&Token::SemiColon) {
                             self.advance();
@@ -7538,8 +7873,9 @@ impl Parser {
 
                     // 消耗直到 TemplateEnd
                     while !self.current_token_eq(&Token::TemplateEnd)
-                          && !self.current_token_eq(&Token::Eof)
-                          && !self.current_token_eq(&Token::SemiColon) {
+                        && !self.current_token_eq(&Token::Eof)
+                        && !self.current_token_eq(&Token::SemiColon)
+                    {
                         self.advance();
                     }
                     // 只有在找到 TemplateEnd 时才消耗它
@@ -7600,43 +7936,48 @@ impl Parser {
                 first_type.clone()
             };
 
-            return Some(format!("{} extends {} ? {} : {}", first_type, extend_type, true_type, false_type));
+            return Some(format!(
+                "{} extends {} ? {} : {}",
+                first_type, extend_type, true_type, false_type
+            ));
         }
 
         // 处理数组类型和索引访问类型后缀
         let mut result = first_type;
         while self.current_token_eq(&Token::LBracket) {
             // 向前查看：检查是否是空括号 [] (数组类型) 或有内容 (索引访问类型)
-            if self.position + 1 < self.tokens.len() && self.tokens[self.position + 1] == Token::RBracket {
+            if self.position + 1 < self.tokens.len()
+                && self.tokens[self.position + 1] == Token::RBracket
+            {
                 // 数组类型: T[]
                 self.advance(); // 消耗 [
                 self.advance(); // 消耗 ]
                 result = format!("{}[]", result);
-                } else {
-                    // 索引访问类型: T[key]
+            } else {
+                // 索引访问类型: T[key]
+                self.advance();
+                // 解析索引键
+                let index_key = if let Token::String(ref s, quote) = self.current_token() {
+                    let s = s.clone();
+                    let quote_char = *quote;
                     self.advance();
-                    // 解析索引键
-                    let index_key = if let Token::String(ref s, quote) = self.current_token() {
-                        let s = s.clone();
-                        let quote_char = *quote;
-                        self.advance();
-                        format!("{}{}{}", quote_char, s, quote_char)
-                    } else if let Token::Identifier(ref name) = self.current_token() {
-                        let name = name.clone();
-                        self.advance();
-                        name
+                    format!("{}{}{}", quote_char, s, quote_char)
+                } else if let Token::Identifier(ref name) = self.current_token() {
+                    let name = name.clone();
+                    self.advance();
+                    name
+                } else {
+                    // 解析基本类型作为索引
+                    if let Some(idx_type) = self.parse_basic_type() {
+                        idx_type
                     } else {
-                        // 解析基本类型作为索引
-                        if let Some(idx_type) = self.parse_basic_type() {
-                            idx_type
-                        } else {
-                            break
-                        }
-                    };
-                    self.consume(Token::RBracket).ok()?;
-                    result = format!("{}[{}]", result, index_key);
-                }
+                        break;
+                    }
+                };
+                self.consume(Token::RBracket).ok()?;
+                result = format!("{}[{}]", result, index_key);
             }
+        }
 
         let mut types = vec![result];
         let mut operators = Vec::new();
@@ -7678,12 +8019,33 @@ impl Parser {
     fn is_utility_type(name: &str) -> bool {
         matches!(
             name,
-            "Partial" | "Required" | "Readonly" | "Pick" | "Omit" | "Record"
-            | "Exclude" | "Extract" | "NonNullable" | "ReturnType" | "Parameters"
-            | "ConstructorParameters" | "InstanceType" | "ThisParameterType"
-            | "OmitThisParameter" | "Uppercase" | "Lowercase" | "Capitalize"
-            | "Uncapitalize" | "NoInfer" | "Infer" | "Awaited" | "ThisType"
-            | "Mutable" | "Trim" | "TrimLeft" | "TrimRight"
+            "Partial"
+                | "Required"
+                | "Readonly"
+                | "Pick"
+                | "Omit"
+                | "Record"
+                | "Exclude"
+                | "Extract"
+                | "NonNullable"
+                | "ReturnType"
+                | "Parameters"
+                | "ConstructorParameters"
+                | "InstanceType"
+                | "ThisParameterType"
+                | "OmitThisParameter"
+                | "Uppercase"
+                | "Lowercase"
+                | "Capitalize"
+                | "Uncapitalize"
+                | "NoInfer"
+                | "Infer"
+                | "Awaited"
+                | "ThisType"
+                | "Mutable"
+                | "Trim"
+                | "TrimLeft"
+                | "TrimRight"
         )
     }
 
@@ -7834,18 +8196,14 @@ impl Parser {
                 Some("never".to_string())
             }
             // 处理函数类型: (arg1: type1, arg2: type2) => returnType
-            Token::LParen => {
-                self.parse_function_type()
-            }
+            Token::LParen => self.parse_function_type(),
             // 处理 unknown 类型（类型安全的 top 类型）
             Token::UnknownType => {
                 self.advance();
                 Some("unknown".to_string())
             }
             // 处理元组类型: [type1, type2, ...]
-            Token::LBracket => {
-                self.parse_tuple_type()
-            }
+            Token::LBracket => self.parse_tuple_type(),
             // 注意: 索引访问类型 T[K] 由 parse_type_annotation 处理
             _ => None,
         }
@@ -8084,13 +8442,15 @@ impl Parser {
             // Identifier 需要比较字符串内容
             (Token::Identifier(a), Token::Identifier(b)) => a == b,
             // String 需要比较值和引号类型
-            (Token::String(val1, quote1), Token::String(val2, quote2)) => val1 == val2 && quote1 == quote2,
+            (Token::String(val1, quote1), Token::String(val2, quote2)) => {
+                val1 == val2 && quote1 == quote2
+            }
             // Number 需要比较字符串内容
             (Token::Number(a), Token::Number(b)) => a == b,
             // BigInt 需要比较字符串内容 (v0.3.179)
             (Token::BigInt(a), Token::BigInt(b)) => a == b,
             // 其他 token 只比较 discriminant
-            (a, b) => std::mem::discriminant(a) == std::mem::discriminant(b)
+            (a, b) => std::mem::discriminant(a) == std::mem::discriminant(b),
         }
     }
     fn advance(&mut self) -> Token {
@@ -8217,7 +8577,14 @@ impl CodeEmitter {
                 }
                 self.output.push_str(") { /* overload */ }\n");
             }
-            ASTNode::ClassDeclaration { is_declare, is_abstract: _, decorators, name, extends, members } => {
+            ASTNode::ClassDeclaration {
+                is_declare,
+                is_abstract: _,
+                decorators,
+                name,
+                extends,
+                members,
+            } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -8255,7 +8622,16 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::MethodDeclaration { decorators, name, kind, is_async, is_static, is_abstract: _, params, body } => {
+            ASTNode::MethodDeclaration {
+                decorators,
+                name,
+                kind,
+                is_async,
+                is_static,
+                is_abstract: _,
+                params,
+                body,
+            } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -8326,7 +8702,13 @@ impl CodeEmitter {
                 }
                 self.output.push_str("}\n");
             }
-            ASTNode::PropertyDeclaration { decorators, name, is_static, is_abstract: _, initializer } => {
+            ASTNode::PropertyDeclaration {
+                decorators,
+                name,
+                is_static,
+                is_abstract: _,
+                initializer,
+            } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -8357,7 +8739,12 @@ impl CodeEmitter {
                 }
                 self.output.push_str(";\n");
             }
-            ASTNode::ComputedPropertyDeclaration { decorators, key_expr, is_static, initializer } => {
+            ASTNode::ComputedPropertyDeclaration {
+                decorators,
+                key_expr,
+                is_static,
+                initializer,
+            } => {
                 // 输出装饰器（作为注释保留）
                 for decorator in decorators {
                     self.output.push_str("/* @");
@@ -8419,7 +8806,13 @@ impl CodeEmitter {
                 }
                 self.output.push_str("\n};\n");
             }
-            ASTNode::ImportDeclaration { module_specifier, imports, is_default, namespace_alias, is_type_only } => {
+            ASTNode::ImportDeclaration {
+                module_specifier,
+                imports,
+                is_default,
+                namespace_alias,
+                is_type_only,
+            } => {
                 // import type 在编译时完全移除，不生成任何运行时代码
                 if *is_type_only {
                     return;
@@ -8489,7 +8882,13 @@ impl CodeEmitter {
                 self.output.push_str(module_specifier);
                 self.output.push_str(");\n");
             }
-            ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
+            ASTNode::ExportDeclaration {
+                exports,
+                is_default,
+                module_specifier,
+                inline_declaration,
+                is_type_only,
+            } => {
                 // export type 在编译时完全移除，不生成任何运行时代码
                 if *is_type_only {
                     return;
@@ -8566,7 +8965,12 @@ impl CodeEmitter {
                 if let Some(ref decl) = inline_declaration {
                     self.output.push_str("/* ESM export: ");
                     match decl.as_ref() {
-                        ASTNode::VariableDeclaration { kind, name, initializer, .. } => {
+                        ASTNode::VariableDeclaration {
+                            kind,
+                            name,
+                            initializer,
+                            ..
+                        } => {
                             self.output.push_str(kind);
                             self.output.push_str(" ");
                             self.output.push_str(name);
@@ -8617,7 +9021,11 @@ impl CodeEmitter {
                         }
                         self.output.push_str(";\n");
                     }
-                    ASTStatement::If { test, consequent, alternate } => {
+                    ASTStatement::If {
+                        test,
+                        consequent,
+                        alternate,
+                    } => {
                         self.output.push_str("if (");
                         self.emit_expression(test);
                         self.output.push_str(") ");
@@ -8627,7 +9035,11 @@ impl CodeEmitter {
                             self.emit_node(alt);
                         }
                     }
-                    ASTStatement::ForOf { initializer, iterable, body } => {
+                    ASTStatement::ForOf {
+                        initializer,
+                        iterable,
+                        body,
+                    } => {
                         self.output.push_str("for (");
                         self.emit_node(initializer);
                         self.output.push_str(" of ");
@@ -8635,7 +9047,12 @@ impl CodeEmitter {
                         self.output.push_str(") ");
                         self.emit_node(body);
                     }
-                    ASTStatement::For { initializer, condition, update, body } => {
+                    ASTStatement::For {
+                        initializer,
+                        condition,
+                        update,
+                        body,
+                    } => {
                         self.output.push_str("for (");
                         if let Some(init) = initializer {
                             self.emit_node(init);
@@ -8664,7 +9081,10 @@ impl CodeEmitter {
                         self.emit_expression(test);
                         self.output.push_str(");\n");
                     }
-                    ASTStatement::Switch { discriminant, cases } => {
+                    ASTStatement::Switch {
+                        discriminant,
+                        cases,
+                    } => {
                         self.output.push_str("switch (");
                         self.emit_expression(discriminant);
                         self.output.push_str(") {\n");
@@ -8682,7 +9102,11 @@ impl CodeEmitter {
                         }
                         self.output.push_str("}\n");
                     }
-                    ASTStatement::Try { body, handler, finalizer } => {
+                    ASTStatement::Try {
+                        body,
+                        handler,
+                        finalizer,
+                    } => {
                         self.output.push_str("try ");
                         self.emit_node(body);
                         if let Some(catch) = handler {
@@ -8730,7 +9154,12 @@ impl CodeEmitter {
                     // 嵌套命名空间: namespace A.B.C { ... }
                     // 编译为: var A; (function(A) { var B; (function(B) { var C; (function(C) { ... })(C || (C = {})); })(B || (B = {})); })(A || (A = {}));
                     // declare namespace: 生成 declare namespace 声明语法
-                    ASTStatement::Namespace { name, full_name, body, is_declare } => {
+                    ASTStatement::Namespace {
+                        name,
+                        full_name,
+                        body,
+                        is_declare,
+                    } => {
                         if *is_declare {
                             // declare namespace - 保留 declare namespace 语法
                             self.output.push_str("declare namespace ");
@@ -8783,7 +9212,13 @@ impl CodeEmitter {
                         self.output.push_str("\" {\n");
                         for stmt in body {
                             match stmt {
-                                ASTNode::ExportDeclaration { exports, is_default, module_specifier, inline_declaration, is_type_only } => {
+                                ASTNode::ExportDeclaration {
+                                    exports,
+                                    is_default,
+                                    module_specifier,
+                                    inline_declaration,
+                                    is_type_only,
+                                } => {
                                     // 在 declare module 内部，将 export 转换为 declare export
                                     if *is_type_only {
                                         // export type 应该完全移除
@@ -8814,7 +9249,11 @@ impl CodeEmitter {
                                         self.output.push_str("declare export default");
                                         if let Some(ref decl) = inline_declaration {
                                             match decl.as_ref() {
-                                                ASTNode::FunctionDeclaration { name, is_async, .. } => {
+                                                ASTNode::FunctionDeclaration {
+                                                    name,
+                                                    is_async,
+                                                    ..
+                                                } => {
                                                     if *is_async {
                                                         self.output.push_str(" async");
                                                     }
@@ -8846,14 +9285,21 @@ impl CodeEmitter {
                                     } else if let Some(ref decl) = inline_declaration {
                                         // export const/function/class - 转换为 declare export const/function/class
                                         match decl.as_ref() {
-                                            ASTNode::VariableDeclaration { kind, name, initializer: _, .. } => {
+                                            ASTNode::VariableDeclaration {
+                                                kind,
+                                                name,
+                                                initializer: _,
+                                                ..
+                                            } => {
                                                 self.output.push_str("declare export ");
                                                 self.output.push_str(kind);
                                                 self.output.push_str(" ");
                                                 self.output.push_str(name);
                                                 self.output.push_str(";\n");
                                             }
-                                            ASTNode::FunctionDeclaration { name, is_async, .. } => {
+                                            ASTNode::FunctionDeclaration {
+                                                name, is_async, ..
+                                            } => {
                                                 self.output.push_str("declare export ");
                                                 if *is_async {
                                                     self.output.push_str("async ");
@@ -8862,7 +9308,13 @@ impl CodeEmitter {
                                                 self.output.push_str(name);
                                                 self.output.push_str(";\n");
                                             }
-                                            ASTNode::FunctionOverload { name, is_async, params, return_type, .. } => {
+                                            ASTNode::FunctionOverload {
+                                                name,
+                                                is_async,
+                                                params,
+                                                return_type,
+                                                ..
+                                            } => {
                                                 // 处理 export function 重载签名（如 export function foo(): void;）
                                                 self.output.push_str("declare export ");
                                                 if *is_async {
@@ -8876,7 +9328,11 @@ impl CodeEmitter {
                                                         self.output.push_str(", ");
                                                     }
                                                     match param {
-                                                        FunctionParameter::Simple { name, type_annotation, .. } => {
+                                                        FunctionParameter::Simple {
+                                                            name,
+                                                            type_annotation,
+                                                            ..
+                                                        } => {
                                                             self.output.push_str(name);
                                                             if let Some(ty) = type_annotation {
                                                                 self.output.push_str(": ");
@@ -8900,19 +9356,31 @@ impl CodeEmitter {
                                                 self.output.push_str(name);
                                                 self.output.push_str(";\n");
                                             }
-                                            ASTNode::Statement(ASTStatement::Namespace { name, body, .. }) => {
+                                            ASTNode::Statement(ASTStatement::Namespace {
+                                                name,
+                                                body,
+                                                ..
+                                            }) => {
                                                 // 处理 export namespace Inner { ... }
                                                 self.output.push_str("declare export namespace ");
                                                 self.output.push_str(name);
                                                 self.output.push_str(" {\n");
                                                 for stmt in body {
                                                     match stmt {
-                                                        ASTNode::ExportDeclaration { exports: _, is_default: _, module_specifier: _, inline_declaration, is_type_only } => {
+                                                        ASTNode::ExportDeclaration {
+                                                            exports: _,
+                                                            is_default: _,
+                                                            module_specifier: _,
+                                                            inline_declaration,
+                                                            is_type_only,
+                                                        } => {
                                                             // 递归处理嵌套的 export
                                                             if *is_type_only {
                                                                 continue;
                                                             }
-                                                            if let Some(ref decl) = inline_declaration {
+                                                            if let Some(ref decl) =
+                                                                inline_declaration
+                                                            {
                                                                 match decl.as_ref() {
                                                                     ASTNode::FunctionDeclaration { name: fn_name, is_async, .. } => {
                                                                         self.output.push_str("declare export ");
@@ -9016,7 +9484,10 @@ impl CodeEmitter {
                         }
                     }
                     // export = 语句 (CommonJS/AMD 兼容)
-                    ASTStatement::ExportAssignment { expression, is_type_only } => {
+                    ASTStatement::ExportAssignment {
+                        expression,
+                        is_type_only,
+                    } => {
                         if *is_type_only {
                             self.output.push_str("/* export = type */\n");
                         } else {
@@ -9030,7 +9501,11 @@ impl CodeEmitter {
             ASTNode::DestructuringPattern { pattern } => {
                 self.emit_destructuring_pattern(pattern);
             }
-            ASTNode::DestructuringDeclaration { kind, pattern, source } => {
+            ASTNode::DestructuringDeclaration {
+                kind,
+                pattern,
+                source,
+            } => {
                 self.output.push_str(kind);
                 self.output.push(' ');
                 self.emit_destructuring_pattern(pattern);
@@ -9156,7 +9631,10 @@ impl CodeEmitter {
                     self.emit_node(default);
                 }
             }
-            FunctionParameter::Destructuring { pattern, default_value } => {
+            FunctionParameter::Destructuring {
+                pattern,
+                default_value,
+            } => {
                 self.emit_destructuring_pattern(pattern);
                 if let Some(default) = default_value {
                     self.output.push_str(" = ");
@@ -9185,10 +9663,7 @@ impl CodeEmitter {
                 self.output.push_str(" ");
                 self.emit_expression(right);
             }
-            ASTExpression::CallExpression {
-                callee,
-                arguments,
-            } => {
+            ASTExpression::CallExpression { callee, arguments } => {
                 // 检查 callee 是否需要括号包裹（箭头函数）
                 let needs_parentheses = matches!(
                     callee.as_ref(),
@@ -9210,24 +9685,22 @@ impl CodeEmitter {
                 }
                 self.output.push(')');
             }
-            ASTExpression::MemberExpression {
-                object,
-                property,
-            } => {
+            ASTExpression::MemberExpression { object, property } => {
                 self.emit_expression(object);
                 self.output.push('.');
                 self.output.push_str(property);
             }
-            ASTExpression::IndexExpression {
-                object,
-                index,
-            } => {
+            ASTExpression::IndexExpression { object, index } => {
                 self.emit_expression(object);
                 self.output.push('[');
                 self.emit_expression(index);
                 self.output.push(']');
             }
-            ASTExpression::ObjectProperty { name, key_expr, value } => {
+            ASTExpression::ObjectProperty {
+                name,
+                key_expr,
+                value,
+            } => {
                 // 对象属性（用于对象字面量内部）
                 if let Some(expr) = key_expr {
                     self.output.push('[');
@@ -9246,7 +9719,11 @@ impl CodeEmitter {
                         self.output.push_str(", ");
                     }
                     match prop {
-                        ASTExpression::ObjectProperty { name, key_expr, value } => {
+                        ASTExpression::ObjectProperty {
+                            name,
+                            key_expr,
+                            value,
+                        } => {
                             if let Some(expr) = key_expr {
                                 // 计算属性名: [expr]
                                 self.output.push('[');
@@ -9356,7 +9833,10 @@ impl CodeEmitter {
                 self.output.push(' ');
                 self.emit_expression(operand);
             }
-            ASTExpression::NewExpression { constructor, arguments } => {
+            ASTExpression::NewExpression {
+                constructor,
+                arguments,
+            } => {
                 self.output.push_str("new ");
                 self.emit_expression(constructor);
                 self.output.push('(');
@@ -9387,7 +9867,11 @@ impl CodeEmitter {
                 self.output.push_str("...");
                 self.emit_expression(argument);
             }
-            ASTExpression::ConditionalExpression { condition, consequent, alternate } => {
+            ASTExpression::ConditionalExpression {
+                condition,
+                consequent,
+                alternate,
+            } => {
                 self.emit_expression(condition);
                 self.output.push_str(" ? ");
                 self.emit_expression(consequent);
@@ -9399,17 +9883,27 @@ impl CodeEmitter {
             }
             // TypeScript 类型断言: value as Type 或 value as const
             // 转译时移除类型信息，直接输出原始表达式
-            ASTExpression::TSAsExpression { expression, target_type: _, is_const: _ } => {
+            ASTExpression::TSAsExpression {
+                expression,
+                target_type: _,
+                is_const: _,
+            } => {
                 self.emit_expression(expression);
             }
             // TypeScript 尖括号类型断言: <Type>value
             // 转译时移除类型信息，直接输出原始表达式
-            ASTExpression::TSAngleBracketAssertion { expression, target_type: _ } => {
+            ASTExpression::TSAngleBracketAssertion {
+                expression,
+                target_type: _,
+            } => {
                 self.emit_expression(expression);
             }
             // TypeScript satisfies 操作符: expr satisfies Type
             // 转译时移除类型信息，直接输出原始表达式
-            ASTExpression::TSSatisfiesExpression { expression, target_type: _ } => {
+            ASTExpression::TSSatisfiesExpression {
+                expression,
+                target_type: _,
+            } => {
                 self.emit_expression(expression);
             }
             ASTExpression::AssignmentExpression { left, right } => {
@@ -9470,14 +9964,26 @@ mod tests {
         let result = compiler.compile_source(source, "test.ts").unwrap();
 
         // Verify source map is generated
-        assert!(result.source_map.is_some(), "Source map should be generated");
+        assert!(
+            result.source_map.is_some(),
+            "Source map should be generated"
+        );
 
         let source_map = result.source_map.unwrap();
 
         // Verify source map structure
-        assert!(source_map.contains("\"version\":3"), "Should have version 3");
-        assert!(source_map.contains("\"sources\":[\"test.ts\"]"), "Should contain source file");
-        assert!(source_map.contains("\"sourcesContent\""), "Should have sourcesContent");
+        assert!(
+            source_map.contains("\"version\":3"),
+            "Should have version 3"
+        );
+        assert!(
+            source_map.contains("\"sources\":[\"test.ts\"]"),
+            "Should contain source file"
+        );
+        assert!(
+            source_map.contains("\"sourcesContent\""),
+            "Should have sourcesContent"
+        );
         assert!(source_map.contains("\"mappings\""), "Should have mappings");
     }
 
@@ -9488,8 +9994,10 @@ mod tests {
         let result = compiler.compile_source(source, "test.ts").unwrap();
 
         let source_map = result.source_map.unwrap();
-        assert!(source_map.contains("let x: number = 5;"),
-            "Source map should contain original source code");
+        assert!(
+            source_map.contains("let x: number = 5;"),
+            "Source map should contain original source code"
+        );
     }
 
     // v0.3.139: Source map improvements tests
@@ -9504,7 +10012,11 @@ mod tests {
     fn test_build_line_positions_multi_line() {
         let source = "line1\nline2\nline3";
         let positions = build_line_positions(source);
-        assert_eq!(positions.len(), 3, "Three lines should have three positions");
+        assert_eq!(
+            positions.len(),
+            3,
+            "Three lines should have three positions"
+        );
         assert_eq!(positions[0], 0, "First line starts at 0");
         assert_eq!(positions[1], 6, "Second line starts after first newline");
         assert_eq!(positions[2], 12, "Third line starts after second newline");
@@ -9517,19 +10029,37 @@ mod tests {
         let result = compiler.compile_source(source, "test.ts").unwrap();
 
         // Verify source map is generated
-        assert!(result.source_map.is_some(), "Source map should be generated");
+        assert!(
+            result.source_map.is_some(),
+            "Source map should be generated"
+        );
 
         let source_map = result.source_map.unwrap();
 
         // Verify source map structure for multi-line
-        assert!(source_map.contains("\"version\":3"), "Should have version 3");
-        assert!(source_map.contains("\"sources\":[\"test.ts\"]"), "Should contain source file");
+        assert!(
+            source_map.contains("\"version\":3"),
+            "Should have version 3"
+        );
+        assert!(
+            source_map.contains("\"sources\":[\"test.ts\"]"),
+            "Should contain source file"
+        );
         assert!(source_map.contains("\"mappings\""), "Should have mappings");
 
         // Verify each line is in sourcesContent
-        assert!(source_map.contains("let x: number"), "Should contain first line");
-        assert!(source_map.contains("let y: string"), "Should contain second line");
-        assert!(source_map.contains("let z: boolean"), "Should contain third line");
+        assert!(
+            source_map.contains("let x: number"),
+            "Should contain first line"
+        );
+        assert!(
+            source_map.contains("let y: string"),
+            "Should contain second line"
+        );
+        assert!(
+            source_map.contains("let z: boolean"),
+            "Should contain third line"
+        );
     }
 
     #[test]
@@ -9547,12 +10077,21 @@ function setup(config: Config): void {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
 
-        assert!(result.source_map.is_some(), "Source map should be generated");
+        assert!(
+            result.source_map.is_some(),
+            "Source map should be generated"
+        );
         let source_map = result.source_map.unwrap();
 
         // Verify the source map contains the original TypeScript
-        assert!(source_map.contains("interface Config"), "Should contain interface");
-        assert!(source_map.contains("function setup"), "Should contain function");
+        assert!(
+            source_map.contains("interface Config"),
+            "Should contain interface"
+        );
+        assert!(
+            source_map.contains("function setup"),
+            "Should contain function"
+        );
     }
 
     #[test]
@@ -9562,13 +10101,19 @@ function setup(config: Config): void {
         let mappings = generate_vlq_mappings_improved(js_code, &line_positions);
 
         // Should have mappings with semicolons separating lines
-        assert!(mappings.contains(';'), "Should have semicolons between lines");
+        assert!(
+            mappings.contains(';'),
+            "Should have semicolons between lines"
+        );
 
         // Should have valid VLQ characters (including comma as separator)
         for ch in mappings.chars() {
             if ch != ';' {
-                assert!(ch.is_alphanumeric() || ch == '+' || ch == '/' || ch == ',',
-                    "Invalid character in mappings: {}", ch);
+                assert!(
+                    ch.is_alphanumeric() || ch == '+' || ch == '/' || ch == ',',
+                    "Invalid character in mappings: {}",
+                    ch
+                );
             }
         }
     }
@@ -9606,8 +10151,13 @@ console.log(greet({name: "Test", version: "1.0"}));
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // The object literal has spaces: {name: "Test", version: "1.0"}
-        assert!(result.js_code.contains("greet({name: \"Test\", version: \"1.0\"})"),
-            "Should contain object literal in function call: {}", result.js_code);
+        assert!(
+            result
+                .js_code
+                .contains("greet({name: \"Test\", version: \"1.0\"})"),
+            "Should contain object literal in function call: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9625,12 +10175,21 @@ console.log(obj);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("[key]"),
-            "Should contain computed property [key]: {}", result.js_code);
-        assert!(result.js_code.contains("[\"static\"]"),
-            "Should contain computed property [\"static\"]: {}", result.js_code);
-        assert!(result.js_code.contains("[1 + 1]"),
-            "Should contain computed property [1 + 1]: {}", result.js_code);
+        assert!(
+            result.js_code.contains("[key]"),
+            "Should contain computed property [key]: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("[\"static\"]"),
+            "Should contain computed property [\"static\"]: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("[1 + 1]"),
+            "Should contain computed property [1 + 1]: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9649,12 +10208,21 @@ console.log(MyClass);
         let result = compiler.compile_source(source, "test.ts").unwrap();
         println!("Class computed property output:\n{}", result.js_code);
         // Should compile without errors
-        assert!(result.js_code.contains("[prefix + \"Key\"]"),
-            "Should contain computed property [prefix + \"Key\"]: {}", result.js_code);
-        assert!(result.js_code.contains("[\"staticKey\"]"),
-            "Should contain computed property [\"staticKey\"]: {}", result.js_code);
-        assert!(result.js_code.contains("[1 + 1]"),
-            "Should contain computed property [1 + 1]: {}", result.js_code);
+        assert!(
+            result.js_code.contains("[prefix + \"Key\"]"),
+            "Should contain computed property [prefix + \"Key\"]: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("[\"staticKey\"]"),
+            "Should contain computed property [\"staticKey\"]: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("[1 + 1]"),
+            "Should contain computed property [1 + 1]: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9668,10 +10236,16 @@ console.log(result);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("?"),
-            "Should contain ternary operator: {}", result.js_code);
-        assert!(result.js_code.contains(":"),
-            "Should contain ternary colon: {}", result.js_code);
+        assert!(
+            result.js_code.contains("?"),
+            "Should contain ternary operator: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains(":"),
+            "Should contain ternary colon: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9686,10 +10260,16 @@ console.log(grade);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("?"),
-            "Should contain ternary operator: {}", result.js_code);
-        assert!(result.js_code.contains("score >= 90"),
-            "Should contain first condition: {}", result.js_code);
+        assert!(
+            result.js_code.contains("?"),
+            "Should contain ternary operator: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("score >= 90"),
+            "Should contain first condition: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9703,10 +10283,16 @@ function max(a: number, b: number): number {
 console.log(max(3, 7));
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("function max"),
-            "Should contain function: {}", result.js_code);
-        assert!(result.js_code.contains("a > b ? a : b"),
-            "Should contain ternary in return: {}", result.js_code);
+        assert!(
+            result.js_code.contains("function max"),
+            "Should contain function: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("a > b ? a : b"),
+            "Should contain ternary in return: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9722,8 +10308,11 @@ console.log(obj);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("\"normal-key\""),
-            "Should contain string property name: {}", result.js_code);
+        assert!(
+            result.js_code.contains("\"normal-key\""),
+            "Should contain string property name: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9737,10 +10326,16 @@ async function fetchData(): Promise<string> {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors and produce valid JS
-        assert!(result.js_code.contains("async function fetchData"),
-            "Should contain async function: {}", result.js_code);
-        assert!(result.js_code.contains("return \"Data loaded!\""),
-            "Should contain return statement: {}", result.js_code);
+        assert!(
+            result.js_code.contains("async function fetchData"),
+            "Should contain async function: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("return \"Data loaded!\""),
+            "Should contain return statement: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9755,8 +10350,11 @@ function identity<T>(arg: T): T {
 let result = identity<string>("hello");
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("function identity"),
-            "Should contain function: {}", result.js_code);
+        assert!(
+            result.js_code.contains("function identity"),
+            "Should contain function: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9769,10 +10367,16 @@ async function fetchData(): Promise<string> {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("async function fetchData"),
-            "Should contain async function: {}", result.js_code);
-        assert!(result.js_code.contains("return \"Data loaded!\""),
-            "Should contain return statement: {}", result.js_code);
+        assert!(
+            result.js_code.contains("async function fetchData"),
+            "Should contain async function: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("return \"Data loaded!\""),
+            "Should contain return statement: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9786,10 +10390,16 @@ async function getData(): Promise<string> {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("await fetchData()"),
-            "Should contain await expression: {}", result.js_code);
-        assert!(result.js_code.contains("async function getData"),
-            "Should contain async function: {}", result.js_code);
+        assert!(
+            result.js_code.contains("await fetchData()"),
+            "Should contain await expression: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async function getData"),
+            "Should contain async function: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9803,8 +10413,11 @@ async function process() {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("await api.getUsers()"),
-            "Should contain await with method call: {}", result.js_code);
+        assert!(
+            result.js_code.contains("await api.getUsers()"),
+            "Should contain await with method call: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9815,10 +10428,16 @@ async function process() {
 const fetch = async () => await fetchData();
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("await fetchData()"),
-            "Should contain await in arrow function: {}", result.js_code);
-        assert!(result.js_code.contains("async ()"),
-            "Should contain async arrow function: {}", result.js_code);
+        assert!(
+            result.js_code.contains("await fetchData()"),
+            "Should contain await in arrow function: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async ()"),
+            "Should contain async arrow function: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9834,22 +10453,40 @@ const processData = async (input: string) => {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should contain async keyword
-        assert!(result.js_code.contains("async"),
-            "Should contain async keyword: {}", result.js_code);
+        assert!(
+            result.js_code.contains("async"),
+            "Should contain async keyword: {}",
+            result.js_code
+        );
         // Should contain parameter
-        assert!(result.js_code.contains("input"),
-            "Should contain parameter: {}", result.js_code);
+        assert!(
+            result.js_code.contains("input"),
+            "Should contain parameter: {}",
+            result.js_code
+        );
         // Should contain variable declarations
-        assert!(result.js_code.contains("const temp"),
-            "Should contain temp variable: {}", result.js_code);
-        assert!(result.js_code.contains("const result"),
-            "Should contain result variable: {}", result.js_code);
+        assert!(
+            result.js_code.contains("const temp"),
+            "Should contain temp variable: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("const result"),
+            "Should contain result variable: {}",
+            result.js_code
+        );
         // Should contain await expression
-        assert!(result.js_code.contains("await fetchData"),
-            "Should contain await: {}", result.js_code);
+        assert!(
+            result.js_code.contains("await fetchData"),
+            "Should contain await: {}",
+            result.js_code
+        );
         // Should contain return statement
-        assert!(result.js_code.contains("return result"),
-            "Should contain return: {}", result.js_code);
+        assert!(
+            result.js_code.contains("return result"),
+            "Should contain return: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9865,17 +10502,32 @@ const add = (a: number, b: number) => {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should contain parameter
-        assert!(result.js_code.contains("a"),
-            "Should contain parameter a: {}", result.js_code);
-        assert!(result.js_code.contains("b"),
-            "Should contain parameter b: {}", result.js_code);
+        assert!(
+            result.js_code.contains("a"),
+            "Should contain parameter a: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("b"),
+            "Should contain parameter b: {}",
+            result.js_code
+        );
         // Should contain all statements
-        assert!(result.js_code.contains("const sum"),
-            "Should contain sum variable: {}", result.js_code);
-        assert!(result.js_code.contains("console.log"),
-            "Should contain console.log: {}", result.js_code);
-        assert!(result.js_code.contains("return sum"),
-            "Should contain return: {}", result.js_code);
+        assert!(
+            result.js_code.contains("const sum"),
+            "Should contain sum variable: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("console.log"),
+            "Should contain console.log: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("return sum"),
+            "Should contain return: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9889,14 +10541,26 @@ for (const item of items) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should contain for...of syntax
-        assert!(result.js_code.contains("for"),
-            "Should contain for: {}", result.js_code);
-        assert!(result.js_code.contains("const item"),
-            "Should contain const item: {}", result.js_code);
-        assert!(result.js_code.contains("of items"),
-            "Should contain of items: {}", result.js_code);
-        assert!(result.js_code.contains("console.log(item)"),
-            "Should contain console.log: {}", result.js_code);
+        assert!(
+            result.js_code.contains("for"),
+            "Should contain for: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("const item"),
+            "Should contain const item: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("of items"),
+            "Should contain of items: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("console.log(item)"),
+            "Should contain console.log: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9910,14 +10574,26 @@ for (let i = 0; i < 10; i++) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should contain for loop syntax
-        assert!(result.js_code.contains("for"),
-            "Should contain for: {}", result.js_code);
-        assert!(result.js_code.contains("let i = 0"),
-            "Should contain initializer: {}", result.js_code);
-        assert!(result.js_code.contains("i < 10"),
-            "Should contain condition: {}", result.js_code);
-        assert!(result.js_code.contains("i++"),
-            "Should contain update: {}", result.js_code);
+        assert!(
+            result.js_code.contains("for"),
+            "Should contain for: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("let i = 0"),
+            "Should contain initializer: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("i < 10"),
+            "Should contain condition: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("i++"),
+            "Should contain update: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9931,10 +10607,16 @@ if (x > 0) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should contain if syntax
-        assert!(result.js_code.contains("if"),
-            "Should contain if: {}", result.js_code);
-        assert!(result.js_code.contains("x > 0"),
-            "Should contain condition: {}", result.js_code);
+        assert!(
+            result.js_code.contains("if"),
+            "Should contain if: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("x > 0"),
+            "Should contain condition: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9950,10 +10632,16 @@ if (x > 0) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should contain if...else syntax
-        assert!(result.js_code.contains("if"),
-            "Should contain if: {}", result.js_code);
-        assert!(result.js_code.contains("else"),
-            "Should contain else: {}", result.js_code);
+        assert!(
+            result.js_code.contains("if"),
+            "Should contain if: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("else"),
+            "Should contain else: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9967,10 +10655,16 @@ while (i < 5) {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("while"),
-            "Should contain while: {}", result.js_code);
-        assert!(result.js_code.contains("i < 5"),
-            "Should contain condition: {}", result.js_code);
+        assert!(
+            result.js_code.contains("while"),
+            "Should contain while: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("i < 5"),
+            "Should contain condition: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -9984,12 +10678,21 @@ do {
 } while (i < 10);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("do"),
-            "Should contain do: {}", result.js_code);
-        assert!(result.js_code.contains("while"),
-            "Should contain while: {}", result.js_code);
-        assert!(result.js_code.contains("i < 10"),
-            "Should contain condition: {}", result.js_code);
+        assert!(
+            result.js_code.contains("do"),
+            "Should contain do: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("while"),
+            "Should contain while: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("i < 10"),
+            "Should contain condition: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10009,14 +10712,26 @@ switch (x) {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("switch"),
-            "Should contain switch: {}", result.js_code);
-        assert!(result.js_code.contains("case 1"),
-            "Should contain case 1: {}", result.js_code);
-        assert!(result.js_code.contains("case 2"),
-            "Should contain case 2: {}", result.js_code);
-        assert!(result.js_code.contains("default"),
-            "Should contain default: {}", result.js_code);
+        assert!(
+            result.js_code.contains("switch"),
+            "Should contain switch: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("case 1"),
+            "Should contain case 1: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("case 2"),
+            "Should contain case 2: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("default"),
+            "Should contain default: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10031,12 +10746,21 @@ try {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("try"),
-            "Should contain try: {}", result.js_code);
-        assert!(result.js_code.contains("catch"),
-            "Should contain catch: {}", result.js_code);
-        assert!(result.js_code.contains("riskyFunction"),
-            "Should contain riskyFunction: {}", result.js_code);
+        assert!(
+            result.js_code.contains("try"),
+            "Should contain try: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("catch"),
+            "Should contain catch: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("riskyFunction"),
+            "Should contain riskyFunction: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10053,12 +10777,21 @@ try {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("try"),
-            "Should contain try: {}", result.js_code);
-        assert!(result.js_code.contains("catch"),
-            "Should contain catch: {}", result.js_code);
-        assert!(result.js_code.contains("finally"),
-            "Should contain finally: {}", result.js_code);
+        assert!(
+            result.js_code.contains("try"),
+            "Should contain try: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("catch"),
+            "Should contain catch: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("finally"),
+            "Should contain finally: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10071,8 +10804,11 @@ if (error) {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("throw"),
-            "Should contain throw: {}", result.js_code);
+        assert!(
+            result.js_code.contains("throw"),
+            "Should contain throw: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10087,8 +10823,11 @@ for (let i = 0; i < 10; i++) {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("break"),
-            "Should contain break: {}", result.js_code);
+        assert!(
+            result.js_code.contains("break"),
+            "Should contain break: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10104,8 +10843,11 @@ for (let i = 0; i < 10; i++) {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("continue"),
-            "Should contain continue: {}", result.js_code);
+        assert!(
+            result.js_code.contains("continue"),
+            "Should contain continue: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10117,10 +10859,16 @@ const numbers = [1, 2, 3];
 const empty = [];
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("[1, 2, 3]"),
-            "Should contain array literal: {}", result.js_code);
-        assert!(result.js_code.contains("[]"),
-            "Should contain empty array: {}", result.js_code);
+        assert!(
+            result.js_code.contains("[1, 2, 3]"),
+            "Should contain array literal: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("[]"),
+            "Should contain empty array: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10132,8 +10880,11 @@ const arr1 = [1, 2, 3];
 const arr2 = [...arr1, 4, 5];
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("[...arr1, 4, 5]"),
-            "Should contain spread expression: {}", result.js_code);
+        assert!(
+            result.js_code.contains("[...arr1, 4, 5]"),
+            "Should contain spread expression: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10142,8 +10893,11 @@ const arr2 = [...arr1, 4, 5];
         // Test class with extends (minimal test)
         let source = "class Dog extends Animal {}";
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("class Dog extends Animal"),
-            "Should contain class Dog extends Animal: {}", result.js_code);
+        assert!(
+            result.js_code.contains("class Dog extends Animal"),
+            "Should contain class Dog extends Animal: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10163,14 +10917,26 @@ class Counter {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         println!("Class with method transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("class Counter"),
-            "Should contain 'class Counter': {}", result.js_code);
-        assert!(result.js_code.contains("increment()"),
-            "Should contain 'increment()': {}", result.js_code);
-        assert!(result.js_code.contains("getCount()"),
-            "Should contain 'getCount()': {}", result.js_code);
-        assert!(result.js_code.contains("count"),
-            "Should contain 'count' field: {}", result.js_code);
+        assert!(
+            result.js_code.contains("class Counter"),
+            "Should contain 'class Counter': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("increment()"),
+            "Should contain 'increment()': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("getCount()"),
+            "Should contain 'getCount()': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("count"),
+            "Should contain 'count' field: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10188,13 +10954,25 @@ class Calculator {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Class with constructor transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("class Calculator"),
-            "Should contain 'class Calculator': {}", result.js_code);
-        assert!(result.js_code.contains("constructor"),
-            "Should contain 'constructor': {}", result.js_code);
-        assert!(result.js_code.contains("add"),
-            "Should contain 'add': {}", result.js_code);
+        println!(
+            "Class with constructor transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("class Calculator"),
+            "Should contain 'class Calculator': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("constructor"),
+            "Should contain 'constructor': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("add"),
+            "Should contain 'add': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10217,18 +10995,36 @@ class Person {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Constructor with type annotations transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("class Person"),
-            "Should contain 'class Person': {}", result.js_code);
-        assert!(result.js_code.contains("constructor"),
-            "Should contain 'constructor': {}", result.js_code);
-        assert!(result.js_code.contains("greet"),
-            "Should contain 'greet': {}", result.js_code);
+        println!(
+            "Constructor with type annotations transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("class Person"),
+            "Should contain 'class Person': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("constructor"),
+            "Should contain 'constructor': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("greet"),
+            "Should contain 'greet': {}",
+            result.js_code
+        );
         // Should not contain TypeScript type annotations
-        assert!(!result.js_code.contains(": string"),
-            "Should not contain type annotation ': string': {}", result.js_code);
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain type annotation ': number': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10241,25 +11037,49 @@ class Person {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Constructor with access modifiers transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("class Person"),
-            "Should contain 'class Person': {}", result.js_code);
-        assert!(result.js_code.contains("constructor"),
-            "Should contain 'constructor': {}", result.js_code);
+        println!(
+            "Constructor with access modifiers transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("class Person"),
+            "Should contain 'class Person': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("constructor"),
+            "Should contain 'constructor': {}",
+            result.js_code
+        );
         // Should generate this.name = name; for public parameter
-        assert!(result.js_code.contains("this.name = name"),
-            "Should generate 'this.name = name;' for public parameter: {}", result.js_code);
+        assert!(
+            result.js_code.contains("this.name = name"),
+            "Should generate 'this.name = name;' for public parameter: {}",
+            result.js_code
+        );
         // Should generate this.age = age; for private parameter
-        assert!(result.js_code.contains("this.age = age"),
-            "Should generate 'this.age = age;' for private parameter: {}", result.js_code);
+        assert!(
+            result.js_code.contains("this.age = age"),
+            "Should generate 'this.age = age;' for private parameter: {}",
+            result.js_code
+        );
         // Should generate this.id = id; for protected parameter
-        assert!(result.js_code.contains("this.id = id"),
-            "Should generate 'this.id = id;' for protected parameter: {}", result.js_code);
+        assert!(
+            result.js_code.contains("this.id = id"),
+            "Should generate 'this.id = id;' for protected parameter: {}",
+            result.js_code
+        );
         // Should not contain TypeScript type annotations
-        assert!(!result.js_code.contains(": string"),
-            "Should not contain type annotation ': string': {}", result.js_code);
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain type annotation ': number': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10280,20 +11100,41 @@ class Calculator {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Class with typed methods transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("class Calculator"),
-            "Should contain 'class Calculator': {}", result.js_code);
-        assert!(result.js_code.contains("add("),
-            "Should contain 'add(' method: {}", result.js_code);
-        assert!(result.js_code.contains("multiply("),
-            "Should contain 'multiply(' method: {}", result.js_code);
-        assert!(result.js_code.contains("greet("),
-            "Should contain 'greet(' method: {}", result.js_code);
+        println!(
+            "Class with typed methods transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("class Calculator"),
+            "Should contain 'class Calculator': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("add("),
+            "Should contain 'add(' method: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("multiply("),
+            "Should contain 'multiply(' method: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("greet("),
+            "Should contain 'greet(' method: {}",
+            result.js_code
+        );
         // Should not contain TypeScript type annotations
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain type annotation ': number': {}", result.js_code);
-        assert!(!result.js_code.contains(": string"),
-            "Should not contain type annotation ': string': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10311,11 +11152,20 @@ class MathUtils {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Class with static method transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("static add"),
-            "Should contain 'static add': {}", result.js_code);
-        assert!(result.js_code.contains("static PI"),
-            "Should contain 'static PI': {}", result.js_code);
+        println!(
+            "Class with static method transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("static add"),
+            "Should contain 'static add': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("static PI"),
+            "Should contain 'static PI': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10331,8 +11181,11 @@ class Temperature {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         println!("Class with getter transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("get value()"),
-            "Should contain 'get value()': {}", result.js_code);
+        assert!(
+            result.js_code.contains("get value()"),
+            "Should contain 'get value()': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10358,16 +11211,31 @@ class Rectangle {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Getter/setter with type annotations transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("get width()"),
-            "Should contain 'get width()': {}", result.js_code);
-        assert!(result.js_code.contains("set width"),
-            "Should contain 'set width': {}", result.js_code);
-        assert!(result.js_code.contains("get area()"),
-            "Should contain 'get area()': {}", result.js_code);
+        println!(
+            "Getter/setter with type annotations transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("get width()"),
+            "Should contain 'get width()': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("set width"),
+            "Should contain 'set width': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("get area()"),
+            "Should contain 'get area()': {}",
+            result.js_code
+        );
         // Should not contain TypeScript type annotations
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain type annotation ': number': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain type annotation ': number': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10383,9 +11251,15 @@ class DataFetcher {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Class with async method transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("async fetchData"),
-            "Should contain 'async fetchData': {}", result.js_code);
+        println!(
+            "Class with async method transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async fetchData"),
+            "Should contain 'async fetchData': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10404,16 +11278,31 @@ class DataFetcher {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Async method with types transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("async fetchData"),
-            "Should contain 'async fetchData': {}", result.js_code);
-        assert!(result.js_code.contains("async getCount"),
-            "Should contain 'async getCount': {}", result.js_code);
+        println!(
+            "Async method with types transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async fetchData"),
+            "Should contain 'async fetchData': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async getCount"),
+            "Should contain 'async getCount': {}",
+            result.js_code
+        );
         // Should not contain TypeScript type annotations
-        assert!(!result.js_code.contains(": string"),
-            "Should not contain type annotation ': string': {}", result.js_code);
-        assert!(!result.js_code.contains(": Promise"),
-            "Should not contain type annotation ': Promise': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": string"),
+            "Should not contain type annotation ': string': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": Promise"),
+            "Should not contain type annotation ': Promise': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10425,10 +11314,16 @@ const greeting = `Hello ${name}!`;"#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         println!("Template literal transpiled output:\n{}", result.js_code);
         // Template literal should be transpiled to string concatenation
-        assert!(result.js_code.contains("Hello"),
-            "Should contain 'Hello': {}", result.js_code);
-        assert!(result.js_code.contains("name"),
-            "Should contain 'name': {}", result.js_code);
+        assert!(
+            result.js_code.contains("Hello"),
+            "Should contain 'Hello': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("name"),
+            "Should contain 'name': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10437,9 +11332,15 @@ const greeting = `Hello ${name}!`;"#;
         // Test template literal only (no variable declaration)
         let source = r#"`Hello ${name}!`"#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Template literal only transpiled output:\n{}", result.js_code);
-        assert!(result.js_code.contains("Hello"),
-            "Should contain 'Hello': {}", result.js_code);
+        println!(
+            "Template literal only transpiled output:\n{}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("Hello"),
+            "Should contain 'Hello': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10449,10 +11350,16 @@ const greeting = `Hello ${name}!`;"#;
         let source = r#"const a = 1, b = 2;
 const sum = `${a} + ${b} = ${a + b}`;"#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Template literal with expression transpiled output:\n{}", result.js_code);
+        println!(
+            "Template literal with expression transpiled output:\n{}",
+            result.js_code
+        );
         // Should handle expressions in template
-        assert!(result.js_code.contains("+"),
-            "Should contain '+' expression: {}", result.js_code);
+        assert!(
+            result.js_code.contains("+"),
+            "Should contain '+' expression: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10462,10 +11369,16 @@ const sum = `${a} + ${b} = ${a + b}`;"#;
         let source = r#"const a = 1;
 const sum = `${a + a}`;"#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        println!("Template literal simple expr transpiled output:\n{}", result.js_code);
+        println!(
+            "Template literal simple expr transpiled output:\n{}",
+            result.js_code
+        );
         // Should handle expressions in template
-        assert!(result.js_code.contains("+"),
-            "Should contain '+' expression: {}", result.js_code);
+        assert!(
+            result.js_code.contains("+"),
+            "Should contain '+' expression: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -10522,14 +11435,26 @@ const sum = `${a + a}`;"#;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
-                assert!(result.js_code.contains("a"),
-                    "Should contain a: {}", result.js_code);
-                assert!(result.js_code.contains("b"),
-                    "Should contain b: {}", result.js_code);
-                assert!(result.js_code.contains("c"),
-                    "Should contain c: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("a"),
+                    "Should contain a: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("b"),
+                    "Should contain b: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("c"),
+                    "Should contain c: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10549,12 +11474,21 @@ const sum = `${a + a}`;"#;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
-                assert!(result.js_code.contains("x"),
-                    "Should contain x: {}", result.js_code);
-                assert!(result.js_code.contains("y"),
-                    "Should contain y: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("x"),
+                    "Should contain x: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("y"),
+                    "Should contain y: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10574,8 +11508,11 @@ const sum = `${a + a}`;"#;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10605,12 +11542,21 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("class"),
-                    "Should contain class: {}", result.js_code);
-                assert!(result.js_code.contains("constructor"),
-                    "Should contain constructor: {}", result.js_code);
-                assert!(result.js_code.contains("this.name = name"),
-                    "Should contain assignment: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("class"),
+                    "Should contain class: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("constructor"),
+                    "Should contain constructor: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("this.name = name"),
+                    "Should contain assignment: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10630,14 +11576,26 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
-                assert!(result.js_code.contains("a"),
-                    "Should contain a: {}", result.js_code);
-                assert!(result.js_code.contains("b = 2"),
-                    "Should contain b = 2: {}", result.js_code);
-                assert!(result.js_code.contains("c = 3"),
-                    "Should contain c = 3: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("a"),
+                    "Should contain a: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("b = 2"),
+                    "Should contain b = 2: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("c = 3"),
+                    "Should contain c = 3: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10657,14 +11615,26 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
-                assert!(result.js_code.contains("x"),
-                    "Should contain x: {}", result.js_code);
-                assert!(result.js_code.contains("y = 10"),
-                    "Should contain y = 10: {}", result.js_code);
-                assert!(result.js_code.contains("z = 20"),
-                    "Should contain z = 20: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("x"),
+                    "Should contain x: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("y = 10"),
+                    "Should contain y = 10: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("z = 20"),
+                    "Should contain z = 20: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10684,10 +11654,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
-                assert!(result.js_code.contains("alias = 5"),
-                    "Should contain alias = 5: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("alias = 5"),
+                    "Should contain alias = 5: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10707,12 +11683,21 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
-                assert!(result.js_code.contains("nestedA = 1"),
-                    "Should contain nestedA = 1: {}", result.js_code);
-                assert!(result.js_code.contains("nestedB = 2"),
-                    "Should contain nestedB = 2: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("nestedA = 1"),
+                    "Should contain nestedA = 1: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("nestedB = 2"),
+                    "Should contain nestedB = 2: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10736,11 +11721,17 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function greet"),
-                    "Should contain function greet: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function greet"),
+                    "Should contain function greet: {}",
+                    result.js_code
+                );
                 // Note: emitter outputs without spaces: {name, age}
-                assert!(result.js_code.contains("{name, age}"),
-                    "Should contain destructuring param: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("{name, age}"),
+                    "Should contain destructuring param: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10760,10 +11751,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function greet"),
-                    "Should contain function greet: {}", result.js_code);
-                assert!(result.js_code.contains("{name, age}"),
-                    "Should contain destructuring param: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function greet"),
+                    "Should contain function greet: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("{name, age}"),
+                    "Should contain destructuring param: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10787,10 +11784,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function sum"),
-                    "Should contain function sum: {}", result.js_code);
-                assert!(result.js_code.contains("[a, b, c]"),
-                    "Should contain array destructuring param: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function sum"),
+                    "Should contain function sum: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("[a, b, c]"),
+                    "Should contain array destructuring param: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10809,8 +11812,11 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function greet"),
-                    "Should contain function greet: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function greet"),
+                    "Should contain function greet: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10829,8 +11835,11 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("const greet"),
-                    "Should contain const greet: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const greet"),
+                    "Should contain const greet: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10856,11 +11865,17 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("class Greeter"),
-                    "Should contain class Greeter: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("class Greeter"),
+                    "Should contain class Greeter: {}",
+                    result.js_code
+                );
                 // Note: emitter outputs without spaces: {name, age}
-                assert!(result.js_code.contains("greet({name, age})"),
-                    "Should contain destructuring param: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("greet({name, age})"),
+                    "Should contain destructuring param: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10881,10 +11896,16 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // v0.3.195: ESM import -> CommonJS require
-                assert!(result.js_code.contains("require"),
-                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
-                assert!(result.js_code.contains("a, b"),
-                    "Should contain a, b: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("a, b"),
+                    "Should contain a, b: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10905,10 +11926,16 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // v0.3.195: ESM import -> CommonJS require
-                assert!(result.js_code.contains("require"),
-                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
-                assert!(result.js_code.contains("foo"),
-                    "Should contain foo: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("foo"),
+                    "Should contain foo: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10929,10 +11956,16 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // v0.3.195: ESM import * as ns -> CommonJS const ns = require()
-                assert!(result.js_code.contains("require"),
-                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
-                assert!(result.js_code.contains("utils"),
-                    "Should contain utils: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("utils"),
+                    "Should contain utils: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10953,10 +11986,16 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // v0.3.195: ESM side-effect import -> CommonJS require()
-                assert!(result.js_code.contains("require"),
-                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
-                assert!(result.js_code.contains("module"),
-                    "Should contain module: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("module"),
+                    "Should contain module: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -10977,12 +12016,21 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // v0.3.195: ESM import { x as y } -> CommonJS const { x: y } = require()
-                assert!(result.js_code.contains("require"),
-                    "Should contain require (ESM -> CommonJS): {}", result.js_code);
-                assert!(result.js_code.contains("original"),
-                    "Should contain original: {}", result.js_code);
-                assert!(result.js_code.contains("alias"),
-                    "Should contain alias: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("require"),
+                    "Should contain require (ESM -> CommonJS): {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("original"),
+                    "Should contain original: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("alias"),
+                    "Should contain alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11002,10 +12050,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("export"),
-                    "Should contain export: {}", result.js_code);
-                assert!(result.js_code.contains("{ a, b }"),
-                    "Should contain {{ a, b }}: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("export"),
+                    "Should contain export: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("{ a, b }"),
+                    "Should contain {{ a, b }}: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11025,10 +12079,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("export"),
-                    "Should contain export: {}", result.js_code);
-                assert!(result.js_code.contains("default"),
-                    "Should contain default: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("export"),
+                    "Should contain export: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("default"),
+                    "Should contain default: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11048,10 +12108,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("export"),
-                    "Should contain export: {}", result.js_code);
-                assert!(result.js_code.contains("const"),
-                    "Should contain const: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("export"),
+                    "Should contain export: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("const"),
+                    "Should contain const: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11071,10 +12137,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("export"),
-                    "Should contain export: {}", result.js_code);
-                assert!(result.js_code.contains("from"),
-                    "Should contain from: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("export"),
+                    "Should contain export: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("from"),
+                    "Should contain from: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11094,10 +12166,16 @@ class Animal {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("export"),
-                    "Should contain export: {}", result.js_code);
-                assert!(result.js_code.contains("*"),
-                    "Should contain *: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("export"),
+                    "Should contain export: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("*"),
+                    "Should contain *: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11118,8 +12196,11 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11140,8 +12221,11 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11162,8 +12246,11 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11186,8 +12273,11 @@ class Animal {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11216,10 +12306,16 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped, but function should remain
-                assert!(result.js_code.contains("function getStatus"),
-                    "Should contain function: {}", result.js_code);
-                assert!(!result.js_code.contains("type Status"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function getStatus"),
+                    "Should contain function: {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("type Status"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11240,8 +12336,11 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11262,8 +12361,11 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11284,8 +12386,11 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11306,8 +12411,11 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11328,8 +12436,11 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11350,10 +12461,16 @@ console.log(getStatus());
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
-                assert!(!result.js_code.contains("keyof"),
-                    "Should not contain 'keyof' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("keyof"),
+                    "Should not contain 'keyof' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11380,10 +12497,16 @@ type UserKeys = keyof User;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type aliases and interfaces should be skipped
-                assert!(!result.js_code.contains("type UserKeys"),
-                    "Should not contain 'type UserKeys': {}", result.js_code);
-                assert!(!result.js_code.contains("interface"),
-                    "Should not contain 'interface': {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type UserKeys"),
+                    "Should not contain 'type UserKeys': {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("interface"),
+                    "Should not contain 'interface': {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11407,10 +12530,16 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped but const should remain
-                assert!(result.js_code.contains("const config"),
-                    "Should contain 'const config': {}", result.js_code);
-                assert!(!result.js_code.contains("type ConfigType"),
-                    "Should not contain 'type ConfigType': {}", result.js_code);
+                assert!(
+                    result.js_code.contains("const config"),
+                    "Should contain 'const config': {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("type ConfigType"),
+                    "Should not contain 'type ConfigType': {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11431,8 +12560,11 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11455,8 +12587,11 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Function should remain but type annotations should be removed
-                assert!(result.js_code.contains("function getProperty"),
-                    "Should contain function: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function getProperty"),
+                    "Should contain function: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11477,10 +12612,16 @@ type ConfigType = typeof config;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type Partial"),
-                    "Should not contain 'type Partial': {}", result.js_code);
-                assert!(!result.js_code.contains("[P in keyof T]"),
-                    "Should not contain mapped type syntax: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type Partial"),
+                    "Should not contain 'type Partial': {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("[P in keyof T]"),
+                    "Should not contain mapped type syntax: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11500,8 +12641,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type StringKeyMap"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type StringKeyMap"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11521,8 +12665,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type Readonly"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type Readonly"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11544,8 +12691,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function makeOptional"),
-                    "Should contain function: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function makeOptional"),
+                    "Should contain function: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11565,8 +12715,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type IsString"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type IsString"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11586,8 +12739,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type Result"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type Result"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11607,8 +12763,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type DeepResult"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type DeepResult"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11628,8 +12787,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type NonNullable"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type NonNullable"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11649,8 +12811,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type Greeting"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type Greeting"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11664,14 +12829,19 @@ type ConfigType = typeof config;
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         // Test template literal type with multiple placeholders
         let source = r#"type Email = `user-${string}@${string}.${string}`;"#;
-        println!("\n========== Testing template literal type with multiple placeholders ==========\n");
+        println!(
+            "\n========== Testing template literal type with multiple placeholders ==========\n"
+        );
 
         match compiler.compile_source(source, "test.ts") {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type Email"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type Email"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11691,8 +12861,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type EventName"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type EventName"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11712,8 +12885,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type ApiPath"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type ApiPath"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11733,8 +12909,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type UnwrapPromise"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type UnwrapPromise"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11754,8 +12933,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type StringResult"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type StringResult"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11775,8 +12957,11 @@ type ConfigType = typeof config;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type DeepUnwrap"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type DeepUnwrap"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11802,10 +12987,16 @@ type Result<T> = T extends success ? T : never;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type NeverType"),
-                    "Should not contain type alias: {}", result.js_code);
-                assert!(!result.js_code.contains("type Result"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type NeverType"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("type Result"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11831,10 +13022,16 @@ type SafeResult<T> = T extends unknown ? T : never;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type UnknownType"),
-                    "Should not contain type alias: {}", result.js_code);
-                assert!(!result.js_code.contains("type SafeResult"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type UnknownType"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("type SafeResult"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11865,10 +13062,16 @@ function isDefined<T>(value: T): value is NonNullable<T> {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Should remove type annotations including type predicates
-                assert!(!result.js_code.contains(": unknown"),
-                    "Should not contain type annotation: {}", result.js_code);
-                assert!(!result.js_code.contains(": string"),
-                    "Should not contain return type: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains(": unknown"),
+                    "Should not contain type annotation: {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains(": string"),
+                    "Should not contain return type: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11895,8 +13098,11 @@ function genericFunction<T extends unknown>(value: T): T {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(!result.js_code.contains("type UnionWithNever"),
-                    "Should not contain type alias: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type UnionWithNever"),
+                    "Should not contain type alias: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11926,14 +13132,23 @@ function greet(name: string, formal?: boolean): string {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Should contain function implementation
-                assert!(result.js_code.contains("function greet"),
-                    "Should contain function greet: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function greet"),
+                    "Should contain function greet: {}",
+                    result.js_code
+                );
                 // Should contain @overload comments for signatures
-                assert!(result.js_code.contains("/** @overload */"),
-                    "Should contain @overload comment: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("/** @overload */"),
+                    "Should contain @overload comment: {}",
+                    result.js_code
+                );
                 // Should not contain TypeScript type annotations in output
-                assert!(!result.js_code.contains(": string;"),
-                    "Should not contain overload signature type annotation: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains(": string;"),
+                    "Should not contain overload signature type annotation: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11962,12 +13177,18 @@ function process(input: string | number): string | number {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function process"),
-                    "Should contain function process: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function process"),
+                    "Should contain function process: {}",
+                    result.js_code
+                );
                 // Count @overload occurrences (should be 2)
                 let overload_count = result.js_code.matches("/** @overload */").count();
-                assert_eq!(overload_count, 2,
-                    "Should have 2 @overload comments, got {}: {}", overload_count, result.js_code);
+                assert_eq!(
+                    overload_count, 2,
+                    "Should have 2 @overload comments, got {}: {}",
+                    overload_count, result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -11993,11 +13214,17 @@ function identity<T>(value: T, defaultValue?: T): T {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("function identity"),
-                    "Should contain function identity: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function identity"),
+                    "Should contain function identity: {}",
+                    result.js_code
+                );
                 let overload_count = result.js_code.matches("/** @overload */").count();
-                assert_eq!(overload_count, 2,
-                    "Should have 2 @overload comments, got {}", overload_count);
+                assert_eq!(
+                    overload_count, 2,
+                    "Should have 2 @overload comments, got {}",
+                    overload_count
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12024,11 +13251,17 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("async function fetchData"),
-                    "Should contain async function fetchData: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("async function fetchData"),
+                    "Should contain async function fetchData: {}",
+                    result.js_code
+                );
                 let overload_count = result.js_code.matches("/** @overload */").count();
-                assert_eq!(overload_count, 2,
-                    "Should have 2 @overload comments, got {}", overload_count);
+                assert_eq!(
+                    overload_count, 2,
+                    "Should have 2 @overload comments, got {}",
+                    overload_count
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12051,8 +13284,11 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Interface should be skipped in JS output
-                assert!(!result.js_code.contains("interface"),
-                    "Should not contain 'interface' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("interface"),
+                    "Should not contain 'interface' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12075,8 +13311,11 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Interface should be skipped in JS output
-                assert!(!result.js_code.contains("interface"),
-                    "Should not contain 'interface' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("interface"),
+                    "Should not contain 'interface' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12101,8 +13340,11 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Interface should be skipped in JS output
-                assert!(!result.js_code.contains("interface"),
-                    "Should not contain 'interface' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("interface"),
+                    "Should not contain 'interface' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12126,8 +13368,11 @@ async function fetchData(url: string, options?: { timeout: number }): Promise<st
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Type alias should be skipped in JS output
-                assert!(!result.js_code.contains("type"),
-                    "Should not contain 'type' keyword: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains("type"),
+                    "Should not contain 'type' keyword: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12159,10 +13404,16 @@ class Greeter {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Decorator should be output as comment
-                assert!(result.js_code.contains("/* @sealed */"),
-                    "Should contain decorator comment: {}", result.js_code);
-                assert!(result.js_code.contains("class Greeter"),
-                    "Should contain class definition: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("/* @sealed */"),
+                    "Should contain decorator comment: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("class Greeter"),
+                    "Should contain class definition: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12191,12 +13442,21 @@ class MyComponent {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Decorator with args should be output as comment
-                assert!(result.js_code.contains("/* @Component"),
-                    "Should contain decorator comment: {}", result.js_code);
-                assert!(result.js_code.contains("selector"),
-                    "Should contain decorator argument: {}", result.js_code);
-                assert!(result.js_code.contains("class MyComponent"),
-                    "Should contain class definition: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("/* @Component"),
+                    "Should contain decorator comment: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("selector"),
+                    "Should contain decorator argument: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("class MyComponent"),
+                    "Should contain class definition: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12227,12 +13487,21 @@ class Calculator {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Decorators should be output as comments
-                assert!(result.js_code.contains("/* @readonly */"),
-                    "Should contain readonly decorator comment: {}", result.js_code);
-                assert!(result.js_code.contains("/* @deprecated */"),
-                    "Should contain deprecated decorator comment: {}", result.js_code);
-                assert!(result.js_code.contains("calculate"),
-                    "Should contain method definition: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("/* @readonly */"),
+                    "Should contain readonly decorator comment: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("/* @deprecated */"),
+                    "Should contain deprecated decorator comment: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("calculate"),
+                    "Should contain method definition: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12266,16 +13535,31 @@ class MyService {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // All decorators should be output as comments
-                assert!(result.js_code.contains("/* @Injectable */"),
-                    "Should contain Injectable decorator: {}", result.js_code);
-                assert!(result.js_code.contains("/* @Component"),
-                    "Should contain Component decorator: {}", result.js_code);
-                assert!(result.js_code.contains("/* @Prop */"),
-                    "Should contain Prop decorator: {}", result.js_code);
-                assert!(result.js_code.contains("/* @Watch"),
-                    "Should contain Watch decorator: {}", result.js_code);
-                assert!(result.js_code.contains("/* @Get"),
-                    "Should contain Get decorator: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("/* @Injectable */"),
+                    "Should contain Injectable decorator: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("/* @Component"),
+                    "Should contain Component decorator: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("/* @Prop */"),
+                    "Should contain Prop decorator: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("/* @Watch"),
+                    "Should contain Watch decorator: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("/* @Get"),
+                    "Should contain Get decorator: {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12302,14 +13586,26 @@ enum Color {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Enum should be transpiled to JavaScript object
-                assert!(result.js_code.contains("var Color"),
-                    "Should contain 'var Color': {}", result.js_code);
-                assert!(result.js_code.contains("Red"),
-                    "Should contain 'Red': {}", result.js_code);
-                assert!(result.js_code.contains("Green"),
-                    "Should contain 'Green': {}", result.js_code);
-                assert!(result.js_code.contains("Blue"),
-                    "Should contain 'Blue': {}", result.js_code);
+                assert!(
+                    result.js_code.contains("var Color"),
+                    "Should contain 'var Color': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Red"),
+                    "Should contain 'Red': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Green"),
+                    "Should contain 'Green': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Blue"),
+                    "Should contain 'Blue': {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12335,14 +13631,26 @@ enum Status {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("var Status"),
-                    "Should contain 'var Status': {}", result.js_code);
-                assert!(result.js_code.contains("Pending: 1"),
-                    "Should contain 'Pending: 1': {}", result.js_code);
-                assert!(result.js_code.contains("Active: 2"),
-                    "Should contain 'Active: 2': {}", result.js_code);
-                assert!(result.js_code.contains("Inactive: 0"),
-                    "Should contain 'Inactive: 0': {}", result.js_code);
+                assert!(
+                    result.js_code.contains("var Status"),
+                    "Should contain 'var Status': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Pending: 1"),
+                    "Should contain 'Pending: 1': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Active: 2"),
+                    "Should contain 'Active: 2': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Inactive: 0"),
+                    "Should contain 'Inactive: 0': {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12369,12 +13677,21 @@ enum Direction {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("var Direction"),
-                    "Should contain 'var Direction': {}", result.js_code);
-                assert!(result.js_code.contains("Up: \"UP\""),
-                    "Should contain 'Up: \"UP\"': {}", result.js_code);
-                assert!(result.js_code.contains("Down: \"DOWN\""),
-                    "Should contain 'Down: \"DOWN\"': {}", result.js_code);
+                assert!(
+                    result.js_code.contains("var Direction"),
+                    "Should contain 'var Direction': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Up: \"UP\""),
+                    "Should contain 'Up: \"UP\"': {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("Down: \"DOWN\""),
+                    "Should contain 'Down: \"DOWN\"': {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12402,8 +13719,11 @@ const size = PixelSize.Medium;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // const enum should still be transpiled (simple implementation)
-                assert!(result.js_code.contains("PixelSize"),
-                    "Should contain 'PixelSize': {}", result.js_code);
+                assert!(
+                    result.js_code.contains("PixelSize"),
+                    "Should contain 'PixelSize': {}",
+                    result.js_code
+                );
             }
             Err(e) => {
                 println!("Compilation failed: {:?}", e);
@@ -12422,15 +13742,27 @@ let age: number = 25;
 let isActive: boolean = true;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("name"),
-            "Should contain 'name': {}", result.js_code);
-        assert!(result.js_code.contains("age"),
-            "Should contain 'age': {}", result.js_code);
+        assert!(
+            result.js_code.contains("name"),
+            "Should contain 'name': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("age"),
+            "Should contain 'age': {}",
+            result.js_code
+        );
         // Type annotations should be removed in output
-        assert!(!result.js_code.contains(": string"),
-            "Should not contain ': string': {}", result.js_code);
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain ': number': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": string"),
+            "Should not contain ': string': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain ': number': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12447,15 +13779,27 @@ function add(a: number, b: number): number {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("function greet"),
-            "Should contain 'function greet': {}", result.js_code);
-        assert!(result.js_code.contains("function add"),
-            "Should contain 'function add': {}", result.js_code);
+        assert!(
+            result.js_code.contains("function greet"),
+            "Should contain 'function greet': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("function add"),
+            "Should contain 'function add': {}",
+            result.js_code
+        );
         // Type annotations should be removed in output
-        assert!(!result.js_code.contains(": string"),
-            "Should not contain ': string': {}", result.js_code);
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain ': number': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": string"),
+            "Should not contain ': string': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain ': number': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12475,10 +13819,16 @@ interface Employee {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Interface declarations should be removed in transpiled output
-        assert!(!result.js_code.contains("interface Person"),
-            "Should not contain 'interface Person': {}", result.js_code);
-        assert!(!result.js_code.contains("interface Employee"),
-            "Should not contain 'interface Employee': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface Person"),
+            "Should not contain 'interface Person': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("interface Employee"),
+            "Should not contain 'interface Employee': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12491,10 +13841,16 @@ type UserId = string | number;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Type alias declarations should be removed in transpiled output
-        assert!(!result.js_code.contains("type Status"),
-            "Should not contain 'type Status': {}", result.js_code);
-        assert!(!result.js_code.contains("type UserId"),
-            "Should not contain 'type UserId': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("type UserId"),
+            "Should not contain 'type UserId': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12517,10 +13873,16 @@ enum Direction {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Enum declarations should be transpiled
-        assert!(result.js_code.contains("Color"),
-            "Should contain 'Color': {}", result.js_code);
-        assert!(result.js_code.contains("Direction"),
-            "Should contain 'Direction': {}", result.js_code);
+        assert!(
+            result.js_code.contains("Color"),
+            "Should contain 'Color': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("Direction"),
+            "Should contain 'Direction': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12535,13 +13897,22 @@ const numValue = someValue as number;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Type annotations should be removed
-        assert!(!result.js_code.contains(": unknown"),
-            "Should not contain ': unknown': {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": unknown"),
+            "Should not contain ': unknown': {}",
+            result.js_code
+        );
         // The type assertion `as Type` should be removed, leaving just the expression
-        assert!(result.js_code.contains("strValue = value"),
-            "Should contain 'strValue = value': {}", result.js_code);
-        assert!(result.js_code.contains("numValue = someValue"),
-            "Should contain 'numValue = someValue': {}", result.js_code);
+        assert!(
+            result.js_code.contains("strValue = value"),
+            "Should contain 'strValue = value': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("numValue = someValue"),
+            "Should contain 'numValue = someValue': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12559,11 +13930,17 @@ const person = data as Person;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Type assertion should be removed
-        assert!(result.js_code.contains("person = data"),
-            "Should contain 'person = data': {}", result.js_code);
+        assert!(
+            result.js_code.contains("person = data"),
+            "Should contain 'person = data': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface Person"),
-            "Should not contain 'interface Person': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface Person"),
+            "Should not contain 'interface Person': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12576,8 +13953,11 @@ const result = value as string as any;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Chained type assertions should be removed, leaving just the expression
-        assert!(result.js_code.contains("result = value"),
-            "Should contain 'result = value': {}", result.js_code);
+        assert!(
+            result.js_code.contains("result = value"),
+            "Should contain 'result = value': {}",
+            result.js_code
+        );
     }
 
     // ============ Angle Bracket Type Assertion Tests (v0.3.147) ============
@@ -12592,11 +13972,17 @@ const str = <string>value;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Type assertion should be removed
-        assert!(result.js_code.contains("str = value"),
-            "Should contain 'str = value': {}", result.js_code);
+        assert!(
+            result.js_code.contains("str = value"),
+            "Should contain 'str = value': {}",
+            result.js_code
+        );
         // Type annotation should be removed
-        assert!(!result.js_code.contains("<string>"),
-            "Should not contain '<string>': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("<string>"),
+            "Should not contain '<string>': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12608,8 +13994,11 @@ const input: unknown = "42";
 const num = <number>input;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("num = input"),
-            "Should contain 'num = input': {}", result.js_code);
+        assert!(
+            result.js_code.contains("num = input"),
+            "Should contain 'num = input': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12627,11 +14016,17 @@ const person = <Person>data;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Type assertion should be removed
-        assert!(result.js_code.contains("person = data"),
-            "Should contain 'person = data': {}", result.js_code);
+        assert!(
+            result.js_code.contains("person = data"),
+            "Should contain 'person = data': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface Person"),
-            "Should not contain 'interface Person': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface Person"),
+            "Should not contain 'interface Person': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12651,10 +14046,16 @@ const result2 = <string>value;
         let result_angle = compiler2.compile_source(source_angle, "test.ts").unwrap();
 
         // Both should produce similar output (without type annotations)
-        assert!(result_as.js_code.contains("result1 = value"),
-            "AS assertion should contain 'result1 = value': {}", result_as.js_code);
-        assert!(result_angle.js_code.contains("result2 = value"),
-            "Angle bracket assertion should contain 'result2 = value': {}", result_angle.js_code);
+        assert!(
+            result_as.js_code.contains("result1 = value"),
+            "AS assertion should contain 'result1 = value': {}",
+            result_as.js_code
+        );
+        assert!(
+            result_angle.js_code.contains("result2 = value"),
+            "Angle bracket assertion should contain 'result2 = value': {}",
+            result_angle.js_code
+        );
     }
 
     #[test]
@@ -12669,8 +14070,11 @@ function process(input: unknown): string {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should handle function with type assertion
-        assert!(result.js_code.contains("processed"),
-            "Should contain 'processed': {}", result.js_code);
+        assert!(
+            result.js_code.contains("processed"),
+            "Should contain 'processed': {}",
+            result.js_code
+        );
     }
 
     // ============ Utility Types Tests ============
@@ -12691,14 +14095,23 @@ function updateUser(user: Partial<User>) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Partial<T> should be erased, leaving just the inner type
-        assert!(!result.js_code.contains("Partial"),
-            "Should not contain 'Partial': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Partial"),
+            "Should not contain 'Partial': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface User"),
-            "Should not contain 'interface User': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface User"),
+            "Should not contain 'interface User': {}",
+            result.js_code
+        );
         // Function should still be present
-        assert!(result.js_code.contains("updateUser"),
-            "Should contain 'updateUser': {}", result.js_code);
+        assert!(
+            result.js_code.contains("updateUser"),
+            "Should contain 'updateUser': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12718,14 +14131,23 @@ function init(config: Required<Config>) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Required<T> should be erased
-        assert!(!result.js_code.contains("Required"),
-            "Should not contain 'Required': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Required"),
+            "Should not contain 'Required': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface Config"),
-            "Should not contain 'interface Config': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface Config"),
+            "Should not contain 'interface Config': {}",
+            result.js_code
+        );
         // Function should still be present
-        assert!(result.js_code.contains("init"),
-            "Should contain 'init': {}", result.js_code);
+        assert!(
+            result.js_code.contains("init"),
+            "Should contain 'init': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12742,14 +14164,23 @@ const origin: Readonly<Point> = { x: 0, y: 0 };
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Readonly<T> should be erased
-        assert!(!result.js_code.contains("Readonly"),
-            "Should not contain 'Readonly': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Readonly"),
+            "Should not contain 'Readonly': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface Point"),
-            "Should not contain 'interface Point': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface Point"),
+            "Should not contain 'interface Point': {}",
+            result.js_code
+        );
         // Origin assignment should still be present
-        assert!(result.js_code.contains("origin"),
-            "Should contain 'origin': {}", result.js_code);
+        assert!(
+            result.js_code.contains("origin"),
+            "Should contain 'origin': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12770,14 +14201,23 @@ const user: UserPreview = { name: "Alice" };
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Pick<T, K> should be erased, keeping only the first type argument
-        assert!(!result.js_code.contains("Pick"),
-            "Should not contain 'Pick': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Pick"),
+            "Should not contain 'Pick': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface User"),
-            "Should not contain 'interface User': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface User"),
+            "Should not contain 'interface User': {}",
+            result.js_code
+        );
         // Variable should still be present
-        assert!(result.js_code.contains("user"),
-            "Should contain 'user': {}", result.js_code);
+        assert!(
+            result.js_code.contains("user"),
+            "Should contain 'user': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12795,14 +14235,23 @@ const tasks: Record<Status, boolean> = {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Record<K, T> should be erased
-        assert!(!result.js_code.contains("Record"),
-            "Should not contain 'Record': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Record"),
+            "Should not contain 'Record': {}",
+            result.js_code
+        );
         // Type alias should be removed
-        assert!(!result.js_code.contains("type Status"),
-            "Should not contain 'type Status': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}",
+            result.js_code
+        );
         // Tasks assignment should still be present
-        assert!(result.js_code.contains("tasks"),
-            "Should contain 'tasks': {}", result.js_code);
+        assert!(
+            result.js_code.contains("tasks"),
+            "Should contain 'tasks': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12825,14 +14274,23 @@ function showUser(user: PublicUser) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Omit<T, K> should be erased
-        assert!(!result.js_code.contains("Omit"),
-            "Should not contain 'Omit': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Omit"),
+            "Should not contain 'Omit': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface User"),
-            "Should not contain 'interface User': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface User"),
+            "Should not contain 'interface User': {}",
+            result.js_code
+        );
         // Function should still be present
-        assert!(result.js_code.contains("showUser"),
-            "Should contain 'showUser': {}", result.js_code);
+        assert!(
+            result.js_code.contains("showUser"),
+            "Should contain 'showUser': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12847,14 +14305,23 @@ const current: ActiveStatus = "active";
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Exclude<T, U> should be erased
-        assert!(!result.js_code.contains("Exclude"),
-            "Should not contain 'Exclude': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Exclude"),
+            "Should not contain 'Exclude': {}",
+            result.js_code
+        );
         // Type aliases should be removed
-        assert!(!result.js_code.contains("type Status"),
-            "Should not contain 'type Status': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}",
+            result.js_code
+        );
         // Variable should still be present
-        assert!(result.js_code.contains("current"),
-            "Should contain 'current': {}", result.js_code);
+        assert!(
+            result.js_code.contains("current"),
+            "Should contain 'current': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12869,14 +14336,23 @@ const status: StringStatus = "active";
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Extract<T, U> should be erased
-        assert!(!result.js_code.contains("Extract"),
-            "Should not contain 'Extract': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Extract"),
+            "Should not contain 'Extract': {}",
+            result.js_code
+        );
         // Type aliases should be removed
-        assert!(!result.js_code.contains("type Status"),
-            "Should not contain 'type Status': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type Status"),
+            "Should not contain 'type Status': {}",
+            result.js_code
+        );
         // Variable should still be present
-        assert!(result.js_code.contains("status"),
-            "Should contain 'status': {}", result.js_code);
+        assert!(
+            result.js_code.contains("status"),
+            "Should contain 'status': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12890,11 +14366,17 @@ const value: NonNullable<MaybeString> = "hello";
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // NonNullable<T> should be erased
-        assert!(!result.js_code.contains("NonNullable"),
-            "Should not contain 'NonNullable': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("NonNullable"),
+            "Should not contain 'NonNullable': {}",
+            result.js_code
+        );
         // Variable should still be present
-        assert!(result.js_code.contains("value"),
-            "Should contain 'value': {}", result.js_code);
+        assert!(
+            result.js_code.contains("value"),
+            "Should contain 'value': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12910,14 +14392,23 @@ type User = ReturnType<typeof getUser>;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // ReturnType<T> should be erased
-        assert!(!result.js_code.contains("ReturnType"),
-            "Should not contain 'ReturnType': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("ReturnType"),
+            "Should not contain 'ReturnType': {}",
+            result.js_code
+        );
         // Type alias should be removed
-        assert!(!result.js_code.contains("type User"),
-            "Should not contain 'type User': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type User"),
+            "Should not contain 'type User': {}",
+            result.js_code
+        );
         // Function should still be present
-        assert!(result.js_code.contains("getUser"),
-            "Should contain 'getUser': {}", result.js_code);
+        assert!(
+            result.js_code.contains("getUser"),
+            "Should contain 'getUser': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -12933,14 +14424,23 @@ type GreetParams = Parameters<typeof greet>;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Parameters<T> should be erased
-        assert!(!result.js_code.contains("Parameters"),
-            "Should not contain 'Parameters': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Parameters"),
+            "Should not contain 'Parameters': {}",
+            result.js_code
+        );
         // Type alias should be removed
-        assert!(!result.js_code.contains("type GreetParams"),
-            "Should not contain 'type GreetParams': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type GreetParams"),
+            "Should not contain 'type GreetParams': {}",
+            result.js_code
+        );
         // Function should still be present
-        assert!(result.js_code.contains("greet"),
-            "Should contain 'greet': {}", result.js_code);
+        assert!(
+            result.js_code.contains("greet"),
+            "Should contain 'greet': {}",
+            result.js_code
+        );
     }
 
     /// v0.3.192: Test ConstructorParameters<T> utility type
@@ -12965,17 +14465,29 @@ console.log(params);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // ConstructorParameters<T> should be erased
-        assert!(!result.js_code.contains("ConstructorParameters"),
-            "Should not contain 'ConstructorParameters': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("ConstructorParameters"),
+            "Should not contain 'ConstructorParameters': {}",
+            result.js_code
+        );
         // Type alias should be removed
-        assert!(!result.js_code.contains("type UserConstructorParams"),
-            "Should not contain 'type UserConstructorParams': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type UserConstructorParams"),
+            "Should not contain 'type UserConstructorParams': {}",
+            result.js_code
+        );
         // Class should still be present (without type annotations)
-        assert!(result.js_code.contains("class User"),
-            "Should contain 'class User': {}", result.js_code);
+        assert!(
+            result.js_code.contains("class User"),
+            "Should contain 'class User': {}",
+            result.js_code
+        );
         // Variable should still be present
-        assert!(result.js_code.contains("const params"),
-            "Should contain 'const params': {}", result.js_code);
+        assert!(
+            result.js_code.contains("const params"),
+            "Should contain 'const params': {}",
+            result.js_code
+        );
     }
 
     /// v0.3.192: Test InstanceType<T> utility type
@@ -13000,17 +14512,29 @@ console.log(point);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // InstanceType<T> should be erased
-        assert!(!result.js_code.contains("InstanceType"),
-            "Should not contain 'InstanceType': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("InstanceType"),
+            "Should not contain 'InstanceType': {}",
+            result.js_code
+        );
         // Type alias should be removed
-        assert!(!result.js_code.contains("type PointInstance"),
-            "Should not contain 'type PointInstance': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type PointInstance"),
+            "Should not contain 'type PointInstance': {}",
+            result.js_code
+        );
         // Class should still be present (without type annotations)
-        assert!(result.js_code.contains("class Point"),
-            "Should contain 'class Point': {}", result.js_code);
+        assert!(
+            result.js_code.contains("class Point"),
+            "Should contain 'class Point': {}",
+            result.js_code
+        );
         // Variable should still be present
-        assert!(result.js_code.contains("const point"),
-            "Should contain 'const point': {}", result.js_code);
+        assert!(
+            result.js_code.contains("const point"),
+            "Should contain 'const point': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13043,20 +14567,38 @@ function getHost(config: Pick<Config, "host">) {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // All utility types should be erased
-        assert!(!result.js_code.contains("Partial"),
-            "Should not contain 'Partial': {}", result.js_code);
-        assert!(!result.js_code.contains("Readonly"),
-            "Should not contain 'Readonly': {}", result.js_code);
-        assert!(!result.js_code.contains("Pick"),
-            "Should not contain 'Pick': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Partial"),
+            "Should not contain 'Partial': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("Readonly"),
+            "Should not contain 'Readonly': {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("Pick"),
+            "Should not contain 'Pick': {}",
+            result.js_code
+        );
         // Interface should be removed
-        assert!(!result.js_code.contains("interface Config"),
-            "Should not contain 'interface Config': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface Config"),
+            "Should not contain 'interface Config': {}",
+            result.js_code
+        );
         // Functions should still be present
-        assert!(result.js_code.contains("updateConfig"),
-            "Should contain 'updateConfig': {}", result.js_code);
-        assert!(result.js_code.contains("getHost"),
-            "Should contain 'getHost': {}", result.js_code);
+        assert!(
+            result.js_code.contains("updateConfig"),
+            "Should contain 'updateConfig': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("getHost"),
+            "Should contain 'getHost': {}",
+            result.js_code
+        );
     }
 
     // ===== v0.3.141 边界情况测试 =====
@@ -13073,10 +14615,16 @@ runner();
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("async"),
-            "Should contain 'async': {}", result.js_code);
-        assert!(result.js_code.contains("console"),
-            "Should contain 'console': {}", result.js_code);
+        assert!(
+            result.js_code.contains("async"),
+            "Should contain 'async': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("console"),
+            "Should contain 'console': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13091,8 +14639,11 @@ fn();
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("console"),
-            "Should contain 'console': {}", result.js_code);
+        assert!(
+            result.js_code.contains("console"),
+            "Should contain 'console': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13109,10 +14660,16 @@ const single: number[] = [1, 2, 3];
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("matrix"),
-            "Should contain 'matrix': {}", result.js_code);
-        assert!(result.js_code.contains("single"),
-            "Should contain 'single': {}", result.js_code);
+        assert!(
+            result.js_code.contains("matrix"),
+            "Should contain 'matrix': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("single"),
+            "Should contain 'single': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13125,8 +14682,11 @@ console.log(greeting);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("greeting"),
-            "Should contain 'greeting': {}", result.js_code);
+        assert!(
+            result.js_code.contains("greeting"),
+            "Should contain 'greeting': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13140,8 +14700,11 @@ console.log(greeting);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("greeting"),
-            "Should contain 'greeting': {}", result.js_code);
+        assert!(
+            result.js_code.contains("greeting"),
+            "Should contain 'greeting': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13171,12 +14734,21 @@ class Animal {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("Animal"),
-            "Should contain 'Animal': {}", result.js_code);
-        assert!(result.js_code.contains("getName"),
-            "Should contain 'getName': {}", result.js_code);
-        assert!(result.js_code.contains("setAge"),
-            "Should contain 'setAge': {}", result.js_code);
+        assert!(
+            result.js_code.contains("Animal"),
+            "Should contain 'Animal': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("getName"),
+            "Should contain 'getName': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("setAge"),
+            "Should contain 'setAge': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13200,13 +14772,22 @@ console.log(config.name);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors - Config interface usage should be preserved
-        assert!(result.js_code.contains("config"),
-            "Should contain 'config': {}", result.js_code);
-        assert!(result.js_code.contains("console"),
-            "Should contain 'console': {}", result.js_code);
+        assert!(
+            result.js_code.contains("config"),
+            "Should contain 'config': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("console"),
+            "Should contain 'console': {}",
+            result.js_code
+        );
         // Interface declarations should be removed (they don't exist in JS)
-        assert!(!result.js_code.contains("interface"),
-            "Should not contain 'interface': {}", result.js_code);
+        assert!(
+            !result.js_code.contains("interface"),
+            "Should not contain 'interface': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13224,12 +14805,21 @@ const arr = identity([1, 2, 3]);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("identity"),
-            "Should contain 'identity': {}", result.js_code);
-        assert!(result.js_code.contains("str"),
-            "Should contain 'str': {}", result.js_code);
-        assert!(result.js_code.contains("arr"),
-            "Should contain 'arr': {}", result.js_code);
+        assert!(
+            result.js_code.contains("identity"),
+            "Should contain 'identity': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("str"),
+            "Should contain 'str': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("arr"),
+            "Should contain 'arr': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13246,10 +14836,16 @@ const result = process("test");
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("process"),
-            "Should contain 'process': {}", result.js_code);
-        assert!(result.js_code.contains("result"),
-            "Should contain 'result': {}", result.js_code);
+        assert!(
+            result.js_code.contains("process"),
+            "Should contain 'process': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("result"),
+            "Should contain 'result': {}",
+            result.js_code
+        );
     }
 
     // ===== v0.3.142 函数表达式测试 =====
@@ -13267,15 +14863,27 @@ const result = add(1, 2);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("function"),
-            "Should contain 'function': {}", result.js_code);
-        assert!(result.js_code.contains("add"),
-            "Should contain 'add': {}", result.js_code);
-        assert!(result.js_code.contains("result"),
-            "Should contain 'result': {}", result.js_code);
+        assert!(
+            result.js_code.contains("function"),
+            "Should contain 'function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("add"),
+            "Should contain 'add': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("result"),
+            "Should contain 'result': {}",
+            result.js_code
+        );
         // Type annotations should be removed
-        assert!(!result.js_code.contains(": number"),
-            "Should not contain type annotations: {}", result.js_code);
+        assert!(
+            !result.js_code.contains(": number"),
+            "Should not contain type annotations: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13291,13 +14899,22 @@ const runner = fetchData();
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("async function"),
-            "Should contain 'async function': {}", result.js_code);
-        assert!(result.js_code.contains("fetchData"),
-            "Should contain 'fetchData': {}", result.js_code);
+        assert!(
+            result.js_code.contains("async function"),
+            "Should contain 'async function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("fetchData"),
+            "Should contain 'fetchData': {}",
+            result.js_code
+        );
         // Promise type annotation should be removed
-        assert!(!result.js_code.contains("Promise"),
-            "Should not contain Promise type: {}", result.js_code);
+        assert!(
+            !result.js_code.contains("Promise"),
+            "Should not contain Promise type: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13313,10 +14930,16 @@ console.log(greet());
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("function"),
-            "Should contain 'function': {}", result.js_code);
-        assert!(result.js_code.contains("greet"),
-            "Should contain 'greet': {}", result.js_code);
+        assert!(
+            result.js_code.contains("function"),
+            "Should contain 'function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("greet"),
+            "Should contain 'greet': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13332,10 +14955,16 @@ wait();
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("async function"),
-            "Should contain 'async function': {}", result.js_code);
-        assert!(result.js_code.contains("wait"),
-            "Should contain 'wait': {}", result.js_code);
+        assert!(
+            result.js_code.contains("async function"),
+            "Should contain 'async function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("wait"),
+            "Should contain 'wait': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13350,12 +14979,21 @@ const doubled = numbers.map(function(n: number): number {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("function"),
-            "Should contain 'function': {}", result.js_code);
-        assert!(result.js_code.contains("map"),
-            "Should contain 'map': {}", result.js_code);
-        assert!(result.js_code.contains("doubled"),
-            "Should contain 'doubled': {}", result.js_code);
+        assert!(
+            result.js_code.contains("function"),
+            "Should contain 'function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("map"),
+            "Should contain 'map': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("doubled"),
+            "Should contain 'doubled': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13372,10 +15010,16 @@ console.log(factorial(5));
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("function"),
-            "Should contain 'function': {}", result.js_code);
-        assert!(result.js_code.contains("factorial"),
-            "Should contain 'factorial': {}", result.js_code);
+        assert!(
+            result.js_code.contains("function"),
+            "Should contain 'function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("factorial"),
+            "Should contain 'factorial': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13391,10 +15035,16 @@ processAsync([]);
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should compile without errors
-        assert!(result.js_code.contains("async function"),
-            "Should contain 'async function': {}", result.js_code);
-        assert!(result.js_code.contains("processAsync"),
-            "Should contain 'processAsync': {}", result.js_code);
+        assert!(
+            result.js_code.contains("async function"),
+            "Should contain 'async function': {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("processAsync"),
+            "Should contain 'processAsync': {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13409,10 +15059,16 @@ const fetchData = async function(): Promise<string> {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Note: single quotes may be converted to double quotes in output
-        assert!(result.js_code.contains("await fetch"),
-            "Should contain await expression: {}", result.js_code);
-        assert!(result.js_code.contains("async function"),
-            "Should contain async function: {}", result.js_code);
+        assert!(
+            result.js_code.contains("await fetch"),
+            "Should contain await expression: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async function"),
+            "Should contain async function: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13426,10 +15082,16 @@ const fetchData = async () => {
 };
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("await getData()"),
-            "Should contain await expression: {}", result.js_code);
-        assert!(result.js_code.contains("async"),
-            "Should contain async: {}", result.js_code);
+        assert!(
+            result.js_code.contains("await getData()"),
+            "Should contain await expression: {}",
+            result.js_code
+        );
+        assert!(
+            result.js_code.contains("async"),
+            "Should contain async: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13443,8 +15105,11 @@ type PersonCity = Person["address"]["city"];
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Type aliases should be removed in JS output
-        assert!(!result.js_code.contains("type PersonCity"),
-            "Should not contain type alias: {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type PersonCity"),
+            "Should not contain type alias: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13456,8 +15121,11 @@ type Data = { id: number; name: string; active: boolean };
 type DataIdOrName = Data["id" | "name"];
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(!result.js_code.contains("type DataIdOrName"),
-            "Should not contain type alias: {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type DataIdOrName"),
+            "Should not contain type alias: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13470,10 +15138,16 @@ type PointKeys = keyof Point;
 type MappedPoint = { [K in keyof Point]: Point[K] };
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(!result.js_code.contains("type PointKeys"),
-            "Should not contain type alias: {}", result.js_code);
-        assert!(!result.js_code.contains("[K in keyof"),
-            "Should not contain mapped type syntax: {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type PointKeys"),
+            "Should not contain type alias: {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("[K in keyof"),
+            "Should not contain mapped type syntax: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13486,10 +15160,16 @@ type Result1 = DeepPromise<Promise<Promise<string>>>;
 type Result2 = DeepPromise<number>;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(!result.js_code.contains("type Result1"),
-            "Should not contain type alias: {}", result.js_code);
-        assert!(!result.js_code.contains("type Result2"),
-            "Should not contain type alias: {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type Result1"),
+            "Should not contain type alias: {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("type Result2"),
+            "Should not contain type alias: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13501,8 +15181,11 @@ type Id = { id: number };
 type IdString = `${Id["id"]}_suffix`;
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(!result.js_code.contains("type IdString"),
-            "Should not contain type alias: {}", result.js_code);
+        assert!(
+            !result.js_code.contains("type IdString"),
+            "Should not contain type alias: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13519,10 +15202,16 @@ class Counter {
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
         // Should remove type annotations but keep method structure
-        assert!(result.js_code.contains("increment"),
-            "Should contain increment method: {}", result.js_code);
-        assert!(!result.js_code.contains(": this"),
-            "Should not contain this parameter type: {}", result.js_code);
+        assert!(
+            result.js_code.contains("increment"),
+            "Should contain increment method: {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains(": this"),
+            "Should not contain this parameter type: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13537,7 +15226,10 @@ function bound(this: any, x: number): void {
         match compiler.compile_source(source, "test.ts") {
             Ok(result) => {
                 println!("Test this parameter in function passed: {}", result.js_code);
-                assert!(result.js_code.contains("bound"), "Should contain bound function");
+                assert!(
+                    result.js_code.contains("bound"),
+                    "Should contain bound function"
+                );
             }
             Err(e) => {
                 println!("Test this parameter in function failed: {:?}", e);
@@ -13556,10 +15248,16 @@ function wrap<T = string>(value: T): T[] {
 }
 "#;
         let result = compiler.compile_source(source, "test.ts").unwrap();
-        assert!(result.js_code.contains("function wrap"),
-            "Should contain function: {}", result.js_code);
-        assert!(!result.js_code.contains("= string"),
-            "Should not contain generic default in JS: {}", result.js_code);
+        assert!(
+            result.js_code.contains("function wrap"),
+            "Should contain function: {}",
+            result.js_code
+        );
+        assert!(
+            !result.js_code.contains("= string"),
+            "Should not contain generic default in JS: {}",
+            result.js_code
+        );
     }
 
     #[test]
@@ -13588,7 +15286,10 @@ function wrap<T = string>(value: T): T[] {
         let result = compiler.compile_source(source, "test.ts").unwrap();
         println!("Compiled JS:\n{}", result.js_code);
 
-        assert!(result.js_code.contains("Generic"), "Should contain 'Generic'");
+        assert!(
+            result.js_code.contains("Generic"),
+            "Should contain 'Generic'"
+        );
     }
 
     // v0.3.145: Source Map validation utility tests
@@ -13598,11 +15299,18 @@ function wrap<T = string>(value: T): T[] {
         let source = "let x: number = 5;";
         let result = compiler.compile_source(source, "test.ts").unwrap();
 
-        assert!(result.source_map.is_some(), "Source map should be generated");
+        assert!(
+            result.source_map.is_some(),
+            "Source map should be generated"
+        );
 
         // Validate the source map
         let validation = validate_source_map(result.source_map.as_ref().unwrap());
-        assert!(validation.is_valid, "Source map should be valid: {:?}", validation.errors);
+        assert!(
+            validation.is_valid,
+            "Source map should be valid: {:?}",
+            validation.errors
+        );
     }
 
     #[test]
@@ -13610,7 +15318,10 @@ function wrap<T = string>(value: T): T[] {
         let source_map = r#"{"version":3,"sources":["test.ts"],"mappings":"AACA","names":[],"sourcesContent":["let x: number = 5;"]}"#;
         let validation = validate_source_map(source_map);
 
-        assert!(validation.is_valid, "Valid source map should pass validation");
+        assert!(
+            validation.is_valid,
+            "Valid source map should pass validation"
+        );
         assert!(validation.version.is_some(), "Should detect version 3");
         assert!(validation.sources.is_some(), "Should detect sources");
         assert!(validation.mappings.is_some(), "Should detect mappings");
@@ -13621,9 +15332,16 @@ function wrap<T = string>(value: T): T[] {
         let source_map = r#"{"sources":["test.ts"],"mappings":"AACA"}"#;
         let validation = validate_source_map(source_map);
 
-        assert!(!validation.is_valid, "Source map without version should fail");
-        assert!(validation.errors.contains(&"Missing required field: version".to_string()),
-            "Should report missing version error");
+        assert!(
+            !validation.is_valid,
+            "Source map without version should fail"
+        );
+        assert!(
+            validation
+                .errors
+                .contains(&"Missing required field: version".to_string()),
+            "Should report missing version error"
+        );
     }
 
     #[test]
@@ -13631,17 +15349,28 @@ function wrap<T = string>(value: T): T[] {
         let source_map = r#"{"version":3,"sources":["test.ts"]}"#;
         let validation = validate_source_map(source_map);
 
-        assert!(!validation.is_valid, "Source map without mappings should fail");
-        assert!(validation.errors.contains(&"Missing required field: mappings".to_string()),
-            "Should report missing mappings error");
+        assert!(
+            !validation.is_valid,
+            "Source map without mappings should fail"
+        );
+        assert!(
+            validation
+                .errors
+                .contains(&"Missing required field: mappings".to_string()),
+            "Should report missing mappings error"
+        );
     }
 
     #[test]
     fn test_source_map_validation_invalid_vlq() {
-        let source_map = r#"{"version":3,"sources":["test.ts"],"mappings":"!!!INVALID!!!","names":[]}"#;
+        let source_map =
+            r#"{"version":3,"sources":["test.ts"],"mappings":"!!!INVALID!!!","names":[]}"#;
         let validation = validate_source_map(source_map);
 
-        assert!(!validation.is_valid, "Source map with invalid VLQ should fail");
+        assert!(
+            !validation.is_valid,
+            "Source map with invalid VLQ should fail"
+        );
         assert!(!validation.errors.is_empty(), "Should report VLQ errors");
     }
 
@@ -13651,15 +15380,25 @@ function wrap<T = string>(value: T): T[] {
         let source = "let x: number = 5;\nlet y: string = 'hello';\nlet z: boolean = true;";
         let result = compiler.compile_source(source, "test.ts").unwrap();
 
-        assert!(result.source_map.is_some(), "Source map should be generated");
+        assert!(
+            result.source_map.is_some(),
+            "Source map should be generated"
+        );
 
         // Validate the source map
         let validation = validate_source_map(result.source_map.as_ref().unwrap());
-        assert!(validation.is_valid, "Multi-line source map should be valid: {:?}", validation.errors);
+        assert!(
+            validation.is_valid,
+            "Multi-line source map should be valid: {:?}",
+            validation.errors
+        );
 
         // Should have semicolons in mappings for multi-line
         if let Some(mappings) = &validation.mappings {
-            assert!(mappings.contains(';'), "Multi-line source map should have semicolons");
+            assert!(
+                mappings.contains(';'),
+                "Multi-line source map should have semicolons"
+            );
         }
     }
 
@@ -13668,9 +15407,9 @@ function wrap<T = string>(value: T): T[] {
     pub fn test_precise_source_map_generation() {
         // Test the precise source map generation function
         let token_positions: Vec<(usize, usize, usize, usize)> = vec![
-            (0, 0, 0, 0),   // Line 0, col 0 -> TS line 0, col 0
-            (0, 4, 0, 4),   // Line 0, col 4 -> TS line 0, col 4
-            (1, 0, 1, 0),   // Line 1, col 0 -> TS line 1, col 0
+            (0, 0, 0, 0), // Line 0, col 0 -> TS line 0, col 0
+            (0, 4, 0, 4), // Line 0, col 4 -> TS line 0, col 4
+            (1, 0, 1, 0), // Line 1, col 0 -> TS line 1, col 0
         ];
 
         let js_code = "let x = 5;\nlet y = 10;";
@@ -13680,14 +15419,18 @@ function wrap<T = string>(value: T): T[] {
         assert!(!mappings.is_empty(), "Should generate mappings");
 
         // Should contain segment separators
-        assert!(mappings.contains(';'), "Should have line separators for multi-line");
+        assert!(
+            mappings.contains(';'),
+            "Should have line separators for multi-line"
+        );
 
         // Validate VLQ encoding characters
         for ch in mappings.chars() {
             if ch != ';' && ch != ',' {
                 assert!(
                     ch.is_alphanumeric() || ch == '+' || ch == '/' || ch == '-',
-                    "Invalid VLQ character: {}", ch
+                    "Invalid VLQ character: {}",
+                    ch
                 );
             }
         }
@@ -13696,17 +15439,17 @@ function wrap<T = string>(value: T): T[] {
     /// Test precise source map with single line (v0.3.146)
     #[test]
     pub fn test_precise_source_map_single_line() {
-        let token_positions: Vec<(usize, usize, usize, usize)> = vec![
-            (0, 0, 0, 0),
-            (0, 3, 0, 3),
-            (0, 5, 0, 6),
-        ];
+        let token_positions: Vec<(usize, usize, usize, usize)> =
+            vec![(0, 0, 0, 0), (0, 3, 0, 3), (0, 5, 0, 6)];
 
         let js_code = "let x = 5;";
         let mappings = generate_precise_source_map(js_code, &token_positions);
 
         // Single line should not have semicolons
-        assert!(!mappings.contains(';'), "Single line should not have semicolons");
+        assert!(
+            !mappings.contains(';'),
+            "Single line should not have semicolons"
+        );
         assert!(!mappings.is_empty(), "Should generate mappings");
     }
 
@@ -13726,7 +15469,10 @@ namespace MyNamespace {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Should compile to JavaScript
-                assert!(result.js_code.contains("var MyNamespace"), "Should declare namespace variable");
+                assert!(
+                    result.js_code.contains("var MyNamespace"),
+                    "Should declare namespace variable"
+                );
                 assert!(result.js_code.contains("function"), "Should have IIFE");
                 println!("✅ Basic namespace test passed");
             }
@@ -13756,9 +15502,15 @@ namespace Utils {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Should compile namespace to JavaScript IIFE
-                assert!(result.js_code.contains("var Utils"), "Should declare namespace variable");
+                assert!(
+                    result.js_code.contains("var Utils"),
+                    "Should declare namespace variable"
+                );
                 assert!(result.js_code.contains("function"), "Should have IIFE");
-                assert!(result.js_code.contains("Utils"), "Should reference namespace");
+                assert!(
+                    result.js_code.contains("Utils"),
+                    "Should reference namespace"
+                );
                 println!("✅ Multiple declarations namespace test passed");
             }
             Err(e) => {
@@ -13786,8 +15538,14 @@ namespace Outer {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Should compile both namespaces
-                assert!(result.js_code.contains("var Outer"), "Should declare outer namespace");
-                assert!(result.js_code.contains("var Inner"), "Should declare inner namespace");
+                assert!(
+                    result.js_code.contains("var Outer"),
+                    "Should declare outer namespace"
+                );
+                assert!(
+                    result.js_code.contains("var Inner"),
+                    "Should declare inner namespace"
+                );
                 println!("✅ Nested namespace test passed");
             }
             Err(e) => {
@@ -13815,7 +15573,10 @@ namespace MyNamespace {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("var MyNamespace"), "Should declare namespace");
+                assert!(
+                    result.js_code.contains("var MyNamespace"),
+                    "Should declare namespace"
+                );
                 assert!(result.js_code.contains("function"), "Should have IIFE");
                 println!("✅ Namespace with class test passed");
             }
@@ -13844,9 +15605,15 @@ namespace MyNamespace {
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("var MyNamespace"), "Should declare namespace");
+                assert!(
+                    result.js_code.contains("var MyNamespace"),
+                    "Should declare namespace"
+                );
                 // Interface should be stripped, but person should remain
-                assert!(result.js_code.contains("person"), "Should have person variable");
+                assert!(
+                    result.js_code.contains("person"),
+                    "Should have person variable"
+                );
                 println!("✅ Namespace with interface test passed");
             }
             Err(e) => {
@@ -13871,13 +15638,22 @@ declare function add(a: number, b: number): number;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Should contain declare keyword
-                assert!(result.js_code.contains("declare function greet"),
-                    "Should contain declare function greet: {}", result.js_code);
-                assert!(result.js_code.contains("declare function add"),
-                    "Should contain declare function add: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("declare function greet"),
+                    "Should contain declare function greet: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("declare function add"),
+                    "Should contain declare function add: {}",
+                    result.js_code
+                );
                 // Type annotations should be stripped
-                assert!(!result.js_code.contains(": string"),
-                    "Should not contain type annotation: {}", result.js_code);
+                assert!(
+                    !result.js_code.contains(": string"),
+                    "Should not contain type annotation: {}",
+                    result.js_code
+                );
                 println!("✅ Declare function basic test passed");
             }
             Err(e) => {
@@ -13901,15 +15677,27 @@ declare function logMessage(msg: string, level: string): void;
             Ok(result) => {
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
-                assert!(result.js_code.contains("declare function fetchData"),
-                    "Should contain declare function fetchData: {}", result.js_code);
-                assert!(result.js_code.contains("declare function logMessage"),
-                    "Should contain declare function logMessage: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("declare function fetchData"),
+                    "Should contain declare function fetchData: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("declare function logMessage"),
+                    "Should contain declare function logMessage: {}",
+                    result.js_code
+                );
                 // Parameters should be present without type annotations
-                assert!(result.js_code.contains("url"),
-                    "Should contain url parameter: {}", result.js_code);
-                assert!(result.js_code.contains("options"),
-                    "Should contain options parameter: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("url"),
+                    "Should contain url parameter: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("options"),
+                    "Should contain options parameter: {}",
+                    result.js_code
+                );
                 println!("✅ Declare function with params test passed");
             }
             Err(e) => {
@@ -13934,12 +15722,21 @@ export declare function getVersion(): string;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // v0.3.197: ESM exports are converted to comments
-                assert!(result.js_code.contains("ESM export"),
-                    "Should contain ESM export comment: {}", result.js_code);
-                assert!(result.js_code.contains("calculate"),
-                    "Should contain calculate: {}", result.js_code);
-                assert!(result.js_code.contains("getVersion"),
-                    "Should contain getVersion: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("ESM export"),
+                    "Should contain ESM export comment: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("calculate"),
+                    "Should contain calculate: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("getVersion"),
+                    "Should contain getVersion: {}",
+                    result.js_code
+                );
                 println!("✅ Export declare function test passed");
             }
             Err(e) => {
@@ -13967,15 +15764,27 @@ declare function declaredFunc(x: number): number;
                 println!("Compiled successfully!");
                 println!("JS Code:\n{}", result.js_code);
                 // Regular function should have body
-                assert!(result.js_code.contains("function regularFunc"),
-                    "Should contain regular function: {}", result.js_code);
-                assert!(result.js_code.contains("return x * 2"),
-                    "Should contain function body: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("function regularFunc"),
+                    "Should contain regular function: {}",
+                    result.js_code
+                );
+                assert!(
+                    result.js_code.contains("return x * 2"),
+                    "Should contain function body: {}",
+                    result.js_code
+                );
                 // Declare function should have declare keyword but no body
-                assert!(result.js_code.contains("declare function declaredFunc"),
-                    "Should contain declare function: {}", result.js_code);
-                assert!(!result.js_code.contains("declare function declaredFunc {"),
-                    "Declare function should not have body: {}", result.js_code);
+                assert!(
+                    result.js_code.contains("declare function declaredFunc"),
+                    "Should contain declare function: {}",
+                    result.js_code
+                );
+                assert!(
+                    !result.js_code.contains("declare function declaredFunc {"),
+                    "Declare function should not have body: {}",
+                    result.js_code
+                );
                 println!("✅ Regular vs declare function test passed");
             }
             Err(e) => {
@@ -14019,7 +15828,9 @@ fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
                 if let Some(v_num) = v.as_u64() {
                     result.version = Some(v_num as u32);
                     if v_num != 3 {
-                        result.errors.push("Source map version must be 3".to_string());
+                        result
+                            .errors
+                            .push("Source map version must be 3".to_string());
                         result.is_valid = false;
                     }
                 } else {
@@ -14027,20 +15838,28 @@ fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
                     result.is_valid = false;
                 }
             } else {
-                result.errors.push("Missing required field: version".to_string());
+                result
+                    .errors
+                    .push("Missing required field: version".to_string());
                 result.is_valid = false;
             }
 
             // Validate sources (required)
             if let Some(sources) = map.get("sources") {
                 if sources.is_array() {
-                    result.sources = Some(sources.as_array().unwrap()
-                        .iter()
-                        .filter_map(|s| s.as_str().map(|s| s.to_string()))
-                        .collect());
+                    result.sources = Some(
+                        sources
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .filter_map(|s| s.as_str().map(|s| s.to_string()))
+                            .collect(),
+                    );
                 }
             } else {
-                result.errors.push("Missing required field: sources".to_string());
+                result
+                    .errors
+                    .push("Missing required field: sources".to_string());
                 result.is_valid = false;
             }
 
@@ -14059,7 +15878,9 @@ fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
                     }
                 }
             } else {
-                result.errors.push("Missing required field: mappings".to_string());
+                result
+                    .errors
+                    .push("Missing required field: mappings".to_string());
                 result.is_valid = false;
             }
 
@@ -14073,7 +15894,9 @@ fn validate_source_map(source_map: &str) -> SourceMapValidationResult {
             // Validate names (optional)
             if let Some(names) = map.get("names") {
                 if !names.is_array() {
-                    result.errors.push("Field 'names' must be an array".to_string());
+                    result
+                        .errors
+                        .push("Field 'names' must be an array".to_string());
                     result.is_valid = false;
                 }
             }

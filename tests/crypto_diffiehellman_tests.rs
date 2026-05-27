@@ -9,7 +9,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -21,11 +21,12 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     // Parse output - skip the "🐝 Running Beejs on:" line and "Result:" line
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
@@ -40,7 +41,11 @@ fn test_create_diffie_hellman_exists() {
 console.log(typeof crypto.createDiffieHellman === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createDiffieHellman to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createDiffieHellman to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -51,7 +56,11 @@ const dh = crypto.createDiffieHellman(256);
 console.log(typeof dh === 'object' && dh !== null ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected createDiffieHellman to return object: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createDiffieHellman to return object: {}",
+        output
+    );
 }
 
 #[test]
@@ -78,7 +87,11 @@ console.log(hasGetPrime ? 'PASS' : 'FAIL');
 console.log(hasGetGenerator ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected all DH properties to exist: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected all DH properties to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -90,7 +103,11 @@ console.log(dh.prime.length > 0 ? 'PASS' : 'FAIL');
 console.log(dh.generator === 2 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected DH with number prime: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected DH with number prime: {}",
+        output
+    );
 }
 
 #[test]
@@ -105,7 +122,11 @@ console.log(dh.prime.length > 0 ? 'PASS' : 'FAIL');
 console.log(dh.generator === 2 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected DH with options object: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected DH with options object: {}",
+        output
+    );
 }
 
 #[test]
@@ -116,7 +137,11 @@ const dh = crypto.createDiffieHellman(256, 5);
 console.log(dh.generator === 5 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected custom generator: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected custom generator: {}",
+        output
+    );
 }
 
 #[test]
@@ -134,7 +159,11 @@ console.log(aliceSecret.length > 0 ? 'PASS' : 'FAIL');
 console.log(bobSecret.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -151,7 +180,11 @@ console.log(typeof aliceSecret === 'string' ? 'PASS' : 'FAIL');
 console.log(aliceSecret.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with hex encoding: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with hex encoding: {}",
+        output
+    );
 }
 
 #[test]
@@ -168,7 +201,11 @@ console.log(typeof aliceSecret === 'string' ? 'PASS' : 'FAIL');
 console.log(aliceSecret.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with base64 encoding: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with base64 encoding: {}",
+        output
+    );
 }
 
 #[test]
@@ -185,7 +222,11 @@ console.log(keys.privateKey.length > 0 ? 'PASS' : 'FAIL');
 console.log(keys.publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected generateKeys to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected generateKeys to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -199,7 +240,11 @@ console.log(typeof prime === 'string' ? 'PASS' : 'FAIL');
 console.log(prime.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected getPrime to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected getPrime to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -213,7 +258,11 @@ console.log(typeof generator === 'number' ? 'PASS' : 'FAIL');
 console.log(generator === 2 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected getGenerator to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected getGenerator to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -228,7 +277,11 @@ console.log(privateKeyHex ? 'PASS' : 'FAIL');
 console.log(publicKeyHex ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected keys to be hex strings: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected keys to be hex strings: {}",
+        output
+    );
 }
 
 #[test]
@@ -243,7 +296,11 @@ console.log(dh1.privateKey !== dh2.privateKey ? 'PASS' : 'FAIL');
 console.log(dh1.publicKey !== dh2.publicKey ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different instances to have different keys: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different instances to have different keys: {}",
+        output
+    );
 }
 
 #[test]
@@ -257,7 +314,11 @@ const secret = alice.computeSecret(bob.publicKey);
 console.log(secret instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with string public key: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with string public key: {}",
+        output
+    );
 }
 
 #[test]
@@ -271,5 +332,9 @@ const secret = alice.computeSecret({ publicKey: bob.publicKey });
 console.log(secret instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with object public key: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with object public key: {}",
+        output
+    );
 }

@@ -1,23 +1,23 @@
 // CI/CD Integration module
 // Provides GitOps workflows and CI/CD pipeline support
+pub mod deployment;
 pub mod gitops;
 pub mod pipeline;
-pub mod deployment;
+/// Re-export deployment types
+pub use deployment::{
+    BlueGreenDeployment, CanaryDeployment, DeploymentConfig, DeploymentStatus, DeploymentStrategy,
+    Error as DeploymentError, RollingDeployment,
+};
 /// Re-export GitOps types
 pub use gitops::{
-    GitOpsManager, ArgoCDApplication, FluxHelmRelease, GitOpsSyncPolicy,
-    GitOpsConfig, Error as GitOpsError,
+    ArgoCDApplication, Error as GitOpsError, FluxHelmRelease, GitOpsConfig, GitOpsManager,
+    GitOpsSyncPolicy,
 };
 /// Re-export pipeline types
 pub use pipeline::{
-    PipelineManager, GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
-    PipelineStage, PipelineStatus, PipelineEvent, PipelineConfig,
-    PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
-};
-/// Re-export deployment types
-pub use deployment::{
-    DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
-    DeploymentConfig, DeploymentStatus, Error as DeploymentError,
+    Error as PipelineError, GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
+    PipelineArtifact, PipelineCache, PipelineConfig, PipelineEvent, PipelineManager,
+    PipelineSecret, PipelineStage, PipelineStatus,
 };
 /// Unified CI/CD Error type
 #[derive(Debug, thiserror::Error)]
@@ -32,7 +32,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

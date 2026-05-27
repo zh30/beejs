@@ -16,10 +16,12 @@ pub fn setup_events_api(
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
     // EventEmitter构造函数
-    let event_emitter_constructor: _ = v8::FunctionTemplate::new(scope, event_emitter_constructor_callback);
+    let event_emitter_constructor: _ =
+        v8::FunctionTemplate::new(scope, event_emitter_constructor_callback);
     // 添加静态方法
     // EventEmitter.listenerCount()
-    let listener_count_func: _ = v8::FunctionTemplate::new(scope, event_emitter_listener_count_callback);
+    let listener_count_func: _ =
+        v8::FunctionTemplate::new(scope, event_emitter_listener_count_callback);
     let listener_count_instance: _ = listener_count_func.get_function(scope).unwrap();
     // set_on_instance has been removed, use instance template instead
     let listener_count_key: _ = v8::String::new(scope, "listenerCount").unwrap();
@@ -62,7 +64,8 @@ fn event_emitter_constructor_callback(
     emitter_obj.set(scope, once_key.into(), once_instance.into());
 
     // v0.3.258: prependOnceListener(eventName, listener) - 一次性监听器，添加到队列开头
-    let prepend_once_func = v8::FunctionTemplate::new(scope, event_emitter_prepend_once_listener_callback);
+    let prepend_once_func =
+        v8::FunctionTemplate::new(scope, event_emitter_prepend_once_listener_callback);
     let prepend_once_instance = prepend_once_func.get_function(scope).unwrap();
     let prepend_once_key = v8::String::new(scope, "prependOnceListener").unwrap();
     emitter_obj.set(scope, prepend_once_key.into(), prepend_once_instance.into());
@@ -73,10 +76,15 @@ fn event_emitter_constructor_callback(
     let emit_key = v8::String::new(scope, "emit").unwrap();
     emitter_obj.set(scope, emit_key.into(), emit_instance.into());
     // removeListener(eventName, listener)
-    let remove_listener_func = v8::FunctionTemplate::new(scope, event_emitter_remove_listener_callback);
+    let remove_listener_func =
+        v8::FunctionTemplate::new(scope, event_emitter_remove_listener_callback);
     let remove_listener_instance = remove_listener_func.get_function(scope).unwrap();
     let remove_listener_key = v8::String::new(scope, "removeListener").unwrap();
-    emitter_obj.set(scope, remove_listener_key.into(), remove_listener_instance.into());
+    emitter_obj.set(
+        scope,
+        remove_listener_key.into(),
+        remove_listener_instance.into(),
+    );
     // removeAllListeners(eventName)
     let remove_all_func = v8::FunctionTemplate::new(scope, event_emitter_remove_all_callback);
     let remove_all_instance = remove_all_func.get_function(scope).unwrap();
@@ -137,7 +145,8 @@ fn event_emitter_on_callback(
 
     // 获取 maxListeners
     let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
-    let max_listeners = this.get(scope, max_key.into())
+    let max_listeners = this
+        .get(scope, max_key.into())
         .and_then(|v| v.to_integer(scope))
         .map(|v| v.value() as usize)
         .unwrap_or(10);
@@ -169,7 +178,10 @@ fn event_emitter_on_callback(
     // 添加新监听器
     EVENT_LISTENERS.with(|map| {
         let mut map_ref = map.lock().unwrap();
-        map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
+        map_ref
+            .entry(event_name.clone())
+            .or_insert_with(Vec::new)
+            .push(function_global);
     });
     // 在对象上设置属性标记
     let prop_key: _ = v8::String::new(scope, &event_name).unwrap();
@@ -207,7 +219,8 @@ fn event_emitter_prepend_listener_callback(
     });
 
     let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
-    let max_listeners = this.get(scope, max_key.into())
+    let max_listeners = this
+        .get(scope, max_key.into())
         .and_then(|v| v.to_integer(scope))
         .map(|v| v.value() as usize)
         .unwrap_or(10);
@@ -220,7 +233,7 @@ fn event_emitter_prepend_listener_callback(
     EVENT_LISTENERS.with(|map| {
         let mut map_ref = map.lock().unwrap();
         let listeners = map_ref.entry(event_name.clone()).or_insert_with(Vec::new);
-        listeners.insert(0, function_global);  // 插入到开头
+        listeners.insert(0, function_global); // 插入到开头
     });
 
     let prop_key: _ = v8::String::new(scope, &event_name).unwrap();
@@ -256,7 +269,8 @@ fn event_emitter_once_callback(
 
     // 获取 maxListeners
     let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
-    let max_listeners = this.get(scope, max_key.into())
+    let max_listeners = this
+        .get(scope, max_key.into())
         .and_then(|v| v.to_integer(scope))
         .map(|v| v.value() as usize)
         .unwrap_or(10);
@@ -269,7 +283,10 @@ fn event_emitter_once_callback(
     // 添加一次性监听器
     ONCE_LISTENERS.with(|map| {
         let mut map_ref = map.lock().unwrap();
-        map_ref.entry(event_name.clone()).or_insert_with(Vec::new).push(function_global);
+        map_ref
+            .entry(event_name.clone())
+            .or_insert_with(Vec::new)
+            .push(function_global);
     });
     let prop_key: _ = v8::String::new(scope, &event_name).unwrap();
     let prop_val: _ = v8::Boolean::new(scope, true);
@@ -305,7 +322,8 @@ fn event_emitter_prepend_once_listener_callback(
     });
 
     let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
-    let max_listeners = this.get(scope, max_key.into())
+    let max_listeners = this
+        .get(scope, max_key.into())
         .and_then(|v| v.to_integer(scope))
         .map(|v| v.value() as usize)
         .unwrap_or(10);
@@ -318,7 +336,7 @@ fn event_emitter_prepend_once_listener_callback(
     ONCE_LISTENERS.with(|map| {
         let mut map_ref = map.lock().unwrap();
         let listeners = map_ref.entry(event_name.clone()).or_insert_with(Vec::new);
-        listeners.insert(0, function_global);  // 插入到开头
+        listeners.insert(0, function_global); // 插入到开头
     });
 
     let prop_key: _ = v8::String::new(scope, &event_name).unwrap();
@@ -490,7 +508,9 @@ fn event_emitter_get_max_callback(
 ) {
     let this: _ = args.this();
     let max_key: _ = v8::String::new(scope, "_maxListeners").unwrap();
-    let max: _ = this.get(scope, max_key.into()).unwrap_or(v8::Integer::new(scope, 10).into());
+    let max: _ = this
+        .get(scope, max_key.into())
+        .unwrap_or(v8::Integer::new(scope, 10).into());
     retval.set(max);
 }
 fn event_emitter_set_max_callback(
@@ -528,7 +548,10 @@ fn emit_max_listeners_warning(
 
     // 调用 console.warn
     let console_key = v8::String::new(scope, "console").unwrap();
-    let console = scope.get_current_context().global(scope).get(scope, console_key.into());
+    let console = scope
+        .get_current_context()
+        .global(scope)
+        .get(scope, console_key.into());
 
     if let Some(console_obj) = console {
         if console_obj.is_object() {

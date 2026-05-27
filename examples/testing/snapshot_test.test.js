@@ -173,8 +173,8 @@ describe("快照测试 - 大对象", () => {
  * 4. 如果需要更新快照，使用 --updateSnapshot 参数
  *
  * 命令:
- * beejs test examples/testing/snapshot_test.test.js
- * beejs test examples/testing/snapshot_test.test.js --update-snapshot
+ * bee test examples/testing/snapshot_test.test.js
+ * bee test examples/testing/snapshot_test.test.js --update-snapshot
  *
  * 快照文件:
  * __snapshots__/snapshot_test.test.js.snap

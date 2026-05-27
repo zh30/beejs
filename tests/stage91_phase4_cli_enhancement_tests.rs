@@ -1,7 +1,6 @@
 // Stage 91 Phase 4.1 CLI Enhancement Tests
 // 测试新增的 CLI 命令和功能
 
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // ========== Output Formatter Tests ==========
@@ -44,12 +43,12 @@ mod output_formatter_tests {
     #[test]
     fn test_format_duration_micros() {
         fn format_duration(duration: Duration) -> String {
-            let secs: _ = duration.as_secs();
-            let millis: _ = duration.subsec_millis();
+            let secs = duration.as_secs();
+            let millis = duration.subsec_millis();
 
             if secs >= 60 {
-                let mins: _ = secs / 60;
-                let remaining_secs: _ = secs % 60;
+                let mins = secs / 60;
+                let remaining_secs = secs % 60;
                 format!("{}m {}s", mins, remaining_secs)
             } else if secs > 0 {
                 format!("{}.{:03}s", secs, millis)
@@ -130,29 +129,29 @@ mod init_command_tests {
     /// 测试 package.json 生成
     #[test]
     fn test_package_json_generation() {
-        let temp_dir: _ = TempDir::new().unwrap();
-        let package_json_path: _ = temp_dir.path().join("package.json");
+        let temp_dir = TempDir::new().unwrap();
+        let package_json_path = temp_dir.path().join("package.json");
 
-        let package_json: _ = serde_json::json!({
+        let package_json = serde_json::json!({
             "name": "test-project",
             "version": "0.1.0",
             "main": "src/index.js",
             "type": "module",
             "scripts": {
-                "start": "beejs run src/index.js",
-                "dev": "beejs run --watch src/index.js",
-                "test": "beejs test"
+                "start": "bee run src/index.js",
+                "dev": "bee run --watch src/index.js",
+                "test": "bee test"
             }
         });
 
-        let content: _ = serde_json::to_string_pretty(&package_json).unwrap();
+        let content = serde_json::to_string_pretty(&package_json).unwrap();
         fs::write(&package_json_path, &content).unwrap();
 
         // 验证文件创建
         assert!(package_json_path.exists());
 
         // 验证内容
-        let read_content: _ = fs::read_to_string(&package_json_path).unwrap();
+        let read_content = fs::read_to_string(&package_json_path).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&read_content).unwrap();
 
         assert_eq!(parsed["name"], "test-project");
@@ -163,10 +162,10 @@ mod init_command_tests {
     /// 测试 tsconfig.json 生成
     #[test]
     fn test_tsconfig_generation() {
-        let temp_dir: _ = TempDir::new().unwrap();
-        let tsconfig_path: _ = temp_dir.path().join("tsconfig.json");
+        let temp_dir = TempDir::new().unwrap();
+        let tsconfig_path = temp_dir.path().join("tsconfig.json");
 
-        let tsconfig: _ = serde_json::json!({
+        let tsconfig = serde_json::json!({
             "compilerOptions": {
                 "target": "ESNext",
                 "module": "ESNext",
@@ -185,7 +184,7 @@ mod init_command_tests {
             "exclude": ["node_modules", "dist"]
         });
 
-        let content: _ = serde_json::to_string_pretty(&tsconfig).unwrap();
+        let content = serde_json::to_string_pretty(&tsconfig).unwrap();
         fs::write(&tsconfig_path, &content).unwrap();
 
         // 验证
@@ -199,10 +198,10 @@ mod init_command_tests {
     /// 测试 .gitignore 生成
     #[test]
     fn test_gitignore_generation() {
-        let temp_dir: _ = TempDir::new().unwrap();
-        let gitignore_path: _ = temp_dir.path().join(".gitignore");
+        let temp_dir = TempDir::new().unwrap();
+        let gitignore_path = temp_dir.path().join(".gitignore");
 
-        let gitignore_content: _ = r#"# Dependencies
+        let gitignore_content = r#"# Dependencies
 node_modules/
 
 # Build output
@@ -225,7 +224,7 @@ build/
 
         // 验证
         assert!(gitignore_path.exists());
-        let content: _ = fs::read_to_string(&gitignore_path).unwrap();
+        let content = fs::read_to_string(&gitignore_path).unwrap();
         assert!(content.contains("node_modules/"));
         assert!(content.contains(".env"));
         assert!(content.contains(".DS_Store"));
@@ -234,14 +233,14 @@ build/
     /// 测试完整项目初始化
     #[test]
     fn test_full_project_init() {
-        let temp_dir: _ = TempDir::new().unwrap();
-        let project_path: _ = temp_dir.path();
+        let temp_dir = TempDir::new().unwrap();
+        let project_path = temp_dir.path();
 
         // 创建 src 目录
         fs::create_dir_all(project_path.join("src")).unwrap();
 
         // 创建 package.json
-        let package_json: _ = serde_json::json!({
+        let package_json = serde_json::json!({
             "name": "my-beejs-app",
             "version": "0.1.0",
             "main": "src/index.js"
@@ -253,7 +252,7 @@ build/
         .unwrap();
 
         // 创建 index.js
-        let index_content: _ = r#"console.log("Hello, Beejs!");
+        let index_content = r#"console.log("Hello, Beejs!");
 "#;
         fs::write(project_path.join("src/index.js"), index_content).unwrap();
 
@@ -278,9 +277,9 @@ mod info_command_tests {
     #[test]
     fn test_system_info_collection() {
         // 测试基本信息获取
-        let os: _ = std::env::consts::OS;
-        let arch: _ = std::env::consts::ARCH;
-        let cpu_count: _ = num_cpus::get();
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+        let cpu_count = num_cpus::get();
 
         assert!(!os.is_empty());
         assert!(!arch.is_empty());
@@ -300,31 +299,31 @@ mod info_command_tests {
         }
 
         // 在非 CI 环境中应该返回 false (除非正在 CI 中运行)
-        let is_ci: _ = detect_ci();
+        let is_ci = detect_ci();
         // 只是验证函数能运行
-        assert!(is_ci == true || is_ci == false);
+        assert_eq!(is_ci, detect_ci());
     }
 
     /// 测试目录信息
     #[test]
     fn test_directory_info() {
-        let cwd: _ = env::current_dir();
+        let cwd = env::current_dir();
         assert!(cwd.is_ok());
 
-        let home: _ = dirs::home_dir();
+        let home = dirs::home_dir();
         // home_dir 在某些环境可能返回 None
         if let Some(home_path) = home {
             assert!(home_path.exists());
         }
 
-        let temp: _ = env::temp_dir();
+        let temp = env::temp_dir();
         assert!(temp.exists());
     }
 
     /// 测试 JSON 输出格式
     #[test]
     fn test_info_json_format() {
-        let info: _ = serde_json::json!({
+        let info = serde_json::json!({
             "beejs": {
                 "version": "0.1.0",
                 "v8_version": "10.x"
@@ -336,7 +335,7 @@ mod info_command_tests {
             }
         });
 
-        let json_str: _ = serde_json::to_string_pretty(&info).unwrap();
+        let json_str = serde_json::to_string_pretty(&info).unwrap();
         assert!(json_str.contains("beejs"));
         assert!(json_str.contains("system"));
         assert!(json_str.contains("version"));
@@ -379,11 +378,11 @@ mod doctor_command_tests {
     /// 测试 Git 检查
     #[test]
     fn test_git_check() {
-        let result: _ = Command::new("git").arg("--version").output();
+        let result = Command::new("git").arg("--version").output();
 
         match result {
             Ok(output) if output.status.success() => {
-                let version: _ = String::from_utf8_lossy(&output.stdout);
+                let version = String::from_utf8_lossy(&output.stdout);
                 assert!(version.contains("git version"));
             }
             _ => {
@@ -396,26 +395,33 @@ mod doctor_command_tests {
     #[test]
     fn test_package_manager_check() {
         // 检查 npm
-        let npm_result: _ = Command::new("npm").arg("--version").output();
-        let npm_available: _ = npm_result.map(|o| o.status.success()).unwrap_or(false);
+        let npm_result = Command::new("npm").arg("--version").output();
+        let npm_available = npm_result.map(|o| o.status.success()).unwrap_or(false);
 
         // 至少应该能正确检测
-        assert!(npm_available == true || npm_available == false);
+        assert_eq!(
+            npm_available,
+            Command::new("npm")
+                .arg("--version")
+                .output()
+                .map(|o| o.status.success())
+                .unwrap_or(false)
+        );
     }
 
     /// 测试文件权限检查
     #[test]
     fn test_permissions_check() {
-        let temp_dir: _ = tempfile::TempDir::new().unwrap();
-        let test_file: _ = temp_dir.path().join(".permission-test");
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let test_file = temp_dir.path().join(".permission-test");
 
         // 尝试写入
-        let can_write: _ = fs::write(&test_file, "test").is_ok();
+        let can_write = fs::write(&test_file, "test").is_ok();
         assert!(can_write);
 
         // 清理
         if can_write {
-            let _: _ = fs::remove_file(&test_file);
+            let _ = fs::remove_file(&test_file);
         }
     }
 
@@ -430,7 +436,7 @@ mod doctor_command_tests {
             Skip,
         }
 
-        let checks: _ = vec![
+        let checks = vec![
             CheckStatus::Pass,
             CheckStatus::Pass,
             CheckStatus::Warning,
@@ -467,25 +473,25 @@ mod integration_tests {
     /// 测试完整的项目初始化流程
     #[test]
     fn test_complete_init_workflow() {
-        let temp_dir: _ = TempDir::new().unwrap();
-        let project_name: _ = "integration-test-project";
-        let project_path: _ = temp_dir.path().join(project_name);
+        let temp_dir = TempDir::new().unwrap();
+        let project_name = "integration-test-project";
+        let project_path = temp_dir.path().join(project_name);
 
         // 1. 创建项目目录
         fs::create_dir_all(&project_path).unwrap();
         fs::create_dir_all(project_path.join("src")).unwrap();
 
         // 2. 生成 package.json
-        let package_json: _ = serde_json::json!({
+        let package_json = serde_json::json!({
             "name": project_name,
             "version": "0.1.0",
             "main": "src/index.ts",
             "type": "module",
             "scripts": {
-                "start": "beejs run src/index.ts",
-                "dev": "beejs run --watch src/index.ts",
-                "build": "beejs bundle src/index.ts --outfile dist/index.js",
-                "test": "beejs test"
+                "start": "bee run src/index.ts",
+                "dev": "bee run --watch src/index.ts",
+                "build": "bee bundle src/index.ts --outfile dist/index.js",
+                "test": "bee test"
             }
         });
         fs::write(
@@ -495,7 +501,7 @@ mod integration_tests {
         .unwrap();
 
         // 3. 生成 tsconfig.json
-        let tsconfig: _ = serde_json::json!({
+        let tsconfig = serde_json::json!({
             "compilerOptions": {
                 "target": "ESNext",
                 "module": "ESNext",
@@ -509,7 +515,7 @@ mod integration_tests {
         .unwrap();
 
         // 4. 生成 index.ts
-        let index_content: _ = r#"interface Greeting {
+        let index_content = r#"interface Greeting {
     message: string;
 }
 
@@ -532,7 +538,7 @@ console.log(greeting.message);
         assert!(project_path.join(".gitignore").exists());
 
         // 验证 package.json 内容
-        let pkg_content: _ = fs::read_to_string(project_path.join("package.json")).unwrap();
+        let pkg_content = fs::read_to_string(project_path.join("package.json")).unwrap();
         let pkg: serde_json::Value = serde_json::from_str(&pkg_content).unwrap();
         assert_eq!(pkg["name"], project_name);
         assert_eq!(pkg["main"], "src/index.ts");
@@ -542,10 +548,10 @@ console.log(greeting.message);
     #[test]
     fn test_cli_tools_availability() {
         // 测试常见工具的可用性检测模式
-        let tools: _ = ["git", "node", "npm"];
+        let tools = ["git", "node", "npm"];
 
         for tool in tools {
-            let result: _ = std::process::Command::new(tool).arg("--version").output();
+            let result = std::process::Command::new(tool).arg("--version").output();
 
             // 工具可能安装也可能未安装，但检测应该成功
             match result {
@@ -569,43 +575,45 @@ console.log(greeting.message);
 #[cfg(test)]
 mod performance_tests {
     use std::time::Instant;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
     /// 测试格式化函数性能
     #[test]
     fn test_format_performance() {
-        let start: _ = Instant::now();
+        let start = Instant::now();
 
         // 执行 10000 次格式化
         for i in 0..10000 {
-            let _: _ = format!("{} B", i);
-            let _: _ = format!("{:.2} KB", i as f64 / 1024.0);
+            let _ = format!("{} B", i);
+            let _ = format!("{:.2} KB", i as f64 / 1024.0);
         }
 
-        let elapsed: _ = start.elapsed();
+        let elapsed = start.elapsed();
         // 应该在 100ms 内完成
-        assert!(elapsed.as_millis() < 100, "Format took too long: {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() < 100,
+            "Format took too long: {:?}",
+            elapsed
+        );
     }
 
     /// 测试 JSON 序列化性能
     #[test]
     fn test_json_serialization_performance() {
-        let start: _ = Instant::now();
+        let start = Instant::now();
 
         for _ in 0..1000 {
-            let json: _ = serde_json::json!({
+            let json = serde_json::json!({
                 "name": "test-project",
                 "version": "0.1.0",
                 "scripts": {
-                    "start": "beejs run src/index.js",
-                    "test": "beejs test"
+                    "start": "bee run src/index.js",
+                    "test": "bee test"
                 }
             });
-            let _: _ = serde_json::to_string_pretty(&json).unwrap();
+            let _ = serde_json::to_string_pretty(&json).unwrap();
         }
 
-        let elapsed: _ = start.elapsed();
+        let elapsed = start.elapsed();
         // 应该在 500ms 内完成
         assert!(
             elapsed.as_millis() < 500,

@@ -1,8 +1,34 @@
 // SharedArrayBuffer tests for Beejs runtime
 // v0.3.322: Tests for cross-Worker shared memory support
 
-use std::process::{Command, Stdio};
 use std::fs;
+use std::process::{Command, Stdio};
+
+/// Helper function to run a JavaScript script with beejs
+fn run_script(script: &str) -> std::process::Output {
+    // Create a temporary file with the script
+    let temp_dir = tempfile::Builder::new()
+        .prefix("beejs-shared-buffer-test-")
+        .tempdir()
+        .unwrap();
+    let temp_file = temp_dir.path().join("test.js");
+    fs::write(&temp_file, script).unwrap();
+
+    // Run beejs with the script
+    let output = Command::new("./target/debug/bee")
+        .arg("run")
+        .arg(&temp_file)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("Failed to run bee");
+
+    // Clean up
+    drop(temp_dir);
+
+    output
+}
 
 #[cfg(test)]
 mod shared_array_buffer_tests {
@@ -20,9 +46,17 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(output.status.success(), "SharedArrayBuffer should exist: {}", stdout);
+        assert!(
+            output.status.success(),
+            "SharedArrayBuffer should exist: {}",
+            stdout
+        );
         // Check for the success message (output may contain "Result: undefined" at the end)
-        assert!(stdout.contains("SUCCESS: SharedArrayBuffer constructor exists"), "Output: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: SharedArrayBuffer constructor exists"),
+            "Output: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -38,8 +72,15 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Should create SharedArrayBuffer: {}", stdout);
-        assert!(stdout.contains("byteLength: 1024"), "Should have correct byteLength");
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Should create SharedArrayBuffer: {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("byteLength: 1024"),
+            "Should have correct byteLength"
+        );
     }
 
     #[test]
@@ -59,7 +100,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Should create empty SharedArrayBuffer: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Should create empty SharedArrayBuffer: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -76,7 +121,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Properties should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Properties should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -98,7 +147,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "TypedArray on SharedArrayBuffer should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "TypedArray on SharedArrayBuffer should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -119,7 +172,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "slice() should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "slice() should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -140,7 +197,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Large allocation should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Large allocation should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -162,7 +223,11 @@ mod shared_array_buffer_tests {
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
         // Either instanceof works or properties work - both are valid
-        assert!(stdout.contains("SUCCESS"), "Type checking should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Type checking should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -185,7 +250,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "DataView should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "DataView should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -209,7 +278,11 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Multiple buffers should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Multiple buffers should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -242,32 +315,10 @@ mod shared_array_buffer_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Uint8Array should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Uint8Array should work: {}",
+            stdout
+        );
     }
-}
-
-/// Helper function to run a JavaScript script with beejs
-fn run_script(script: &str) -> std::process::Output {
-    // Create a temporary file with the script
-    let temp_dir = tempfile::Builder::new()
-        .prefix("beejs-shared-buffer-test-")
-        .tempdir()
-        .unwrap();
-    let temp_file = temp_dir.path().join("test.js");
-    fs::write(&temp_file, script).unwrap();
-
-    // Run beejs with the script
-    let output = Command::new("./target/debug/beejs")
-        .arg("run")
-        .arg(&temp_file)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .expect("Failed to run beejs");
-
-    // Clean up
-    drop(temp_dir);
-
-    output
 }

@@ -15,7 +15,8 @@ pub fn setup_url_api(
     let url_key: _ = v8::String::new(scope, "URL").unwrap();
     global.set(scope, url_key.into(), url_func.into());
     // URLSearchParams构造函数
-    let search_params_constructor: _ = v8::FunctionTemplate::new(scope, search_params_constructor_callback);
+    let search_params_constructor: _ =
+        v8::FunctionTemplate::new(scope, search_params_constructor_callback);
     let search_params_func: _ = search_params_constructor.get_function(scope).unwrap();
     let search_params_key: _ = v8::String::new(scope, "URLSearchParams").unwrap();
     global.set(scope, search_params_key.into(), search_params_func.into());
@@ -490,7 +491,8 @@ fn search_params_to_string_callback(
                         let key: _ = pair.get_index(scope, 0).unwrap();
                         let value: _ = pair.get_index(scope, 1).unwrap();
                         let key_str: _ = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                        let value_str: _ = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                        let value_str: _ =
+                            value.to_string(scope).unwrap().to_rust_string_lossy(scope);
                         if !query_string.is_empty() {
                             query_string.push('&');
                         }
@@ -552,15 +554,18 @@ fn url_format_callback(
     let mut href = String::new();
     if let Some(obj) = url_obj.to_object(scope) {
         let protocol_key: _ = v8::String::new(scope, "protocol").unwrap();
-        let protocol: _ = obj.get(scope, protocol_key.into())
+        let protocol: _ = obj
+            .get(scope, protocol_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let hostname_key: _ = v8::String::new(scope, "hostname").unwrap();
-        let hostname: _ = obj.get(scope, hostname_key.into())
+        let hostname: _ = obj
+            .get(scope, hostname_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let pathname_key: _ = v8::String::new(scope, "pathname").unwrap();
-        let pathname: _ = obj.get(scope, pathname_key.into())
+        let pathname: _ = obj
+            .get(scope, pathname_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         href = format!("{}{}{}", protocol, hostname, pathname);
@@ -640,8 +645,12 @@ fn parse_query_string(query: &str) -> Vec<(String, String)> {
     let parts: _ = query.split('&');
     for part in parts {
         if let Some(eq_pos) = part.find('=') {
-            let key: _ = urlencoding::decode(&part[..eq_pos]).unwrap_or_default().to_string();
-            let value: _ = urlencoding::decode(&part[eq_pos + 1..]).unwrap_or_default().to_string();
+            let key: _ = urlencoding::decode(&part[..eq_pos])
+                .unwrap_or_default()
+                .to_string();
+            let value: _ = urlencoding::decode(&part[eq_pos + 1..])
+                .unwrap_or_default()
+                .to_string();
             pairs.push((key, value));
         }
     }

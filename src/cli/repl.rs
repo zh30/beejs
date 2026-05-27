@@ -23,7 +23,7 @@ pub struct ReplConfig {
 impl Default for ReplConfig {
     fn default() -> Self {
         Self {
-            prompt: "beejs> ".to_string(),
+            prompt: "bee> ".to_string(),
             history_size: 100,
             syntax_highlight: false,
             auto_indent: true,

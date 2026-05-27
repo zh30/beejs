@@ -22,14 +22,23 @@ console.log(user);
                 println!("import type 基础转译结果:");
                 println!("{}", output.js_code);
                 // import type 语句应该被移除
-                assert!(!output.js_code.contains("import type"),
-                    "Should remove import type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("import type"),
+                    "Should remove import type: {}",
+                    output.js_code
+                );
                 // 运行时代码应该保留
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 // 变量声明应该保留
-                assert!(output.js_code.contains("const user"),
-                    "Should contain user variable: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const user"),
+                    "Should contain user variable: {}",
+                    output.js_code
+                );
                 println!("✅ Basic import type test passed");
             }
             Err(e) => {
@@ -56,11 +65,17 @@ console.log(MyClass.value);
                 println!("import type 默认导入转译结果:");
                 println!("{}", output.js_code);
                 // import type 应该被移除
-                assert!(!output.js_code.contains("import type"),
-                    "Should remove import type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("import type"),
+                    "Should remove import type: {}",
+                    output.js_code
+                );
                 // 类定义应该保留
-                assert!(output.js_code.contains("class MyClass"),
-                    "Should contain class MyClass: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("class MyClass"),
+                    "Should contain class MyClass: {}",
+                    output.js_code
+                );
                 println!("✅ Import type default test passed");
             }
             Err(e) => {
@@ -89,15 +104,24 @@ console.log(user);
                 println!("export type 转译结果:");
                 println!("{}", output.js_code);
                 // export type { User } 应该被移除
-                assert!(!output.js_code.contains("export type"),
-                    "Should remove export type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("export type"),
+                    "Should remove export type: {}",
+                    output.js_code
+                );
                 // 但 type User = ... 应该被转译为注释或保留
                 // 当前实现会移除所有类型声明，只保留运行时代码
                 // 运行时代码应该保留
-                assert!(output.js_code.contains("const user"),
-                    "Should contain user variable: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const user"),
+                    "Should contain user variable: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Export type test passed");
             }
             Err(e) => {
@@ -124,15 +148,24 @@ console.log(func(42), value);
             Ok(output) => {
                 println!("混合导入转译结果:");
                 println!("{}", output.js_code);
-                // 普通 import 应该保留
-                assert!(output.js_code.contains("import"),
-                    "Should contain regular import: {}", output.js_code);
+                // 普通 import 应该转为运行时 require
+                assert!(
+                    output.js_code.contains("require(\"./utils\")"),
+                    "Should contain regular import: {}",
+                    output.js_code
+                );
                 // import type 应该被移除
-                assert!(!output.js_code.contains("import type"),
-                    "Should remove import type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("import type"),
+                    "Should remove import type: {}",
+                    output.js_code
+                );
                 // 运行时代码应该保留
-                assert!(output.js_code.contains("function func"),
-                    "Should contain func function: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("function func"),
+                    "Should contain func function: {}",
+                    output.js_code
+                );
                 println!("✅ Mixed import test passed");
             }
             Err(e) => {
@@ -154,12 +187,18 @@ console.log("hello");
             Ok(output) => {
                 println!("副作用导入转译结果:");
                 println!("{}", output.js_code);
-                // 副作用导入应该保留
-                assert!(output.js_code.contains("import"),
-                    "Should contain side-effect import: {}", output.js_code);
+                // 副作用导入应该转为运行时 require
+                assert!(
+                    output.js_code.contains("require(\"./side-effect\")"),
+                    "Should contain side-effect import: {}",
+                    output.js_code
+                );
                 // 运行时代码应该保留
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Side-effect import test passed");
             }
             Err(e) => {
@@ -186,13 +225,22 @@ console.log(foo);
                 println!("import type with interface 转译结果:");
                 println!("{}", output.js_code);
                 // import type 应该被移除
-                assert!(!output.js_code.contains("import type"),
-                    "Should remove import type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("import type"),
+                    "Should remove import type: {}",
+                    output.js_code
+                );
                 // 运行时代码应该保留
-                assert!(output.js_code.contains("const foo"),
-                    "Should contain foo variable: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const foo"),
+                    "Should contain foo variable: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Import type with interface test passed");
             }
             Err(e) => {
@@ -214,12 +262,18 @@ console.log(result);
             Ok(output) => {
                 println!("普通导入转译结果:");
                 println!("{}", output.js_code);
-                // 普通 import 应该保留
-                assert!(output.js_code.contains("import { something }"),
-                    "Should contain regular import: {}", output.js_code);
+                // 普通 import 应该转为运行时 require
+                assert!(
+                    output.js_code.contains("require(\"./module\")"),
+                    "Should contain regular import: {}",
+                    output.js_code
+                );
                 // 运行时代码应该保留
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Regular import test passed");
             }
             Err(e) => {

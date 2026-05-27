@@ -9,7 +9,9 @@
 // - node_modules 结构管理
 
 #[allow(unused)]
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
+#[allow(unused)]
+use flate2::read::GzDecoder;
 #[allow(unused)]
 use serde::{Deserialize, Serialize};
 #[allow(unused)]
@@ -17,19 +19,17 @@ use std::collections::HashMap;
 #[allow(unused)]
 use std::fs;
 #[allow(unused)]
-use std::path::{Path, PathBuf};
-#[allow(unused)]
 use std::hash::Hash;
 #[allow(unused)]
 use std::io::Write;
 #[allow(unused)]
+use std::path::{Path, PathBuf};
+#[allow(unused)]
 use std::process::Command;
 #[allow(unused)]
-use tempfile::{NamedTempFile, TempDir};
-#[allow(unused)]
-use flate2::read::GzDecoder;
-#[allow(unused)]
 use tar::Archive;
+#[allow(unused)]
+use tempfile::{NamedTempFile, TempDir};
 
 #[allow(unused_imports)]
 /// Package manager configuration
@@ -109,14 +109,18 @@ fn resolve_caret_range(versions: Vec<String>, base: &str) -> String {
     let parsed: Vec<&str> = base.split('.').collect();
     if parsed.len() >= 1 {
         let major: u32 = parsed[0].parse().unwrap_or(0);
-        let latest_major: Vec<String> = versions.iter()
+        let latest_major: Vec<String> = versions
+            .iter()
             .filter(|v| {
                 let parts: Vec<&str> = v.split('.').collect();
                 parts.get(0).map(|p| p.parse::<u32>().unwrap_or(0)) == Some(major)
             })
             .cloned()
             .collect();
-        latest_major.last().map(|s| s.to_string()).unwrap_or_else(|| base.to_string())
+        latest_major
+            .last()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| base.to_string())
     } else {
         base.to_string()
     }
@@ -128,7 +132,8 @@ fn resolve_tilde_range(versions: Vec<String>, base: &str) -> String {
     if parsed.len() >= 2 {
         let major: u32 = parsed[0].parse().unwrap_or(0);
         let minor: u32 = parsed[1].parse().unwrap_or(0);
-        let latest: Vec<String> = versions.iter()
+        let latest: Vec<String> = versions
+            .iter()
             .filter(|v| {
                 let parts: Vec<&str> = v.split('.').collect();
                 parts.get(0).map(|p| p.parse::<u32>().unwrap_or(0)) == Some(major)
@@ -136,7 +141,10 @@ fn resolve_tilde_range(versions: Vec<String>, base: &str) -> String {
             })
             .cloned()
             .collect();
-        latest.last().map(|s| s.to_string()).unwrap_or_else(|| base.to_string())
+        latest
+            .last()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| base.to_string())
     } else {
         base.to_string()
     }
@@ -145,27 +153,41 @@ fn resolve_tilde_range(versions: Vec<String>, base: &str) -> String {
 /// Resolve greater than version
 fn resolve_greater_than(versions: Vec<String>, min: &str) -> String {
     let min_parsed: Vec<u32> = min.split('.').map(|p| p.parse().unwrap_or(0)).collect();
-    let latest: Vec<String> = versions.iter()
+    let latest: Vec<String> = versions
+        .iter()
         .filter(|v| {
             let parts: Vec<u32> = v.split('.').map(|p| p.parse().unwrap_or(0)).collect();
             parts >= min_parsed
         })
         .cloned()
         .collect();
-    latest.last().map(|s| s.to_string()).unwrap_or_else(|| min.to_string())
+    latest
+        .last()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| min.to_string())
 }
 
 /// Resolve less than version
 fn resolve_less_than(versions: Vec<String>, max: &str) -> String {
-    let max_parsed: Vec<u32> = max.split('.').map(|p| p.parse().unwrap_or(u32::MAX)).collect();
-    let latest: Vec<String> = versions.iter()
+    let max_parsed: Vec<u32> = max
+        .split('.')
+        .map(|p| p.parse().unwrap_or(u32::MAX))
+        .collect();
+    let latest: Vec<String> = versions
+        .iter()
         .filter(|v| {
-            let parts: Vec<u32> = v.split('.').map(|p| p.parse().unwrap_or(u32::MAX)).collect();
+            let parts: Vec<u32> = v
+                .split('.')
+                .map(|p| p.parse().unwrap_or(u32::MAX))
+                .collect();
             parts <= max_parsed
         })
         .cloned()
         .collect();
-    latest.last().map(|s| s.to_string()).unwrap_or_else(|| max.to_string())
+    latest
+        .last()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| max.to_string())
 }
 
 impl PackageManager {
@@ -220,7 +242,11 @@ impl PackageManager {
     /// Download package tarball from npm registry
     pub fn download_package(&self, name: &str, version: &str) -> Result<PathBuf> {
         // Check cache first
-        let cached_path = self.config.cache_dir.join(name).join(format!("{}.tgz", version));
+        let cached_path = self
+            .config
+            .cache_dir
+            .join(name)
+            .join(format!("{}.tgz", version));
         if cached_path.exists() {
             return Ok(cached_path);
         }
@@ -292,12 +318,13 @@ impl PackageManager {
         }
 
         // Extract tarball
-        let tarball_file = fs::File::open(tarball_path)
-            .map_err(|e| anyhow!("Failed to open tarball: {}", e))?;
+        let tarball_file =
+            fs::File::open(tarball_path).map_err(|e| anyhow!("Failed to open tarball: {}", e))?;
         let decoder = GzDecoder::new(tarball_file);
         let mut archive = Archive::new(decoder);
 
-        for entry in archive.entries()
+        for entry in archive
+            .entries()
             .map_err(|e| anyhow!("Failed to read archive: {}", e))?
         {
             let mut entry = entry.map_err(|e| anyhow!("Failed to read entry: {}", e))?;
@@ -322,7 +349,8 @@ impl PackageManager {
                             .map_err(|e| anyhow!("Failed to create parent: {}", e))?;
                     }
                 }
-                entry.unpack(&target_path)
+                entry
+                    .unpack(&target_path)
                     .map_err(|e| anyhow!("Failed to unpack entry: {}", e))?;
             }
         }
@@ -336,12 +364,14 @@ impl PackageManager {
 
         // Handle "latest" special tag
         if version_range == "latest" {
-            let dist_tags = info.get("dist-tags")
+            let dist_tags = info
+                .get("dist-tags")
                 .ok_or(anyhow!("No dist-tags found"))?
                 .as_object()
                 .ok_or(anyhow!("Invalid dist-tags format"))?;
 
-            let latest_version = dist_tags.get("latest")
+            let latest_version = dist_tags
+                .get("latest")
                 .ok_or(anyhow!("No 'latest' tag found"))?
                 .as_str()
                 .ok_or(anyhow!("Invalid latest tag format"))?
@@ -350,7 +380,8 @@ impl PackageManager {
             return Ok(latest_version);
         }
 
-        let versions = info.get("versions")
+        let versions = info
+            .get("versions")
             .ok_or(anyhow!("No versions found"))?
             .as_object()
             .ok_or(anyhow!("Invalid versions format"))?;
@@ -470,7 +501,9 @@ impl PackageManager {
             for (name, version) in deps {
                 match self.install_package(name, version) {
                     Ok(resolution) => results.push(resolution),
-                    Err(e) => tracing::debug!("Failed to install optional {}@{}: {}", name, version, e),
+                    Err(e) => {
+                        tracing::debug!("Failed to install optional {}@{}: {}", name, version, e)
+                    }
                 }
             }
         }
@@ -524,7 +557,8 @@ impl PackageManager {
             for entry in fs::read_dir(&self.config.node_modules_dir)
                 .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
             {
-                let entry: _ = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                let entry: _ =
+                    entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
                 let path: _ = entry.path();
                 if path.is_dir() {
                     let _name: _ = path
@@ -648,30 +682,41 @@ impl PackageManager {
                 let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
                 let path = entry.path();
 
-                if path.is_dir() && path.file_name().map(|n| n.to_str()) == Some(Some("node_modules")) {
+                if path.is_dir()
+                    && path.file_name().map(|n| n.to_str()) == Some(Some("node_modules"))
+                {
                     continue; // Skip the node_modules directory itself
                 }
 
                 if path.is_dir() {
                     if let Some(pkg) = self.scan_installed_package(&path)? {
-                        let nested_deps: HashMap<String, LockedDependency> = pkg.dependencies
+                        let nested_deps: HashMap<String, LockedDependency> = pkg
+                            .dependencies
                             .iter()
-                            .map(|d| (d.name.clone(), LockedDependency {
-                                version: d.version.clone(),
-                                resolved: d.resolved.clone(),
-                                integrity: d.integrity.clone(),
-                                dev: Some(d.dev),
-                                dependencies: None, // Simplified: no recursive nesting for now
-                            }))
+                            .map(|d| {
+                                (
+                                    d.name.clone(),
+                                    LockedDependency {
+                                        version: d.version.clone(),
+                                        resolved: d.resolved.clone(),
+                                        integrity: d.integrity.clone(),
+                                        dev: Some(d.dev),
+                                        dependencies: None, // Simplified: no recursive nesting for now
+                                    },
+                                )
+                            })
                             .collect();
 
-                        dependencies.insert(pkg.name.clone(), LockedDependency {
-                            version: pkg.version.clone(),
-                            resolved: pkg.resolved.clone(),
-                            integrity: pkg.integrity.clone(),
-                            dev: Some(pkg.dev),
-                            dependencies: Some(nested_deps),
-                        });
+                        dependencies.insert(
+                            pkg.name.clone(),
+                            LockedDependency {
+                                version: pkg.version.clone(),
+                                resolved: pkg.resolved.clone(),
+                                integrity: pkg.integrity.clone(),
+                                dev: Some(pkg.dev),
+                                dependencies: Some(nested_deps),
+                            },
+                        );
                     }
                 }
             }
@@ -784,11 +829,7 @@ impl PackageManager {
     }
 
     /// Install a package with exact version (--save-exact behavior)
-    pub fn install_package_exact(
-        &self,
-        name: &str,
-        version: &str,
-    ) -> Result<ResolutionResult> {
+    pub fn install_package_exact(&self, name: &str, version: &str) -> Result<ResolutionResult> {
         // Resolve to exact version first
         let exact_version = self.resolve_version(name, version)?;
 
@@ -843,19 +884,23 @@ impl PackageManager {
             version: "0.0.0".to_string(),
             lockfile_version: 3,
             requires: true,
-            dependencies: Some(vec![(
-                package_name.to_string(),
-                LockedDependency {
-                    version: package_version.to_string(),
-                    resolved: Some(format!(
-                        "https://registry.npmjs.org/{}/-/{}-{}.tgz",
-                        package_name, package_name, package_version
-                    )),
-                    integrity: None,
-                    dev: Some(false),
-                    dependencies: None,
-                },
-            )].into_iter().collect()),
+            dependencies: Some(
+                vec![(
+                    package_name.to_string(),
+                    LockedDependency {
+                        version: package_version.to_string(),
+                        resolved: Some(format!(
+                            "https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                            package_name, package_name, package_version
+                        )),
+                        integrity: None,
+                        dev: Some(false),
+                        dependencies: None,
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
         };
 
         Ok(lock)
@@ -901,7 +946,8 @@ impl PackageManager {
             {
                 let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
                 let path = entry.path();
-                let name = path.file_name()
+                let name = path
+                    .file_name()
                     .and_then(|s| s.to_str())
                     .map(|s| s.to_string());
 
@@ -932,21 +978,22 @@ impl PackageManager {
             }
 
             // Handle scoped packages (@org/pkg) - check if parent @org is declared
-            let org_dirs: std::collections::HashSet<String> = if let Ok(entries) = fs::read_dir(&self.config.node_modules_dir) {
-                entries
-                    .filter_map(|e| e.ok())
-                    .filter_map(|e| {
-                        let name = e.file_name().to_str()?.to_string();
-                        if name.starts_with('@') && e.path().is_dir() {
-                            Some(name)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            } else {
-                std::collections::HashSet::new()
-            };
+            let org_dirs: std::collections::HashSet<String> =
+                if let Ok(entries) = fs::read_dir(&self.config.node_modules_dir) {
+                    entries
+                        .filter_map(|e| e.ok())
+                        .filter_map(|e| {
+                            let name = e.file_name().to_str()?.to_string();
+                            if name.starts_with('@') && e.path().is_dir() {
+                                Some(name)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                } else {
+                    std::collections::HashSet::new()
+                };
 
             for org in org_dirs {
                 // Check if this org/pkg should exist

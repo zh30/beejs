@@ -3,11 +3,9 @@
 // 实现基于角色的访问控制 (RBAC) 和权限检查
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
-use std::collections::HashMap;
-use std::hash::Hash;
 
 /// 权限控制错误
 #[derive(Error, Debug)]
@@ -81,17 +79,20 @@ impl PolicyEngine {
 /// 角色管理器
 #[derive(Debug)]
 pub struct RoleManager {
-    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role>>>>,
+    user_roles: Arc<Mutex<HashMap<UserId, Vec<Role>>>>,
 }
 impl RoleManager {
     pub fn new() -> Self {
         Self {
-            user_roles: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))
+            user_roles: Arc::new(Mutex::new(HashMap::new())),
         }
     }
     pub async fn assign_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {
         let mut user_roles = self.user_roles.lock().unwrap();
-        user_roles.entry(user_id.clone()).or_insert_with(Vec::new).push(role.clone());
+        user_roles
+            .entry(user_id.clone())
+            .or_insert_with(Vec::new)
+            .push(role.clone());
         Ok(())
     }
     pub async fn remove_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {
@@ -107,7 +108,9 @@ impl RoleManager {
     }
     pub async fn check_role(&self, user_id: &UserId, role: &Role) -> Result<bool, AuthzError> {
         let user_roles: _ = self.user_roles.lock().unwrap();
-        Ok(user_roles.get(user_id).map_or(false, |roles| roles.contains(role))
+        Ok(user_roles
+            .get(user_id)
+            .map_or(false, |roles| roles.contains(role)))
     }
 }
 /// 权限控制服务
@@ -119,12 +122,20 @@ pub struct AuthorizationService {
 impl AuthorizationService {
     pub fn new() -> Self {
         Self {
-            policy_engine: Arc::new(Mutex::new(PolicyEngine::new()))
-            role_manager: Arc::new(Mutex::new(RoleManager::new()))
+            policy_engine: Arc::new(PolicyEngine::new()),
+            role_manager: Arc::new(RoleManager::new()),
         }
     }
-    pub async fn check_permission(&self, user_id: &UserId, action: &Action) -> Result<bool, AuthzError> {
-        let roles: _ = self.role_manager.get_roles(user_id).await.unwrap_or_default();
+    pub async fn check_permission(
+        &self,
+        user_id: &UserId,
+        action: &Action,
+    ) -> Result<bool, AuthzError> {
+        let roles: _ = self
+            .role_manager
+            .get_roles(user_id)
+            .await
+            .unwrap_or_default();
         Ok(self.policy_engine.check_permission(action, &roles))
     }
     pub async fn assign_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {

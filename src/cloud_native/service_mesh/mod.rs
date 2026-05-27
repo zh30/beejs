@@ -4,20 +4,19 @@ pub mod istio;
 pub mod observability;
 /// Re-export Istio types
 pub use istio::{
-    IstioConfigManager, IstioConfig, IstioService, TrafficPolicyConfig,
-    LoadBalancerAlgorithm, ConnectionPoolConfig, OutlierDetectionConfig,
-    TrafficManager, FaultType, TrafficSplit, Error as IstioError,
+    ConnectionPoolConfig, Error as IstioError, FaultType, IstioConfig, IstioConfigManager,
+    IstioService, LoadBalancerAlgorithm, OutlierDetectionConfig, TrafficManager,
+    TrafficPolicyConfig, TrafficSplit,
 };
 /// Re-export observability types
 pub use observability::{
-    DistributedTracer, TraceContext, SpanRecord, SpanStatus, SpanEvent,
-    PerformanceAnalysis, MetricsCollector, RequestMetrics, LatencyMetrics,
-    ErrorMetrics, MetricsReport,
+    DistributedTracer, ErrorMetrics, LatencyMetrics, MetricsCollector, MetricsReport,
+    PerformanceAnalysis, RequestMetrics, SpanEvent, SpanRecord, SpanStatus, TraceContext,
 };
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

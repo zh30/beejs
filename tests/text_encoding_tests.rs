@@ -18,7 +18,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "TextEncoder constructor should be available");
+        assert!(
+            result.is_ok(),
+            "TextEncoder constructor should be available"
+        );
         assert_eq!(result.unwrap().trim(), "function");
     }
 
@@ -63,7 +66,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "TextDecoder constructor should be available");
+        assert!(
+            result.is_ok(),
+            "TextDecoder constructor should be available"
+        );
         assert_eq!(result.unwrap().trim(), "function");
     }
 
@@ -79,7 +85,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "TextDecoder.decode should work with Uint8Array");
+        assert!(
+            result.is_ok(),
+            "TextDecoder.decode should work with Uint8Array"
+        );
     }
 
     /// 测试 TextDecoder.decode() 方法 - 字符串
@@ -94,7 +103,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "TextDecoder.decode should handle Chinese characters");
+        assert!(
+            result.is_ok(),
+            "TextDecoder.decode should handle Chinese characters"
+        );
     }
 
     /// 测试 TextDecoder with fatal option
@@ -202,7 +214,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "btoa/atob round-trip should preserve string");
+        assert!(
+            result.is_ok(),
+            "btoa/atob round-trip should preserve string"
+        );
     }
 
     /// 测试 btoa 编码空字符串
@@ -228,7 +243,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "btoa should encode special base64 characters");
+        assert!(
+            result.is_ok(),
+            "btoa should encode special base64 characters"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -247,7 +265,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "btoa should throw error for non-Latin1 characters");
+        assert!(
+            result.is_ok(),
+            "btoa should throw error for non-Latin1 characters"
+        );
     }
 
     /// 测试 atob 处理无效输入
@@ -283,7 +304,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "atob should throw error when input is undefined");
+        assert!(
+            result.is_ok(),
+            "atob should throw error when input is undefined"
+        );
     }
 
     /// 测试 btoa 处理 undefined
@@ -301,6 +325,9 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "btoa should throw error when input is undefined");
+        assert!(
+            result.is_ok(),
+            "btoa should throw error when input is undefined"
+        );
     }
 }

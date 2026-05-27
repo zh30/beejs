@@ -11,9 +11,9 @@ use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, Me
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use tokio::task::{JoinHandle, self};
-use std::time::Duration;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
+use tokio::task::{self, JoinHandle};
 
 /// 并发性能基准测试套件
 pub struct ConcurrentBenchmark;
@@ -32,29 +32,25 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "multithreaded_execution",
-            MetricType::Throughput,
-            || {
-                // 模拟多线程执行
-                let num_threads: _ = 4;
-                let mut handles = Vec::new();
-                for _ in 0..num_threads {
-                    handles.push(std::thread::spawn(|| {
-                        let mut sum = 0;
-                        for i in 0..10000 {
-                            sum += i * 2;
-                        }
-                        sum
-                    }));
-                }
-                let mut total = 0;
-                for handle in handles {
-                    total += handle.join().unwrap();
-                }
-                total
-            },
-        )
+        framework.run_benchmark("multithreaded_execution", MetricType::Throughput, || {
+            // 模拟多线程执行
+            let num_threads: _ = 4;
+            let mut handles = Vec::new();
+            for _ in 0..num_threads {
+                handles.push(std::thread::spawn(|| {
+                    let mut sum = 0;
+                    for i in 0..10000 {
+                        sum += i * 2;
+                    }
+                    sum
+                }));
+            }
+            let mut total = 0;
+            for handle in handles {
+                total += handle.join().unwrap();
+            }
+            total
+        })
     }
     /// 异步任务性能测试
     pub fn async_task_benchmark(&self) -> BenchmarkResult {
@@ -66,31 +62,27 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "async_task",
-            MetricType::Throughput,
-            || {
-                // 模拟异步任务
-                let rt: _ = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    let mut handles: Vec<JoinHandle<i32>> = Vec::new();
-                    for _ in 0..10 {
-                        handles.push(task::spawn(async {
-                            let mut sum = 0;
-                            for i in 0..1000 {
-                                sum += i * 2;
-                            }
-                            sum
-                        }));
-                    }
-                    let mut total = 0;
-                    for handle in handles {
-                        total += handle.await.unwrap();
-                    }
-                    total
-                })
-            },
-        )
+        framework.run_benchmark("async_task", MetricType::Throughput, || {
+            // 模拟异步任务
+            let rt: _ = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                let mut handles: Vec<JoinHandle<i32>> = Vec::new();
+                for _ in 0..10 {
+                    handles.push(task::spawn(async {
+                        let mut sum = 0;
+                        for i in 0..1000 {
+                            sum += i * 2;
+                        }
+                        sum
+                    }));
+                }
+                let mut total = 0;
+                for handle in handles {
+                    total += handle.await.unwrap();
+                }
+                total
+            })
+        })
     }
     /// 锁竞争性能测试
     pub fn lock_contention_benchmark(&self) -> BenchmarkResult {
@@ -102,29 +94,25 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "lock_contention",
-            MetricType::Throughput,
-            || {
-                // 模拟锁竞争
-                let counter: _ = Arc::new(Mutex::new(0));
-                let mut handles = Vec::new();
-                for _ in 0..10 {
-                    let counter: _ = Arc::clone(counter);
-                    handles.push(std::thread::spawn(move || {
-                        for _ in 0..1000 {
-                            let mut c = counter.lock().unwrap();
-                            *c += 1;
-                        }
-                    }));
-                }
-                for handle in handles {
-                    handle.join().unwrap();
-                }
-                let final_count: _ = *counter.lock().unwrap();
-                final_count
-            },
-        )
+        framework.run_benchmark("lock_contention", MetricType::Throughput, || {
+            // 模拟锁竞争
+            let counter: _ = Arc::new(Mutex::new(0));
+            let mut handles = Vec::new();
+            for _ in 0..10 {
+                let counter: _ = Arc::clone(counter);
+                handles.push(std::thread::spawn(move || {
+                    for _ in 0..1000 {
+                        let mut c = counter.lock().unwrap();
+                        *c += 1;
+                    }
+                }));
+            }
+            for handle in handles {
+                handle.join().unwrap();
+            }
+            let final_count: _ = *counter.lock().unwrap();
+            final_count
+        })
     }
     /// 无锁计数器性能测试
     pub fn lock_free_counter_benchmark(&self) -> BenchmarkResult {
@@ -136,27 +124,23 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "lock_free_counter",
-            MetricType::Throughput,
-            || {
-                // 模拟无锁计数器
-                let counter: _ = Arc::new(Mutex::new(AtomicUsize::new(0)));
-                let mut handles = Vec::new();
-                for _ in 0..10 {
-                    let counter: _ = Arc::clone(counter);
-                    handles.push(std::thread::spawn(move || {
-                        for _ in 0..1000 {
-                            counter.fetch_add(1, Ordering::SeqCst);
-                        }
-                    }));
-                }
-                for handle in handles {
-                    handle.join().unwrap();
-                }
-                counter.load(Ordering::SeqCst)
-            },
-        )
+        framework.run_benchmark("lock_free_counter", MetricType::Throughput, || {
+            // 模拟无锁计数器
+            let counter: _ = Arc::new(Mutex::new(AtomicUsize::new(0)));
+            let mut handles = Vec::new();
+            for _ in 0..10 {
+                let counter: _ = Arc::clone(counter);
+                handles.push(std::thread::spawn(move || {
+                    for _ in 0..1000 {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                }));
+            }
+            for handle in handles {
+                handle.join().unwrap();
+            }
+            counter.load(Ordering::SeqCst)
+        })
     }
     /// 工作窃取性能测试
     pub fn work_stealing_benchmark(&self) -> BenchmarkResult {
@@ -168,31 +152,27 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "work_stealing",
-            MetricType::Throughput,
-            || {
-                // 模拟工作窃取
-                let rt: _ = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    let mut tasks = Vec::new();
-                    for _ in 0..20 {
-                        tasks.push(task::spawn(async {
-                            let mut sum = 0;
-                            for i in 0..500 {
-                                sum += i * 2;
-                            }
-                            sum
-                        }));
-                    }
-                    let mut total = 0;
-                    for task in tasks {
-                        total += task.await.unwrap();
-                    }
-                    total
-                })
-            },
-        )
+        framework.run_benchmark("work_stealing", MetricType::Throughput, || {
+            // 模拟工作窃取
+            let rt: _ = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                let mut tasks = Vec::new();
+                for _ in 0..20 {
+                    tasks.push(task::spawn(async {
+                        let mut sum = 0;
+                        for i in 0..500 {
+                            sum += i * 2;
+                        }
+                        sum
+                    }));
+                }
+                let mut total = 0;
+                for task in tasks {
+                    total += task.await.unwrap();
+                }
+                total
+            })
+        })
     }
     /// 生产者-消费者性能测试
     pub fn producer_consumer_benchmark(&self) -> BenchmarkResult {
@@ -204,36 +184,34 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "producer_consumer",
-            MetricType::Throughput,
-            || {
-                // 模拟生产者-消费者
-                let (tx, rx) = std::sync::mpsc::channel::<i32>();
-                let num_producers: _ = 4;
-                // 生产者
-                let producer_handles: Vec<_> = (0..num_producers)
-                    .map(|id| {
-                        let tx: _ = tx.clone();
-                        std::thread::spawn(move || {
-                            for i in 0..100 {
-                                tx.send((i * id) as i32).unwrap();
-                            }
-                        })
-                    })
-                    .collect();
-                // 消费者
-                std::thread::spawn(move || {
-                    let mut sum = 0;
-                    for _ in 0..(num_producers * 100) {
-                        if let Ok(val) = rx.recv() {
-                            sum += val;
+        framework.run_benchmark("producer_consumer", MetricType::Throughput, || {
+            // 模拟生产者-消费者
+            let (tx, rx) = std::sync::mpsc::channel::<i32>();
+            let num_producers: _ = 4;
+            // 生产者
+            let producer_handles: Vec<_> = (0..num_producers)
+                .map(|id| {
+                    let tx: _ = tx.clone();
+                    std::thread::spawn(move || {
+                        for i in 0..100 {
+                            tx.send((i * id) as i32).unwrap();
                         }
+                    })
+                })
+                .collect();
+            // 消费者
+            std::thread::spawn(move || {
+                let mut sum = 0;
+                for _ in 0..(num_producers * 100) {
+                    if let Ok(val) = rx.recv() {
+                        sum += val;
                     }
-                    sum
-                }).join().unwrap()
-            },
-        )
+                }
+                sum
+            })
+            .join()
+            .unwrap()
+        })
     }
     /// 数据竞争检测测试
     pub fn data_race_detection_benchmark(&self) -> BenchmarkResult {
@@ -245,29 +223,25 @@ impl ConcurrentBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "data_race_detection",
-            MetricType::Throughput,
-            || {
-                // 模拟数据竞争检测
-                let shared: _ = Arc::new(Mutex::new(0));
-                let mut handles = Vec::new();
-                for _ in 0..10 {
-                    let shared: _ = Arc::clone(shared);
-                    handles.push(std::thread::spawn(move || {
-                        // 故意引入潜在的竞争条件
-                        let _guard: _ = shared.lock().unwrap();
-                        std::thread::sleep(Duration::from_micros(1));
-                        // 注意：这里可能存在竞争条件
-                    }));
-                }
-                for handle in handles {
-                    handle.join().unwrap();
-                }
-                let final_value: _ = *shared.lock().unwrap();
-                final_value
-            },
-        )
+        framework.run_benchmark("data_race_detection", MetricType::Throughput, || {
+            // 模拟数据竞争检测
+            let shared: _ = Arc::new(Mutex::new(0));
+            let mut handles = Vec::new();
+            for _ in 0..10 {
+                let shared: _ = Arc::clone(shared);
+                handles.push(std::thread::spawn(move || {
+                    // 故意引入潜在的竞争条件
+                    let _guard: _ = shared.lock().unwrap();
+                    std::thread::sleep(Duration::from_micros(1));
+                    // 注意：这里可能存在竞争条件
+                }));
+            }
+            for handle in handles {
+                handle.join().unwrap();
+            }
+            let final_value: _ = *shared.lock().unwrap();
+            final_value
+        })
     }
     /// 运行所有并发性能基准测试
     pub fn run_all_benchmarks(&self) -> Vec<BenchmarkResult> {
@@ -290,10 +264,7 @@ impl ConcurrentBenchmark {
             report.push_str("\n\n");
         }
         // 统计分析
-        let total_throughput: f64 = results
-            .iter()
-            .map(|r| r.operations_per_second)
-            .sum();
+        let total_throughput: f64 = results.iter().map(|r| r.operations_per_second).sum();
         let avg_throughput: _ = total_throughput / results.len() as f64;
         report.push_str(&format!(
             "Total Throughput: {:.0} ops/sec\n",
@@ -347,11 +318,8 @@ impl ConcurrentOptimizationSuggestions {
             }
         }
         // 通用建议
-        let avg_throughput: _ = results
-            .iter()
-            .map(|r| r.operations_per_second)
-            .sum::<f64>()
-            / results.len() as f64;
+        let avg_throughput: _ =
+            results.iter().map(|r| r.operations_per_second).sum::<f64>() / results.len() as f64;
         if avg_throughput < 5000.0 {
             suggestions.push(
                 "Overall concurrent performance is below target. Consider implementing more aggressive parallelization strategies.".to_string()
@@ -362,7 +330,8 @@ impl ConcurrentOptimizationSuggestions {
     /// 格式化优化建议
     pub fn format(&self) -> String {
         if self.suggestions.is_empty() {
-            "No optimization suggestions. Concurrent performance is within acceptable limits.".to_string()
+            "No optimization suggestions. Concurrent performance is within acceptable limits."
+                .to_string()
         } else {
             format!(
                 "=== Concurrent Optimization Suggestions ===\n\n{}",

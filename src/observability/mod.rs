@@ -20,37 +20,35 @@
 // # Ok(())
 // # }
 // ```
+pub mod alerting;
+pub mod dashboard;
+pub mod jaeger_tracer;
+pub mod metrics;
 pub mod prometheus_exporter;
 pub mod structured_logging;
-pub mod metrics;
-pub mod alerting;
-pub mod jaeger_tracer;
-pub mod dashboard;
 pub mod visualization;
 
 use metrics::{BusinessMetrics, CustomMetrics, PerformanceMetrics, RuntimeMetrics};
 use std::collections::{BTreeMap, HashMap};
 
-use std::sync::{Arc, Mutex};
 use std::net::SocketAddr;
 use std::sync::RwLock;
+use std::sync::{Arc, Mutex};
 // use std::sync::::{Arc, Mutex, RwLock};
-use tracing::info;
 use std::time::Duration;
+use tracing::info;
 
 pub use dashboard::{
-    DashboardManager, DashboardConfig, Dashboard, PanelConfig,
-    GrafanaClient, MetricsCollector, ChartType, GraphType,
-    GridPos, QueryTarget, FieldConfig, ThresholdsConfig, PanelOptions,
-    LegendConfig, TooltipConfig, TimeRangeConfig, TemplateVariable
+    ChartType, Dashboard, DashboardConfig, DashboardManager, FieldConfig, GrafanaClient, GraphType,
+    GridPos, LegendConfig, MetricsCollector, PanelConfig, PanelOptions, QueryTarget,
+    TemplateVariable, ThresholdsConfig, TimeRangeConfig, TooltipConfig,
 };
 pub use visualization::{
-    LineChart, BarChart, PieChart, TopologyGraph,
-    LineChartBuilder, BarChartBuilder, PieChartBuilder, TopologyGraphBuilder,
-    VisualizationConfig, DataPoint, DataSeries, ColorPalette, AxisConfig,
-    LegendConfig as VizLegendConfig, TooltipConfig as VizTooltipConfig, GridConfig, MarkerConfig, LineStyle,
-    Position, Size, GraphNode, GraphEdge, EdgeStyle, LayoutConfig,
-    LayoutAlgorithm, ForceLayoutParams, InteractionConfig, FilterConfig
+    AxisConfig, BarChart, BarChartBuilder, ColorPalette, DataPoint, DataSeries, EdgeStyle,
+    FilterConfig, ForceLayoutParams, GraphEdge, GraphNode, GridConfig, InteractionConfig,
+    LayoutAlgorithm, LayoutConfig, LegendConfig as VizLegendConfig, LineChart, LineChartBuilder,
+    LineStyle, MarkerConfig, PieChart, PieChartBuilder, Position, Size,
+    TooltipConfig as VizTooltipConfig, TopologyGraph, TopologyGraphBuilder, VisualizationConfig,
 };
 /// Configuration for observability system
 #[derive(Debug, Clone)]
@@ -101,10 +99,8 @@ impl ObservableSystem {
         };
         // Initialize structured logging first
         if config.enable_structured_logging {
-            system.structured_logger = Some(StructuredLogger::new(
-                config.log_level,
-                "beejs".to_string(),
-            ));
+            system.structured_logger =
+                Some(StructuredLogger::new(config.log_level, "beejs".to_string()));
             info!("Structured logging initialized");
         }
         // Initialize Prometheus exporter
@@ -127,7 +123,9 @@ impl ObservableSystem {
     }
     /// Get structured logger reference
     pub fn logger(&self) -> &StructuredLogger {
-        self.structured_logger.as_ref().expect("Structured logger not initialized")
+        self.structured_logger
+            .as_ref()
+            .expect("Structured logger not initialized")
     }
     /// Get custom metrics reference
     pub fn custom_metrics(&self) -> Arc<RwLock<CustomMetrics>> {
@@ -150,8 +148,14 @@ impl ObservableSystem {
         // Log event
         if let Some(logger) = &self.structured_logger {
             let context: _ = HashMap::from([
-                ("script_name".to_string(), Value::String(script_name.to_string())),
-                ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64))),
+                (
+                    "script_name".to_string(),
+                    Value::String(script_name.to_string()),
+                ),
+                (
+                    "duration_ms".to_string(),
+                    Value::Number(serde_json::Number::from(duration.as_millis() as u64)),
+                ),
                 ("success".to_string(), Value::Bool(success)),
             ]);
             if success {

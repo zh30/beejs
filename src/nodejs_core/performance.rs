@@ -2,10 +2,10 @@
 // Provides high-resolution timing for AI workloads and performance monitoring
 // Implements Web Performance API compatible with Node.js/Bun
 
-use std::sync::Mutex;
-use std::time::{Duration, Instant, SystemTime};
 use once_cell::sync::Lazy;
 use rusty_v8 as v8;
+use std::sync::Mutex;
+use std::time::{Duration, Instant, SystemTime};
 
 /// Performance entry type
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,7 +69,8 @@ impl PerformanceState {
     }
 
     fn get_mark(&self, name: &str) -> Option<f64> {
-        self.marks.iter()
+        self.marks
+            .iter()
             .filter(|m| m.name == name)
             .max_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap())
             .map(|m| m.start_time)
@@ -82,7 +83,8 @@ impl PerformanceState {
 }
 
 /// Global performance state (thread-safe for V8 main thread access)
-static PERFORMANCE_STATE: Lazy<Mutex<PerformanceState>> = Lazy::new(|| Mutex::new(PerformanceState::new()));
+static PERFORMANCE_STATE: Lazy<Mutex<PerformanceState>> =
+    Lazy::new(|| Mutex::new(PerformanceState::new()));
 
 /// High-resolution time origin (time since system boot for macOS, or Unix epoch for others)
 #[cfg(target_os = "macos")]
@@ -103,7 +105,9 @@ fn get_time_origin() -> Instant {
 fn get_high_res_time() -> f64 {
     // Use SystemTime for time since Unix epoch
     let now = SystemTime::now();
-    let duration = now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or(Duration::ZERO);
+    let duration = now
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or(Duration::ZERO);
     // Convert to milliseconds with sub-millisecond precision
     duration.as_secs_f64() * 1000.0
 }
@@ -112,14 +116,18 @@ fn get_high_res_time() -> f64 {
 #[allow(dead_code)]
 fn get_high_res_time_us() -> f64 {
     let now = SystemTime::now();
-    let duration = now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or(Duration::ZERO);
+    let duration = now
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or(Duration::ZERO);
     duration.as_secs_f64() * 1_000_000.0
 }
 
 /// Get the time origin timestamp in milliseconds
 fn get_time_origin_ms() -> f64 {
     let now = SystemTime::now();
-    let duration = now.duration_since(SystemTime::UNIX_EPOCH).unwrap_or(Duration::ZERO);
+    let duration = now
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or(Duration::ZERO);
     duration.as_secs_f64() * 1000.0
 }
 
@@ -131,242 +139,366 @@ pub fn setup_performance_api(
     let global = context.global(scope);
 
     // performance.now() - returns a high-resolution timestamp in milliseconds
-    let now_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let now = get_high_res_time();
-        retval.set(v8::Number::new(scope, now).into());
-    }).unwrap();
+    let now_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let now = get_high_res_time();
+            retval.set(v8::Number::new(scope, now).into());
+        },
+    )
+    .unwrap();
 
     // performance.mark(name) - creates a performance mark
-    let mark_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let error = v8::String::new(scope, "performance.mark requires at least 1 argument").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+    let mark_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let error = v8::String::new(scope, "performance.mark requires at least 1 argument")
+                    .unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let name = args
+                .get(0)
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
 
-        if name.is_empty() {
-            let error = v8::String::new(scope, "performance.mark name cannot be empty").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+            if name.is_empty() {
+                let error =
+                    v8::String::new(scope, "performance.mark name cannot be empty").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let start_time = get_high_res_time();
+            let start_time = get_high_res_time();
 
-        let mut state = PERFORMANCE_STATE.lock().unwrap();
-        state.add_mark(PerformanceMark {
-            name: name.clone(),
-            start_time,
-        });
-        state.add_entry(PerformanceEntry {
-            name,
-            entry_type: PerformanceEntryType::Mark,
-            start_time,
-            duration: 0.0,
-            detail: None,
-        });
-    }).unwrap();
+            let mut state = PERFORMANCE_STATE.lock().unwrap();
+            state.add_mark(PerformanceMark {
+                name: name.clone(),
+                start_time,
+            });
+            state.add_entry(PerformanceEntry {
+                name,
+                entry_type: PerformanceEntryType::Mark,
+                start_time,
+                duration: 0.0,
+                detail: None,
+            });
+        },
+    )
+    .unwrap();
 
     // performance.measure(name, startMark, endMark) - creates a performance measure
-    let measure_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let error = v8::String::new(scope, "performance.measure requires at least 1 argument").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+    let measure_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let error =
+                    v8::String::new(scope, "performance.measure requires at least 1 argument")
+                        .unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let name = args
+                .get(0)
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
 
-        let start_time = if args.length() >= 2 {
-            let start_mark = args.get(1).to_string(scope).unwrap().to_rust_string_lossy(scope);
-            PERFORMANCE_STATE.lock().unwrap().get_mark(&start_mark).unwrap_or(0.0)
-        } else {
-            get_time_origin_ms()
-        };
+            let start_time = if args.length() >= 2 {
+                let start_mark = args
+                    .get(1)
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope);
+                PERFORMANCE_STATE
+                    .lock()
+                    .unwrap()
+                    .get_mark(&start_mark)
+                    .unwrap_or(0.0)
+            } else {
+                get_time_origin_ms()
+            };
 
-        let end_time = if args.length() >= 3 {
-            let end_mark = args.get(2).to_string(scope).unwrap().to_rust_string_lossy(scope);
-            PERFORMANCE_STATE.lock().unwrap().get_mark(&end_mark).unwrap_or(get_high_res_time())
-        } else {
-            get_high_res_time()
-        };
+            let end_time = if args.length() >= 3 {
+                let end_mark = args
+                    .get(2)
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope);
+                PERFORMANCE_STATE
+                    .lock()
+                    .unwrap()
+                    .get_mark(&end_mark)
+                    .unwrap_or(get_high_res_time())
+            } else {
+                get_high_res_time()
+            };
 
-        let duration = end_time - start_time;
+            let duration = end_time - start_time;
 
-        let mut state = PERFORMANCE_STATE.lock().unwrap();
-        state.add_entry(PerformanceEntry {
-            name: name.clone(),
-            entry_type: PerformanceEntryType::Measure,
-            start_time,
-            duration,
-            detail: None,
-        });
-    }).unwrap();
+            let mut state = PERFORMANCE_STATE.lock().unwrap();
+            state.add_entry(PerformanceEntry {
+                name: name.clone(),
+                entry_type: PerformanceEntryType::Measure,
+                start_time,
+                duration,
+                detail: None,
+            });
+        },
+    )
+    .unwrap();
 
     // performance.clearMarks() - removes all marks
-    let clear_marks_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let mut state = PERFORMANCE_STATE.lock().unwrap();
-        state.marks.clear();
-        state.entries.retain(|e| e.entry_type != PerformanceEntryType::Mark);
-    }).unwrap();
+    let clear_marks_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let mut state = PERFORMANCE_STATE.lock().unwrap();
+            state.marks.clear();
+            state
+                .entries
+                .retain(|e| e.entry_type != PerformanceEntryType::Mark);
+        },
+    )
+    .unwrap();
 
     // performance.clearMeasures() - removes all measures
-    let clear_measures_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let mut state = PERFORMANCE_STATE.lock().unwrap();
-        state.entries.retain(|e| e.entry_type != PerformanceEntryType::Measure);
-    }).unwrap();
+    let clear_measures_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let mut state = PERFORMANCE_STATE.lock().unwrap();
+            state
+                .entries
+                .retain(|e| e.entry_type != PerformanceEntryType::Measure);
+        },
+    )
+    .unwrap();
 
     // performance.clearAllMarks() - removes all marks (alias for clearMarks)
-    let clear_all_marks_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let mut state = PERFORMANCE_STATE.lock().unwrap();
-        state.marks.clear();
-        state.entries.retain(|e| e.entry_type != PerformanceEntryType::Mark);
-    }).unwrap();
+    let clear_all_marks_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let mut state = PERFORMANCE_STATE.lock().unwrap();
+            state.marks.clear();
+            state
+                .entries
+                .retain(|e| e.entry_type != PerformanceEntryType::Mark);
+        },
+    )
+    .unwrap();
 
     // performance.getEntries() - returns all performance entries
-    let get_entries_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let state = PERFORMANCE_STATE.lock().unwrap();
-        let entries: Vec<v8::Local<v8::Value>> = state.entries.iter().map(|e| {
-            let obj = v8::Object::new(scope);
+    let get_entries_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let state = PERFORMANCE_STATE.lock().unwrap();
+            let entries: Vec<v8::Local<v8::Value>> = state
+                .entries
+                .iter()
+                .map(|e| {
+                    let obj = v8::Object::new(scope);
 
-            let name_key = v8::String::new(scope, "name").unwrap();
-            let name_val = v8::String::new(scope, &e.name).unwrap();
-            obj.set(scope, name_key.into(), name_val.into());
+                    let name_key = v8::String::new(scope, "name").unwrap();
+                    let name_val = v8::String::new(scope, &e.name).unwrap();
+                    obj.set(scope, name_key.into(), name_val.into());
 
-            let entry_type_key = v8::String::new(scope, "entryType").unwrap();
-            let entry_type_val = v8::String::new(scope, match e.entry_type {
-                PerformanceEntryType::Mark => "mark",
-                PerformanceEntryType::Measure => "measure",
-                PerformanceEntryType::Histogram => "histogram",
-            }).unwrap();
-            obj.set(scope, entry_type_key.into(), entry_type_val.into());
+                    let entry_type_key = v8::String::new(scope, "entryType").unwrap();
+                    let entry_type_val = v8::String::new(
+                        scope,
+                        match e.entry_type {
+                            PerformanceEntryType::Mark => "mark",
+                            PerformanceEntryType::Measure => "measure",
+                            PerformanceEntryType::Histogram => "histogram",
+                        },
+                    )
+                    .unwrap();
+                    obj.set(scope, entry_type_key.into(), entry_type_val.into());
 
-            let start_time_key = v8::String::new(scope, "startTime").unwrap();
-            let start_time_val = v8::Number::new(scope, e.start_time);
-            obj.set(scope, start_time_key.into(), start_time_val.into());
+                    let start_time_key = v8::String::new(scope, "startTime").unwrap();
+                    let start_time_val = v8::Number::new(scope, e.start_time);
+                    obj.set(scope, start_time_key.into(), start_time_val.into());
 
-            let duration_key = v8::String::new(scope, "duration").unwrap();
-            let duration_val = v8::Number::new(scope, e.duration);
-            obj.set(scope, duration_key.into(), duration_val.into());
+                    let duration_key = v8::String::new(scope, "duration").unwrap();
+                    let duration_val = v8::Number::new(scope, e.duration);
+                    obj.set(scope, duration_key.into(), duration_val.into());
 
-            obj.into()
-        }).collect();
+                    obj.into()
+                })
+                .collect();
 
-        let array = v8::Array::new_with_elements(scope, &entries);
-        retval.set(array.into());
-    }).unwrap();
+            let array = v8::Array::new_with_elements(scope, &entries);
+            retval.set(array.into());
+        },
+    )
+    .unwrap();
 
     // performance.getEntriesByName(name) - returns entries matching the name
-    let get_entries_by_name_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let array = v8::Array::new(scope, 0);
+    let get_entries_by_name_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let array = v8::Array::new(scope, 0);
+                retval.set(array.into());
+                return;
+            }
+
+            let name = args
+                .get(0)
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
+
+            let state = PERFORMANCE_STATE.lock().unwrap();
+            let entries: Vec<v8::Local<v8::Value>> = state
+                .entries
+                .iter()
+                .filter(|e| e.name == name)
+                .map(|e| {
+                    let obj = v8::Object::new(scope);
+
+                    let name_key = v8::String::new(scope, "name").unwrap();
+                    let name_val = v8::String::new(scope, &e.name).unwrap();
+                    obj.set(scope, name_key.into(), name_val.into());
+
+                    let entry_type_key = v8::String::new(scope, "entryType").unwrap();
+                    let entry_type_val = v8::String::new(
+                        scope,
+                        match e.entry_type {
+                            PerformanceEntryType::Mark => "mark",
+                            PerformanceEntryType::Measure => "measure",
+                            PerformanceEntryType::Histogram => "histogram",
+                        },
+                    )
+                    .unwrap();
+                    obj.set(scope, entry_type_key.into(), entry_type_val.into());
+
+                    let start_time_key = v8::String::new(scope, "startTime").unwrap();
+                    let start_time_val = v8::Number::new(scope, e.start_time);
+                    obj.set(scope, start_time_key.into(), start_time_val.into());
+
+                    let duration_key = v8::String::new(scope, "duration").unwrap();
+                    let duration_val = v8::Number::new(scope, e.duration);
+                    obj.set(scope, duration_key.into(), duration_val.into());
+
+                    obj.into()
+                })
+                .collect();
+
+            let array = v8::Array::new_with_elements(scope, &entries);
             retval.set(array.into());
-            return;
-        }
-
-        let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
-
-        let state = PERFORMANCE_STATE.lock().unwrap();
-        let entries: Vec<v8::Local<v8::Value>> = state.entries.iter()
-            .filter(|e| e.name == name)
-            .map(|e| {
-                let obj = v8::Object::new(scope);
-
-                let name_key = v8::String::new(scope, "name").unwrap();
-                let name_val = v8::String::new(scope, &e.name).unwrap();
-                obj.set(scope, name_key.into(), name_val.into());
-
-                let entry_type_key = v8::String::new(scope, "entryType").unwrap();
-                let entry_type_val = v8::String::new(scope, match e.entry_type {
-                    PerformanceEntryType::Mark => "mark",
-                    PerformanceEntryType::Measure => "measure",
-                    PerformanceEntryType::Histogram => "histogram",
-                }).unwrap();
-                obj.set(scope, entry_type_key.into(), entry_type_val.into());
-
-                let start_time_key = v8::String::new(scope, "startTime").unwrap();
-                let start_time_val = v8::Number::new(scope, e.start_time);
-                obj.set(scope, start_time_key.into(), start_time_val.into());
-
-                let duration_key = v8::String::new(scope, "duration").unwrap();
-                let duration_val = v8::Number::new(scope, e.duration);
-                obj.set(scope, duration_key.into(), duration_val.into());
-
-                obj.into()
-            }).collect();
-
-        let array = v8::Array::new_with_elements(scope, &entries);
-        retval.set(array.into());
-    }).unwrap();
+        },
+    )
+    .unwrap();
 
     // performance.getEntriesByType(type) - returns entries of the specified type
-    let get_entries_by_type_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let array = v8::Array::new(scope, 0);
+    let get_entries_by_type_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let array = v8::Array::new(scope, 0);
+                retval.set(array.into());
+                return;
+            }
+
+            let entry_type = args
+                .get(0)
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
+
+            let state = PERFORMANCE_STATE.lock().unwrap();
+            let entries: Vec<v8::Local<v8::Value>> = state
+                .entries
+                .iter()
+                .filter(|e| {
+                    let e_type_str = match e.entry_type {
+                        PerformanceEntryType::Mark => "mark",
+                        PerformanceEntryType::Measure => "measure",
+                        PerformanceEntryType::Histogram => "histogram",
+                    };
+                    e_type_str == entry_type
+                })
+                .map(|e| {
+                    let obj = v8::Object::new(scope);
+
+                    let name_key = v8::String::new(scope, "name").unwrap();
+                    let name_val = v8::String::new(scope, &e.name).unwrap();
+                    obj.set(scope, name_key.into(), name_val.into());
+
+                    let type_key = v8::String::new(scope, "entryType").unwrap();
+                    let type_val = v8::String::new(
+                        scope,
+                        match e.entry_type {
+                            PerformanceEntryType::Mark => "mark",
+                            PerformanceEntryType::Measure => "measure",
+                            PerformanceEntryType::Histogram => "histogram",
+                        },
+                    )
+                    .unwrap();
+                    obj.set(scope, type_key.into(), type_val.into());
+
+                    let start_time_key = v8::String::new(scope, "startTime").unwrap();
+                    let start_time_val = v8::Number::new(scope, e.start_time);
+                    obj.set(scope, start_time_key.into(), start_time_val.into());
+
+                    let duration_key = v8::String::new(scope, "duration").unwrap();
+                    let duration_val = v8::Number::new(scope, e.duration);
+                    obj.set(scope, duration_key.into(), duration_val.into());
+
+                    obj.into()
+                })
+                .collect();
+
+            let array = v8::Array::new_with_elements(scope, &entries);
             retval.set(array.into());
-            return;
-        }
-
-        let entry_type = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
-
-        let state = PERFORMANCE_STATE.lock().unwrap();
-        let entries: Vec<v8::Local<v8::Value>> = state.entries.iter()
-            .filter(|e| {
-                let e_type_str = match e.entry_type {
-                    PerformanceEntryType::Mark => "mark",
-                    PerformanceEntryType::Measure => "measure",
-                    PerformanceEntryType::Histogram => "histogram",
-                };
-                e_type_str == entry_type
-            })
-            .map(|e| {
-                let obj = v8::Object::new(scope);
-
-                let name_key = v8::String::new(scope, "name").unwrap();
-                let name_val = v8::String::new(scope, &e.name).unwrap();
-                obj.set(scope, name_key.into(), name_val.into());
-
-                let type_key = v8::String::new(scope, "entryType").unwrap();
-                let type_val = v8::String::new(scope, match e.entry_type {
-                    PerformanceEntryType::Mark => "mark",
-                    PerformanceEntryType::Measure => "measure",
-                    PerformanceEntryType::Histogram => "histogram",
-                }).unwrap();
-                obj.set(scope, type_key.into(), type_val.into());
-
-                let start_time_key = v8::String::new(scope, "startTime").unwrap();
-                let start_time_val = v8::Number::new(scope, e.start_time);
-                obj.set(scope, start_time_key.into(), start_time_val.into());
-
-                let duration_key = v8::String::new(scope, "duration").unwrap();
-                let duration_val = v8::Number::new(scope, e.duration);
-                obj.set(scope, duration_key.into(), duration_val.into());
-
-                obj.into()
-            }).collect();
-
-        let array = v8::Array::new_with_elements(scope, &entries);
-        retval.set(array.into());
-    }).unwrap();
+        },
+    )
+    .unwrap();
 
     // performance.toJSON() - returns a JSON representation
-    let to_json_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let obj = v8::Object::new(scope);
+    let to_json_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let obj = v8::Object::new(scope);
 
-        let now_key = v8::String::new(scope, "now").unwrap();
-        let now_val = v8::Number::new(scope, get_high_res_time());
-        obj.set(scope, now_key.into(), now_val.into());
+            let now_key = v8::String::new(scope, "now").unwrap();
+            let now_val = v8::Number::new(scope, get_high_res_time());
+            obj.set(scope, now_key.into(), now_val.into());
 
-        let time_origin_key = v8::String::new(scope, "timeOrigin").unwrap();
-        let time_origin_val = v8::Number::new(scope, get_time_origin_ms());
-        obj.set(scope, time_origin_key.into(), time_origin_val.into());
+            let time_origin_key = v8::String::new(scope, "timeOrigin").unwrap();
+            let time_origin_val = v8::Number::new(scope, get_time_origin_ms());
+            obj.set(scope, time_origin_key.into(), time_origin_val.into());
 
-        retval.set(obj.into());
-    }).unwrap();
+            retval.set(obj.into());
+        },
+    )
+    .unwrap();
 
     // Create the performance object
     let perf_obj = v8::Object::new(scope);
@@ -398,10 +530,18 @@ pub fn setup_performance_api(
     perf_obj.set(scope, get_entries_key.into(), get_entries_fn.into());
 
     let get_entries_by_name_key = v8::String::new(scope, "getEntriesByName").unwrap();
-    perf_obj.set(scope, get_entries_by_name_key.into(), get_entries_by_name_fn.into());
+    perf_obj.set(
+        scope,
+        get_entries_by_name_key.into(),
+        get_entries_by_name_fn.into(),
+    );
 
     let get_entries_by_type_key = v8::String::new(scope, "getEntriesByType").unwrap();
-    perf_obj.set(scope, get_entries_by_type_key.into(), get_entries_by_type_fn.into());
+    perf_obj.set(
+        scope,
+        get_entries_by_type_key.into(),
+        get_entries_by_type_fn.into(),
+    );
 
     let to_json_key = v8::String::new(scope, "toJSON").unwrap();
     perf_obj.set(scope, to_json_key.into(), to_json_fn.into());

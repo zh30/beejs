@@ -1,11 +1,12 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-/// Stage 39.0 网络零拷贝优化与云平台集成测试套件
-/// 测试零拷贝 I/O、云平台适配、智能负载均衡和分布式缓存
+//! Stage 39.0 网络零拷贝优化与云平台集成测试套件
+//! 测试零拷贝 I/O、云平台适配、智能负载均衡和分布式缓存
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::unnecessary_get_then_check)]
+#![allow(clippy::useless_vec)]
 
 #[cfg(test)]
 mod stage_39_tests {
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::HashMap;
 
     /// 测试 1: 零拷贝文件传输 - sendfile 系统调用
     #[test]
@@ -13,14 +14,14 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 零拷贝文件传输");
 
         // 创建临时测试文件
-        let test_file_path: _ = "/tmp/beejs_test_file.bin";
-        let test_data: _ = vec![42u8; 1024 * 1024]; // 1MB 测试数据
+        let test_file_path = "/tmp/beejs_test_file.bin";
+        let test_data = vec![42u8; 1024 * 1024]; // 1MB 测试数据
 
         // 写入测试文件
         std::fs::write(test_file_path, &test_data).expect("写入测试文件失败");
 
         // 验证文件大小
-        let metadata: _ = std::fs::metadata(test_file_path).expect("获取文件元数据失败");
+        let metadata = std::fs::metadata(test_file_path).expect("获取文件元数据失败");
         assert_eq!(metadata.len(), test_data.len() as u64);
 
         // 清理
@@ -35,7 +36,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 零拷贝网络接收");
 
         // 模拟零拷贝接收操作
-        let _socket_buffer: _ = vec![0u8; 64 * 1024]; // 64KB 缓冲区
+        let _socket_buffer = vec![0u8; 64 * 1024]; // 64KB 缓冲区
         let mut received_data = Vec::new();
 
         // 模拟接收数据
@@ -56,7 +57,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 内存映射优化");
 
         // 创建映射数据
-        let map_size: _ = 4096; // 4KB
+        let map_size = 4096; // 4KB
         let mut mapped_data = vec![0u8; map_size];
 
         // 模拟内存映射访问
@@ -78,7 +79,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 智能批处理器");
 
         let mut batch_size = 0;
-        let max_batch_size: _ = 100;
+        let max_batch_size = 100;
         let mut system_call_count = 0;
 
         // 模拟批处理操作
@@ -106,7 +107,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: AWS 云平台适配器");
 
         // 模拟 AWS 配置
-        let aws_config: _ = HashMap::from([
+        let aws_config = HashMap::from([
             ("region".to_string(), "us-west-2".to_string()),
             ("access_key".to_string(), "test_key".to_string()),
         ]);
@@ -124,7 +125,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: Azure 云平台适配器");
 
         // 模拟 Azure 配置
-        let azure_config: _ = HashMap::from([
+        let azure_config = HashMap::from([
             ("region".to_string(), "eastus".to_string()),
             ("subscription_id".to_string(), "test_sub".to_string()),
         ]);
@@ -142,7 +143,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: GCP 云平台适配器");
 
         // 模拟 GCP 配置
-        let gcp_config: _ = HashMap::from([
+        let gcp_config = HashMap::from([
             ("project_id".to_string(), "test-project".to_string()),
             ("region".to_string(), "us-central1".to_string()),
         ]);
@@ -160,7 +161,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: Cloudflare 边缘节点适配器");
 
         // 模拟 Cloudflare 配置
-        let cf_config: _ = HashMap::from([
+        let cf_config = HashMap::from([
             ("account_id".to_string(), "test_account".to_string()),
             ("zone_id".to_string(), "test_zone".to_string()),
         ]);
@@ -178,21 +179,17 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 智能负载均衡器");
 
         // 模拟服务器节点
-        let _nodes: _ = vec![
-            "server1:8080",
-            "server2:8080",
-            "server3:8080",
-        ];
+        let _nodes = ["server1:8080", "server2:8080", "server3:8080"];
 
         // 模拟历史负载数据
-        let load_history: _ = vec![
+        let load_history = vec![
             (50.0, "server1:8080"), // 平均延迟 50ms
             (30.0, "server2:8080"), // 平均延迟 30ms
             (80.0, "server3:8080"), // 平均延迟 80ms
         ];
 
         // 模拟 ML 预测选择最优节点
-        let best_node: _ = load_history
+        let best_node = load_history
             .iter()
             .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
             .map(|(_, node)| node)
@@ -210,14 +207,14 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 自动扩缩容");
 
         let mut current_replicas = 2;
-        let max_replicas: _ = 10;
-        let min_replicas: _ = 2;
+        let max_replicas = 10;
+        let min_replicas = 2;
 
         // 模拟负载检测
-        let simulated_load: _ = vec![50.0, 80.0, 95.0, 60.0, 70.0];
+        let simulated_load = vec![50.0, 80.0, 95.0, 60.0, 70.0];
 
         for load in simulated_load {
-            let before_replicas: _ = current_replicas;
+            let before_replicas = current_replicas;
 
             // 高负载时扩容
             if load > 85.0 && current_replicas < max_replicas {
@@ -228,7 +225,10 @@ use std::collections::{HashMap, BTreeMap};
                 current_replicas -= 1;
             }
 
-            println!("负载: {:.1}%, 副本数: {} -> {}", load, before_replicas, current_replicas);
+            println!(
+                "负载: {:.1}%, 副本数: {} -> {}",
+                load, before_replicas, current_replicas
+            );
         }
 
         // 验证扩缩容工作正常
@@ -247,13 +247,13 @@ use std::collections::{HashMap, BTreeMap};
         let mut cache = HashMap::new();
         let mut hit_count = 0;
         let mut miss_count = 0;
-        let total_requests: _ = 100;
-        let key_count: _ = 5; // 只有 5 个不同的键，提高命中率
+        let total_requests = 100;
+        let key_count = 5; // 只有 5 个不同的键，提高命中率
 
         // 模拟缓存请求
         for i in 0..total_requests {
-            let key: _ = format!("key_{}", i % key_count); // 5 个不同的键
-            let value: _ = format!("value_{}", i);
+            let key = format!("key_{}", i % key_count); // 5 个不同的键
+            let value = format!("value_{}", i);
 
             // 检查缓存命中
             if cache.get(&key).is_some() {
@@ -265,9 +265,12 @@ use std::collections::{HashMap, BTreeMap};
             }
         }
 
-        let hit_rate: _ = (hit_count as f64 / total_requests as f64) * 100.0;
+        let hit_rate = (hit_count as f64 / total_requests as f64) * 100.0;
 
-        println!("缓存命中: {}, 缓存未命中: {}, 命中率: {:.1}%", hit_count, miss_count, hit_rate);
+        println!(
+            "缓存命中: {}, 缓存未命中: {}, 命中率: {:.1}%",
+            hit_count, miss_count, hit_rate
+        );
 
         // 验证缓存命中率 (应该达到 95%+)
         assert!(hit_rate >= 95.0);
@@ -280,7 +283,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_failover() {
         println!("🚀 开始测试: 故障转移");
 
-        let servers: _ = vec![
+        let servers = vec![
             ("server1", true),
             ("server2", true),
             ("server3", false), // 故障服务器
@@ -308,7 +311,7 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 成本优化");
 
         // 模拟不同云平台成本
-        let platform_costs: _ = HashMap::from([
+        let platform_costs = HashMap::from([
             ("AWS", 100.0),
             ("Azure", 90.0),
             ("GCP", 85.0),
@@ -316,7 +319,7 @@ use std::collections::{HashMap, BTreeMap};
         ]);
 
         // 模拟基于成本的选择
-        let cheapest_platform: _ = platform_costs
+        let cheapest_platform = platform_costs
             .iter()
             .min_by(|a, b| a.1.partial_cmp(b.1).unwrap())
             .map(|(platform, _)| platform)
@@ -325,9 +328,9 @@ use std::collections::{HashMap, BTreeMap};
         // 验证选择最优成本方案
         assert_eq!(cheapest_platform, &"Cloudflare");
 
-        let max_cost: _ = 100.0;
-        let min_cost: _ = 70.0;
-        let savings: _ = ((max_cost - min_cost) / max_cost) * 100.0;
+        let max_cost = 100.0;
+        let min_cost = 70.0;
+        let savings = ((max_cost - min_cost) / max_cost) * 100.0;
 
         println!("最优平台: {}, 成本节省: {:.1}%", cheapest_platform, savings);
 
@@ -343,13 +346,17 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 网络 I/O 性能提升");
 
         // 模拟传统 I/O vs 零拷贝 I/O
-        let traditional_io_time: _ = 100.0; // 传统 I/O 时间 (ms)
-        let zero_copy_time: _ = 15.0; // 零拷贝 I/O 时间 (ms)
+        let traditional_io_time = 100.0; // 传统 I/O 时间 (ms)
+        let zero_copy_time = 15.0; // 零拷贝 I/O 时间 (ms)
 
-        let improvement: _ = (traditional_io_time - zero_copy_time) / traditional_io_time * 100.0;
+        let improvement = (traditional_io_time - zero_copy_time) / traditional_io_time * 100.0;
 
-        println!("传统 I/O: {}ms, 零拷贝 I/O: {}ms, 性能提升: {:.1}x",
-                 traditional_io_time, zero_copy_time, traditional_io_time / zero_copy_time);
+        println!(
+            "传统 I/O: {}ms, 零拷贝 I/O: {}ms, 性能提升: {:.1}x",
+            traditional_io_time,
+            zero_copy_time,
+            traditional_io_time / zero_copy_time
+        );
 
         // 验证性能提升 (应该达到 5x+)
         assert!(traditional_io_time / zero_copy_time >= 5.0);
@@ -364,18 +371,18 @@ use std::collections::{HashMap, BTreeMap};
         println!("🚀 开始测试: 综合集成工作流");
 
         // 1. 零拷贝数据传输
-        let data: _ = vec![0u8; 1024];
+        let data = vec![0u8; 1024];
         assert!(!data.is_empty());
 
         // 2. 云平台部署模拟
-        let deployment_config: _ = HashMap::from([
+        let deployment_config = HashMap::from([
             ("platform".to_string(), "cloudflare".to_string()),
             ("region".to_string(), "global".to_string()),
         ]);
         assert_eq!(deployment_config.get("platform").unwrap(), "cloudflare");
 
         // 3. 负载均衡
-        let services: _ = vec!["service1", "service2", "service3"];
+        let services = ["service1", "service2", "service3"];
         assert_eq!(services.len(), 3);
 
         // 4. 缓存检查

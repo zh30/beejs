@@ -1,16 +1,13 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 // Stage 73 TypeScript 转译测试
 // 验证箭头函数和类型标注转译功能
 
 #[cfg(test)]
 mod tests {
-    use beejs::typescript::{compile_typescript, TypeScriptCompiler, TypeScriptCompilerConfig};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::typescript::compile_typescript;
 
     #[test]
     fn test_simple_arrow_function() {
-        let code: _ = r#"
+        let code = r#"
 const double = (x: number) => x * 2;
 console.log(double(5));
 "#;
@@ -33,7 +30,7 @@ console.log(double(5));
 
     #[test]
     fn test_multi_param_arrow() {
-        let code: _ = r#"
+        let code = r#"
 const add = (a: number, b: number): number => a + b;
 console.log(add(10, 20));
 "#;
@@ -55,7 +52,7 @@ console.log(add(10, 20));
 
     #[test]
     fn test_no_param_arrow() {
-        let code: _ = r#"
+        let code = r#"
 const getAnswer = () => 42;
 console.log(getAnswer());
 "#;
@@ -74,7 +71,7 @@ console.log(getAnswer());
 
     #[test]
     fn test_function_with_types() {
-        let code: _ = r#"
+        let code = r#"
 function greet(name: string): string {
     return `Hello, ${name}!`;
 }

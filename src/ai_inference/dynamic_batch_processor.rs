@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
 use super::{AIInferenceEngine, InferenceResult};
-use std::time::{Duration, Instant};
 use std::collections::VecDeque;
+use std::time::{Duration, Instant};
 
 /// 动态批处理配置
 #[derive(Debug, Clone)]
@@ -112,10 +112,11 @@ impl DynamicBatchProcessor {
                 }
                 // 获取当前批次大小（这里简化处理，实际可使用 Arc<Mutex<usize>>）
                 let current_batch_size: _ = 8; // 默认值，可根据需要调整
-                // 检查是否应该处理批次
+                                               // 检查是否应该处理批次
                 let should_process: _ = {
                     let queue: _ = input_queue.lock().await;
-                    let timeout_reached: _ = last_batch_time.elapsed() > Duration::from_millis(config.wait_timeout_ms);
+                    let timeout_reached: _ =
+                        last_batch_time.elapsed() > Duration::from_millis(config.wait_timeout_ms);
                     let batch_full: _ = queue.len() >= current_batch_size;
                     timeout_reached || batch_full
                 };
@@ -178,11 +179,19 @@ impl DynamicBatchProcessor {
         // 简化的调整逻辑：如果延迟很低，增加批次大小
         if stats.avg_latency_ms < 5.0 && self.current_batch_size < self.config.max_batch_size {
             let new_size: _ = (self.current_batch_size * 2).min(self.config.max_batch_size);
-            println!("🔧 动态调整批次大小: {} -> {}", self.current_batch_size, new_size);
+            println!(
+                "🔧 动态调整批次大小: {} -> {}",
+                self.current_batch_size, new_size
+            );
             // 注意：在实际实现中，这里需要使用 Arc<Mutex<usize>> 来安全地更新
-        } else if stats.avg_latency_ms > 20.0 && self.current_batch_size > self.config.min_batch_size {
+        } else if stats.avg_latency_ms > 20.0
+            && self.current_batch_size > self.config.min_batch_size
+        {
             let new_size: _ = (self.current_batch_size / 2).max(self.config.min_batch_size);
-            println!("🔧 动态调整批次大小: {} -> {}", self.current_batch_size, new_size);
+            println!(
+                "🔧 动态调整批次大小: {} -> {}",
+                self.current_batch_size, new_size
+            );
         }
         Ok(())
     }
@@ -209,7 +218,9 @@ mod tests {
     async fn test_dynamic_batch_submission() {
         let config: _ = DynamicBatchConfig::default();
         let engine: _ = AIInferenceEngine::new().await.unwrap();
-        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config).await.unwrap();
+        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config)
+            .await
+            .unwrap();
         // 创建测试张量
         let input: _ = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]).unwrap();
         let task_id: _ = processor.submit_inference(input).await.unwrap();
@@ -224,15 +235,18 @@ mod tests {
             performance_window: 10,
         };
         let engine: _ = AIInferenceEngine::new().await.unwrap();
-        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config).await.unwrap();
+        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config)
+            .await
+            .unwrap();
         // 启动处理
         processor.start_processing().await.unwrap();
         // 提交几个任务
         for i in 0..3 {
             let input: _ = Tensor::new(
                 vec![i as f32, (i + 1) as f32, (i + 2) as f32, (i + 3) as f32],
-                vec![2, 2]
-            ).unwrap();
+                vec![2, 2],
+            )
+            .unwrap();
             let _: _ = processor.submit_inference(input).await;
         }
         // 等待处理完成

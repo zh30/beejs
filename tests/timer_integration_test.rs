@@ -2,9 +2,9 @@
 // v0.3.249: Tests for async timer execution with polling
 // Tests setTimeout, setInterval, clearTimeout, and clearImmediate
 
-use serial_test::serial;
+use beejs::nodejs_core::timers::{clear_all_async_timers, clear_all_timers};
 use beejs::MinimalRuntime;
-use beejs::nodejs_core::timers::{clear_all_timers, clear_all_async_timers};
+use serial_test::serial;
 
 fn cleanup_global_state() {
     // Clear timer metadata between tests
@@ -19,7 +19,9 @@ fn test_settimeout_zero_delay_executes() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // setTimeout with delay=0 executes immediately (simplified implementation)
-    let result = runtime.execute_code("let executed = false; setTimeout(() => { executed = true; }, 0); executed;").unwrap();
+    let result = runtime
+        .execute_code("let executed = false; setTimeout(() => { executed = true; }, 0); executed;")
+        .unwrap();
     assert_eq!(result.trim(), "true"); // Timer executes immediately for delay=0
 }
 
@@ -29,11 +31,15 @@ fn test_settimeout_nonzero_delay_queued() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Test that setTimeout with delay > 0 only stores metadata (async not yet integrated)
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         let result = 'not called';
         setTimeout(() => { result = 'called'; }, 100);
         result;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     // For delay > 0, timer is queued but not executed (requires async runtime)
     assert_eq!(result.trim(), "not called");
 }
@@ -44,11 +50,15 @@ fn test_cleartimer_prevents_execution() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Clear timer before it can execute
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         globalThis.testValue = 'initial';
         const id = setTimeout(() => { globalThis.testValue = 'changed'; }, 100);
         clearTimeout(id);
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     // The callback should not have run
     let check = runtime.execute_code("globalThis.testValue").unwrap();
     assert_eq!(check.trim(), "initial");
@@ -61,12 +71,19 @@ fn test_setinterval_returns_timer() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // setInterval returns a timer ID (number or wrapped in object)
     // v0.3.249: Accept both number and object for flexibility
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         const id = setInterval(() => {}, 100);
         typeof id;
-    "#).unwrap();
-    assert!(result.trim() == "number" || result.trim() == "object",
-        "Expected number or object, got: {}", result.trim());
+    "#,
+        )
+        .unwrap();
+    assert!(
+        result.trim() == "number" || result.trim() == "object",
+        "Expected number or object, got: {}",
+        result.trim()
+    );
 }
 
 #[test]
@@ -75,11 +92,15 @@ fn test_setimmediate_basic() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // setImmediate executes immediately (simplified implementation)
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         let result = 'start';
         setImmediate(() => { result = 'done'; });
         result;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     // Either result is valid depending on implementation
     assert!(result.trim() == "start" || result.trim() == "done");
 }
@@ -89,11 +110,13 @@ fn test_setimmediate_basic() {
 fn test_timer_with_arguments() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    let _ = runtime.execute_code(r#"
+    let _ = runtime.execute_code(
+        r#"
         setTimeout((a, b, c) => {
             globalThis.result = a + b + c;
         }, 0, 1, 2, 3);
-    "#);
+    "#,
+    );
     let result = runtime.execute_code("globalThis.result").unwrap();
     assert_eq!(result.trim(), "6");
 }
@@ -104,12 +127,16 @@ fn test_timer_metadata_storage() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Just verify timers can be created without error
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         setTimeout(() => {}, 100);
         setInterval(() => {}, 200);
         setImmediate(() => {});
         'timers created';
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     assert_eq!(result.trim(), "timers created");
 }
 
@@ -118,7 +145,9 @@ fn test_timer_metadata_storage() {
 fn test_cleartimer_with_invalid_id() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code("clearTimeout(99999); 'no crash'").unwrap();
+    let result = runtime
+        .execute_code("clearTimeout(99999); 'no crash'")
+        .unwrap();
     assert_eq!(result.trim(), "no crash");
 }
 
@@ -127,11 +156,15 @@ fn test_cleartimer_with_invalid_id() {
 fn test_multiple_timers_metadata() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         setTimeout(() => {}, 10);
         setTimeout(() => {}, 5);
         'timers registered';
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     // Timers are registered (metadata stored)
     assert_eq!(result.trim(), "timers registered");
 }
@@ -143,14 +176,20 @@ fn test_settimeout_async_callback_stored() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Timer with delay > 0 should store callback in registry
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         setTimeout(() => {
             globalThis.asyncExecuted = true;
         }, 100);
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Verify timer was created (callback stored)
-    let check = runtime.execute_code("typeof globalThis.asyncExecuted").unwrap();
+    let check = runtime
+        .execute_code("typeof globalThis.asyncExecuted")
+        .unwrap();
     assert_eq!(check.trim(), "undefined"); // Not yet executed
 }
 
@@ -160,13 +199,17 @@ fn test_cleartimer_prevents_callback_execution() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Schedule a timer and immediately clear it
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         globalThis.timerTest = 'initial';
         const id = setTimeout(() => {
             globalThis.timerTest = 'changed';
         }, 50);
         clearTimeout(id);
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Timer should not execute after being cleared
     let check = runtime.execute_code("globalThis.timerTest").unwrap();
@@ -179,18 +222,27 @@ fn test_setinterval_repeats() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // setInterval should store callback for repeated execution
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         globalThis.intervalCount = 0;
         const id = setInterval(() => {
             globalThis.intervalCount += 1;
         }, 10);
         globalThis.intervalId = id;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Verify interval was created (accept number or object)
-    let check = runtime.execute_code("typeof globalThis.intervalId").unwrap();
-    assert!(check.trim() == "number" || check.trim() == "object",
-        "Expected number or object, got: {}", check.trim());
+    let check = runtime
+        .execute_code("typeof globalThis.intervalId")
+        .unwrap();
+    assert!(
+        check.trim() == "number" || check.trim() == "object",
+        "Expected number or object, got: {}",
+        check.trim()
+    );
 }
 
 #[test]
@@ -199,11 +251,15 @@ fn test_timer_callback_with_multiple_args() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Test timer with multiple arguments
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         setTimeout((a, b, c, d) => {
             globalThis.argsResult = a + '-' + b + '-' + c + '-' + d;
         }, 0, 'hello', 'world', 42, true);
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Verify callback was executed with arguments
     let result = runtime.execute_code("globalThis.argsResult").unwrap();
@@ -217,13 +273,20 @@ fn test_timer_metadata_complete() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // Verify all timer types create proper metadata
     // v0.3.249: Timers return number IDs (which may be wrapped in object internally)
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         const timeoutId = setTimeout(() => {}, 100);
         const intervalId = setInterval(() => {}, 200);
         const immediateId = setImmediate(() => {});
         typeof timeoutId + '-' + typeof intervalId + '-' + typeof immediateId;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     // Accept both number or object return types (implementation detail)
-    assert!(result.trim() == "number-number-number" || result.trim() == "object-object-object",
-        "Unexpected result: {}", result.trim());
+    assert!(
+        result.trim() == "number-number-number" || result.trim() == "object-object-object",
+        "Unexpected result: {}",
+        result.trim()
+    );
 }

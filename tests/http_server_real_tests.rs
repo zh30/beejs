@@ -1,8 +1,8 @@
 // HTTP Server Real Listening Tests - v0.3.87
 // 测试 http.Server 的真实 TCP 监听和请求处理功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -116,7 +116,11 @@ fn test_http_server_request_has_headers() {
         true;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "request should have headers property");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "request should have headers property"
+    );
 }
 
 #[test]
@@ -130,7 +134,11 @@ fn test_http_server_close() {
         server.listening === false;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "server.listening should be false after close");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "server.listening should be false after close"
+    );
 }
 
 #[test]
@@ -210,7 +218,11 @@ fn test_http_server_request_method_get() {
         true;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "GET request method should be detected");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "GET request method should be detected"
+    );
 }
 
 #[test]

@@ -171,7 +171,11 @@ impl CanaryDeployment {
     pub fn execute(&self) -> Result<DeploymentStatus, Error> {
         println!(
             "Executing Canary deployment for {}/{}: {} -> {} ({}% traffic)",
-            self.service_name, self.environment, self.current_version, self.next_version, self.traffic_split
+            self.service_name,
+            self.environment,
+            self.current_version,
+            self.next_version,
+            self.traffic_split
         );
         // In a real implementation, this would:
         // 1. Deploy the next version with limited traffic
@@ -295,8 +299,12 @@ impl RollingDeployment {
     pub fn execute(&self) -> Result<DeploymentStatus, Error> {
         println!(
             "Executing Rolling deployment for {}/{}: {} -> {} (max_unavailable={}, max_surge={})",
-            self.service_name, self.environment, self.current_version, self.next_version,
-            self.max_unavailable, self.max_surge
+            self.service_name,
+            self.environment,
+            self.current_version,
+            self.next_version,
+            self.max_unavailable,
+            self.max_surge
         );
         // In a real implementation, this would:
         // 1. Gradually replace old pods with new ones
@@ -384,7 +392,10 @@ impl DeploymentStrategySelector {
         }
     }
     /// Select and create deployment strategy based on configuration
-    pub fn select_strategy(&mut self, config: &DeploymentConfig) -> Result<DeploymentStrategy, Error> {
+    pub fn select_strategy(
+        &mut self,
+        config: &DeploymentConfig,
+    ) -> Result<DeploymentStrategy, Error> {
         match config.strategy.to_lowercase().as_str() {
             "blue-green" | "blue_green" => {
                 let strategy: _ = BlueGreenDeployment::new(
@@ -396,7 +407,8 @@ impl DeploymentStrategySelector {
                 Ok(DeploymentStrategy::BlueGreen(strategy))
             }
             "canary" => {
-                let traffic_split: _ = config.parameters
+                let traffic_split: _ = config
+                    .parameters
                     .get("traffic_split")
                     .and_then(|s| s.parse().ok())
                     .unwrap_or(10);
@@ -449,7 +461,10 @@ impl DeploymentStrategySelector {
         }
     }
     /// Execute deployment with selected strategy
-    pub fn execute_deployment(&mut self, config: &DeploymentConfig) -> Result<DeploymentStatus, Error> {
+    pub fn execute_deployment(
+        &mut self,
+        config: &DeploymentConfig,
+    ) -> Result<DeploymentStatus, Error> {
         let strategy: _ = self.select_strategy(config)?;
         let result: _ = strategy.execute();
         if result.is_ok() {
@@ -467,9 +482,7 @@ impl Default for DeploymentStrategySelector {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Invalid deployment strategy: {strategy}")]
-    InvalidStrategy {
-        strategy: String,
-    },
+    InvalidStrategy { strategy: String },
     #[error("Deployment failed: {0}")]
     DeploymentFailed(String),
     #[error("Rollback failed: {0}")]
@@ -481,7 +494,6 @@ pub enum Error {
 }
 #[cfg(test)]
 mod tests {
-
 
     use super::*;
     #[test]

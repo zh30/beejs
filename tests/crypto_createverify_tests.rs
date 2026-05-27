@@ -5,7 +5,7 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_crypto_createVerify_exists() {
+fn test_crypto_create_verify_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.createVerify");
     assert!(result.is_ok());
@@ -14,7 +14,7 @@ fn test_crypto_createVerify_exists() {
 
 #[test]
 #[serial]
-fn test_createVerify_returns_verify_object() {
+fn test_create_verify_returns_verify_object() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const publicKey = `-----BEGIN PUBLIC KEY-----

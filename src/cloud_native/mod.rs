@@ -3,48 +3,46 @@
 pub mod k8s;
 /// Re-export Kubernetes module
 pub use k8s::{
-    BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,
-    Condition, ConditionStatus, ConditionType, DistributedConfig, HPAConfig,
-    MonitoringConfig, NetworkPolicyConfig, PodAffinity, PodAntiAffinity,
-    PreferredSchedulingTerm, ResourceRequirements, RetryConfig, SecurityConfig,
-    SecurityContext, ServiceDiscoveryConfig, ServiceMonitorConfig, Toleration,
-    WorkloadPhase,
+    BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase, Condition,
+    ConditionStatus, ConditionType, DistributedConfig, HPAConfig, MonitoringConfig,
+    NetworkPolicyConfig, PodAffinity, PodAntiAffinity, PreferredSchedulingTerm,
+    ResourceRequirements, RetryConfig, SecurityConfig, SecurityContext, ServiceDiscoveryConfig,
+    ServiceMonitorConfig, Toleration, WorkloadPhase,
 };
 /// Container module for Docker builds and security
 pub mod container;
 /// Re-export container types
 pub use container::{
-    MultiStageBuilder, BuilderStage, RuntimeStage, Optimization,
-    SecurityScanner, ContainerImage, ImageLayer, Vulnerability, VulnerabilitySeverity,
-    ComplianceIssue, ComplianceSeverity, Secret, ScanReport, ScanConfig,
-    Optimizer, OptimizationStrategy, OptimizationSuggestion, ImpactLevel,
-    LayerMinimizationStrategy, BaseImageOptimizationStrategy, CacheOptimizationStrategy,
-    SecurityHardeningStrategy, SizeOptimizationStrategy, DockerfileError, SecurityError,
+    BaseImageOptimizationStrategy, BuilderStage, CacheOptimizationStrategy, ComplianceIssue,
+    ComplianceSeverity, ContainerImage, DockerfileError, ImageLayer, ImpactLevel,
+    LayerMinimizationStrategy, MultiStageBuilder, Optimization, OptimizationStrategy,
+    OptimizationSuggestion, Optimizer, RuntimeStage, ScanConfig, ScanReport, Secret, SecurityError,
+    SecurityHardeningStrategy, SecurityScanner, SizeOptimizationStrategy, Vulnerability,
+    VulnerabilitySeverity,
 };
 /// Service Mesh module for Istio/Linkerd
 pub mod service_mesh;
 /// Re-export service mesh types
 pub use service_mesh::{
-    IstioConfigManager, IstioConfig, IstioService, TrafficPolicyConfig,
-    LoadBalancerAlgorithm, ConnectionPoolConfig, OutlierDetectionConfig,
-    TrafficManager, FaultType, TrafficSplit, DistributedTracer, TraceContext,
-    SpanRecord, SpanStatus, SpanEvent, PerformanceAnalysis, MetricsCollector,
-    RequestMetrics, LatencyMetrics, ErrorMetrics, MetricsReport, IstioError,
+    ConnectionPoolConfig, DistributedTracer, ErrorMetrics, FaultType, IstioConfig,
+    IstioConfigManager, IstioError, IstioService, LatencyMetrics, LoadBalancerAlgorithm,
+    MetricsCollector, MetricsReport, OutlierDetectionConfig, PerformanceAnalysis, RequestMetrics,
+    SpanEvent, SpanRecord, SpanStatus, TraceContext, TrafficManager, TrafficPolicyConfig,
+    TrafficSplit,
 };
 /// CI/CD module for GitOps and pipeline integration
 pub mod cicd;
 /// Re-export CI/CD types
 pub use cicd::{
-    GitOpsManager, ArgoCDApplication, FluxHelmRelease, PipelineManager,
-    GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
-    DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
-    PipelineStage, PipelineStatus, PipelineEvent, GitOpsConfig,
-    PipelineConfig, DeploymentConfig, DeploymentStatus, Error as CICDError,
+    ArgoCDApplication, BlueGreenDeployment, CanaryDeployment, DeploymentConfig, DeploymentStatus,
+    DeploymentStrategy, Error as CICDError, FluxHelmRelease, GitHubActionsWorkflow,
+    GitLabCIPipeline, GitOpsConfig, GitOpsManager, JenkinsPipeline, PipelineConfig, PipelineEvent,
+    PipelineManager, PipelineStage, PipelineStatus, RollingDeployment,
 };
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

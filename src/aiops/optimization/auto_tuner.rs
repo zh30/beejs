@@ -3,17 +3,11 @@
 // 这个模块提供了自动性能调优功能，能够根据优化计划
 // 自动应用优化设置并监控效果。
 
-use super::{
-use std::time::SystemTime;
-    performance_analyzer::{
-        PerformanceAnalyzer,
-        PerformanceMetrics,
-        OptimizationPlan,
-        OptimizationSuggestion,
-        OptimizationTarget,
-        OptimizationType,
-    },
+use super::performance_analyzer::{
+    OptimizationPlan, OptimizationSuggestion, OptimizationTarget, OptimizationType,
+    PerformanceAnalyzer, PerformanceMetrics,
 };
+use std::time::SystemTime;
 /// 优化反馈信息
 #[derive(Debug, Clone)]
 pub struct OptimizationFeedback {
@@ -108,8 +102,7 @@ impl AutoTuner {
             };
         }
         // 应用优化
-        let (applied_changes, actual_improvement) =
-            self.apply_optimization_changes(plan);
+        let (applied_changes, actual_improvement) = self.apply_optimization_changes(plan);
         // 计算新的性能分数
         let new_performance_score: _ = plan.current_score * (1.0 + actual_improvement / 100.0);
         // 记录优化历史
@@ -175,10 +168,7 @@ impl AutoTuner {
         // 检查建议的参数值
         for suggestion in &plan.suggestions {
             if suggestion.confidence < 0.0 || suggestion.confidence > 1.0 {
-                return Err(format!(
-                    "无效的置信度值: {}",
-                    suggestion.confidence
-                ));
+                return Err(format!("无效的置信度值: {}", suggestion.confidence));
             }
             if suggestion.expected_improvement < 0.0 {
                 return Err(format!(
@@ -190,10 +180,7 @@ impl AutoTuner {
         Ok(())
     }
     /// 应用优化变更
-    fn apply_optimization_changes(
-        &self,
-        plan: &OptimizationPlan,
-    ) -> (Vec<String>, f64) {
+    fn apply_optimization_changes(&self, plan: &OptimizationPlan) -> (Vec<String>, f64) {
         let mut applied_changes = Vec::new();
         let mut total_improvement = 0.0;
         for suggestion in &plan.suggestions {
@@ -234,7 +221,8 @@ impl AutoTuner {
         self.optimization_history
             .iter()
             .map(|f| f.improvement_percentage)
-            .sum::<f64>() / self.optimization_history.len() as f64
+            .sum::<f64>()
+            / self.optimization_history.len() as f64
     }
     /// 检查是否可以继续优化
     pub fn can_optimize_further(&self) -> bool {
@@ -444,4 +432,5 @@ mod tests {
         assert!(!result.success);
     }
 }
-use std::collections::{BTreeMap, HashMap};use std::time::Duration;
+use std::collections::{BTreeMap, HashMap};
+use std::time::Duration;

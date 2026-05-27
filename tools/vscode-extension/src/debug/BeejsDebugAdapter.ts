@@ -102,7 +102,7 @@ class BeejsDebugAdapter implements vscode.DebugAdapter {
         }
 
         // Spawn Beejs process with debug port
-        const beejsPath = vscode.workspace.getConfiguration('beejs').get('runtimePath', 'beejs');
+        const beejsPath = vscode.workspace.getConfiguration('beejs').get('runtimePath', 'bee');
         const debugPort = vscode.workspace.getConfiguration('beejs').get('debugPort', 9229);
 
         this.outputChannel.appendLine(`Launching: ${beejsPath} debug ${args.program}`);

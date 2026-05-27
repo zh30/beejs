@@ -9,12 +9,12 @@
 // - 详细性能报告生成
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use thiserror::Error;
-use std::collections::{BTreeMap};
 use std::time::{SystemTime, UNIX_EPOCH};
+use thiserror::Error;
 
 /// Stub type for MemoryStats (normally from benchmarks module)
 #[derive(Debug, Clone)]
@@ -54,20 +54,20 @@ pub enum RegressionError {
 /// 性能阈值配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceThresholds {
-    pub startup_time_regression_percent: f64,    // 启动时间回归阈值 (%)
-    pub execution_time_regression_percent: f64,  // 执行时间回归阈值 (%)
-    pub memory_regression_percent: f64,          // 内存使用回归阈值 (%)
-    pub throughput_regression_percent: f64,      // 吞吐量回归阈值 (%)
-    pub regression_count_threshold: usize,       // 回归次数阈值
+    pub startup_time_regression_percent: f64, // 启动时间回归阈值 (%)
+    pub execution_time_regression_percent: f64, // 执行时间回归阈值 (%)
+    pub memory_regression_percent: f64,       // 内存使用回归阈值 (%)
+    pub throughput_regression_percent: f64,   // 吞吐量回归阈值 (%)
+    pub regression_count_threshold: usize,    // 回归次数阈值
 }
 impl Default for PerformanceThresholds {
     fn default() -> Self {
         Self {
-            startup_time_regression_percent: 10.0,     // 10% 回归阈值
-            execution_time_regression_percent: 5.0,    // 5% 回归阈值
-            memory_regression_percent: 15.0,           // 15% 回归阈值
-            throughput_regression_percent: 8.0,        // 8% 回归阈值
-            regression_count_threshold: 1,             // 单次回归即报警
+            startup_time_regression_percent: 10.0,  // 10% 回归阈值
+            execution_time_regression_percent: 5.0, // 5% 回归阈值
+            memory_regression_percent: 15.0,        // 15% 回归阈值
+            throughput_regression_percent: 8.0,     // 8% 回归阈值
+            regression_count_threshold: 1,          // 单次回归即报警
         }
     }
 }
@@ -75,7 +75,7 @@ impl Default for PerformanceThresholds {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceBaseline {
     pub test_name: String,
-    pub metric_type: String,  // Simplified from MetricType
+    pub metric_type: String, // Simplified from MetricType
     pub avg_duration_ns: u64,
     pub std_deviation_ns: f64,
     pub operations_per_second: f64,
@@ -101,10 +101,10 @@ pub struct RegressionDetectionResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RegressionSeverity {
     None,
-    Minor,      // < 5% regression
-    Moderate,   // 5-15% regression
-    Severe,     // > 15% regression
-    Critical,   // > 30% regression or system failure
+    Minor,    // < 5% regression
+    Moderate, // 5-15% regression
+    Severe,   // > 15% regression
+    Critical, // > 30% regression or system failure
 }
 impl RegressionSeverity {
     /// 根据回归百分比判断严重程度
@@ -171,18 +171,26 @@ impl PerformanceRegressionDetector {
         let baseline = self.baselines.get(&result.test_name);
         let threshold = self.thresholds.execution_time_regression_percent;
 
-        let (is_regression, actual_delta_percent, performance_delta) = if let Some(baseline) = baseline {
-            let delta_ns = result.duration_ns as i64 - baseline.avg_duration_ns as i64;
-            let delta_percent = if baseline.avg_duration_ns > 0 {
-                (delta_ns as f64 / baseline.avg_duration_ns as f64) * 100.0
+        let (is_regression, actual_delta_percent, performance_delta) =
+            if let Some(baseline) = baseline {
+                let delta_ns = result.duration_ns as i64 - baseline.avg_duration_ns as i64;
+                let delta_percent = if baseline.avg_duration_ns > 0 {
+                    (delta_ns as f64 / baseline.avg_duration_ns as f64) * 100.0
+                } else {
+                    0.0
+                };
+                let is_regression = delta_percent > threshold;
+                (
+                    is_regression,
+                    delta_percent,
+                    Some(PerformanceDelta {
+                        delta_ns,
+                        delta_percent,
+                    }),
+                )
             } else {
-                0.0
+                (false, 0.0, None)
             };
-            let is_regression = delta_percent > threshold;
-            (is_regression, delta_percent, Some(PerformanceDelta { delta_ns, delta_percent }))
-        } else {
-            (false, 0.0, None)
-        };
 
         let regression_severity = RegressionSeverity::from_percentage(actual_delta_percent.abs());
 

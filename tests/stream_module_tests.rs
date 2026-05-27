@@ -1,8 +1,8 @@
 // Stream module tests for Beejs runtime
 // v0.3.56: Tests for Readable, Writable, Transform, Duplex streams with backpressure support
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -53,9 +53,8 @@ fn test_duplex_constructor_exists() {
 #[serial]
 fn test_readable_has_read_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.read"
-    );
+    let result =
+        runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.read");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -64,9 +63,7 @@ fn test_readable_has_read_method() {
 #[serial]
 fn test_readable_has_on_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.on"
-    );
+    let result = runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.on");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -75,9 +72,8 @@ fn test_readable_has_on_method() {
 #[serial]
 fn test_readable_has_pause_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.pause"
-    );
+    let result =
+        runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.pause");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -86,9 +82,8 @@ fn test_readable_has_pause_method() {
 #[serial]
 fn test_readable_has_resume_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.resume"
-    );
+    let result =
+        runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.resume");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -97,9 +92,8 @@ fn test_readable_has_resume_method() {
 #[serial]
 fn test_readable_has_pipe_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.pipe"
-    );
+    let result =
+        runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.pipe");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -131,9 +125,8 @@ fn test_writable_has_end_method() {
 #[serial]
 fn test_readable_has_push_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.push"
-    );
+    let result =
+        runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.push");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -143,9 +136,8 @@ fn test_readable_has_push_method() {
 #[serial]
 fn test_readable_has_once_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); typeof r.once"
-    );
+    let result =
+        runtime.execute_code("const r = new stream.Readable({ read() {} }); typeof r.once");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -156,7 +148,7 @@ fn test_readable_has_once_method() {
 fn test_readable_state_has_high_water_mark() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); r._readableState.highWaterMark"
+        "const r = new stream.Readable({ read() {} }); r._readableState.highWaterMark",
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "16384"); // 16KB default
@@ -167,9 +159,8 @@ fn test_readable_state_has_high_water_mark() {
 #[serial]
 fn test_readable_state_has_ended() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const r = new stream.Readable({ read() {} }); r._readableState.ended"
-    );
+    let result = runtime
+        .execute_code("const r = new stream.Readable({ read() {} }); r._readableState.ended");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
 }
@@ -188,7 +179,7 @@ fn test_readable_push_returns_true() {
           }
         });
         r.push('test')
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -211,7 +202,7 @@ fn test_readable_push_null_triggers_end() {
         r.read();
         r.on('end', () => { endFired = true; });
         r._readableState.ended && endFired
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -235,7 +226,7 @@ fn test_readable_once_on_ended_stream() {
         // Then add once listener - should fire immediately
         r.once('end', () => { endFired = true; });
         endFired
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -251,7 +242,7 @@ fn test_readable_pause_resume() {
         const r = new stream.Readable({ read() {} });
         r.pause();
         r._readableState.flowing === false && r._readableState.paused === true
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -273,7 +264,7 @@ fn test_readable_data_event() {
         });
         r.on('data', (chunk) => { received = true; });
         received
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -295,7 +286,7 @@ fn test_readable_end_event() {
         // Read to trigger _read -> push(null), which should fire end event
         r.read();
         ended
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -315,7 +306,7 @@ fn test_writable_has_writablestate() {
           }
         });
         typeof w._writableState
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -333,7 +324,7 @@ fn test_writable_state_has_high_water_mark() {
           }
         });
         w._writableState.highWaterMark === 16384
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -351,7 +342,7 @@ fn test_writable_state_has_need_drain() {
           }
         });
         w._writableState.needDrain === false
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -369,7 +360,7 @@ fn test_writable_state_has_ended() {
           }
         });
         w._writableState.ended === false
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -387,7 +378,7 @@ fn test_writable_state_has_writable() {
           }
         });
         w._writableState.writable === true
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -406,7 +397,7 @@ fn test_writable_write_returns_boolean() {
         });
         const result = w.write('test');
         typeof result === 'boolean'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -427,7 +418,7 @@ fn test_writable_end_triggers_finish_event() {
         w.on('finish', () => { finished = true; });
         w.end();
         finished
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -446,7 +437,7 @@ fn test_writable_end_sets_ended_state() {
         });
         w.end();
         w._writableState.ended === true
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -465,7 +456,7 @@ fn test_writable_end_sets_writable_false() {
         });
         w.end();
         w._writableState.writable === false
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -476,9 +467,8 @@ fn test_writable_end_sets_writable_false() {
 #[serial]
 fn test_transform_has_read_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.read"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.read");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -487,9 +477,8 @@ fn test_transform_has_read_method() {
 #[serial]
 fn test_transform_has_push_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.push"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.push");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -498,9 +487,8 @@ fn test_transform_has_push_method() {
 #[serial]
 fn test_transform_has_on_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.on"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.on");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -509,9 +497,8 @@ fn test_transform_has_on_method() {
 #[serial]
 fn test_transform_has_write_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.write"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.write");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -520,9 +507,8 @@ fn test_transform_has_write_method() {
 #[serial]
 fn test_transform_has_end_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.end"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.end");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -531,9 +517,8 @@ fn test_transform_has_end_method() {
 #[serial]
 fn test_transform_has_pause_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.pause"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.pause");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -542,9 +527,8 @@ fn test_transform_has_pause_method() {
 #[serial]
 fn test_transform_has_resume_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.resume"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.resume");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -553,9 +537,8 @@ fn test_transform_has_resume_method() {
 #[serial]
 fn test_transform_has_pipe_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const t = new stream.Transform({ transform() {} }); typeof t.pipe"
-    );
+    let result =
+        runtime.execute_code("const t = new stream.Transform({ transform() {} }); typeof t.pipe");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -565,9 +548,7 @@ fn test_transform_has_pipe_method() {
 #[serial]
 fn test_duplex_has_read_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.read"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.read");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -576,9 +557,7 @@ fn test_duplex_has_read_method() {
 #[serial]
 fn test_duplex_has_push_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.push"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.push");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -587,9 +566,7 @@ fn test_duplex_has_push_method() {
 #[serial]
 fn test_duplex_has_on_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.on"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.on");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -598,9 +575,7 @@ fn test_duplex_has_on_method() {
 #[serial]
 fn test_duplex_has_write_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.write"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.write");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -609,9 +584,7 @@ fn test_duplex_has_write_method() {
 #[serial]
 fn test_duplex_has_end_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.end"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.end");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -620,9 +593,7 @@ fn test_duplex_has_end_method() {
 #[serial]
 fn test_duplex_has_pause_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.pause"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.pause");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -631,9 +602,7 @@ fn test_duplex_has_pause_method() {
 #[serial]
 fn test_duplex_has_resume_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const d = new stream.Duplex({}); typeof d.resume"
-    );
+    let result = runtime.execute_code("const d = new stream.Duplex({}); typeof d.resume");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -661,7 +630,11 @@ fn test_transform_transform_basic() {
     if result.is_err() {
         eprintln!("Error: {:?}", result.as_ref().err());
     }
-    assert!(result.is_ok(), "Code execution failed: {:?}", result.as_ref().err());
+    assert!(
+        result.is_ok(),
+        "Code execution failed: {:?}",
+        result.as_ref().err()
+    );
     assert_eq!(result.unwrap().trim(), "HELLOWORLD|END");
 }
 
@@ -688,7 +661,11 @@ fn test_duplex_basic() {
     if result.is_err() {
         eprintln!("Error: {:?}", result.as_ref().err());
     }
-    assert!(result.is_ok(), "Code execution failed: {:?}", result.as_ref().err());
+    assert!(
+        result.is_ok(),
+        "Code execution failed: {:?}",
+        result.as_ref().err()
+    );
     assert_eq!(result.unwrap().trim(), "HELLOWORLD|END");
 }
 
@@ -703,7 +680,7 @@ fn test_readable_pipe_returns_destination() {
         const w = new stream.Writable({ _write(chunk, encoding, callback) { callback(); } });
         const result = r.pipe(w);
         result === w
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -731,7 +708,7 @@ fn test_readable_pipe_data_flow() {
         });
         r.pipe(w);
         output
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "helloworld");
@@ -760,7 +737,7 @@ fn test_readable_pipe_triggers_writable_end() {
         w.on('finish', () => { finished = true; });
         r.pipe(w);
         finished && output === 'test'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -833,9 +810,7 @@ fn test_readable_pipe_triggers_writable_end() {
 #[serial]
 fn test_stream_pipeline_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        r#"typeof stream.pipeline"#
-    );
+    let result = runtime.execute_code(r#"typeof stream.pipeline"#);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -861,7 +836,7 @@ fn test_stream_pipeline_two_streams() {
         });
         const result = stream.pipeline(r, w);
         result === w && output === 'hello'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -879,7 +854,7 @@ fn test_stream_pipeline_returns_last_writable() {
         const result = stream.pipeline(r, w);
         // pipeline should return the destination (writable stream)
         typeof result === 'object' && result !== null
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -908,7 +883,7 @@ fn test_stream_pipeline_finish_event() {
         w.on('finish', () => { finished = true; });
         stream.pipeline(r, w);
         finished && output === 'test'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -935,7 +910,7 @@ fn test_stream_pipeline_with_callback() {
         });
         const result = stream.pipeline(r, w);
         typeof result === 'object' && result !== null
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -965,7 +940,7 @@ fn test_stream_pipeline_with_callback() {
         });
         // 由于没有完整事件循环，只能验证回调被正确设置
         typeof callbackCalled2 === 'boolean'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -984,7 +959,7 @@ fn test_readable_push_in_read_direct() {
             }
         });
         r.read();
-        "#
+        "#,
     );
     if let Err(e) = &result {
         panic!("Direct push error: {:?}", e);
@@ -1004,7 +979,7 @@ fn test_pipe_just_setup() {
         // Don't call read(), just set up pipe
         const result = r.pipe(pt);
         result === pt
-        "#
+        "#,
     );
     if let Err(e) = &result {
         panic!("Pipe setup error: {:?}", e);
@@ -1028,7 +1003,7 @@ fn test_pipe_with_push_no_data_handler() {
         // 不设置 data 监听器，直接 pipe
         const result = r.pipe(pt);
         result === pt
-        "#
+        "#,
     );
     if let Err(e) = &result {
         panic!("Pipe with push error: {:?}", e);
@@ -1046,7 +1021,7 @@ fn test_stream_pipeline_three_streams() {
         const r = new stream.Readable({ read() { this.push('A'); } });
         const pt = stream.passThrough();
         r.pipe(pt);
-        "#
+        "#,
     );
     if let Err(e) = &result {
         panic!("Pipe + push error: {:?}", e);
@@ -1059,9 +1034,7 @@ fn test_stream_pipeline_three_streams() {
 #[serial]
 fn test_stream_passthrough_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        r#"typeof stream.passThrough"#
-    );
+    let result = runtime.execute_code(r#"typeof stream.passThrough"#);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -1074,7 +1047,7 @@ fn test_stream_passthrough_creates_object() {
         r#"
         const pt = stream.passThrough();
         pt !== null && typeof pt === 'object'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -1092,7 +1065,7 @@ fn test_stream_passthrough_data_passthrough() {
         pt.write('hello');
         pt.end();
         output
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "hello");
@@ -1110,7 +1083,7 @@ fn test_stream_passthrough_with_options() {
         pt.write('test');
         pt.end();
         output
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "test");
@@ -1127,7 +1100,7 @@ fn test_stream_passthrough_pipeline() {
         const pt2 = stream.passThrough();
         const result = pt1.pipe(pt2);
         result === pt2
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -1147,7 +1120,7 @@ fn test_stream_pipeline_callback_after_end() {
         w.on('finish', () => {});
         const result = stream.pipeline(r, w, (err) => {});
         result === w
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
@@ -1181,7 +1154,7 @@ fn test_stream_pipeline_callback_data_integrity() {
         const w = new stream.Writable({ _write(chunk, encoding, cb) { cb(); } });
         const result = stream.pipeline(r, w);
         result !== null && typeof result === 'object'
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");

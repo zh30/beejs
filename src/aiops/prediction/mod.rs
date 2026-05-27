@@ -3,24 +3,17 @@
 // This module provides intelligent failure prediction capabilities including
 // anomaly detection, trend analysis, and failure prediction.
 pub mod anomaly_detector;
-pub mod trend_analyzer;
 pub mod failure_predictor;
-// Re-exports
+pub mod trend_analyzer;
 
-use std::collections::{BTreeMap, HashMap};
-
-    AnomalyDetector,
-    Anomaly,
-    AnomalyType,
-    AnomalyResult,
+pub use anomaly_detector::{
+    Anomaly, AnomalyDetector, AnomalyResult, AnomalyType, StatisticalAnomalyDetector,
 };
-    TrendAnalyzer,
-    TrendDirection,
-    TrendResult,
-    TrendMetrics,
+pub use failure_predictor::{
+    ConfidenceLevel, FailurePrediction, FailurePredictor, FailurePredictorConfig, FailureType,
+    MLFailurePredictor, PredictionResult,
 };
-    FailurePredictor,
-    PredictionResult,
-    FailurePrediction,
-    ConfidenceLevel,
+pub use trend_analyzer::{
+    LinearTrendAnalyzer, TrendAnalyzer, TrendAnalyzerConfig, TrendDirection, TrendMetrics,
+    TrendResult, TrendStats,
 };

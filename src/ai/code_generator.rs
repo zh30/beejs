@@ -3,10 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, atomic::Ordering, RwLock};
-use std::time::Duration;
-use std::sync::atomic::Ordering;
 use std::num::NonZeroUsize;
+use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, Arc, RwLock};
+use std::time::Duration;
 
 /// 编程语言
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -160,8 +160,17 @@ impl Clone for AICodeGenerator {
 }
 /// AI 模型接口
 pub trait AiModel: Send + Sync {
-    fn generate(&self, prompt: &str, context: &CodeContext) -> Result<String, Box<dyn std::error::Error>>;
-    fn complete(&self, partial_code: &str, position: usize, context: &CodeContext) -> Result<Vec<String>, Box<dyn std::error::Error>>;
+    fn generate(
+        &self,
+        prompt: &str,
+        context: &CodeContext,
+    ) -> Result<String, Box<dyn std::error::Error>>;
+    fn complete(
+        &self,
+        partial_code: &str,
+        position: usize,
+        context: &CodeContext,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>>;
     fn explain(&self, code: &str) -> Result<String, Box<dyn std::error::Error>>;
 }
 /// 模拟 AI 模型
@@ -179,7 +188,11 @@ impl MockAiModel {
     }
 }
 impl AiModel for MockAiModel {
-    fn generate(&self, prompt: &str, context: &CodeContext) -> Result<String, Box<dyn std::error::Error>> {
+    fn generate(
+        &self,
+        prompt: &str,
+        context: &CodeContext,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // 模拟 AI 延迟
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms));
         // 基于语言生成代码
@@ -193,7 +206,12 @@ impl AiModel for MockAiModel {
         };
         Ok(code)
     }
-    fn complete(&self, partial_code: &str, _position: usize, _context: &CodeContext) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    fn complete(
+        &self,
+        partial_code: &str,
+        _position: usize,
+        _context: &CodeContext,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms / 2));
         let completions: _ = vec![
             self.suggest_completion(partial_code),
@@ -203,7 +221,10 @@ impl AiModel for MockAiModel {
     }
     fn explain(&self, code: &str) -> Result<String, Box<dyn std::error::Error>> {
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms / 3));
-        Ok(format!("这段代码实现了: {}", code.lines().take(3).collect::<Vec<_>>().join(" ")))
+        Ok(format!(
+            "这段代码实现了: {}",
+            code.lines().take(3).collect::<Vec<_>>().join(" ")
+        ))
     }
 }
 impl MockAiModel {
@@ -232,7 +253,8 @@ impl MockAiModel {
     }
     fn generate_typescript(&self, prompt: &str) -> String {
         if prompt.contains("interface") {
-            "interface GeneratedInterface {\n  id: number;\n  name: string;\n  email?: string;\n}".to_string()
+            "interface GeneratedInterface {\n  id: number;\n  name: string;\n  email?: string;\n}"
+                .to_string()
         } else if prompt.contains("type") {
             "type GeneratedType = {\n  id: number;\n  name: string;\n  tags: string[];\n};\n\ntype OptionalType = Partial<GeneratedType>;".to_string()
         } else if prompt.contains("class") {
@@ -285,7 +307,8 @@ impl MockAiModel {
         if partial.contains("fun") {
             "const myArrowFunction = () => {\n  // TODO: Implement arrow function\n  return null;\n};".to_string()
         } else if partial.contains("cla") {
-            "const myObject = {\n  // TODO: Define object properties\n  property: value,\n};".to_string()
+            "const myObject = {\n  // TODO: Define object properties\n  property: value,\n};"
+                .to_string()
         } else {
             " // Alternative completion".to_string()
         }
@@ -373,13 +396,16 @@ impl PatternAnalyzer {
             },
             PatternHint {
                 trigger: "map".to_string(),
-                completion: ".map(item => {\n  // TODO: Transform item\n  return transformed;\n})".to_string(),
+                completion: ".map(item => {\n  // TODO: Transform item\n  return transformed;\n})"
+                    .to_string(),
                 description: "数组映射".to_string(),
                 performance_score: 0.9,
             },
             PatternHint {
                 trigger: "filter".to_string(),
-                completion: ".filter(item => {\n  // TODO: Filter condition\n  return condition;\n})".to_string(),
+                completion:
+                    ".filter(item => {\n  // TODO: Filter condition\n  return condition;\n})"
+                        .to_string(),
                 description: "数组过滤".to_string(),
                 performance_score: 0.9,
             },
@@ -415,13 +441,17 @@ impl PatternAnalyzer {
         let rust: _ = vec![
             PatternHint {
                 trigger: "fn ".to_string(),
-                completion: "pub fn function_name() -> Result<T, E> {\n    // TODO: Implement\n    Ok(T)\n}".to_string(),
+                completion:
+                    "pub fn function_name() -> Result<T, E> {\n    // TODO: Implement\n    Ok(T)\n}"
+                        .to_string(),
                 description: "Rust 函数".to_string(),
                 performance_score: 1.0,
             },
             PatternHint {
                 trigger: "struct".to_string(),
-                completion: "#[derive(Debug)]\npub struct MyStruct {\n    // TODO: Define fields\n}".to_string(),
+                completion:
+                    "#[derive(Debug)]\npub struct MyStruct {\n    // TODO: Define fields\n}"
+                        .to_string(),
                 description: "Rust 结构体".to_string(),
                 performance_score: 1.0,
             },
@@ -437,7 +467,11 @@ impl PatternAnalyzer {
         }
     }
     /// 分析代码片段并返回匹配的补全项
-    pub async fn analyze_pattern(&self, partial_code: &str, language: &Language) -> Vec<CompletionItem> {
+    pub async fn analyze_pattern(
+        &self,
+        partial_code: &str,
+        language: &Language,
+    ) -> Vec<CompletionItem> {
         let mut items = Vec::new();
         // 检查常见模式
         let patterns: _ = self.common_patterns.read().await;
@@ -450,7 +484,9 @@ impl PatternAnalyzer {
                         confidence: pattern.confidence,
                         description: Some(format!("常见模式: {}", pattern.pattern)),
                         kind: CompletionKind::Snippet,
-                        performance_impact: Some(self.estimate_performance_impact(completion, language)),
+                        performance_impact: Some(
+                            self.estimate_performance_impact(completion, language),
+                        ),
                         context_aware: true,
                     });
                 }
@@ -478,7 +514,10 @@ impl PatternAnalyzer {
                         estimated_execution_time_ms: 1.0 / hint.performance_score,
                         memory_overhead_mb: 0.1,
                         complexity_score: (hint.performance_score * 10.0) as u8,
-                        optimization_suggestions: vec!["使用缓存优化".to_string(), "考虑懒加载".to_string()],
+                        optimization_suggestions: vec![
+                            "使用缓存优化".to_string(),
+                            "考虑懒加载".to_string(),
+                        ],
                     }),
                     context_aware: true,
                 });
@@ -536,7 +575,8 @@ impl ContextCache {
     pub fn new(capacity: usize) -> Self {
         Self {
             cache: Arc::new(RwLock::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(capacity).unwrap_or(std::num::NonZeroUsize::new(100).unwrap()),
+                std::num::NonZeroUsize::new(capacity)
+                    .unwrap_or(std::num::NonZeroUsize::new(100).unwrap()),
             ))),
         }
     }
@@ -655,7 +695,10 @@ impl AICodeGenerator {
         let suggestions: _ = self.generate_suggestions(&processed, &language)?;
         // 5. 生成测试（可选）
         let tests: _ = if language == Language::JavaScript || language == Language::TypeScript {
-            Some(self.generate_basic_tests(processed.clone(), &language).await?)
+            Some(
+                self.generate_basic_tests(processed.clone(), &language)
+                    .await?,
+            )
         } else {
             None
         };
@@ -679,9 +722,14 @@ impl AICodeGenerator {
         // 1. 分析上下文
         let context_analysis: _ = self.analyze_context(partial_code, cursor_position, context)?;
         // 2. 使用模式分析器获取智能补全
-        let pattern_completions: _ = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
+        let pattern_completions: _ = self
+            .pattern_analyzer
+            .analyze_pattern(partial_code, &context.language)
+            .await;
         // 3. 生成 AI 补全
-        let ai_completions: _ = self.model.complete(partial_code, cursor_position, context)?;
+        let ai_completions: _ = self
+            .model
+            .complete(partial_code, cursor_position, context)?;
         // 4. 处理和合并补全项
         let mut completion_items = Vec::new();
         // 添加模式分析器生成的补全
@@ -702,7 +750,10 @@ impl AICodeGenerator {
                 text: completion.clone(),
                 display_text: completion.clone(),
                 confidence: 0.9 - (i as f64 * 0.1),
-                description: Some(format!("AI 推荐的补全 (置信度: {:.0}%)", (0.9 - (i as f64 * 0.1)) * 100.0)),
+                description: Some(format!(
+                    "AI 推荐的补全 (置信度: {:.0}%)",
+                    (0.9 - (i as f64 * 0.1)) * 100.0
+                )),
                 kind,
                 performance_impact,
                 context_aware: false,
@@ -725,7 +776,10 @@ impl AICodeGenerator {
         context: &CodeContext,
     ) -> Result<CodeCompletion, Box<dyn std::error::Error>> {
         // 快速模式分析（不使用 AI 模型）
-        let pattern_completions: _ = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
+        let pattern_completions: _ = self
+            .pattern_analyzer
+            .analyze_pattern(partial_code, &context.language)
+            .await;
         let replace_range: _ = self.get_replace_range(partial_code, cursor_position);
         Ok(CodeCompletion {
             completions: pattern_completions,
@@ -740,17 +794,25 @@ impl AICodeGenerator {
             completions.sort_by(|a, b| {
                 let score_a: _ = self.calculate_performance_score(a, &perf_config);
                 let score_b: _ = self.calculate_performance_score(b, &perf_config);
-                score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                score_b
+                    .partial_cmp(&score_a)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
         } else {
             // 按置信度排序
             completions.sort_by(|a, b| {
-                b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
         }
     }
     /// 计算性能评分
-    fn calculate_performance_score(&self, item: &CompletionItem, config: &PerformanceAwareConfig) -> f64 {
+    fn calculate_performance_score(
+        &self,
+        item: &CompletionItem,
+        config: &PerformanceAwareConfig,
+    ) -> f64 {
         let confidence_score: _ = item.confidence;
         let performance_score: _ = if let Some(ref impact) = item.performance_impact {
             // 性能分数 = 1 / (1 + 执行时间 + 内存开销)
@@ -762,7 +824,11 @@ impl AICodeGenerator {
         confidence_score * 0.7 + performance_score * 0.3
     }
     /// 估算 AI 补全的性能影响
-    fn estimate_ai_completion_performance(&self, completion: &str, language: &Language) -> PerformanceImpact {
+    fn estimate_ai_completion_performance(
+        &self,
+        completion: &str,
+        language: &Language,
+    ) -> PerformanceImpact {
         let lines: _ = completion.lines().count();
         let complexity_score: _ = (lines as f64 / 3.0).min(10.0) as u8;
         let (execution_time, memory_overhead) = match language {
@@ -808,7 +874,11 @@ impl AICodeGenerator {
         }
     }
     /// 分析代码质量并生成重构建议
-    pub async fn analyze_code_quality(&self, source: &str, language: &Language) -> Result<Vec<RefactorSuggestion>, Box<dyn std::error::Error>> {
+    pub async fn analyze_code_quality(
+        &self,
+        source: &str,
+        language: &Language,
+    ) -> Result<Vec<RefactorSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
         // 检查常见问题
         if source.contains("var ") {
@@ -842,12 +912,17 @@ impl AICodeGenerator {
             });
         }
         // 添加异步/await 建议
-        if language == &Language::JavaScript && source.contains("Promise") && !source.contains("async") {
+        if language == &Language::JavaScript
+            && source.contains("Promise")
+            && !source.contains("async")
+        {
             suggestions.push(RefactorSuggestion {
                 title: "使用 async/await 简化 Promise".to_string(),
                 description: "async/await 语法更清晰易读".to_string(),
                 original_code: "promise.then(result => process(result))".to_string(),
-                refactored_code: "async function() {\n  const result = await promise;\n  process(result);\n}".to_string(),
+                refactored_code:
+                    "async function() {\n  const result = await promise;\n  process(result);\n}"
+                        .to_string(),
                 benefits: vec!["更清晰的异步代码".to_string(), "更好的错误处理".to_string()],
                 confidence: 0.90,
             });
@@ -855,12 +930,20 @@ impl AICodeGenerator {
         Ok(suggestions)
     }
     /// 增强提示词
-    async fn enhance_prompt(&self, prompt: &str, context: &CodeContext) -> Result<String, Box<dyn std::error::Error>> {
+    async fn enhance_prompt(
+        &self,
+        prompt: &str,
+        context: &CodeContext,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut enhanced = prompt.to_string();
         // 添加语言信息
         enhanced.push_str(&format!("\n语言: {:?}", context.language));
         // 添加框架信息
-        if let Some(ref framework) = context.project_info.as_ref().and_then(|p| p.framework.clone()) {
+        if let Some(ref framework) = context
+            .project_info
+            .as_ref()
+            .and_then(|p| p.framework.clone())
+        {
             enhanced.push_str(&format!("\n框架: {}", framework));
         }
         // 添加周围的代码
@@ -870,7 +953,11 @@ impl AICodeGenerator {
         Ok(enhanced)
     }
     /// 后处理生成的代码
-    fn post_process(&self, code: &str, language: &Language) -> Result<String, Box<dyn std::error::Error>> {
+    fn post_process(
+        &self,
+        code: &str,
+        language: &Language,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let mut processed = code.to_string();
         // 移除多余的空行
         while processed.contains("\n\n\n") {
@@ -883,7 +970,11 @@ impl AICodeGenerator {
         Ok(processed)
     }
     /// 生成代码建议
-    fn generate_suggestions(&self, code: &str, language: &Language) -> Result<Vec<CodeSuggestion>, Box<dyn std::error::Error>> {
+    fn generate_suggestions(
+        &self,
+        code: &str,
+        language: &Language,
+    ) -> Result<Vec<CodeSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
         // 基于代码内容生成建议
         if code.contains("function") {
@@ -905,7 +996,11 @@ impl AICodeGenerator {
         Ok(suggestions)
     }
     /// 生成基础测试
-    async fn generate_basic_tests(&self, code: String, language: &Language) -> Result<Vec<TestFile>, Box<dyn std::error::Error>> {
+    async fn generate_basic_tests(
+        &self,
+        code: String,
+        language: &Language,
+    ) -> Result<Vec<TestFile>, Box<dyn std::error::Error>> {
         let mut tests = Vec::new();
         if language == &Language::JavaScript {
             tests.push(TestFile {
@@ -927,7 +1022,12 @@ impl AICodeGenerator {
         Ok(tests)
     }
     /// 分析上下文
-    fn analyze_context(&self, partial: &str, position: usize, context: &CodeContext) -> Result<ContextAnalysis, Box<dyn std::error::Error>> {
+    fn analyze_context(
+        &self,
+        partial: &str,
+        position: usize,
+        context: &CodeContext,
+    ) -> Result<ContextAnalysis, Box<dyn std::error::Error>> {
         Ok(ContextAnalysis {
             cursor_line: partial[..position].lines().count(),
             cursor_column: partial[..position].lines().last().map_or(0, |l| l.len()),
@@ -941,7 +1041,10 @@ impl AICodeGenerator {
             CompletionKind::Function
         } else if completion.contains("class") {
             CompletionKind::Class
-        } else if completion.contains("const") || completion.contains("let") || completion.contains("var") {
+        } else if completion.contains("const")
+            || completion.contains("let")
+            || completion.contains("var")
+        {
             CompletionKind::Variable
         } else if completion.contains("import") || completion.contains("export") {
             CompletionKind::Keyword
@@ -997,7 +1100,11 @@ mod tests {
             classes: vec![],
         };
         let result: _ = generator
-            .generate_from_prompt("create a function to add two numbers", Language::JavaScript, &context)
+            .generate_from_prompt(
+                "create a function to add two numbers",
+                Language::JavaScript,
+                &context,
+            )
             .await
             .unwrap();
         assert!(!result.code.is_empty());
@@ -1024,7 +1131,10 @@ mod tests {
     async fn test_analyze_code_quality() {
         let generator: _ = AICodeGenerator::new_with_defaults();
         let source: _ = "var x = 5;\nif (a == b) { console.log('test'); }";
-        let suggestions: _ = generator.analyze_code_quality(source, &Language::JavaScript).await.unwrap();
+        let suggestions: _ = generator
+            .analyze_code_quality(source, &Language::JavaScript)
+            .await
+            .unwrap();
         assert!(!suggestions.is_empty());
         assert!(suggestions.len() >= 2);
     }

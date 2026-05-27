@@ -2,8 +2,8 @@
 // 测试 http.request() 发送真实 HTTP 请求
 // 注意：end() 调用会触发真实网络请求，这里使用模拟方式测试属性设置
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -21,7 +21,11 @@ fn test_http_request_real_connection() {
         req.method === 'GET' && req.hostname === '127.0.0.1' && req.port === 80;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Request object should be created correctly");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Request object should be created correctly"
+    );
 }
 
 #[test]
@@ -80,7 +84,11 @@ fn test_http_request_multiple_writes() {
         req._body === 'part1part2part3';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Multiple writes should be concatenated");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Multiple writes should be concatenated"
+    );
 }
 
 #[test]
@@ -115,7 +123,11 @@ fn test_http_request_ipv6_address() {
         req.hostname === '::1';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "IPv6 address should be handled correctly");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "IPv6 address should be handled correctly"
+    );
 }
 
 #[test]
@@ -132,7 +144,11 @@ fn test_http_get_shortcut() {
         req.method === 'GET' && req.path === '/api/data';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "http.get should set method to GET and path correctly");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "http.get should set method to GET and path correctly"
+    );
 }
 
 #[test]
@@ -146,7 +162,11 @@ fn test_http_request_default_values() {
         req.method === 'GET' && req.hostname === 'localhost' && req.port === 80 && req.path === '/';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Default values should be set correctly");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Default values should be set correctly"
+    );
 }
 
 #[test]
@@ -162,7 +182,11 @@ fn test_http_request_has_write_end_methods() {
         typeof req.write === 'function' && typeof req.end === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Request should have write and end methods");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Request should have write and end methods"
+    );
 }
 
 /// v0.3.82: 测试 http.request().end() 触发真实网络请求
@@ -188,8 +212,10 @@ fn test_http_request_end_triggers_real_network_request() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     // 如果请求成功，应该返回 true
-    assert!(result.trim() == "true" || result.trim() == "等待响应",
-        "Request should either return true or show pending status");
+    assert!(
+        result.trim() == "true" || result.trim() == "等待响应",
+        "Request should either return true or show pending status"
+    );
 }
 
 /// v0.3.82: 测试 http.request() 支持 POST 请求体发送
@@ -218,6 +244,8 @@ fn test_http_request_post_with_body() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     // 验证 POST 请求发送成功
-    assert!(result.trim() == "POST 请求已发送" || result.trim() == "true",
-        "POST request should be sent successfully");
+    assert!(
+        result.trim() == "POST 请求已发送" || result.trim() == "true",
+        "POST request should be sent successfully"
+    );
 }

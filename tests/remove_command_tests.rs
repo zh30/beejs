@@ -46,7 +46,11 @@ mod remove_command_tests {
 
         // Write updated package.json
         let updated_path = temp_dir.path().join("package.json");
-        fs::write(&updated_path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
+        fs::write(
+            &updated_path,
+            serde_json::to_string_pretty(&content).unwrap(),
+        )
+        .unwrap();
 
         // Verify
         let result = read_package_json(&temp_dir);
@@ -78,7 +82,11 @@ mod remove_command_tests {
 
         // Write updated package.json
         let updated_path = temp_dir.path().join("package.json");
-        fs::write(&updated_path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
+        fs::write(
+            &updated_path,
+            serde_json::to_string_pretty(&content).unwrap(),
+        )
+        .unwrap();
 
         // Verify
         let result = read_package_json(&temp_dir);
@@ -110,7 +118,11 @@ mod remove_command_tests {
 
         // Write updated package.json
         let updated_path = temp_dir.path().join("package.json");
-        fs::write(&updated_path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
+        fs::write(
+            &updated_path,
+            serde_json::to_string_pretty(&content).unwrap(),
+        )
+        .unwrap();
 
         // Verify
         let result = read_package_json(&temp_dir);
@@ -141,7 +153,11 @@ mod remove_command_tests {
 
         // Write updated package.json
         let updated_path = temp_dir.path().join("package.json");
-        fs::write(&updated_path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
+        fs::write(
+            &updated_path,
+            serde_json::to_string_pretty(&content).unwrap(),
+        )
+        .unwrap();
 
         // Verify - package.json should be unchanged
         let result = read_package_json(&temp_dir);
@@ -191,7 +207,11 @@ mod remove_command_tests {
 
         // Write updated package.json
         let updated_path = temp_dir.path().join("package.json");
-        fs::write(&updated_path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
+        fs::write(
+            &updated_path,
+            serde_json::to_string_pretty(&content).unwrap(),
+        )
+        .unwrap();
 
         // Verify
         let result = read_package_json(&temp_dir);

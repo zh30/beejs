@@ -2,14 +2,11 @@
 //
 // 该模块基于历史数据和实时指标，利用机器学习算法预测潜在的系统故障。
 
-use crate::aiops::anomaly_detection::::{Anomaly, AnomalyDetector, BaselineCalculator};
+use crate::aiops::anomaly_detection::{Anomaly, AnomalyDetector, BaselineCalculator};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::Duration;
 use std::collections::HashMap;
-use std::time::SystemTime;
-use std::hash::Hash;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 
 /// 系统指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -84,11 +81,14 @@ pub struct TrendAnalyzer {
 impl TrendAnalyzer {
     pub fn new() -> Self {
         Self {
-            baseline_calculator: Arc::new(Mutex::new(BaselineCalculator::new()))
+            baseline_calculator: Arc::new(Mutex::new(BaselineCalculator::new())),
         }
     }
     /// 分析时间序列趋势
-    pub async fn analyze_trends(&self, time_series: &[TimeSeriesData]) -> Result<TrendReport, Box<dyn std::error::Error>> {
+    pub async fn analyze_trends(
+        &self,
+        time_series: &[TimeSeriesData],
+    ) -> Result<TrendReport, Box<dyn std::error::Error>> {
         if time_series.len() < 2 {
             return Err("时间序列数据点不足".into());
         }
@@ -107,7 +107,10 @@ impl TrendAnalyzer {
             predicted_values,
         })
     }
-    fn calculate_linear_regression(&self, time_series: &[TimeSeriesData]) -> Result<(f64, f64), Box<dyn std::error::Error>> {
+    fn calculate_linear_regression(
+        &self,
+        time_series: &[TimeSeriesData],
+    ) -> Result<(f64, f64), Box<dyn std::error::Error>> {
         let n: _ = time_series.len() as f64;
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
@@ -125,16 +128,26 @@ impl TrendAnalyzer {
         let intercept: _ = (sum_y - slope * sum_x) / n;
         Ok((slope, intercept))
     }
-    fn calculate_confidence(&self, time_series: &[TimeSeriesData], slope: f64) -> Result<f64, Box<dyn std::error::Error>> {
+    fn calculate_confidence(
+        &self,
+        time_series: &[TimeSeriesData],
+        slope: f64,
+    ) -> Result<f64, Box<dyn std::error::Error>> {
         let mean: f64 = time_series.iter().map(|d| d.value).sum::<f64>() / time_series.len() as f64;
-        let variance: f64 = time_series.iter()
+        let variance: f64 = time_series
+            .iter()
             .map(|d| (d.value - mean).powi(2))
-            .sum::<f64>() / time_series.len() as f64;
+            .sum::<f64>()
+            / time_series.len() as f64;
         // 基于方差计算置信度（方差越小，置信度越高）
         let confidence: _ = 1.0 / (1.0 + variance);
         Ok(confidence.min(1.0).max(0.0))
     }
-    fn determine_direction(&self, slope: f64, confidence: f64) -> Result<TrendDirection, Box<dyn std::error::Error>> {
+    fn determine_direction(
+        &self,
+        slope: f64,
+        confidence: f64,
+    ) -> Result<TrendDirection, Box<dyn std::error::Error>> {
         let threshold: _ = 0.1;
         if confidence < 0.5 {
             return Ok(TrendDirection::Volatile);
@@ -147,7 +160,12 @@ impl TrendAnalyzer {
             Ok(TrendDirection::Decreasing)
         }
     }
-    fn predict_future_values(&self, time_series: &[TimeSeriesData], slope: f64, intercept: f64) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
+    fn predict_future_values(
+        &self,
+        time_series: &[TimeSeriesData],
+        slope: f64,
+        intercept: f64,
+    ) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
         let n: _ = time_series.len();
         let mut predictions = Vec::new();
         // 预测未来 5 个时间点的值
@@ -171,11 +189,14 @@ pub struct ModelTrainer {
 impl ModelTrainer {
     pub fn new() -> Self {
         Self {
-            historical_data: Arc::new(Mutex::new(Vec::new()))
+            historical_data: Arc::new(Mutex::new(Vec::new())),
         }
     }
     /// 训练预测模型
-    pub async fn train_model(&self, metrics: &[SystemMetric]) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn train_model(
+        &self,
+        metrics: &[SystemMetric],
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut data = self.historical_data.write().await;
         data.extend_from_slice(metrics);
         // 这里应该实现实际的机器学习模型训练
@@ -183,16 +204,25 @@ impl ModelTrainer {
         Ok(())
     }
     /// 计算故障概率
-    pub async fn calculate_failure_probability(&self, metrics: &[SystemMetric]) -> Result<HashMap<MetricType, f64>, Box<dyn std::error::Error>> {
+    pub async fn calculate_failure_probability(
+        &self,
+        metrics: &[SystemMetric],
+    ) -> Result<HashMap<MetricType, f64>, Box<dyn std::error::Error>> {
         let mut probabilities = HashMap::new();
         for metric in metrics {
             let probability: _ = match metric.metric_type {
                 MetricType::CpuUsage => self.calculate_cpu_failure_probability(metric.value),
                 MetricType::MemoryUsage => self.calculate_memory_failure_probability(metric.value),
                 MetricType::DiskUsage => self.calculate_disk_failure_probability(metric.value),
-                MetricType::NetworkLatency => self.calculate_network_failure_probability(metric.value),
-                MetricType::ErrorRate => self.calculate_error_rate_failure_probability(metric.value),
-                MetricType::Throughput => self.calculate_throughput_failure_probability(metric.value),
+                MetricType::NetworkLatency => {
+                    self.calculate_network_failure_probability(metric.value)
+                }
+                MetricType::ErrorRate => {
+                    self.calculate_error_rate_failure_probability(metric.value)
+                }
+                MetricType::Throughput => {
+                    self.calculate_throughput_failure_probability(metric.value)
+                }
             };
             probabilities.insert(metric.metric_type, probability);
         }
@@ -291,13 +321,16 @@ pub struct PredictionEngine {
 impl PredictionEngine {
     pub fn new() -> Self {
         Self {
-            anomaly_detector: Arc::new(Mutex::new(AnomalyDetector::new()))
-            trend_analyzer: Arc::new(Mutex::new(TrendAnalyzer::new()))
-            model_trainer: Arc::new(Mutex::new(ModelTrainer::new()))
+            anomaly_detector: Arc::new(AnomalyDetector::new()),
+            trend_analyzer: Arc::new(TrendAnalyzer::new()),
+            model_trainer: Arc::new(ModelTrainer::new()),
         }
     }
     /// 预测系统故障
-    pub async fn predict_failures(&self, metrics: &[SystemMetric]) -> Result<Vec<Prediction>, Box<dyn std::error::Error>> {
+    pub async fn predict_failures(
+        &self,
+        metrics: &[SystemMetric],
+    ) -> Result<Vec<Prediction>, Box<dyn std::error::Error>> {
         if metrics.is_empty() {
             return Err("指标数据为空".into());
         }
@@ -314,34 +347,47 @@ impl PredictionEngine {
             let time_series: _ = self.convert_to_time_series(&type_metrics);
             let trend_report: _ = self.trend_analyzer.analyze_trends(&time_series).await?;
             // 计算故障概率
-            let probabilities: _ = self.model_trainer.calculate_failure_probability(&type_metrics).await?;
+            let probabilities: _ = self
+                .model_trainer
+                .calculate_failure_probability(&type_metrics)
+                .await?;
             let probability: _ = probabilities.get(&metric_type).unwrap_or(&0.0);
             // 生成预测（如果概率超过阈值）
             if *probability > 0.5 {
-                let prediction: _ = self.create_prediction(
-                    metric_type,
-                    *probability,
-                    &anomalies,
-                    &trend_report,
-                )?;
+                let prediction: _ =
+                    self.create_prediction(metric_type, *probability, &anomalies, &trend_report)?;
                 predictions.push(prediction);
             }
         }
         Ok(predictions)
     }
     /// 分析时间序列趋势
-    pub async fn analyze_trends(&self, historical_data: &[TimeSeriesData]) -> Result<TrendReport, Box<dyn std::error::Error>> {
+    pub async fn analyze_trends(
+        &self,
+        historical_data: &[TimeSeriesData],
+    ) -> Result<TrendReport, Box<dyn std::error::Error>> {
         self.trend_analyzer.analyze_trends(historical_data).await
     }
     /// 计算故障概率
-    pub async fn calculate_failure_probability(&self, system_metrics: &[SystemMetric]) -> Result<f64, Box<dyn std::error::Error>> {
-        let probabilities: _ = self.model_trainer.calculate_failure_probability(system_metrics).await?;
+    pub async fn calculate_failure_probability(
+        &self,
+        system_metrics: &[SystemMetric],
+    ) -> Result<f64, Box<dyn std::error::Error>> {
+        let probabilities: _ = self
+            .model_trainer
+            .calculate_failure_probability(system_metrics)
+            .await?;
         // 计算综合概率（取最大值）
-        let max_probability: _ = probabilities.values()
-            .fold(0.0, |max, &prob| if prob > max { prob } else { max });
+        let max_probability: _ =
+            probabilities
+                .values()
+                .fold(0.0, |max, &prob| if prob > max { prob } else { max });
         Ok(max_probability)
     }
-    fn group_metrics_by_type(&self, metrics: &[SystemMetric]) -> HashMap<MetricType, Vec<SystemMetric> {
+    fn group_metrics_by_type(
+        &self,
+        metrics: &[SystemMetric],
+    ) -> HashMap<MetricType, Vec<SystemMetric>> {
         let mut grouped = HashMap::new();
         for metric in metrics {
             grouped
@@ -352,7 +398,8 @@ impl PredictionEngine {
         grouped
     }
     fn convert_to_time_series(&self, metrics: &[SystemMetric]) -> Vec<TimeSeriesData> {
-        metrics.iter()
+        metrics
+            .iter()
             .map(|m| TimeSeriesData {
                 timestamp: m.timestamp,
                 value: m.value,
@@ -376,7 +423,8 @@ impl PredictionEngine {
             PredictionSeverity::Low
         };
         let affected_services: _ = self.identify_affected_services(metric_type);
-        let recommendations: _ = self.generate_recommendations(metric_type, probability, anomalies, trend_report)?;
+        let recommendations: _ =
+            self.generate_recommendations(metric_type, probability, anomalies, trend_report)?;
         Ok(Prediction {
             metric_type,
             probability,

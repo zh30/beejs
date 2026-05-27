@@ -3,9 +3,8 @@
 // 提供 GDPR、SOC 2 等合规性检查功能
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use thiserror::Error;
 use std::collections::HashMap;
+use thiserror::Error;
 
 /// 合规性错误
 #[derive(Error, Debug)]
@@ -195,8 +194,10 @@ impl CustomPolicyChecker {
         self.policies.insert(policy.name.clone(), policy);
     }
     pub fn check_policy(&self, name: &str) -> Result<bool, ComplianceError> {
-        let policy: _ = self.policies.get(name)
-            .ok_or_else(|| ComplianceError::InvalidPolicy(name.to_string())?;
+        let policy: _ = self
+            .policies
+            .get(name)
+            .ok_or_else(|| ComplianceError::InvalidPolicy(name.to_string()))?;
         let total_rules: _ = policy.rules.len();
         let passed_rules: _ = policy.rules.values().filter(|&&v| v).count();
         let score: _ = (passed_rules as f64 / total_rules as f64) * 100.0;

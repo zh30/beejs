@@ -1,7 +1,6 @@
 // 统一的 AI 推理引擎接口
 // 支持多种 AI 框架和模型格式的通用接口
 
-
 use crate::ai_inference::Tensor;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -78,11 +77,7 @@ pub trait InferenceEngine: Send + Sync {
     /// 加载模型
     async fn load_model(&self, model_path: &str, options: InferenceOptions) -> Result<ModelHandle>;
     /// 执行单次推理
-    async fn infer(
-        &self,
-        model: &ModelHandle,
-        input: &Tensor,
-    ) -> Result<InferenceResult>;
+    async fn infer(&self, model: &ModelHandle, input: &Tensor) -> Result<InferenceResult>;
     /// 执行批量推理
     async fn batch_infer(
         &self,
@@ -222,7 +217,9 @@ impl EngineManager {
         factory_name: &str,
         engine_type: Option<EngineType>,
     ) -> Result<Box<dyn InferenceEngine>> {
-        let engine_type: _ = engine_type.clone().unwrap_or_else(|| self.default_engine_type.clone());
+        let engine_type: _ = engine_type
+            .clone()
+            .unwrap_or_else(|| self.default_engine_type.clone());
         // 检查缓存的引擎
         let cache_key: _ = format!("{}_{:?}", engine_type, factory_name);
         {
@@ -232,7 +229,9 @@ impl EngineManager {
             }
         }
         // 创建新引擎
-        let factory: _ = self.factories.get(factory_name)
+        let factory: _ = self
+            .factories
+            .get(factory_name)
             .ok_or_else(|| anyhow::anyhow!("Factory '{}' not found", factory_name))?;
         let engine: _ = factory.create(engine_type).await?;
         // 缓存引擎
@@ -247,8 +246,14 @@ impl EngineManager {
         self.factories.keys().cloned().collect()
     }
     /// 检查引擎是否可用
-    pub async fn is_engine_available(&self, factory_name: &str, engine_type: Option<EngineType>) -> bool {
-        let engine_type: _ = engine_type.clone().unwrap_or_else(|| self.default_engine_type.clone());
+    pub async fn is_engine_available(
+        &self,
+        factory_name: &str,
+        engine_type: Option<EngineType>,
+    ) -> bool {
+        let engine_type: _ = engine_type
+            .clone()
+            .unwrap_or_else(|| self.default_engine_type.clone());
         let cache_key: _ = format!("{}_{:?}", engine_type, factory_name);
         {
             let active_engines: _ = self.active_engines.read().await;

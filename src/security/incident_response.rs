@@ -2,13 +2,9 @@
 //
 // 提供威胁检测、事件响应、自动修复和事件升级功能
 
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
-use std::collections::{BTreeMap};
-use std::time::SystemTime;
-use std::hash::Hash;
 /// 事件响应错误
 #[derive(Error, Debug)]
 pub enum IncidentResponseError {
@@ -32,7 +28,7 @@ pub enum ThreatType {
 pub struct ThreatDetectionResult {
     pub threat_detected: bool,
     pub threat_type: Option<ThreatType>,
-    pub severity: f64, // 0-100
+    pub severity: f64,   // 0-100
     pub confidence: f64, // 0-100
     pub timestamp: std::time::SystemTime,
 }
@@ -94,8 +90,14 @@ impl VulnerabilityScanner {
         let vulnerabilities_found: _ = target.contains("vulnerable");
         let vulnerability_count: _ = if vulnerabilities_found { 3 } else { 0 };
         let mut severity_distribution = HashMap::new();
-        severity_distribution.insert("high".to_string(), if vulnerabilities_found { 2 } else { 0 });
-        severity_distribution.insert("medium".to_string(), if vulnerabilities_found { 1 } else { 0 });
+        severity_distribution.insert(
+            "high".to_string(),
+            if vulnerabilities_found { 2 } else { 0 },
+        );
+        severity_distribution.insert(
+            "medium".to_string(),
+            if vulnerabilities_found { 1 } else { 0 },
+        );
         severity_distribution.insert("low".to_string(), 0);
         VulnerabilityScanResult {
             vulnerabilities_found,
@@ -148,7 +150,13 @@ impl IncidentDetector {
         for (pattern, incident_type) in &self.detection_patterns {
             if event.contains(pattern) {
                 return Some(Incident {
-                    id: format!("incident-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()),
+                    id: format!(
+                        "incident-{}",
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs()
+                    ),
                     incident_type: incident_type.clone(),
                     severity: IncidentSeverity::High,
                     description: format!("检测到事件: {}", event),
@@ -195,24 +203,17 @@ impl EscalationManager {
             IncidentSeverity::Critical,
             vec!["安全团队".to_string(), "管理层".to_string()],
         );
-        escalation_rules.insert(
-            IncidentSeverity::High,
-            vec!["安全团队".to_string()],
-        );
-        escalation_rules.insert(
-            IncidentSeverity::Medium,
-            vec!["运维团队".to_string()],
-        );
-        escalation_rules.insert(
-            IncidentSeverity::Low,
-            vec!["值班人员".to_string()],
-        );
+        escalation_rules.insert(IncidentSeverity::High, vec!["安全团队".to_string()]);
+        escalation_rules.insert(IncidentSeverity::Medium, vec!["运维团队".to_string()]);
+        escalation_rules.insert(IncidentSeverity::Low, vec!["值班人员".to_string()]);
         Self { escalation_rules }
     }
     pub fn escalate(&self, incident: &Incident) -> Result<Vec<String>, IncidentResponseError> {
-        let contacts: _ = self.escalation_rules.get(&incident.severity)
+        let contacts: _ = self
+            .escalation_rules
+            .get(&incident.severity)
             .cloned()
-            .ok_or_else(|| IncidentResponseError::ResponseFailed("未找到升级规则".to_string())?;
+            .ok_or_else(|| IncidentResponseError::ResponseFailed("未找到升级规则".to_string()))?;
         Ok(contacts)
     }
 }

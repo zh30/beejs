@@ -1,28 +1,28 @@
 // Stage 94 Phase 3 - CI/CD Integration Tests
 // Tests for GitOps workflows and CI/CD pipeline integration
 
-#[cfg(test)]
+#[cfg(all(test, feature = "cloudnative"))]
 mod cicd_integration_tests {
     // Import CI/CD types directly from the module
+    use beejs::cloud_native::cicd::deployment::{
+        BlueGreenDeployment, CanaryDeployment, DeploymentConfig, DeploymentStatus,
+        DeploymentStrategy, Error as DeploymentError, RollingDeployment,
+    };
     use beejs::cloud_native::cicd::gitops::{
-        GitOpsManager, ArgoCDApplication, FluxHelmRelease, GitOpsSyncPolicy,
-        GitOpsConfig, Error as GitOpsError,
+        ArgoCDApplication, Error as GitOpsError, FluxHelmRelease, GitOpsConfig, GitOpsManager,
+        GitOpsSyncPolicy,
     };
     use beejs::cloud_native::cicd::pipeline::{
-        PipelineManager, GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
-        PipelineStage, PipelineStatus, PipelineEvent, PipelineConfig,
-        PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
+        Error as PipelineError, GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
+        PipelineArtifact, PipelineCache, PipelineConfig, PipelineEvent, PipelineManager,
+        PipelineSecret, PipelineStage, PipelineStatus,
     };
-    use beejs::cloud_native::cicd::deployment::{
-        DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
-        DeploymentConfig, DeploymentStatus, Error as DeploymentError,
-    };
+    use std::collections::{BTreeMap, HashMap};
     use std::sync::{Arc, Mutex, RwLock};
-    use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_argocd_application_creation() {
-        let app: _ = ArgoCDApplication::new(
+        let app = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -32,7 +32,10 @@ mod cicd_integration_tests {
 
         assert_eq!(app.name, "beejs-app");
         assert_eq!(app.environment, "production");
-        assert_eq!(app.repo_url, "https://github.com/example/beejs-manifests.git");
+        assert_eq!(
+            app.repo_url,
+            "https://github.com/example/beejs-manifests.git"
+        );
         assert_eq!(app.target_revision, "main");
         assert_eq!(app.path, "/manifests");
         assert!(app.sync_policy.automatic);
@@ -61,7 +64,7 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_flux_helm_release() {
-        let release: _ = FluxHelmRelease::new(
+        let release = FluxHelmRelease::new(
             "beejs".to_string(),
             "production".to_string(),
             "beejs".to_string(),
@@ -99,7 +102,7 @@ mod cicd_integration_tests {
     fn test_gitops_manager_argocd() {
         let mut manager = GitOpsManager::new("argocd".to_string());
 
-        let app: _ = ArgoCDApplication::new(
+        let app = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -116,7 +119,7 @@ mod cicd_integration_tests {
     fn test_gitops_manager_flux() {
         let mut manager = GitOpsManager::new("flux".to_string());
 
-        let release: _ = FluxHelmRelease::new(
+        let release = FluxHelmRelease::new(
             "beejs".to_string(),
             "production".to_string(),
             "beejs".to_string(),
@@ -132,7 +135,7 @@ mod cicd_integration_tests {
     fn test_gitops_sync() {
         let mut manager = GitOpsManager::new("argocd".to_string());
 
-        let app: _ = ArgoCDApplication::new(
+        let app = ArgoCDApplication::new(
             "test-app".to_string(),
             "production".to_string(),
             "https://github.com/test/repo.git".to_string(),
@@ -141,7 +144,7 @@ mod cicd_integration_tests {
         );
 
         manager.add_application(app);
-        let result: _ = manager.sync_application("test-app");
+        let result = manager.sync_application("test-app");
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -152,17 +155,15 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_github_actions_workflow() {
-        let mut workflow = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let mut workflow =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
 
         workflow.on.push("push".to_string());
         workflow.on.push("pull_request".to_string());
         workflow.on.push("schedule".to_string());
 
         // Add build stage
-        let build_stage: _ = PipelineStage::Build {
+        let build_stage = PipelineStage::Build {
             name: "build".to_string(),
             runs_on: "ubuntu-latest".to_string(),
             steps: vec![
@@ -176,41 +177,43 @@ mod cicd_integration_tests {
         workflow.add_stage(build_stage);
 
         // Add test stage
-        let test_stage: _ = PipelineStage::Test {
+        let test_stage = PipelineStage::Test {
             name: "test".to_string(),
             runs_on: "ubuntu-latest".to_string(),
-            steps: vec![
-                "npm run test".to_string(),
-                "npm run lint".to_string(),
-            ],
+            steps: vec!["npm run test".to_string(), "npm run lint".to_string()],
         };
 
         workflow.add_stage(test_stage);
 
         // Add deploy stage
-        let deploy_stage: _ = PipelineStage::Deploy {
+        let deploy_stage = PipelineStage::Deploy {
             name: "deploy".to_string(),
             environment: "production".to_string(),
             runs_on: "ubuntu-latest".to_string(),
-            steps: vec![
-                "kubectl apply -f k8s/".to_string(),
-            ],
+            steps: vec!["kubectl apply -f k8s/".to_string()],
         };
 
         workflow.add_stage(deploy_stage);
 
         assert_eq!(workflow.stages.len(), 3);
-        assert!(workflow.stages.iter().any(|s| matches!(s, PipelineStage::Build { .. })));
-        assert!(workflow.stages.iter().any(|s| matches!(s, PipelineStage::Test { .. })));
-        assert!(workflow.stages.iter().any(|s| matches!(s, PipelineStage::Deploy { .. })));
+        assert!(workflow
+            .stages
+            .iter()
+            .any(|s| matches!(s, PipelineStage::Build { .. })));
+        assert!(workflow
+            .stages
+            .iter()
+            .any(|s| matches!(s, PipelineStage::Test { .. })));
+        assert!(workflow
+            .stages
+            .iter()
+            .any(|s| matches!(s, PipelineStage::Deploy { .. })));
     }
 
     #[test]
     fn test_gitlab_ci_pipeline() {
-        let mut pipeline = GitLabCIPipeline::new(
-            "beejs-pipeline".to_string(),
-            "production".to_string(),
-        );
+        let mut pipeline =
+            GitLabCIPipeline::new("beejs-pipeline".to_string(), "production".to_string());
 
         pipeline.add_stage("build".to_string());
         pipeline.add_stage("test".to_string());
@@ -218,20 +221,28 @@ mod cicd_integration_tests {
         pipeline.add_stage("notify".to_string());
 
         // Add build job
-        pipeline.add_job("build-job".to_string(), "build".to_string(), vec![
-            "docker build -t beejs:$CI_COMMIT_SHA .".to_string(),
-            "docker push beejs:$CI_COMMIT_SHA".to_string(),
-        ]);
+        pipeline.add_job(
+            "build-job".to_string(),
+            "build".to_string(),
+            vec![
+                "docker build -t beejs:$CI_COMMIT_SHA .".to_string(),
+                "docker push beejs:$CI_COMMIT_SHA".to_string(),
+            ],
+        );
 
         // Add test job
-        pipeline.add_job("test-job".to_string(), "test".to_string(), vec![
-            "npm test".to_string(),
-        ]);
+        pipeline.add_job(
+            "test-job".to_string(),
+            "test".to_string(),
+            vec!["npm test".to_string()],
+        );
 
         // Add deploy job
-        pipeline.add_job("deploy-job".to_string(), "deploy".to_string(), vec![
-            "kubectl set image deployment/beejs beejs=beejs:$CI_COMMIT_SHA".to_string(),
-        ]);
+        pipeline.add_job(
+            "deploy-job".to_string(),
+            "deploy".to_string(),
+            vec!["kubectl set image deployment/beejs beejs=beejs:$CI_COMMIT_SHA".to_string()],
+        );
 
         assert_eq!(pipeline.stages.len(), 4);
         assert_eq!(pipeline.jobs.len(), 3);
@@ -241,27 +252,33 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_jenkins_pipeline() {
-        let mut pipeline = JenkinsPipeline::new(
-            "beejs-pipeline".to_string(),
+        let mut pipeline = JenkinsPipeline::new("beejs-pipeline".to_string());
+
+        pipeline.add_stage(
+            "Checkout".to_string(),
+            vec!["git branch: 'main', url: 'https://github.com/example/beejs.git'".to_string()],
         );
 
-        pipeline.add_stage("Checkout".to_string(), vec![
-            "git branch: 'main', url: 'https://github.com/example/beejs.git'".to_string(),
-        ]);
+        pipeline.add_stage(
+            "Build".to_string(),
+            vec![
+                "sh 'npm install'".to_string(),
+                "sh 'npm run build'".to_string(),
+            ],
+        );
 
-        pipeline.add_stage("Build".to_string(), vec![
-            "sh 'npm install'".to_string(),
-            "sh 'npm run build'".to_string(),
-        ]);
+        pipeline.add_stage(
+            "Test".to_string(),
+            vec![
+                "sh 'npm test'".to_string(),
+                "junit 'test-results.xml'".to_string(),
+            ],
+        );
 
-        pipeline.add_stage("Test".to_string(), vec![
-            "sh 'npm test'".to_string(),
-            "junit 'test-results.xml'".to_string(),
-        ]);
-
-        pipeline.add_stage("Deploy".to_string(), vec![
-            "kubernetesDeploy configs: 'k8s/', kubeconfigId: 'beejs-kubeconfig'".to_string(),
-        ]);
+        pipeline.add_stage(
+            "Deploy".to_string(),
+            vec!["kubernetesDeploy configs: 'k8s/', kubeconfigId: 'beejs-kubeconfig'".to_string()],
+        );
 
         assert_eq!(pipeline.stages.len(), 4);
         assert_eq!(pipeline.agent, "kubernetes");
@@ -272,10 +289,8 @@ mod cicd_integration_tests {
     fn test_pipeline_manager_github_actions() {
         let mut manager = PipelineManager::new("github".to_string());
 
-        let mut workflow = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let mut workflow =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
 
         workflow.add_stage(PipelineStage::Build {
             name: "build".to_string(),
@@ -292,15 +307,15 @@ mod cicd_integration_tests {
     fn test_pipeline_manager_gitlab() {
         let mut manager = PipelineManager::new("gitlab".to_string());
 
-        let mut pipeline = GitLabCIPipeline::new(
-            "beejs-pipeline".to_string(),
-            "production".to_string(),
-        );
+        let mut pipeline =
+            GitLabCIPipeline::new("beejs-pipeline".to_string(), "production".to_string());
 
         pipeline.add_stage("build".to_string());
-        pipeline.add_job("build-job".to_string(), "build".to_string(), vec![
-            "docker build -t beejs .".to_string(),
-        ]);
+        pipeline.add_job(
+            "build-job".to_string(),
+            "build".to_string(),
+            vec!["docker build -t beejs .".to_string()],
+        );
 
         manager.add_pipeline(pipeline);
         assert_eq!(manager.pipelines.len(), 1);
@@ -312,9 +327,7 @@ mod cicd_integration_tests {
         let mut manager = PipelineManager::new("jenkins".to_string());
 
         let mut pipeline = JenkinsPipeline::new("beejs-pipeline".to_string());
-        pipeline.add_stage("Build".to_string(), vec![
-            "sh 'npm install'".to_string(),
-        ]);
+        pipeline.add_stage("Build".to_string(), vec!["sh 'npm install'".to_string()]);
 
         manager.add_pipeline(pipeline);
         assert_eq!(manager.pipelines.len(), 1);
@@ -323,29 +336,25 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_status_tracking() {
-        let pipeline: _ = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let pipeline =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
 
         assert_eq!(pipeline.status, PipelineStatus::Pending);
 
-        let status: _ = PipelineStatus::Running;
+        let status = PipelineStatus::Running;
         assert!(matches!(status, PipelineStatus::Running));
 
-        let status: _ = PipelineStatus::Success;
+        let status = PipelineStatus::Success;
         assert!(matches!(status, PipelineStatus::Success));
 
-        let status: _ = PipelineStatus::Failed;
+        let status = PipelineStatus::Failed;
         assert!(matches!(status, PipelineStatus::Failed));
     }
 
     #[test]
     fn test_pipeline_event_handling() {
-        let mut pipeline = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let mut pipeline =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
 
         pipeline.add_event_listener("push".to_string());
         pipeline.add_event_listener("pull_request".to_string());
@@ -369,11 +378,9 @@ mod cicd_integration_tests {
         assert_eq!(deployment.next_version, "v1.1.0");
         assert!(deployment.pre_hook.is_none());
 
-        deployment.pre_hook = Some(vec![
-            "echo 'Starting blue-green deployment'".to_string(),
-        ]);
+        deployment.pre_hook = Some(vec!["echo 'Starting blue-green deployment'".to_string()]);
 
-        let result: _ = deployment.execute();
+        let result = deployment.execute();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -403,7 +410,7 @@ mod cicd_integration_tests {
         deployment.auto_promote = true;
         deployment.promotion_threshold = 95;
 
-        let result: _ = deployment.execute();
+        let result = deployment.execute();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -426,7 +433,7 @@ mod cicd_integration_tests {
         deployment.auto_promote = true;
         deployment.promotion_threshold = 95;
 
-        let result: _ = deployment.promote_canary();
+        let result = deployment.promote_canary();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -446,7 +453,7 @@ mod cicd_integration_tests {
             10,
         );
 
-        let result: _ = deployment.rollback_canary();
+        let result = deployment.rollback_canary();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -472,7 +479,7 @@ mod cicd_integration_tests {
         assert_eq!(deployment.max_unavailable, 1);
         assert_eq!(deployment.max_surge, 1);
 
-        let result: _ = deployment.execute();
+        let result = deployment.execute();
 
         assert!(result.is_ok());
         if let Ok(status) = result {
@@ -507,7 +514,7 @@ mod cicd_integration_tests {
         let mut manager = DeploymentStrategy::new();
 
         // Test blue-green selection
-        let config: _ = DeploymentConfig {
+        let config = DeploymentConfig {
             strategy: "blue-green".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -516,7 +523,7 @@ mod cicd_integration_tests {
             parameters: std::collections::HashMap::new(),
         };
 
-        let result: _ = manager.select_strategy(&config);
+        let result = manager.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_)));
 
@@ -524,7 +531,7 @@ mod cicd_integration_tests {
         let mut params = std::collections::HashMap::new();
         params.insert("traffic_split".to_string(), "10".to_string());
 
-        let config: _ = DeploymentConfig {
+        let config = DeploymentConfig {
             strategy: "canary".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -533,12 +540,12 @@ mod cicd_integration_tests {
             parameters: params,
         };
 
-        let result: _ = manager.select_strategy(&config);
+        let result = manager.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::Canary(_)));
 
         // Test rolling selection
-        let config: _ = DeploymentConfig {
+        let config = DeploymentConfig {
             strategy: "rolling".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -547,14 +554,14 @@ mod cicd_integration_tests {
             parameters: std::collections::HashMap::new(),
         };
 
-        let result: _ = manager.select_strategy(&config);
+        let result = manager.select_strategy(&config);
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), DeploymentStrategy::Rolling(_)));
     }
 
     #[test]
     fn test_gitops_config() {
-        let config: _ = GitOpsConfig {
+        let config = GitOpsConfig {
             tool: "argocd".to_string(),
             namespace: "argocd".to_string(),
             auto_sync: true,
@@ -573,7 +580,7 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_config() {
-        let config: _ = PipelineConfig {
+        let config = PipelineConfig {
             platform: "github".to_string(),
             trigger: "push".to_string(),
             branches: vec!["main".to_string(), "develop".to_string()],
@@ -594,7 +601,7 @@ mod cicd_integration_tests {
         parameters.insert("traffic_split".to_string(), "10".to_string());
         parameters.insert("max_unavailable".to_string(), "1".to_string());
 
-        let config: _ = DeploymentConfig {
+        let config = DeploymentConfig {
             strategy: "canary".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -613,16 +620,16 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_cicd_error_handling() {
-        let error: _ = CICDError::GitOpsError("Failed to sync application".to_string());
+        let error = CICDError::GitOpsError("Failed to sync application".to_string());
         assert!(matches!(error, CICDError::GitOpsError(_)));
 
-        let error: _ = CICDError::PipelineError("Pipeline execution failed".to_string());
+        let error = CICDError::PipelineError("Pipeline execution failed".to_string());
         assert!(matches!(error, CICDError::PipelineError(_)));
 
-        let error: _ = CICDError::DeploymentError("Deployment timeout".to_string());
+        let error = CICDError::DeploymentError("Deployment timeout".to_string());
         assert!(matches!(error, CICDError::DeploymentError(_)));
 
-        let error: _ = CICDError::ConfigurationError("Invalid config".to_string());
+        let error = CICDError::ConfigurationError("Invalid config".to_string());
         assert!(matches!(error, CICDError::ConfigurationError(_)));
     }
 
@@ -630,7 +637,7 @@ mod cicd_integration_tests {
     fn test_full_cicd_workflow() {
         // Setup GitOps manager
         let mut gitops = GitOpsManager::new("argocd".to_string());
-        let app: _ = ArgoCDApplication::new(
+        let app = ArgoCDApplication::new(
             "beejs-app".to_string(),
             "production".to_string(),
             "https://github.com/example/beejs-manifests.git".to_string(),
@@ -641,10 +648,8 @@ mod cicd_integration_tests {
 
         // Setup Pipeline manager
         let mut pipelines = PipelineManager::new("github".to_string());
-        let mut workflow = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Deploy".to_string(),
-        );
+        let mut workflow =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Deploy".to_string());
         workflow.add_stage(PipelineStage::Build {
             name: "build".to_string(),
             runs_on: "ubuntu-latest".to_string(),
@@ -660,7 +665,7 @@ mod cicd_integration_tests {
 
         // Setup Deployment manager
         let mut deployment = DeploymentStrategy::new();
-        let config: _ = DeploymentConfig {
+        let config = DeploymentConfig {
             strategy: "rolling".to_string(),
             service_name: "beejs-service".to_string(),
             environment: "production".to_string(),
@@ -668,7 +673,7 @@ mod cicd_integration_tests {
             next_version: "v1.1.0".to_string(),
             parameters: std::collections::HashMap::new(),
         };
-        let strategy: _ = deployment.select_strategy(&config).unwrap();
+        let strategy = deployment.select_strategy(&config).unwrap();
 
         assert!(matches!(strategy, DeploymentStrategy::Rolling(_)));
         assert_eq!(gitops.applications.len(), 1);
@@ -677,12 +682,16 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_multi_environment_deployment() {
-        let environments: _ = vec!["dev".to_string(), "staging".to_string(), "production".to_string()];
+        let environments = vec![
+            "dev".to_string(),
+            "staging".to_string(),
+            "production".to_string(),
+        ];
 
         for env in environments {
             let mut gitops = GitOpsManager::new("flux".to_string());
 
-            let release: _ = FluxHelmRelease::new(
+            let release = FluxHelmRelease::new(
                 "beejs".to_string(),
                 env.clone(),
                 "beejs".to_string(),
@@ -698,10 +707,8 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_cache() {
-        let mut pipeline = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let mut pipeline =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
 
         pipeline.enable_cache("node_modules".to_string(), "npm".to_string());
         pipeline.enable_cache("target".to_string(), "rust".to_string());
@@ -715,10 +722,8 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_artifacts() {
-        let mut pipeline = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let mut pipeline =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
 
         pipeline.add_artifact("dist".to_string());
         pipeline.add_artifact("test-results.xml".to_string());
@@ -731,10 +736,8 @@ mod cicd_integration_tests {
 
     #[test]
     fn test_pipeline_secrets() {
-        let mut pipeline = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Deploy".to_string(),
-        );
+        let mut pipeline =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Deploy".to_string());
 
         pipeline.add_secret("NPM_TOKEN".to_string());
         pipeline.add_secret("DOCKER_USERNAME".to_string());

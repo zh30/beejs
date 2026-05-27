@@ -1,27 +1,27 @@
 // AI 推理引擎模块
 // 专为 AI 工作负载优化的推理引擎
 mod ai_inference_engine;
+mod batch_optimizer;
+mod dynamic_batch_processor;
 mod engine_interface;
-mod model_loader;
-mod tensor_ops;
 mod gpu_accelerate;
 mod model_cache;
-mod dynamic_batch_processor;
+mod model_loader;
 mod onnx_runtime;
-mod batch_optimizer;
 mod pytorch_engine;
-pub use pytorch_engine::*;
+mod tensor_ops;
 pub use ai_inference_engine::{AIInferenceEngine, GPUSimpleAccelerator};
-pub use engine_interface::{InferenceEngine, InferenceResult, ModelHandle, ModelInfo};
-pub use model_loader::ModelLoader;
-pub use tensor_ops::Tensor;
-pub use model_cache::ModelCache;
-pub use dynamic_batch_processor::DynamicBatchProcessor;
 pub use batch_optimizer::BatchProcessor;
+pub use dynamic_batch_processor::DynamicBatchProcessor;
+pub use engine_interface::{InferenceEngine, InferenceResult, ModelHandle, ModelInfo};
+pub use model_cache::ModelCache;
+pub use model_loader::ModelLoader;
+pub use pytorch_engine::*;
+pub use tensor_ops::Tensor;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[tokio::test]
     async fn test_ai_inference_engine_creation() {
         let engine: _ = AIInferenceEngine::new().await;

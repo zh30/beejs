@@ -41,7 +41,7 @@ pub enum Runtime {
 impl std::fmt::Display for Runtime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Runtime::Beejs => write!(f, "beejs"),
+            Runtime::Beejs => write!(f, "bee"),
             Runtime::NodeJs => write!(f, "node"),
             Runtime::Bun => write!(f, "bun"),
             Runtime::Deno => write!(f, "deno"),

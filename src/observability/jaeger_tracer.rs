@@ -4,8 +4,8 @@
 // It allows tracking the execution of scripts, network operations,
 /// and other runtime activities across service boundaries.
 use anyhow::Result;
-use std::net::SocketAddr;
 use std::collections::{BTreeMap, HashMap};
+use std::net::SocketAddr;
 use tracing::{debug, error, info};
 /// Jaeger tracer for distributed tracing
 pub struct JaegerTracer {
@@ -23,12 +23,19 @@ impl JaegerTracer {
     /// Create a new span for an operation
     pub fn create_span(&self, operation_name: &str) -> JaegerSpan {
         debug!("Created Jaeger span for operation: {}", operation_name);
-        JaegerSpan { operation_name: operation_name.to_string() }
+        JaegerSpan {
+            operation_name: operation_name.to_string(),
+        }
     }
     /// Create a span with parent context
     pub fn create_child_span(&self, operation_name: &str, _parent: &JaegerSpan) -> JaegerSpan {
-        debug!("Created child Jaeger span for operation: {}", operation_name);
-        JaegerSpan { operation_name: operation_name.to_string() }
+        debug!(
+            "Created child Jaeger span for operation: {}",
+            operation_name
+        );
+        JaegerSpan {
+            operation_name: operation_name.to_string(),
+        }
     }
     /// Extract trace context from carrier
     pub fn extract_from_carrier(&self, _carrier: &HashMap<String, String>) -> () {

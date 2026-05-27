@@ -28,7 +28,7 @@ impl RuntimeDetector {
         // 检测 Beejs
         self.detected_runtimes.insert(
             Runtime::Beejs,
-            check_command_available("beejs")
+            check_command_available("bee")
         );
         // 检测 Node.js
         self.detected_runtimes.insert(
@@ -69,7 +69,7 @@ impl RuntimeDetector {
     /// 获取运行时版本
     pub fn get_version(&self, runtime: Runtime) -> Option<String> {
         match runtime {
-            Runtime::Beejs => get_command_version("beejs"),
+            Runtime::Beejs => get_command_version("bee"),
             Runtime::NodeJs => get_command_version("node"),
             Runtime::Bun => get_command_version("bun"),
             Runtime::Deno => get_command_version("deno"),
@@ -120,7 +120,7 @@ impl ProcessLauncher {
         // 写入临时文件
         tokio::fs::write(&file_path, code).await?;
         // 启动进程
-        let output: _ = tokio::process::Command::new("beejs")
+        let output: _ = tokio::process::Command::new("bee")
             .arg(&file_path)
             .output()
             .await?;

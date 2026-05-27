@@ -5,8 +5,8 @@
 //!
 //! Note: These tests verify the console APIs work correctly with various data types.
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 /// Test console.table with simple array
 #[test]

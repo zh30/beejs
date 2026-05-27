@@ -45,15 +45,36 @@ fn test_truthy_falsy() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Truthy values
-    assert!(runtime.execute_code(r#"if (1) { "truthy"; } else { "falsy"; }"#).unwrap().contains("truthy"));
-    assert!(runtime.execute_code(r#"if ("hello") { "truthy"; } else { "falsy"; }"#).unwrap().contains("truthy"));
-    assert!(runtime.execute_code(r#"if ([]) { "truthy"; } else { "falsy"; }"#).unwrap().contains("truthy"));
+    assert!(runtime
+        .execute_code(r#"if (1) { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("truthy"));
+    assert!(runtime
+        .execute_code(r#"if ("hello") { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("truthy"));
+    assert!(runtime
+        .execute_code(r#"if ([]) { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("truthy"));
 
     // Falsy values
-    assert!(runtime.execute_code(r#"if (0) { "truthy"; } else { "falsy"; }"#).unwrap().contains("falsy"));
-    assert!(runtime.execute_code(r#"if ("") { "truthy"; } else { "falsy"; }"#).unwrap().contains("falsy"));
-    assert!(runtime.execute_code(r#"if (null) { "truthy"; } else { "falsy"; }"#).unwrap().contains("falsy"));
-    assert!(runtime.execute_code(r#"if (undefined) { "truthy"; } else { "falsy"; }"#).unwrap().contains("falsy"));
+    assert!(runtime
+        .execute_code(r#"if (0) { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("falsy"));
+    assert!(runtime
+        .execute_code(r#"if ("") { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("falsy"));
+    assert!(runtime
+        .execute_code(r#"if (null) { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("falsy"));
+    assert!(runtime
+        .execute_code(r#"if (undefined) { "truthy"; } else { "falsy"; }"#)
+        .unwrap()
+        .contains("falsy"));
 }
 
 /// Test string contains

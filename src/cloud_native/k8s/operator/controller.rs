@@ -3,24 +3,30 @@
 
 use std::sync::Arc;
 
-use kube::api::{ListParams, Patch, PatchParams, DeleteParams};
-use kube::core::object::HasStatus;
-use kube::runtime::controller::Action;
-use kube::runtime::events::{Event, EventType, Recorder, Reporter};
-use kube::{Client, Api, Resource, ResourceExt};
-use k8s_openapi::api::apps::v1::{StatefulSet, StatefulSetSpec};
-use k8s_openapi::api::core::v1::{Service, ServiceSpec, ServicePort, ConfigMap, Secret, PodSpec, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, ResourceRequirements, VolumeMount, Volume, ConfigMapVolumeSource, PersistentVolumeClaim, PersistentVolumeClaimSpec, ObjectReference};
-use k8s_openapi::apimachinery::pkg::api::resource::Quantity;
-use k8s_openapi::ByteString;
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, LabelSelector, LabelSelectorRequirement};
-use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
-use std::collections::BTreeMap;
-use tokio::time::Duration as TokioDuration;
-use tracing::{info, warn, error, debug};
 use super::super::crd::{
     BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,
     Condition as BeejsCondition, ConditionStatus, ConditionType, WorkloadPhase,
 };
+use k8s_openapi::api::apps::v1::{StatefulSet, StatefulSetSpec};
+use k8s_openapi::api::core::v1::{
+    ConfigMap, ConfigMapVolumeSource, Container, ContainerPort, EnvVar, EnvVarSource,
+    ObjectFieldSelector, ObjectReference, PersistentVolumeClaim, PersistentVolumeClaimSpec,
+    PodSpec, ResourceRequirements, Secret, Service, ServicePort, ServiceSpec, Volume, VolumeMount,
+};
+use k8s_openapi::apimachinery::pkg::api::resource::Quantity;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::{
+    LabelSelector, LabelSelectorRequirement, ObjectMeta,
+};
+use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
+use k8s_openapi::ByteString;
+use kube::api::{DeleteParams, ListParams, Patch, PatchParams};
+use kube::core::object::HasStatus;
+use kube::runtime::controller::Action;
+use kube::runtime::events::{Event, EventType, Recorder, Reporter};
+use kube::{Api, Client, Resource, ResourceExt};
+use std::collections::BTreeMap;
+use tokio::time::Duration as TokioDuration;
+use tracing::{debug, error, info, warn};
 /// Cluster controller for managing BeejsCluster resources
 pub struct ClusterController {
     /// Kubernetes client
@@ -45,18 +51,17 @@ impl ClusterController {
     pub fn new(client: Client, namespace: &str) -> Self {
         let clusters: _ = Api::<BeejsCluster>::namespaced(client.clone(), namespace);
         let statefulsets: _ = Api::<StatefulSet>::namespaced(client.clone(), namespace);
-        let services: _ = Api::<k8s_openapi::api::core::v1::Service>::namespaced(client.clone(), namespace);
-        let configmaps: _ = Api::<k8s_openapi::api::core::v1::ConfigMap>::namespaced(client.clone(), namespace);
-        let secrets: _ = Api::<k8s_openapi::api::core::v1::Secret>::namespaced(client.clone(), namespace);
+        let services: _ =
+            Api::<k8s_openapi::api::core::v1::Service>::namespaced(client.clone(), namespace);
+        let configmaps: _ =
+            Api::<k8s_openapi::api::core::v1::ConfigMap>::namespaced(client.clone(), namespace);
+        let secrets: _ =
+            Api::<k8s_openapi::api::core::v1::Secret>::namespaced(client.clone(), namespace);
         let reporter: _ = Reporter {
             controller: "beejs-cluster-controller".to_string(),
             instance: None,
         };
-        let recorder: _ = Recorder::new(
-            client.clone(),
-            reporter,
-            ObjectReference::default(),
-        );
+        let recorder: _ = Recorder::new(client.clone(), reporter, ObjectReference::default());
         Self {
             client: client.clone(),
             clusters,
@@ -68,10 +73,7 @@ impl ClusterController {
         }
     }
     /// Reconcile function for BeejsCluster
-    pub async fn reconcile(
-        &self,
-        cluster: Arc<BeejsCluster>,
-    ) -> Result<Action, Error> {
+    pub async fn reconcile(&self, cluster: Arc<BeejsCluster>) -> Result<Action, Error> {
         info!("Reconciling BeejsCluster: {}", cluster.name_any());
         // Check if finalizer exists
         let has_finalizer: _ = cluster.annotations().contains_key(CLUSTER_FINALIZER);
@@ -81,14 +83,16 @@ impl ClusterController {
         match phase {
             ClusterPhase::Pending | ClusterPhase::Creating => {
                 self.reconcile_create(cluster.clone()).await?;
-                self.update_phase(cluster.as_ref(), ClusterPhase::Creating).await?;
+                self.update_phase(cluster.as_ref(), ClusterPhase::Creating)
+                    .await?;
             }
             ClusterPhase::Running => {
                 self.reconcile_running(cluster.clone()).await?;
             }
             ClusterPhase::Updating => {
                 self.reconcile_update(cluster.clone()).await?;
-                self.update_phase(cluster.as_ref(), ClusterPhase::Running).await?;
+                self.update_phase(cluster.as_ref(), ClusterPhase::Running)
+                    .await?;
             }
             ClusterPhase::Failed => {
                 if !has_finalizer {
@@ -96,7 +100,8 @@ impl ClusterController {
                     self.add_finalizer(&cluster).await?;
                 }
                 self.reconcile_recovery(cluster.clone()).await?;
-                self.update_phase(cluster.as_ref(), ClusterPhase::Running).await?;
+                self.update_phase(cluster.as_ref(), ClusterPhase::Running)
+                    .await?;
             }
         }
         // Add finalizer if it doesn't exist
@@ -106,35 +111,48 @@ impl ClusterController {
         Ok(Action::requeue(Duration::from_secs(30)))
     }
     /// Handle cleanup when resource is deleted
-    pub async fn cleanup(
-        &self,
-        cluster: Arc<BeejsCluster>,
-    ) -> Result<Action, Error> {
+    pub async fn cleanup(&self, cluster: Arc<BeejsCluster>) -> Result<Action, Error> {
         info!("Cleaning up BeejsCluster: {}", cluster.name_any());
         let name: _ = cluster.name_any();
         // Delete StatefulSet
-        if let Err(e) = self.statefulsets.delete(&name, &kube::api::DeleteParams::default()).await {
+        if let Err(e) = self
+            .statefulsets
+            .delete(&name, &kube::api::DeleteParams::default())
+            .await
+        {
             // 404 errors are expected when resource doesn't exist
             if !e.to_string().contains("404") && !e.to_string().contains("NotFound") {
                 warn!("Failed to delete StatefulSet: {}", e);
             }
         }
         // Delete Service
-        if let Err(e) = self.services.delete(&name, &kube::api::DeleteParams::default()).await {
+        if let Err(e) = self
+            .services
+            .delete(&name, &kube::api::DeleteParams::default())
+            .await
+        {
             // 404 errors are expected when resource doesn't exist
             if !e.to_string().contains("404") && !e.to_string().contains("NotFound") {
                 warn!("Failed to delete Service: {}", e);
             }
         }
         // Delete ConfigMap
-        if let Err(e) = self.configmaps.delete(&name, &kube::api::DeleteParams::default()).await {
+        if let Err(e) = self
+            .configmaps
+            .delete(&name, &kube::api::DeleteParams::default())
+            .await
+        {
             // 404 errors are expected when resource doesn't exist
             if !e.to_string().contains("404") && !e.to_string().contains("NotFound") {
                 warn!("Failed to delete ConfigMap: {}", e);
             }
         }
         // Delete Secret
-        if let Err(e) = self.secrets.delete(&name, &kube::api::DeleteParams::default()).await {
+        if let Err(e) = self
+            .secrets
+            .delete(&name, &kube::api::DeleteParams::default())
+            .await
+        {
             // 404 errors are expected when resource doesn't exist
             if !e.to_string().contains("404") && !e.to_string().contains("NotFound") {
                 warn!("Failed to delete Secret: {}", e);
@@ -158,18 +176,32 @@ impl ClusterController {
                 }
             }
         }));
-        self.clusters.patch(&cluster.name_any(), &PatchParams::default(), &patch).await?;
+        self.clusters
+            .patch(&cluster.name_any(), &PatchParams::default(), &patch)
+            .await?;
         Ok(())
     }
     /// Update the phase of the cluster
     async fn update_phase(&self, cluster: &BeejsCluster, phase: ClusterPhase) -> Result<(), Error> {
         let is_ready: _ = matches!(phase, ClusterPhase::Running);
         let mut condition = serde_json::Map::new();
-        condition.insert("type".to_string(), serde_json::Value::String("Ready".to_string()));
-        condition.insert("status".to_string(), serde_json::Value::String(is_ready.to_string()));
+        condition.insert(
+            "type".to_string(),
+            serde_json::Value::String("Ready".to_string()),
+        );
+        condition.insert(
+            "status".to_string(),
+            serde_json::Value::String(is_ready.to_string()),
+        );
         let mut status = serde_json::Map::new();
-        status.insert("phase".to_string(), serde_json::Value::String(phase.as_str().to_string()));
-        status.insert("conditions".to_string(), serde_json::Value::Array(vec![serde_json::Value::Object(condition)]));
+        status.insert(
+            "phase".to_string(),
+            serde_json::Value::String(phase.as_str().to_string()),
+        );
+        status.insert(
+            "conditions".to_string(),
+            serde_json::Value::Array(vec![serde_json::Value::Object(condition)]),
+        );
         let mut patch_map = serde_json::Map::new();
         patch_map.insert("status".to_string(), serde_json::Value::Object(status));
         let patch: _ = serde_json::Value::Object(patch_map);
@@ -207,7 +239,10 @@ impl ClusterController {
         self.create_service(&cluster).await?;
         // 5. Wait for pods to be ready
         self.wait_for_ready(&cluster).await?;
-        info!("Successfully created cluster resources for: {}", cluster.name_any());
+        info!(
+            "Successfully created cluster resources for: {}",
+            cluster.name_any()
+        );
         Ok(())
     }
     /// Reconcile running cluster
@@ -237,7 +272,10 @@ impl ClusterController {
     }
     /// Reconcile cluster recovery from failed state
     async fn reconcile_recovery(&self, cluster: Arc<BeejsCluster>) -> Result<(), Error> {
-        warn!("Recovering cluster from failed state: {}", cluster.name_any());
+        warn!(
+            "Recovering cluster from failed state: {}",
+            cluster.name_any()
+        );
         // Check if resources exist
         if !self.resources_exist(&cluster).await? {
             // Resources don't exist, recreate them
@@ -253,7 +291,10 @@ impl ClusterController {
         let name: _ = cluster.name_any();
         let mut data = BTreeMap::new();
         data.insert("version".to_string(), cluster.spec.version.clone());
-        data.insert("clusterName".to_string(), cluster.spec.distributed.cluster_name.clone());
+        data.insert(
+            "clusterName".to_string(),
+            cluster.spec.distributed.cluster_name.clone(),
+        );
         data.insert("nodes".to_string(), cluster.spec.nodes.to_string());
         let cm: _ = k8s_openapi::api::core::v1::ConfigMap {
             metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
@@ -267,7 +308,9 @@ impl ClusterController {
             binary_data: None,
             immutable: None,
         };
-        self.configmaps.create(&kube::api::PostParams::default(), &cm).await?;
+        self.configmaps
+            .create(&kube::api::PostParams::default(), &cm)
+            .await?;
         info!("Created ConfigMap: {}", name);
         Ok(())
     }
@@ -290,7 +333,9 @@ impl ClusterController {
             type_: Some("Opaque".to_string()),
             immutable: None,
         };
-        self.secrets.create(&kube::api::PostParams::default(), &secret).await?;
+        self.secrets
+            .create(&kube::api::PostParams::default(), &secret)
+            .await?;
         info!("Created Secret: {}", name);
         Ok(())
     }
@@ -317,9 +362,10 @@ impl ClusterController {
                 template: k8s_openapi::api::core::v1::PodTemplateSpec {
                     metadata: Some(k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
                         labels: Some(self.get_labels(cluster)),
-                        annotations: Some(BTreeMap::from([
-                            ("beejs.io/cluster".to_string(), name.clone()),
-                        ])),
+                        annotations: Some(BTreeMap::from([(
+                            "beejs.io/cluster".to_string(),
+                            name.clone(),
+                        )])),
                         ..Default::default()
                     }),
                     spec: Some(self.create_pod_spec(cluster)?),
@@ -331,15 +377,21 @@ impl ClusterController {
                 revision_history_limit: Some(10),
                 update_strategy: Some(k8s_openapi::api::apps::v1::StatefulSetUpdateStrategy {
                     type_: Some("RollingUpdate".to_string()),
-                    rolling_update: Some(k8s_openapi::api::apps::v1::RollingUpdateStatefulSetStrategy {
-                        max_unavailable: Some(k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(1)),
-                        partition: None,
-                    }),
+                    rolling_update: Some(
+                        k8s_openapi::api::apps::v1::RollingUpdateStatefulSetStrategy {
+                            max_unavailable: Some(
+                                k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(1),
+                            ),
+                            partition: None,
+                        },
+                    ),
                 }),
             }),
             status: None,
         };
-        self.statefulsets.create(&kube::api::PostParams::default(), &statefulset).await?;
+        self.statefulsets
+            .create(&kube::api::PostParams::default(), &statefulset)
+            .await?;
         info!("Created StatefulSet: {} with {} replicas", name, replicas);
         Ok(())
     }
@@ -378,7 +430,9 @@ impl ClusterController {
             }),
             status: None,
         };
-        self.services.create(&kube::api::PostParams::default(), &headless_service).await?;
+        self.services
+            .create(&kube::api::PostParams::default(), &headless_service)
+            .await?;
         // ClusterIP service for API access
         let api_service: _ = k8s_openapi::api::core::v1::Service {
             metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
@@ -397,7 +451,9 @@ impl ClusterController {
                     name: Some("api".to_string()),
                     port: 8080,
                     protocol: Some("TCP".to_string()),
-                    target_port: Some(k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(8080)),
+                    target_port: Some(
+                        k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(8080),
+                    ),
                     app_protocol: None,
                     node_port: None,
                 }]),
@@ -418,7 +474,9 @@ impl ClusterController {
             }),
             status: None,
         };
-        self.services.create(&kube::api::PostParams::default(), &api_service).await?;
+        self.services
+            .create(&kube::api::PostParams::default(), &api_service)
+            .await?;
         info!("Created Services: {}-headless and {}", name, name);
         Ok(())
     }
@@ -466,7 +524,10 @@ impl ClusterController {
         Ok(())
     }
     /// Create pod specification
-    fn create_pod_spec(&self, cluster: &BeejsCluster) -> Result<k8s_openapi::api::core::v1::PodSpec, Error> {
+    fn create_pod_spec(
+        &self,
+        cluster: &BeejsCluster,
+    ) -> Result<k8s_openapi::api::core::v1::PodSpec, Error> {
         Ok(k8s_openapi::api::core::v1::PodSpec {
             containers: vec![k8s_openapi::api::core::v1::Container {
                 name: "beejs".to_string(),
@@ -502,44 +563,55 @@ impl ClusterController {
                 env_from: None,
                 resources: Some(k8s_openapi::api::core::v1::ResourceRequirements {
                     requests: Some(BTreeMap::from([
-                        ("cpu".to_string(), Quantity(cluster.spec.resources.cpu.clone())),
-                        ("memory".to_string(), Quantity(cluster.spec.resources.memory.clone())),
+                        (
+                            "cpu".to_string(),
+                            Quantity(cluster.spec.resources.cpu.clone()),
+                        ),
+                        (
+                            "memory".to_string(),
+                            Quantity(cluster.spec.resources.memory.clone()),
+                        ),
                     ])),
                     limits: Some(BTreeMap::from([
-                        ("cpu".to_string(), Quantity(cluster.spec.resources.cpu.clone())),
-                        ("memory".to_string(), Quantity(cluster.spec.resources.memory.clone())),
+                        (
+                            "cpu".to_string(),
+                            Quantity(cluster.spec.resources.cpu.clone()),
+                        ),
+                        (
+                            "memory".to_string(),
+                            Quantity(cluster.spec.resources.memory.clone()),
+                        ),
                     ])),
                     claims: None,
                 }),
-                volume_mounts: Some(vec![
-                    k8s_openapi::api::core::v1::VolumeMount {
-                        name: "config".to_string(),
-                        mount_path: "/etc/beejs".to_string(),
-                        read_only: Some(true),
-                        sub_path: None,
-                        sub_path_expr: None,
-                        mount_propagation: None,
-                    },
-                ]),
+                volume_mounts: Some(vec![k8s_openapi::api::core::v1::VolumeMount {
+                    name: "config".to_string(),
+                    mount_path: "/etc/beejs".to_string(),
+                    read_only: Some(true),
+                    sub_path: None,
+                    sub_path_expr: None,
+                    mount_propagation: None,
+                }]),
                 ..Default::default()
             }],
-            volumes: Some(vec![
-                k8s_openapi::api::core::v1::Volume {
-                    name: "config".to_string(),
-                    config_map: Some(k8s_openapi::api::core::v1::ConfigMapVolumeSource {
-                        default_mode: Some(0o644),
-                        items: None,
-                        name: Some(cluster.name_any()),
-                        optional: Some(false),
-                    }),
-                    ..Default::default()
-                },
-            ]),
+            volumes: Some(vec![k8s_openapi::api::core::v1::Volume {
+                name: "config".to_string(),
+                config_map: Some(k8s_openapi::api::core::v1::ConfigMapVolumeSource {
+                    default_mode: Some(0o644),
+                    items: None,
+                    name: Some(cluster.name_any()),
+                    optional: Some(false),
+                }),
+                ..Default::default()
+            }]),
             ..Default::default()
         })
     }
     /// Create PVC templates
-    fn create_pvc_templates(&self, cluster: &BeejsCluster) -> Result<Vec<k8s_openapi::api::core::v1::PersistentVolumeClaim>, Error> {
+    fn create_pvc_templates(
+        &self,
+        cluster: &BeejsCluster,
+    ) -> Result<Vec<k8s_openapi::api::core::v1::PersistentVolumeClaim>, Error> {
         let mut pvcs = Vec::new();
         // Add storage PVC if disk size is specified
         if !cluster.spec.resources.disk.is_empty() {
@@ -551,9 +623,10 @@ impl ClusterController {
                 spec: Some(k8s_openapi::api::core::v1::PersistentVolumeClaimSpec {
                     access_modes: Some(vec!["ReadWriteOnce".to_string()]),
                     resources: Some(k8s_openapi::api::core::v1::ResourceRequirements {
-                        requests: Some(BTreeMap::from([
-                            ("storage".to_string(), Quantity(cluster.spec.resources.disk.clone())),
-                        ])),
+                        requests: Some(BTreeMap::from([(
+                            "storage".to_string(),
+                            Quantity(cluster.spec.resources.disk.clone()),
+                        )])),
                         limits: None,
                         claims: None,
                     }),
@@ -571,18 +644,547 @@ impl ClusterController {
         Ok(pvcs)
     }
     /// Get labels for resources
-    fn get_labels(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
+    fn get_labels(
+        &self,
+        cluster: &BeejsCluster,
+    ) -> BTreeMap<
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    > {
         BTreeMap::from([
             ("beejs.io/cluster".to_string(), cluster.name_any()),
             ("beejs.io/version".to_string(), cluster.spec.version.clone()),
-            ("beejs.io/cluster-name".to_string(), cluster.spec.distributed.cluster_name.clone()),
+            (
+                "beejs.io/cluster-name".to_string(),
+                cluster.spec.distributed.cluster_name.clone(),
+            ),
         ])
     }
     /// Get annotations for resources
-    fn get_annotations(&self, cluster: &BeejsCluster) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
+    fn get_annotations(
+        &self,
+        cluster: &BeejsCluster,
+    ) -> BTreeMap<
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+        String,
+    > {
         BTreeMap::from([
-            ("beejs.io/created-by".to_string(), "beejs-operator".to_string()),
-            ("beejs.io/description".to_string(), "Beejs Cluster".to_string()),
+            (
+                "beejs.io/created-by".to_string(),
+                "beejs-operator".to_string(),
+            ),
+            (
+                "beejs.io/description".to_string(),
+                "Beejs Cluster".to_string(),
+            ),
         ])
     }
 }
@@ -601,8 +1203,8 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::time::Duration;
+    use std::collections::{BTreeMap, HashMap};
+    use std::time::Duration;
     #[test]
     fn test_error_type() {
         // Test error conversion - just verify the error type exists

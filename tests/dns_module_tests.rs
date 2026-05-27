@@ -1,8 +1,8 @@
 // DNS 模块测试 - v0.3.47
 // 测试 DNS lookup 和 resolution 功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -143,7 +143,7 @@ fn test_dns_reverse_empty() {
 
 #[test]
 #[serial]
-fn test_dns_getServers_exists() {
+fn test_dns_get_servers_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof dns.getServers");
     assert!(result.is_ok());
@@ -152,7 +152,7 @@ fn test_dns_getServers_exists() {
 
 #[test]
 #[serial]
-fn test_dns_getServers_returns_array() {
+fn test_dns_get_servers_returns_array() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("Array.isArray(dns.getServers())");
     assert!(result.is_ok());
@@ -161,7 +161,7 @@ fn test_dns_getServers_returns_array() {
 
 #[test]
 #[serial]
-fn test_dns_getServers_contains_dns_server() {
+fn test_dns_get_servers_contains_dns_server() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("dns.getServers().includes('8.8.8.8')");
     assert!(result.is_ok());
@@ -193,5 +193,10 @@ fn test_dns_resolve_with_rrtype() {
     let output = binding.trim();
     // Should return an array or error
     // Array is converted to string by V8, so check for addresses or error
-    assert!(output.contains("::1") || output.contains("127.0.0.1") || output.is_empty() || output.starts_with("Error"));
+    assert!(
+        output.contains("::1")
+            || output.contains("127.0.0.1")
+            || output.is_empty()
+            || output.starts_with("Error")
+    );
 }

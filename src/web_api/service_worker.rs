@@ -10,12 +10,12 @@ use std::sync::{Arc, Mutex};
 // ServiceWorker state
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServiceWorkerState {
-    Parsing,      // 0: Script is being parsed
-    Installing,   // 1: Script is being installed
-    Installed,    // 2: Installation completed, waiting for activation
-    Activating,   // 3: Service worker is being activated
-    Activated,    // 4: Service worker is active and can handle events
-    Redundant,    // 5: Service worker has been replaced
+    Parsing,    // 0: Script is being parsed
+    Installing, // 1: Script is being installed
+    Installed,  // 2: Installation completed, waiting for activation
+    Activating, // 3: Service worker is being activated
+    Activated,  // 4: Service worker is active and can handle events
+    Redundant,  // 5: Service worker has been replaced
 }
 
 impl ServiceWorkerState {
@@ -96,7 +96,8 @@ fn setup_service_worker_global_scope(
     sw_scope.set(scope, add_event_key.into(), add_event_func.into());
 
     // removeEventListener method
-    let remove_event_listener_fn = v8::FunctionTemplate::new(scope, sw_remove_event_listener_callback);
+    let remove_event_listener_fn =
+        v8::FunctionTemplate::new(scope, sw_remove_event_listener_callback);
     let remove_event_key = v8::String::new(scope, "removeEventListener").unwrap();
     let remove_event_func = remove_event_listener_fn.get_function(scope).unwrap();
     sw_scope.set(scope, remove_event_key.into(), remove_event_func.into());
@@ -121,7 +122,6 @@ fn setup_service_worker_global_scope(
     // This allows self.addEventListener, self.skipWaiting, etc.
     global.set(scope, self_key.into(), global.into());
 
-    eprintln!("✅ [v0.3.328] ServiceWorkerGlobalScope (self) initialized");
     Ok(())
 }
 
@@ -177,15 +177,26 @@ fn setup_service_worker_events(
 
     // Register constructors globally
     let install_event_key = v8::String::new(scope, "InstallEvent").unwrap();
-    global.set(scope, install_event_key.into(), install_event_constructor.into());
+    global.set(
+        scope,
+        install_event_key.into(),
+        install_event_constructor.into(),
+    );
 
     let activate_event_key = v8::String::new(scope, "ActivateEvent").unwrap();
-    global.set(scope, activate_event_key.into(), activate_event_constructor.into());
+    global.set(
+        scope,
+        activate_event_key.into(),
+        activate_event_constructor.into(),
+    );
 
     let fetch_event_key = v8::String::new(scope, "FetchEvent").unwrap();
-    global.set(scope, fetch_event_key.into(), fetch_event_constructor.into());
+    global.set(
+        scope,
+        fetch_event_key.into(),
+        fetch_event_constructor.into(),
+    );
 
-    eprintln!("✅ [v0.3.325] ServiceWorker lifecycle events initialized");
     Ok(())
 }
 
@@ -217,17 +228,40 @@ fn fetch_event_constructor_callback(
 ) {
     let event_obj = v8::Object::new(scope);
 
-    // Get request URL from arguments
-    let request_url = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "").unwrap())
-            .to_rust_string_lossy(scope)
+    let event_type = if args.length() > 0 {
+        args.get(0)
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_else(|| "fetch".to_string())
     } else {
-        "".to_string()
+        "fetch".to_string()
+    };
+
+    // FetchEvent follows the DOM constructor shape: new FetchEvent(type, init).
+    // Older Beejs tests also passed a URL as the first argument, so keep that
+    // fallback when no init object is provided.
+    let request_url = if args.length() > 1 {
+        let init = args.get(1);
+        if init.is_object() {
+            let init_obj = init.to_object(scope).unwrap();
+            let request_url_key = v8::String::new(scope, "requestUrl").unwrap();
+            init_obj
+                .get(scope, request_url_key.into())
+                .and_then(|value| value.to_string(scope))
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        }
+    } else if event_type != "fetch" {
+        event_type.clone()
+    } else {
+        String::new()
     };
 
     // Store internal properties - extract values first to avoid scope borrow issues
     let type_key = v8::String::new(scope, "_type").unwrap();
-    let type_val = v8::String::new(scope, "fetch").unwrap();
+    let type_val = v8::String::new(scope, &event_type).unwrap();
     event_obj.set(scope, type_key.into(), type_val.into());
 
     let type_prop_key = v8::String::new(scope, "type").unwrap();
@@ -259,7 +293,9 @@ fn create_service_worker_event(
 
     // Get event type from arguments (usually same as event name)
     let event_type_str = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, event_type).unwrap())
+        args.get(0)
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, event_type).unwrap())
             .to_rust_string_lossy(scope)
     } else {
         event_type.to_string()
@@ -358,7 +394,10 @@ fn setup_navigator_service_worker(
 
     // Add to navigator (create navigator if it doesn't exist)
     let navigator_key = v8::String::new(scope, "navigator").unwrap();
-    let navigator = if let Some(nav) = global.get(scope, navigator_key.into()).and_then(|v| v.to_object(scope)) {
+    let navigator = if let Some(nav) = global
+        .get(scope, navigator_key.into())
+        .and_then(|v| v.to_object(scope))
+    {
         nav
     } else {
         // Create navigator object if it doesn't exist
@@ -367,9 +406,12 @@ fn setup_navigator_service_worker(
         new_navigator
     };
     let service_worker_key = v8::String::new(scope, "serviceWorker").unwrap();
-    navigator.set(scope, service_worker_key.into(), service_worker_container.into());
+    navigator.set(
+        scope,
+        service_worker_key.into(),
+        service_worker_container.into(),
+    );
 
-    eprintln!("✅ [v0.3.324] ServiceWorker API initialized");
     Ok(())
 }
 
@@ -381,7 +423,8 @@ fn service_worker_register_callback(
 ) {
     let url_val = args.get(0);
     if !url_val.is_string() {
-        let error = v8::String::new(scope, "ServiceWorker registration requires a script URL").unwrap();
+        let error =
+            v8::String::new(scope, "ServiceWorker registration requires a script URL").unwrap();
         let exception = v8::Exception::type_error(scope, error);
         scope.throw_exception(exception);
         return;
@@ -392,7 +435,10 @@ fn service_worker_register_callback(
         let options = args.get(1);
         if let Some(options_obj) = options.to_object(scope) {
             let scope_key = v8::String::new(scope, "scope").unwrap();
-            if let Some(scope_val) = options_obj.get(scope, scope_key.into()).and_then(|s| s.to_string(scope)) {
+            if let Some(scope_val) = options_obj
+                .get(scope, scope_key.into())
+                .and_then(|s| s.to_string(scope))
+            {
                 scope_val.to_rust_string_lossy(scope)
             } else {
                 "./".to_string()
@@ -472,7 +518,6 @@ fn setup_cache_api(
     let cache_storage_key = v8::String::new(scope, "caches").unwrap();
     global.set(scope, cache_storage_key.into(), cache_storage_obj.into());
 
-    eprintln!("✅ [v0.3.324] Cache API initialized");
     Ok(())
 }
 
@@ -680,21 +725,34 @@ fn setup_push_api(
 
     // Register globally first
     let push_manager_key = v8::String::new(scope, "PushManager").unwrap();
-    global.set(scope, push_manager_key.into(), push_manager_constructor.into());
+    global.set(
+        scope,
+        push_manager_key.into(),
+        push_manager_constructor.into(),
+    );
 
     // Store prototype globally so JavaScript can access it
     let push_manager_proto_key = v8::String::new(scope, "pushManagerProto").unwrap();
-    global.set(scope, push_manager_proto_key.into(), push_manager_proto.into());
+    global.set(
+        scope,
+        push_manager_proto_key.into(),
+        push_manager_proto.into(),
+    );
 
     // Use JavaScript to set up the prototype chain
     // This changes the [[Prototype]] of the constructor's .prototype object
-    let set_proto_js = v8::String::new(scope, "Object.setPrototypeOf(PushManager.prototype, pushManagerProto)").unwrap();
+    let set_proto_js = v8::String::new(
+        scope,
+        "Object.setPrototypeOf(PushManager.prototype, pushManagerProto)",
+    )
+    .unwrap();
     if let Some(proto_script) = v8::Script::compile(scope, set_proto_js, None) {
         let _ = proto_script.run(scope);
     }
 
     // Setup PushSubscription as a constructor function
-    let push_subscription_fn = v8::FunctionTemplate::new(scope, push_subscription_constructor_callback);
+    let push_subscription_fn =
+        v8::FunctionTemplate::new(scope, push_subscription_constructor_callback);
     let push_subscription_constructor = push_subscription_fn.get_function(scope).unwrap();
 
     // Create prototype object with methods
@@ -720,19 +778,30 @@ fn setup_push_api(
 
     // Register globally
     let push_subscription_key = v8::String::new(scope, "PushSubscription").unwrap();
-    global.set(scope, push_subscription_key.into(), push_subscription_constructor.into());
+    global.set(
+        scope,
+        push_subscription_key.into(),
+        push_subscription_constructor.into(),
+    );
 
     // Store prototype globally so JavaScript can access it
     let push_subscription_proto_key = v8::String::new(scope, "pushSubscriptionProto").unwrap();
-    global.set(scope, push_subscription_proto_key.into(), push_subscription_proto.into());
+    global.set(
+        scope,
+        push_subscription_proto_key.into(),
+        push_subscription_proto.into(),
+    );
 
     // Use JavaScript to set up the prototype chain for PushSubscription
-    let set_sub_proto_js = v8::String::new(scope, "Object.setPrototypeOf(PushSubscription.prototype, pushSubscriptionProto)").unwrap();
+    let set_sub_proto_js = v8::String::new(
+        scope,
+        "Object.setPrototypeOf(PushSubscription.prototype, pushSubscriptionProto)",
+    )
+    .unwrap();
     if let Some(proto_script) = v8::Script::compile(scope, set_sub_proto_js, None) {
         let _ = proto_script.run(scope);
     }
 
-    eprintln!("✅ [v0.3.326] Push API initialized");
     Ok(())
 }
 
@@ -796,23 +865,25 @@ fn push_subscription_get_key_callback(
 
     if key_type == "p256dh" {
         let key_data = [
-            0x04u8, 0xb2, 0x50, 0x75, 0x60, 0x4a, 0x4f, 0x5c,
-            0xf4, 0x4a, 0x3f, 0x5a, 0x8e, 0x0c, 0xa0, 0x1b,
-            0x5e, 0x3f, 0x4e, 0x5e, 0x8a, 0x2b, 0x5d, 0x4f,
-            0x5a, 0x5f, 0x4a, 0x5f, 0x5e, 0x3d, 0x4f, 0x5e,
-            0x5a, 0x4f, 0x5e, 0x5a, 0x3f, 0x5a, 0x4f, 0x5c,
-            0x5a, 0x4f, 0x5e, 0x4a, 0x5f, 0x5e, 0x3f, 0x5a
+            0x04u8, 0xb2, 0x50, 0x75, 0x60, 0x4a, 0x4f, 0x5c, 0xf4, 0x4a, 0x3f, 0x5a, 0x8e, 0x0c,
+            0xa0, 0x1b, 0x5e, 0x3f, 0x4e, 0x5e, 0x8a, 0x2b, 0x5d, 0x4f, 0x5a, 0x5f, 0x4a, 0x5f,
+            0x5e, 0x3d, 0x4f, 0x5e, 0x5a, 0x4f, 0x5e, 0x5a, 0x3f, 0x5a, 0x4f, 0x5c, 0x5a, 0x4f,
+            0x5e, 0x4a, 0x5f, 0x5e, 0x3f, 0x5a,
         ];
         let array_buffer = v8::ArrayBuffer::new(scope, key_data.len());
         let store = array_buffer.get_backing_store();
-        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, key_data.len()) };
+        let slice = unsafe {
+            std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, key_data.len())
+        };
         slice.copy_from_slice(&key_data);
         rv.set(array_buffer.into());
     } else if key_type == "auth" {
         let auth_data = [0x5au8, 0x5f, 0x5e, 0x3f, 0x4a, 0x5f, 0x5e, 0x3d];
         let array_buffer = v8::ArrayBuffer::new(scope, auth_data.len());
         let store = array_buffer.get_backing_store();
-        let slice = unsafe { std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, auth_data.len()) };
+        let slice = unsafe {
+            std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, auth_data.len())
+        };
         slice.copy_from_slice(&auth_data);
         rv.set(array_buffer.into());
     } else {
@@ -835,7 +906,11 @@ fn push_subscription_to_json_callback(
     let options = v8::Object::new(scope);
     let app_server_key_str = v8::String::new(scope, "applicationServerKey").unwrap();
     let user_visible_str = v8::String::new(scope, "userVisibleOnly").unwrap();
-    let vapid_key = v8::String::new(scope, "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U").unwrap();
+    let vapid_key = v8::String::new(
+        scope,
+        "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+    )
+    .unwrap();
     let true_val = v8::Boolean::new(scope, true);
     options.set(scope, app_server_key_str.into(), vapid_key.into());
     options.set(scope, user_visible_str.into(), true_val.into());
@@ -947,7 +1022,9 @@ fn push_event_constructor_callback(
 
     // Get event type (usually 'push')
     let event_type = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "push").unwrap())
+        args.get(0)
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "push").unwrap())
             .to_rust_string_lossy(scope)
     } else {
         "push".to_string()
@@ -986,9 +1063,14 @@ fn push_event_constructor_callback(
 
     // waitUntil method (inherited from ExtendableEvent via prototype chain)
     // For now, add it directly to support basic usage
-    let wait_until_fn = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut rv: v8::ReturnValue| {
-        rv.set(v8::undefined(_scope).into());
-    });
+    let wait_until_fn = v8::FunctionTemplate::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            rv.set(v8::undefined(_scope).into());
+        },
+    );
     let wait_until_key = v8::String::new(scope, "waitUntil").unwrap();
     let wait_until_func = wait_until_fn.get_function(scope).unwrap();
     event_obj.set(scope, wait_until_key.into(), wait_until_func.into());

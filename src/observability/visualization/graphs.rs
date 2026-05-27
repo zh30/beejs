@@ -6,13 +6,13 @@
 // - TraceGraph: Request flow and distributed tracing visualization
 // - NetworkGraph: Network topology and connectivity visualization
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use serde::{Serialize, Deserialize};
-use tracing::{debug, error, warn};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
+use tracing::{debug, error, warn};
 
 /// Graph node with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,7 +198,10 @@ impl TopologyGraph {
     }
     /// Apply layout algorithm
     pub async fn apply_layout(&mut self) -> Result<()> {
-        debug!("Applying layout algorithm: {:?}", self.layout_config.algorithm);
+        debug!(
+            "Applying layout algorithm: {:?}",
+            self.layout_config.algorithm
+        );
         match self.layout_config.algorithm {
             LayoutAlgorithm::ForceDirected => {
                 self.apply_force_directed_layout().await?;
@@ -223,7 +226,11 @@ impl TopologyGraph {
     }
     /// Render the graph as SVG
     pub fn render_svg(&self) -> Result<String> {
-        debug!("Rendering topology graph: {} nodes, {} edges", self.nodes.len(), self.edges.len());
+        debug!(
+            "Rendering topology graph: {} nodes, {} edges",
+            self.nodes.len(),
+            self.edges.len()
+        );
         let width: _ = self.config.width;
         let height: _ = self.config.height;
         let mut svg = String::new();
@@ -242,7 +249,7 @@ impl TopologyGraph {
         for edge in &self.edges {
             if let (Some(source), Some(target)) = (
                 self.nodes.iter().find(|n| n.id == edge.source),
-                self.nodes.iter().find(|n| n.id == edge.target)
+                self.nodes.iter().find(|n| n.id == edge.target),
             ) {
                 let color: _ = edge.color.as_deref().unwrap_or("#999999");
                 let thickness: _ = edge.style.thickness;
@@ -264,9 +271,12 @@ impl TopologyGraph {
                     svg.push_str(&format!(
                         r#"  <polygon points="{},{} {},{} {},{}" fill="{}"/>
 "#,
-                        target.position.x, target.position.y,
-                        arrow_x - 8.0 * (angle + 0.3).cos(), arrow_y - 8.0 * (angle + 0.3).sin(),
-                        arrow_x - 8.0 * (angle - 0.3).cos(), arrow_y - 8.0 * (angle - 0.3).sin(),
+                        target.position.x,
+                        target.position.y,
+                        arrow_x - 8.0 * (angle + 0.3).cos(),
+                        arrow_y - 8.0 * (angle + 0.3).sin(),
+                        arrow_x - 8.0 * (angle - 0.3).cos(),
+                        arrow_y - 8.0 * (angle - 0.3).sin(),
                         color
                     ));
                 }
@@ -277,7 +287,9 @@ impl TopologyGraph {
                     svg.push_str(&format!(
                         r#"  <text x="{}" y="{}" class="edge-label" text-anchor="middle">{}</text>
 "#,
-                        mid_x, mid_y - 5, label
+                        mid_x,
+                        mid_y - 5,
+                        label
                     ));
                 }
             }
@@ -303,20 +315,26 @@ impl TopologyGraph {
                 svg.push_str(&format!(
                     r#"  <text x="{}" y="{}" class="node-label" font-size="24">{}</text>
 "#,
-                    node.position.x, node.position.y + 8, icon
+                    node.position.x,
+                    node.position.y + 8,
+                    icon
                 ));
             } else {
                 svg.push_str(&format!(
                     r#"  <text x="{}" y="{}" class="node-label">{}</text>
 "#,
-                    node.position.x, node.position.y + 5, node.label
+                    node.position.x,
+                    node.position.y + 5,
+                    node.label
                 ));
             }
             // Draw node type indicator
             svg.push_str(&format!(
                 r#"  <text x="{}" y="{}" class="node-label" font-size="10" opacity="0.7">{}</text>
 "#,
-                node.position.x, node.position.y + node.size.height / 2.0 + 15, node.node_type
+                node.position.x,
+                node.position.y + node.size.height / 2.0 + 15,
+                node.node_type
             ));
         }
         svg.push_str("</svg>");
@@ -346,7 +364,8 @@ impl TopologyGraph {
                     let dy: _ = self.nodes[j].position.y - self.nodes[i].position.y;
                     let distance: _ = (dx * dx + dy * dy).sqrt();
                     if distance > 0.0 {
-                        let force: _ = self.layout_config.force_params.repulsion / (distance * distance);
+                        let force: _ =
+                            self.layout_config.force_params.repulsion / (distance * distance);
                         let fx: _ = force * dx / distance;
                         let fy: _ = force * dy / distance;
                         self.nodes[i].position.x -= fx;
@@ -360,19 +379,25 @@ impl TopologyGraph {
             for edge in &self.edges {
                 if let (Some(source_idx), Some(target_idx)) = (
                     self.nodes.iter().position(|n| n.id == edge.source),
-                    self.nodes.iter().position(|n| n.id == edge.target)
+                    self.nodes.iter().position(|n| n.id == edge.target),
                 ) {
-                    let dx: _ = self.nodes[target_idx].position.x - self.nodes[source_idx].position.x;
-                    let dy: _ = self.nodes[target_idx].position.y - self.nodes[source_idx].position.y;
+                    let dx: _ =
+                        self.nodes[target_idx].position.x - self.nodes[source_idx].position.x;
+                    let dy: _ =
+                        self.nodes[target_idx].position.y - self.nodes[source_idx].position.y;
                     let distance: _ = (dx * dx + dy * dy).sqrt();
                     if distance > 0.0 {
                         let force: _ = distance * self.layout_config.force_params.attraction;
                         let fx: _ = force * dx / distance;
                         let fy: _ = force * dy / distance;
-                        self.nodes[source_idx].position.x += fx * self.layout_config.force_params.damping;
-                        self.nodes[source_idx].position.y += fy * self.layout_config.force_params.damping;
-                        self.nodes[target_idx].position.x -= fx * self.layout_config.force_params.damping;
-                        self.nodes[target_idx].position.y -= fy * self.layout_config.force_params.damping;
+                        self.nodes[source_idx].position.x +=
+                            fx * self.layout_config.force_params.damping;
+                        self.nodes[source_idx].position.y +=
+                            fy * self.layout_config.force_params.damping;
+                        self.nodes[target_idx].position.x -=
+                            fx * self.layout_config.force_params.damping;
+                        self.nodes[target_idx].position.y -=
+                            fy * self.layout_config.force_params.damping;
                     }
                 }
             }
@@ -388,7 +413,10 @@ impl TopologyGraph {
         for (i, node) in self.nodes.iter().enumerate() {
             let has_incoming: _ = self.edges.iter().any(|e| e.target == node.id);
             if !has_incoming {
-                levels.entry("level_0".to_string()).or_insert_with(Vec::new).push(i);
+                levels
+                    .entry("level_0".to_string())
+                    .or_insert_with(Vec::new)
+                    .push(i);
             }
         }
         // Assign other nodes to levels
@@ -396,14 +424,15 @@ impl TopologyGraph {
             if levels.values().any(|v| v.contains(&i)) {
                 continue;
             }
-            let max_source_level: _ = self.edges
+            let max_source_level: _ = self
+                .edges
                 .iter()
                 .filter(|e| e.target == node.id)
-                .filter_map(|e| {
-                    self.nodes.iter().position(|n| n.id == e.source)
-                })
+                .filter_map(|e| self.nodes.iter().position(|n| n.id == e.source))
                 .filter_map(|idx| {
-                    levels.iter().find(|(_, v)| v.contains(&idx))
+                    levels
+                        .iter()
+                        .find(|(_, v)| v.contains(&idx))
                         .map(|(k, _)| k)
                         .max()
                         .map(|k| k.parse::<u32>().unwrap_or(0))
@@ -451,10 +480,10 @@ impl TopologyGraph {
     /// Apply tree layout
     async fn apply_tree_layout(&mut self) -> Result<()> {
         // Simplified tree layout - find root and arrange in tree structure
-        let roots: Vec<&GraphNode> = self.nodes.iter()
-            .filter(|node| {
-                !self.edges.iter().any(|e| e.target == node.id)
-            })
+        let roots: Vec<&GraphNode> = self
+            .nodes
+            .iter()
+            .filter(|node| !self.edges.iter().any(|e| e.target == node.id))
             .collect();
         if roots.is_empty() {
             // No roots found, use first node
@@ -479,7 +508,8 @@ impl TopologyGraph {
             return 0;
         }
         visited.insert(node.id.clone());
-        let children: Vec<&GraphNode> = self.edges
+        let children: Vec<&GraphNode> = self
+            .edges
             .iter()
             .filter(|e| e.source == node.id)
             .filter_map(|e| self.nodes.iter().find(|n| n.id == e.target))
@@ -487,7 +517,8 @@ impl TopologyGraph {
         if children.is_empty() {
             1
         } else {
-            let max_child_height: _ = children.iter()
+            let max_child_height: _ = children
+                .iter()
                 .map(|child| self.calculate_subtree_height(child, visited))
                 .max()
                 .unwrap_or(0);
@@ -512,7 +543,8 @@ impl TopologyGraph {
             node_mut.position.x = x;
             node_mut.position.y = y;
         }
-        let children: Vec<&GraphNode> = self.edges
+        let children: Vec<&GraphNode> = self
+            .edges
             .iter()
             .filter(|e| e.source == node.id)
             .filter_map(|e| self.nodes.iter().find(|n| n.id == e.target))
@@ -558,7 +590,10 @@ impl TopologyGraph {
         let mut depth_groups: HashMap<u32, Vec<&GraphNode>> = HashMap::new();
         for node in &self.nodes {
             let depth: _ = *depths.get(&node.id).unwrap_or(&0);
-            depth_groups.entry(depth).or_insert_with(Vec::new).push(node);
+            depth_groups
+                .entry(depth)
+                .or_insert_with(Vec::new)
+                .push(node);
         }
         // Position nodes in circles
         for (depth, nodes) in depth_groups {
@@ -580,8 +615,10 @@ impl Visualizable for TopologyGraph {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
             error!("Failed to render topology graph: {}", e);
-            format!("<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
-                    self.config.width, self.config.height, e)
+            format!(
+                "<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
+                self.config.width, self.config.height, e
+            )
         })
     }
     fn update_data(&mut self, _data: Vec<f64>) -> Result<()> {
@@ -657,7 +694,10 @@ impl TopologyGraphBuilder {
             node_type: node_type.to_string(),
             status: status.to_string(),
             position: Position { x, y },
-            size: Size { width: 80.0, height: 60.0 },
+            size: Size {
+                width: 80.0,
+                height: 60.0,
+            },
             color: "#3b82f6".to_string(),
             icon: None,
             tooltip: None,
@@ -666,12 +706,7 @@ impl TopologyGraphBuilder {
         self
     }
     /// Add edge
-    pub fn edge(
-        &mut self,
-        source: &str,
-        target: &str,
-        label: Option<&str>,
-    ) -> &mut Self {
+    pub fn edge(&mut self, source: &str, target: &str, label: Option<&str>) -> &mut Self {
         self.edges.push(GraphEdge {
             source: source.to_string(),
             target: target.to_string(),
@@ -756,15 +791,24 @@ mod tests {
     #[test]
     fn test_node_with_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("version".to_string(), serde_json::Value::String("1.0".to_string()));
-        metadata.insert("instances".to_string(), serde_json::Value::Number(serde_json::Number::from(3)));
+        metadata.insert(
+            "version".to_string(),
+            serde_json::Value::String("1.0".to_string()),
+        );
+        metadata.insert(
+            "instances".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(3)),
+        );
         let node: _ = GraphNode {
             id: "test-node".to_string(),
             label: "Test Node".to_string(),
             node_type: "service".to_string(),
             status: "healthy".to_string(),
             position: Position { x: 100.0, y: 200.0 },
-            size: Size { width: 80.0, height: 60.0 },
+            size: Size {
+                width: 80.0,
+                height: 60.0,
+            },
             color: "#3b82f6".to_string(),
             icon: Some("⚡".to_string()),
             tooltip: Some("Tooltip text".to_string()),
@@ -808,7 +852,10 @@ mod tests {
                 node_type: "service".to_string(),
                 status: "healthy".to_string(),
                 position: Position { x: 0.0, y: 0.0 },
-                size: Size { width: 80.0, height: 60.0 },
+                size: Size {
+                    width: 80.0,
+                    height: 60.0,
+                },
                 color: "#3b82f6".to_string(),
                 icon: None,
                 tooltip: None,
@@ -857,7 +904,10 @@ mod tests {
                 node_type: "service".to_string(),
                 status: "healthy".to_string(),
                 position: Position { x: 0.0, y: 0.0 },
-                size: Size { width: 80.0, height: 60.0 },
+                size: Size {
+                    width: 80.0,
+                    height: 60.0,
+                },
                 color: "#3b82f6".to_string(),
                 icon: None,
                 tooltip: None,
@@ -882,7 +932,10 @@ mod tests {
                 node_type: "service".to_string(),
                 status: "healthy".to_string(),
                 position: Position { x: 0.0, y: 0.0 },
-                size: Size { width: 80.0, height: 60.0 },
+                size: Size {
+                    width: 80.0,
+                    height: 60.0,
+                },
                 color: "#3b82f6".to_string(),
                 icon: None,
                 tooltip: None,
@@ -891,7 +944,9 @@ mod tests {
         }
         graph.apply_grid_layout().unwrap();
         // Check that nodes are positioned in a grid
-        let positions: Vec<(f64, f64)> = graph.nodes.iter()
+        let positions: Vec<(f64, f64)> = graph
+            .nodes
+            .iter()
             .map(|n| (n.position.x, n.position.y))
             .collect();
         // Should have 2x2 grid

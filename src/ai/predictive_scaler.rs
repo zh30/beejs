@@ -216,21 +216,30 @@ impl PredictiveScaler {
         }
     }
     /// 预测资源使用
-    pub async fn predict_resource_usage(&self, timeframe: TimeFrame) -> Result<ResourcePrediction, Box<dyn std::error::Error>> {
+    pub async fn predict_resource_usage(
+        &self,
+        timeframe: TimeFrame,
+    ) -> Result<ResourcePrediction, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
         let predictor: _ = self.predictor.read().await;
         let prediction: _ = predictor.predict(&timeframe).await?;
         Ok(prediction)
     }
     /// 分析趋势
-    pub async fn analyze_trends(&self, historical_data: &[Metrics]) -> Result<TrendAnalysis, Box<dyn std::error::Error>> {
+    pub async fn analyze_trends(
+        &self,
+        historical_data: &[Metrics],
+    ) -> Result<TrendAnalysis, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(70)).await;
         let analyzer: _ = self.analyzer.read().await;
         let analysis: _ = analyzer.analyze(historical_data).await?;
         Ok(analysis)
     }
     /// 生成扩展策略
-    pub async fn suggest_scaling(&self, prediction: &ResourcePrediction) -> Result<ScalingStrategy, Box<dyn std::error::Error>> {
+    pub async fn suggest_scaling(
+        &self,
+        prediction: &ResourcePrediction,
+    ) -> Result<ScalingStrategy, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let mut strategy = ScalingStrategy {
             trigger_metric: "cpu_usage".to_string(),
@@ -280,14 +289,20 @@ impl PredictiveScaler {
         Ok(strategy)
     }
     /// 执行自动扩展
-    pub async fn auto_scale(&self, strategy: &ScalingStrategy) -> Result<ScalingResult, Box<dyn std::error::Error>> {
+    pub async fn auto_scale(
+        &self,
+        strategy: &ScalingStrategy,
+    ) -> Result<ScalingResult, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         let scaler: _ = self.scaler.read().await;
         let result: _ = scaler.execute(strategy).await?;
         Ok(result)
     }
     /// 优化调度
-    pub async fn optimize_schedule(&self, tasks: &[Task]) -> Result<Schedule, Box<dyn std::error::Error>> {
+    pub async fn optimize_schedule(
+        &self,
+        tasks: &[Task],
+    ) -> Result<Schedule, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
         // 简单的调度算法：按优先级排序
         let mut sorted_tasks = tasks.to_vec();
@@ -322,7 +337,10 @@ impl PredictiveScaler {
         })
     }
     /// 预测执行时间
-    pub async fn predict_execution_time(&self, task: &Task) -> Result<Duration, Box<dyn std::error::Error>> {
+    pub async fn predict_execution_time(
+        &self,
+        task: &Task,
+    ) -> Result<Duration, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(30)).await;
         // 基于历史数据和资源需求预测执行时间
         let base_time: _ = task.estimated_duration.num_seconds() as f64;
@@ -340,7 +358,10 @@ impl ResourcePredictor {
             historical_data: Arc::new(RwLock::new(Vec::new())),
         }
     }
-    pub async fn predict(&self, timeframe: &TimeFrame) -> Result<ResourcePrediction, Box<dyn std::error::Error>> {
+    pub async fn predict(
+        &self,
+        timeframe: &TimeFrame,
+    ) -> Result<ResourcePrediction, Box<dyn std::error::Error>> {
         let historical_data: _ = self.historical_data.read().await;
         if historical_data.is_empty() {
             return Err("没有历史数据用于预测".into());
@@ -392,7 +413,10 @@ impl TrendAnalyzer {
             anomaly_detector: Arc::new(AnomalyDetector::new(2.0, 50)),
         }
     }
-    pub async fn analyze(&self, data: &[Metrics]) -> Result<TrendAnalysis, Box<dyn std::error::Error>> {
+    pub async fn analyze(
+        &self,
+        data: &[Metrics],
+    ) -> Result<TrendAnalysis, Box<dyn std::error::Error>> {
         if data.len() < 2 {
             return Err("数据点不足，无法分析趋势".into());
         }
@@ -407,7 +431,8 @@ impl TrendAnalyzer {
             TrendDirection::Stable
         };
         // 计算增长率
-        let time_span: _ = (data.last().unwrap().timestamp - data.first().unwrap().timestamp).num_seconds() as f64;
+        let time_span: _ =
+            (data.last().unwrap().timestamp - data.first().unwrap().timestamp).num_seconds() as f64;
         let growth_rate: _ = if time_span > 0.0 {
             (last_cpu - first_cpu) / time_span * 3600.0 // 每小时增长率
         } else {
@@ -450,7 +475,10 @@ impl AutoScaler {
             scaling_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
-    pub async fn execute(&self, strategy: &ScalingStrategy) -> Result<ScalingResult, Box<dyn std::error::Error>> {
+    pub async fn execute(
+        &self,
+        strategy: &ScalingStrategy,
+    ) -> Result<ScalingResult, Box<dyn std::error::Error>> {
         let mut capacity = self.current_capacity.write().await;
         let mut history = self.scaling_history.write().await;
         let instances_before: _ = (capacity.cpu_cores / 2.0) as u32;
@@ -464,10 +492,15 @@ impl AutoScaler {
                 capacity.network_bandwidth_mbps += strategy.action.resources.network_bandwidth_mbps;
             }
             ActionType::ScaleIn | ActionType::ScaleDown => {
-                capacity.cpu_cores = (capacity.cpu_cores - strategy.action.resources.cpu_cores).max(1.0);
-                capacity.memory_gb = (capacity.memory_gb - strategy.action.resources.memory_gb).max(1.0);
-                capacity.storage_gb = (capacity.storage_gb - strategy.action.resources.storage_gb).max(10.0);
-                capacity.network_bandwidth_mbps = (capacity.network_bandwidth_mbps - strategy.action.resources.network_bandwidth_mbps).max(100);
+                capacity.cpu_cores =
+                    (capacity.cpu_cores - strategy.action.resources.cpu_cores).max(1.0);
+                capacity.memory_gb =
+                    (capacity.memory_gb - strategy.action.resources.memory_gb).max(1.0);
+                capacity.storage_gb =
+                    (capacity.storage_gb - strategy.action.resources.storage_gb).max(10.0);
+                capacity.network_bandwidth_mbps = (capacity.network_bandwidth_mbps
+                    - strategy.action.resources.network_bandwidth_mbps)
+                    .max(100);
             }
         }
         let instances_after: _ = (capacity.cpu_cores / 2.0) as u32;
@@ -508,11 +541,17 @@ impl AnomalyDetector {
             let window: _ = &data[i - self.window_size..i];
             let current: _ = &data[i];
             // 计算窗口内的平均值和标准差
-            let avg_cpu: f64 = window.iter().map(|m| m.cpu_usage).sum::<f64>() / window.len() as f64;
-            let std_cpu: _ = (window.iter().map(|m| {
-                let diff: _ = m.cpu_usage - avg_cpu;
-                diff * diff
-            }).sum::<f64>() / window.len() as f64).sqrt();
+            let avg_cpu: f64 =
+                window.iter().map(|m| m.cpu_usage).sum::<f64>() / window.len() as f64;
+            let std_cpu: _ = (window
+                .iter()
+                .map(|m| {
+                    let diff: _ = m.cpu_usage - avg_cpu;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / window.len() as f64)
+                .sqrt();
             // 检测异常
             if (current.cpu_usage - avg_cpu).abs() > self.threshold * std_cpu {
                 anomalies.push(Anomaly {

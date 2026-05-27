@@ -1,10 +1,10 @@
 // Lifecycle management for cluster and workload resources
 // Handles state transitions and lifecycle events
 
-use std::collections::{BTreeMap, HashMap};
 use super::super::crd::{ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase};
-use tracing::{debug, error, info, warn};
+use std::collections::{BTreeMap, HashMap};
 use std::time::SystemTime;
+use tracing::{debug, error, info, warn};
 
 /// Cluster lifecycle manager
 pub struct ClusterLifecycle {
@@ -64,7 +64,10 @@ impl ClusterLifecycle {
             return Ok(ClusterPhase::Failed);
         }
         // Try to recover
-        info!("Attempting to recover cluster (failure count: {})", self.failure_count);
+        info!(
+            "Attempting to recover cluster (failure count: {})",
+            self.failure_count
+        );
         Ok(ClusterPhase::Running)
     }
     /// Handle cluster recovery
@@ -90,16 +93,20 @@ impl ClusterLifecycle {
             } else {
                 ConditionStatus::False
             },
-            last_probe_time: Some(SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                .to_string()),
-            last_transition_time: Some(SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                .to_string()),
+            last_probe_time: Some(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string(),
+            ),
+            last_transition_time: Some(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string(),
+            ),
             reason: if self.failure_count == 0 {
                 Some("ClusterReady".to_string())
             } else {
@@ -108,7 +115,10 @@ impl ClusterLifecycle {
             message: if self.failure_count == 0 {
                 Some("Cluster is ready".to_string())
             } else {
-                Some(format!("Cluster is not ready ({} failures)", self.failure_count))
+                Some(format!(
+                    "Cluster is not ready ({} failures)",
+                    self.failure_count
+                ))
             },
         }
     }
@@ -167,11 +177,17 @@ impl WorkloadLifecycle {
         warn!("Workload failure: {}", error);
         self.failure_count += 1;
         if self.failure_count >= self.max_failure_count {
-            error!("Workload has failed {} times, giving up", self.failure_count);
+            error!(
+                "Workload has failed {} times, giving up",
+                self.failure_count
+            );
             return Ok(WorkloadPhase::Failed);
         }
         // Try to recover
-        info!("Attempting to recover workload (failure count: {})", self.failure_count);
+        info!(
+            "Attempting to recover workload (failure count: {})",
+            self.failure_count
+        );
         Ok(WorkloadPhase::Running)
     }
     /// Handle workload recovery
@@ -193,16 +209,20 @@ impl WorkloadLifecycle {
             } else {
                 ConditionStatus::False
             },
-            last_probe_time: Some(SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                .to_string()),
-            last_transition_time: Some(SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                .to_string()),
+            last_probe_time: Some(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string(),
+            ),
+            last_transition_time: Some(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string(),
+            ),
             reason: if self.failure_count == 0 {
                 Some("WorkloadReady".to_string())
             } else {
@@ -211,7 +231,10 @@ impl WorkloadLifecycle {
             message: if self.failure_count == 0 {
                 Some("Workload is ready".to_string())
             } else {
-                Some(format!("Workload is not ready ({} failures)", self.failure_count))
+                Some(format!(
+                    "Workload is not ready ({} failures)",
+                    self.failure_count
+                ))
             },
         }
     }

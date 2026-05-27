@@ -1,5 +1,7 @@
 # Beejs Server 模式设计方案
 
+> 发布校验说明（2026-05-26）：本文件是历史设计稿。当前 public CLI 为 `bee serve [--host HOST] [--port PORT]`，不是 `beejs server`。
+
 ## 概述
 
 Beejs Server 模式将运行时从单次执行模式扩展为长期运行的服务器，支持多个客户端并发执行 JavaScript 代码，彻底避免重复初始化开销。
@@ -168,10 +170,10 @@ ws.send(JSON.stringify({
 ### 1. 独立服务器
 ```bash
 # 启动服务器
-beejs server --port 3000 --host 0.0.0.0
+bee serve --port 3000 --host 0.0.0.0
 
 # 后台运行
-beejs server --daemon --pid-file /var/run/beejs.pid
+bee serve --host 0.0.0.0 --port 3000
 ```
 
 ### 2. 集成模式

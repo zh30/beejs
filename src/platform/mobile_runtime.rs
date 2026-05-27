@@ -1,11 +1,10 @@
 // Mobile Platform Runtime
 // Provides native support for iOS and Android platforms
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::Duration;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// iOS Runtime for native iOS integration
 #[derive(Debug)]
@@ -39,7 +38,7 @@ pub enum MobilePlatform {
     Android,
 }
 /// Isolate status
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IsolateStatus {
     Active,
     Idle,
@@ -52,7 +51,7 @@ pub struct MobileAPI {
     capabilities: Vec<MobileCapability>,
 }
 /// Mobile platform capabilities
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MobileCapability {
     Camera,
     GPS,
@@ -78,7 +77,7 @@ pub struct MobileRuntime {
 impl iOSRuntime {
     /// Create a new iOS runtime
     pub fn new(mobile_api: Arc<MobileAPI>) -> Result<Self> {
-        let isolate_pool: _ = Arc::new(Mutex::new(IsolatePool::new(10)),;
+        let isolate_pool: _ = Arc::new(IsolatePool::new(10));
         Ok(iOSRuntime {
             isolate_pool,
             mobile_api,
@@ -101,7 +100,7 @@ impl iOSRuntime {
 impl AndroidRuntime {
     /// Create a new Android runtime
     pub fn new(jni_env: Arc<JNIEnv>) -> Result<Self> {
-        let isolate_pool: _ = Arc::new(Mutex::new(IsolatePool::new(10)),;
+        let isolate_pool: _ = Arc::new(IsolatePool::new(10));
         Ok(AndroidRuntime {
             jni_env,
             isolate_pool,
@@ -124,7 +123,7 @@ impl IsolatePool {
     /// Create a new isolate pool
     pub fn new(max_isolates: usize) -> Self {
         IsolatePool {
-            isolates: Arc::new(Mutex::new(Vec::new()))
+            isolates: Arc::new(RwLock::new(Vec::new())),
             max_isolates,
         }
     }
@@ -241,6 +240,8 @@ impl MobileRuntime {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_ios_runtime() {
         let capabilities: _ = vec![
@@ -248,20 +249,28 @@ mod tests {
             MobileCapability::GPS,
             MobileCapability::PushNotifications,
         ];
-        let mobile_api: _ = Arc::new(Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities)),;
+        let mobile_api: _ = Arc::new(MobileAPI::new(MobilePlatform::iOS, capabilities));
         let runtime: _ = iOSRuntime::new(mobile_api).unwrap();
         let result: _ = runtime.execute_ios("console.log('Hello iOS')").await;
         assert!(result.is_ok());
-        let result: _ = runtime.execute_background("console.log('Background')").await;
+        let result: _ = runtime
+            .execute_background("console.log('Background')")
+            .await;
         assert!(result.is_ok());
     }
     #[tokio::test]
     async fn test_android_runtime() {
-        let jni_env: _ = Arc::new(Mutex::new(JNIEnv { _env: std::ptr::null_mut()), });
+        let jni_env: _ = Arc::new(JNIEnv {
+            _env: std::ptr::null_mut(),
+        });
         let runtime: _ = AndroidRuntime::new(jni_env).unwrap();
-        let result: _ = runtime.execute_android("console.log('Hello Android')").await;
+        let result: _ = runtime
+            .execute_android("console.log('Hello Android')")
+            .await;
         assert!(result.is_ok());
-        let result: _ = runtime.execute_background("console.log('Background')").await;
+        let result: _ = runtime
+            .execute_background("console.log('Background')")
+            .await;
         assert!(result.is_ok());
     }
     #[tokio::test]
@@ -269,14 +278,18 @@ mod tests {
         let mut runtime = MobileRuntime::new();
         // Test iOS
         let capabilities: _ = vec![MobileCapability::Camera];
-        let mobile_api: _ = Arc::new(Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities)),;
+        let mobile_api: _ = Arc::new(MobileAPI::new(MobilePlatform::iOS, capabilities));
         runtime.init_ios(mobile_api).unwrap();
         let result: _ = runtime.execute_mobile("ios", "console.log('iOS')").await;
         assert!(result.is_ok());
         // Test Android
-        let jni_env: _ = Arc::new(Mutex::new(JNIEnv { _env: std::ptr::null_mut()), });
+        let jni_env: _ = Arc::new(JNIEnv {
+            _env: std::ptr::null_mut(),
+        });
         runtime.init_android(jni_env).unwrap();
-        let result: _ = runtime.execute_mobile("android", "console.log('Android')").await;
+        let result: _ = runtime
+            .execute_mobile("android", "console.log('Android')")
+            .await;
         assert!(result.is_ok());
     }
     #[tokio::test]
@@ -292,10 +305,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_mobile_api_capabilities() {
-        let capabilities: _ = vec![
-            MobileCapability::Camera,
-            MobileCapability::GPS,
-        ];
+        let capabilities: _ = vec![MobileCapability::Camera, MobileCapability::GPS];
         let api: _ = MobileAPI::new(MobilePlatform::iOS, capabilities);
         assert!(api.has_capability(&MobileCapability::Camera));
         assert!(api.has_capability(&MobileCapability::GPS));

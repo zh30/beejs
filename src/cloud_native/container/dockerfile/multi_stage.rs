@@ -101,10 +101,10 @@ impl MultiStageBuilder {
         stage.push_str("RUN cargo build --release");
         // Add target-specific optimizations
         if self.builder_stage.strip_binaries {
-            stage.push_str(" && strip target/release/beejs");
+            stage.push_str(" && strip target/release/bee");
         }
         if self.builder_stage.optimize_for_size {
-            stage.push_str(" && objcopy --only-keep-debug beejs beejs.debug && strip beejs && objcopy --add-gnu-debuglink=beejs.debug beejs");
+            stage.push_str(" && objcopy --only-keep-debug bee bee.debug && strip bee && objcopy --add-gnu-debuglink=bee.debug bee");
         }
         stage.push_str("\n\n");
         Ok(stage)
@@ -113,28 +113,27 @@ impl MultiStageBuilder {
     fn generate_runtime_stage(&self) -> Result<String, Error> {
         let mut stage = String::new();
         stage.push_str(&format!("# Stage 2: Runtime\n"));
-        stage.push_str(&format!(
-            "FROM {}\n",
-            self.runtime_stage.base_image
-        ));
+        stage.push_str(&format!("FROM {}\n", self.runtime_stage.base_image));
         // Create non-root user
         if self.runtime_stage.create_user {
             stage.push_str(&format!(
                 "RUN groupadd -r {} && useradd -r -g {} {}\n",
-                self.runtime_stage.user_group, self.runtime_stage.user_group, self.runtime_stage.username
+                self.runtime_stage.user_group,
+                self.runtime_stage.user_group,
+                self.runtime_stage.username
             ));
         }
         // Copy binary from builder stage
-        stage.push_str("COPY --from=builder /app/target/release/beejs /usr/local/bin/");
+        stage.push_str("COPY --from=builder /app/target/release/bee /usr/local/bin/");
         // Set permissions
         if self.builder_stage.strip_binaries {
-            stage.push_str(" && chmod +x /usr/local/bin/beejs");
+            stage.push_str(" && chmod +x /usr/local/bin/bee");
         }
         stage.push_str("\n");
         // Set ownership
         if self.runtime_stage.create_user {
             stage.push_str(&format!(
-                "RUN chown {}:{} /usr/local/bin/beejs\n",
+                "RUN chown {}:{} /usr/local/bin/bee\n",
                 self.runtime_stage.username, self.runtime_stage.user_group
             ));
         }
@@ -150,7 +149,7 @@ impl MultiStageBuilder {
             stage.push_str(&format!("USER {}\n", self.runtime_stage.username));
         }
         // Set entrypoint
-        stage.push_str("ENTRYPOINT [\"beejs\"]\n");
+        stage.push_str("ENTRYPOINT [\"bee\"]\n");
         Ok(stage)
     }
 }
@@ -240,7 +239,7 @@ impl Optimization for BaseImageOptimization {
             // Replace with distroless image
             dockerfile = dockerfile.replace(
                 "debian:bookworm-slim",
-                "gcr.io/distroless/base-debian12:latest"
+                "gcr.io/distroless/base-debian12:latest",
             );
         }
         Ok(dockerfile)
@@ -330,9 +329,7 @@ mod tests {
         let builder_stage: _ = BuilderStage {
             base_image: "rust:1.75".to_string(),
             rust_version: "1.75".to_string(),
-            labels: HashMap::from([
-                ("custom.label".to_string(), "value".to_string()),
-            ]),
+            labels: HashMap::from([("custom.label".to_string(), "value".to_string())]),
             strip_binaries: false,
             optimize_for_size: false,
             build_args: HashMap::new(),

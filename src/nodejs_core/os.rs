@@ -1,7 +1,6 @@
 // Node.js OS模块实现
 // 操作系统信息
 
-
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::env;
@@ -77,16 +76,25 @@ pub fn setup_os_api(
     let tmpdir_alias_key: _ = v8::String::new(scope, "tmpDir").unwrap();
     os_obj.set(scope, tmpdir_alias_key.into(), tmpdir_alias_instance.into());
     // networkInterfaces
-    let network_interfaces_func: _ = v8::FunctionTemplate::new(scope, os_network_interfaces_callback);
+    let network_interfaces_func: _ =
+        v8::FunctionTemplate::new(scope, os_network_interfaces_callback);
     let network_interfaces_instance: _ = network_interfaces_func.get_function(scope).unwrap();
     let network_interfaces_key: _ = v8::String::new(scope, "networkInterfaces").unwrap();
-    os_obj.set(scope, network_interfaces_key.into(), network_interfaces_instance.into());
+    os_obj.set(
+        scope,
+        network_interfaces_key.into(),
+        network_interfaces_instance.into(),
+    );
     // constants
     let constants_obj: _ = v8::Object::new(scope);
     // OS常量
     let key_uv_udp_reuseaddr: _ = v8::String::new(scope, "UV_UDP_REUSEADDR").unwrap();
     let val_uv_udp_reuseaddr: _ = v8::Integer::new(scope, 4);
-    constants_obj.set(scope, key_uv_udp_reuseaddr.into(), val_uv_udp_reuseaddr.into());
+    constants_obj.set(
+        scope,
+        key_uv_udp_reuseaddr.into(),
+        val_uv_udp_reuseaddr.into(),
+    );
     // Signal常量
     let signals_obj: _ = v8::Object::new(scope);
     let key_sighup: _ = v8::String::new(scope, "SIGHUP").unwrap();
@@ -367,7 +375,9 @@ fn os_cpus_callback(
     for i in 0..cpu_count {
         let cpu_obj: _ = v8::Object::new(scope);
         let _key_0: _ = v8::String::new(scope, "model").unwrap();
-        let val: _ = v8::String::new(scope, "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz").unwrap().into();
+        let val: _ = v8::String::new(scope, "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz")
+            .unwrap()
+            .into();
         cpu_obj.set(scope, _key_0.into(), val);
         let key_speed: _ = v8::String::new(scope, "speed").unwrap();
         let val_speed: _ = v8::Number::new(scope, 3600.0);
@@ -418,7 +428,11 @@ fn os_homedir_callback(
     mut retval: v8::ReturnValue,
 ) {
     if let Some(home_dir) = dirs::home_dir() {
-        retval.set(v8::String::new(scope, &home_dir.to_string_lossy()).unwrap().into());
+        retval.set(
+            v8::String::new(scope, &home_dir.to_string_lossy())
+                .unwrap()
+                .into(),
+        );
     } else {
         retval.set(v8::String::new(scope, "/home/user").unwrap().into());
     }

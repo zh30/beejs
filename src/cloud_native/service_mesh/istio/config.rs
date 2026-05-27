@@ -3,16 +3,15 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use tracing::info;
-use kube::Api;
 use super::types::{
-    DestinationRule, DestinationRuleSpec, TrafficPolicy, LoadBalancerSettings,
-    ConnectionPoolSettings, TcpSettings, OutlierDetection, Subset,
-    VirtualService, VirtualServiceSpec, HttpRoute, HttpRouteDestination, Destination, PortSelector,
-    Gateway, GatewaySpec, Server, Port,
-    PeerAuthentication, PeerAuthenticationSpec, MutualTls,
-    AuthorizationPolicy, AuthorizationPolicySpec, WorkloadSelector, AuthorizationRule, Source, Operation,
+    AuthorizationPolicy, AuthorizationPolicySpec, AuthorizationRule, ConnectionPoolSettings,
+    Destination, DestinationRule, DestinationRuleSpec, Gateway, GatewaySpec, HttpRoute,
+    HttpRouteDestination, LoadBalancerSettings, MutualTls, Operation, OutlierDetection,
+    PeerAuthentication, PeerAuthenticationSpec, Port, PortSelector, Server, Source, Subset,
+    TcpSettings, TrafficPolicy, VirtualService, VirtualServiceSpec, WorkloadSelector,
 };
+use kube::Api;
+use tracing::info;
 /// Istio configuration manager
 pub struct IstioConfigManager {
     /// Istio client
@@ -58,25 +57,35 @@ impl IstioConfigManager {
                     }
                 });
                 let params: _ = kube::api::PatchParams::default();
-                namespaces.patch(&self.config.namespace, &params, &kube::api::Patch::Merge(&patch)).await?;
+                namespaces
+                    .patch(
+                        &self.config.namespace,
+                        &params,
+                        &kube::api::Patch::Merge(&patch),
+                    )
+                    .await?;
             }
             Err(kube::Error::Api(ref err)) if err.code == 404 => {
                 // Create namespace
                 let namespace: _ = k8s_openapi::api::core::v1::Namespace {
                     metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
                         name: Some(self.config.namespace.clone()),
-                        labels: Some(std::collections::BTreeMap::from([
-                            ("istio-injection".to_string(), "enabled".to_string()),
-                        ])),
-                        annotations: Some(std::collections::BTreeMap::from([
-                            ("istio.io/rev".to_string(), "default".to_string()),
-                        ])),
+                        labels: Some(std::collections::BTreeMap::from([(
+                            "istio-injection".to_string(),
+                            "enabled".to_string(),
+                        )])),
+                        annotations: Some(std::collections::BTreeMap::from([(
+                            "istio.io/rev".to_string(),
+                            "default".to_string(),
+                        )])),
                         ..Default::default()
                     },
                     spec: None,
                     status: None,
                 };
-                namespaces.create(&kube::api::PostParams::default(), &namespace).await?;
+                namespaces
+                    .create(&kube::api::PostParams::default(), &namespace)
+                    .await?;
                 info!("Created namespace: {}", self.config.namespace);
             }
             Err(e) => return Err(Error::Kube(e)),
@@ -101,30 +110,53 @@ impl IstioConfigManager {
                     }),
                     connection_pool: Some(ConnectionPoolSettings {
                         tcp: Some(TcpSettings {
-                            max_connections: Some(self.config.traffic_policy.connection_pool.max_connections as i32),
+                            max_connections: Some(
+                                self.config.traffic_policy.connection_pool.max_connections as i32,
+                            ),
                             connect_timeout: Some("10s".to_string()),
                         }),
                         http: None,
                     }),
                     outlier_detection: Some(OutlierDetection {
-                        consecutive_errors: Some(self.config.traffic_policy.outlier_detection.consecutive_errors as i32),
-                        interval: Some(format!("{}s", self.config.traffic_policy.outlier_detection.interval.as_secs())),
-                        base_ejection_time: Some(format!("{}s", self.config.traffic_policy.outlier_detection.base_ejection_time.as_secs())),
+                        consecutive_errors: Some(
+                            self.config
+                                .traffic_policy
+                                .outlier_detection
+                                .consecutive_errors as i32,
+                        ),
+                        interval: Some(format!(
+                            "{}s",
+                            self.config
+                                .traffic_policy
+                                .outlier_detection
+                                .interval
+                                .as_secs()
+                        )),
+                        base_ejection_time: Some(format!(
+                            "{}s",
+                            self.config
+                                .traffic_policy
+                                .outlier_detection
+                                .base_ejection_time
+                                .as_secs()
+                        )),
                         max_ejection_percent: Some(50),
                     }),
                 }),
                 subsets: Some(vec![
                     Subset {
                         name: "v1".to_string(),
-                        labels: Some(std::collections::HashMap::from([
-                            ("version".to_string(), "v1".to_string()),
-                        ])),
+                        labels: Some(std::collections::HashMap::from([(
+                            "version".to_string(),
+                            "v1".to_string(),
+                        )])),
                     },
                     Subset {
                         name: "v2".to_string(),
-                        labels: Some(std::collections::HashMap::from([
-                            ("version".to_string(), "v2".to_string()),
-                        ])),
+                        labels: Some(std::collections::HashMap::from([(
+                            "version".to_string(),
+                            "v2".to_string(),
+                        )])),
                     },
                 ]),
             };
@@ -143,26 +175,22 @@ impl IstioConfigManager {
             let vs_spec: _ = VirtualServiceSpec {
                 hosts: vec![service.name.clone()],
                 gateways: Some(vec![format!("{}-gateway", service.name)]),
-                http: Some(vec![
-                    HttpRoute {
-                        r#match: None,
-                        route: Some(vec![
-                            HttpRouteDestination {
-                                destination: Destination {
-                                    host: service.name.clone(),
-                                    subset: Some("v1".to_string()),
-                                    port: Some(PortSelector {
-                                        number: Some(service.port),
-                                    }),
-                                },
-                                weight: Some(100),
-                            },
-                        ]),
-                        fault: None,
-                        timeout: None,
-                        retries: None,
-                    },
-                ]),
+                http: Some(vec![HttpRoute {
+                    r#match: None,
+                    route: Some(vec![HttpRouteDestination {
+                        destination: Destination {
+                            host: service.name.clone(),
+                            subset: Some("v1".to_string()),
+                            port: Some(PortSelector {
+                                number: Some(service.port),
+                            }),
+                        },
+                        weight: Some(100),
+                    }]),
+                    fault: None,
+                    timeout: None,
+                    retries: None,
+                }]),
             };
             let vs: _ = VirtualService::new(&format!("{}-vs", service.name), vs_spec);
             let params: _ = kube::api::PostParams::default();
@@ -173,24 +201,22 @@ impl IstioConfigManager {
     }
     /// Create Gateway
     async fn create_gateway(&self) -> Result<(), Error> {
-        let gateways: Api<Gateway> =
-            Api::namespaced(self.client.clone(), &self.config.namespace);
+        let gateways: Api<Gateway> = Api::namespaced(self.client.clone(), &self.config.namespace);
         for service in &self.config.services {
             let gw_spec: _ = GatewaySpec {
-                selector: std::collections::HashMap::from([
-                    ("istio".to_string(), "ingressgateway".to_string()),
-                ]),
-                servers: vec![
-                    Server {
-                        port: Port {
-                            number: service.port,
-                            name: service.name.clone(),
-                            protocol: "HTTP".to_string(),
-                        },
-                        hosts: vec!["*".to_string()],
-                        tls: None,
+                selector: std::collections::HashMap::from([(
+                    "istio".to_string(),
+                    "ingressgateway".to_string(),
+                )]),
+                servers: vec![Server {
+                    port: Port {
+                        number: service.port,
+                        name: service.name.clone(),
+                        protocol: "HTTP".to_string(),
                     },
-                ],
+                    hosts: vec!["*".to_string()],
+                    tls: None,
+                }],
             };
             let gw: _ = Gateway::new(&format!("{}-gateway", service.name), gw_spec);
             let params: _ = kube::api::PostParams::default();
@@ -225,23 +251,22 @@ impl IstioConfigManager {
         for service in &self.config.services {
             let ap_spec: _ = AuthorizationPolicySpec {
                 selector: Some(WorkloadSelector {
-                    match_labels: Some(std::collections::HashMap::from([
-                        ("app".to_string(), service.name.clone()),
-                    ])),
+                    match_labels: Some(std::collections::HashMap::from([(
+                        "app".to_string(),
+                        service.name.clone(),
+                    )])),
                 }),
                 action: Some("ALLOW".to_string()),
-                rules: Some(vec![
-                    AuthorizationRule {
-                        from: Some(vec![Source {
-                            principals: None,
-                            namespaces: Some(vec![self.config.namespace.clone()]),
-                        }]),
-                        to: Some(vec![Operation {
-                            paths: None,
-                            methods: Some(vec!["GET".to_string(), "POST".to_string()]),
-                        }]),
-                    },
-                ]),
+                rules: Some(vec![AuthorizationRule {
+                    from: Some(vec![Source {
+                        principals: None,
+                        namespaces: Some(vec![self.config.namespace.clone()]),
+                    }]),
+                    to: Some(vec![Operation {
+                        paths: None,
+                        methods: Some(vec!["GET".to_string(), "POST".to_string()]),
+                    }]),
+                }]),
             };
             let ap: _ = AuthorizationPolicy::new(&format!("{}-authz", service.name), ap_spec);
             let params: _ = kube::api::PostParams::default();
@@ -322,19 +347,17 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::Duration;
+    use std::time::Duration;
     #[test]
     fn test_istio_config_creation() {
         let config: _ = IstioConfig {
             namespace: "beejs-system".to_string(),
             mtls_enabled: true,
-            services: vec![
-                IstioService {
-                    name: "beejs-api".to_string(),
-                    port: 8080,
-                    protocol: "HTTP".to_string(),
-                },
-            ],
+            services: vec![IstioService {
+                name: "beejs-api".to_string(),
+                port: 8080,
+                protocol: "HTTP".to_string(),
+            }],
             traffic_policy: TrafficPolicyConfig {
                 load_balancer: LoadBalancerAlgorithm::LeastRequest,
                 connection_pool: ConnectionPoolConfig {

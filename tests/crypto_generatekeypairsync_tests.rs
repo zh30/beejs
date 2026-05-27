@@ -5,7 +5,7 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_crypto_generateKeyPairSync_exists() {
+fn test_crypto_generate_key_pair_sync_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.generateKeyPairSync");
     assert!(result.is_ok());
@@ -14,7 +14,7 @@ fn test_crypto_generateKeyPairSync_exists() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_rsa_returns_object() {
+fn test_generate_key_pair_sync_rsa_returns_object() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('rsa', {
@@ -31,7 +31,7 @@ fn test_generateKeyPairSync_rsa_returns_object() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_rsa_has_keys() {
+fn test_generate_key_pair_sync_rsa_has_keys() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('rsa', {
@@ -48,7 +48,7 @@ fn test_generateKeyPairSync_rsa_has_keys() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_rsa_key_format() {
+fn test_generate_key_pair_sync_rsa_key_format() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('rsa', {
@@ -65,7 +65,7 @@ fn test_generateKeyPairSync_rsa_key_format() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_ec_returns_object() {
+fn test_generate_key_pair_sync_ec_returns_object() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('ec', {
@@ -82,7 +82,7 @@ fn test_generateKeyPairSync_ec_returns_object() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_ec_has_keys() {
+fn test_generate_key_pair_sync_ec_has_keys() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('ec', {
@@ -99,7 +99,7 @@ fn test_generateKeyPairSync_ec_has_keys() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_ec_key_format() {
+fn test_generate_key_pair_sync_ec_key_format() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('ec', {
@@ -114,7 +114,7 @@ fn test_generateKeyPairSync_ec_key_format() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_rsa_different_modulus_lengths() {
+fn test_generate_key_pair_sync_rsa_different_modulus_lengths() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result = crypto.generateKeyPairSync('rsa', {
@@ -129,7 +129,7 @@ fn test_generateKeyPairSync_rsa_different_modulus_lengths() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_unsupported_type() {
+fn test_generate_key_pair_sync_unsupported_type() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         try {
@@ -146,7 +146,7 @@ fn test_generateKeyPairSync_unsupported_type() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_missing_options() {
+fn test_generate_key_pair_sync_missing_options() {
     // Node.js: generateKeyPairSync('rsa') should use default options (modulusLength: 2048)
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
@@ -160,7 +160,7 @@ fn test_generateKeyPairSync_missing_options() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_key_usage_in_signing() {
+fn test_generate_key_pair_sync_key_usage_in_signing() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
@@ -178,7 +178,7 @@ fn test_generateKeyPairSync_key_usage_in_signing() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_key_usage_in_verification() {
+fn test_generate_key_pair_sync_key_usage_in_verification() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
@@ -198,7 +198,7 @@ fn test_generateKeyPairSync_key_usage_in_verification() {
 
 #[test]
 #[serial]
-fn test_generateKeyPairSync_multiple_calls_consistent() {
+fn test_generate_key_pair_sync_multiple_calls_consistent() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const result1 = crypto.generateKeyPairSync('rsa', {

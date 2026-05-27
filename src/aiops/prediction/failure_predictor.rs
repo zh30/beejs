@@ -3,16 +3,13 @@
 // Predicts potential failures by combining anomaly detection and trend analysis.
 // Provides early warning signals for system failures.
 
-use crate::core::data_collector::::{Metric, MetricType};
-use crate::core::error::::{AIOpsError, Result};
+use super::anomaly_detector::{AnomalyDetector, AnomalyDetectorConfig, StatisticalAnomalyDetector};
+use super::trend_analyzer::{LinearTrendAnalyzer, TrendAnalyzer, TrendAnalyzerConfig, TrendResult};
+use crate::aiops::core::data_collector::{Metric, MetricType};
+use crate::aiops::core::error::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::time::Duration;
-use std::hash::Hash;
-
-    AnomalyDetector, StatisticalAnomalyDetector, AnomalyDetectorConfig,
-    TrendAnalyzer, LinearTrendAnalyzer, TrendAnalyzerConfig,
-};
 /// Confidence level for predictions
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ConfidenceLevel {
@@ -158,7 +155,7 @@ impl MLFailurePredictor {
     fn determine_failure_type(
         &self,
         metrics: &[Metric],
-        trend_result: &crate::prediction::TrendResult,
+        trend_result: &TrendResult,
         anomaly_count: usize,
     ) -> FailureType {
         let avg_value: _ = metrics.iter().map(|m| m.value).sum::<f64>() / metrics.len() as f64;
@@ -166,7 +163,8 @@ impl MLFailurePredictor {
             Some(MetricType::CpuUsage) | Some(MetricType::MemoryUsage) => {
                 if avg_value > 90.0 {
                     FailureType::ResourceExhaustion
-                } else if trend_result.trend.direction == crate::prediction::TrendDirection::Upward
+                } else if trend_result.trend.direction
+                    == super::trend_analyzer::TrendDirection::Upward
                     && trend_result.trend.strength > 0.7
                 {
                     FailureType::PerformanceDegradation
@@ -232,7 +230,7 @@ impl MLFailurePredictor {
             let remaining: _ = threshold - current_value;
             let time_units: _ = remaining / slope.abs();
             // Assume each unit is 1 second (simplified)
-            Some(Duration::from_secs_f64(time_units.max(0.0))
+            Some(Duration::from_secs_f64(time_units.max(0.0)))
         } else {
             None
         }
@@ -240,7 +238,7 @@ impl MLFailurePredictor {
     /// Generate warning signs
     fn generate_warning_signs(
         &self,
-        trend_result: &crate::prediction::TrendResult,
+        trend_result: &TrendResult,
         anomaly_count: usize,
     ) -> Vec<String> {
         let mut warnings = Vec::new();
@@ -350,7 +348,8 @@ impl FailurePredictor for MLFailurePredictor {
         // Determine if failure is predicted
         let is_predicted: _ = risk_score > self.config.risk_threshold;
         let prediction: _ = if is_predicted {
-            let failure_type: _ = self.determine_failure_type(metrics, &trend_result, anomaly_count);
+            let failure_type: _ =
+                self.determine_failure_type(metrics, &trend_result, anomaly_count);
             let probability: _ = risk_score;
             let confidence: _ = self.determine_confidence(probability);
             let time_to_failure: _ = self.estimate_time_to_failure(&trend_result);
@@ -432,7 +431,7 @@ mod tests {
         assert!(matches!(
             prediction.confidence,
             ConfidenceLevel::High | ConfidenceLevel::VeryHigh
-        ))));
+        ));
     }
     #[tokio::test]
     async fn test_predict_resource_exhaustion() {
@@ -502,7 +501,12 @@ mod tests {
         let predictor: _ = MLFailurePredictor::new(FailurePredictorConfig::default());
         let metrics: _ = create_degrading_metrics();
         let result: _ = predictor.predict_failure(&metrics).await.unwrap();
-        assert!(!result.prediction.as_ref().unwrap().recommended_actions.is_empty());
+        assert!(!result
+            .prediction
+            .as_ref()
+            .unwrap()
+            .recommended_actions
+            .is_empty());
     }
     #[tokio::test]
     async fn test_custom_risk_threshold() {

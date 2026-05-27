@@ -8,7 +8,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -20,10 +20,11 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
@@ -38,7 +39,11 @@ fn test_get_hashes_function_exists() {
 console.log(typeof crypto.getHashes === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected getHashes to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected getHashes to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -49,7 +54,11 @@ const hashes = crypto.getHashes();
 console.log(Array.isArray(hashes) ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected getHashes to return array: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected getHashes to return array: {}",
+        output
+    );
 }
 
 #[test]
@@ -64,7 +73,11 @@ const hasSha1 = hashes.includes('sha1');
 console.log(hasSha256 && hasSha512 && hasMd5 && hasSha1 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected common algorithms to be present: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected common algorithms to be present: {}",
+        output
+    );
 }
 
 #[test]
@@ -75,7 +88,11 @@ const hashes = crypto.getHashes();
 console.log(hashes.includes('blake3') ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected blake3 to be present: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected blake3 to be present: {}",
+        output
+    );
 }
 
 #[test]
@@ -87,7 +104,11 @@ const unique = new Set(hashes);
 console.log(hashes.length === unique.size ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected no duplicate algorithms: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected no duplicate algorithms: {}",
+        output
+    );
 }
 
 #[test]
@@ -100,7 +121,11 @@ hashes.push('test');
 console.log(crypto.getHashes().length === originalLength ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected getHashes to return immutable result: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected getHashes to return immutable result: {}",
+        output
+    );
 }
 
 #[test]
@@ -111,5 +136,9 @@ const hashes = crypto.getHashes();
 console.log(hashes.length >= 4 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected at least 4 hash algorithms: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected at least 4 hash algorithms: {}",
+        output
+    );
 }

@@ -75,12 +75,12 @@ tests/
 ├── typescript_tests.rs          # TypeScript 测试 (已有)
 └── v8_integration_tests.rs      # V8 测试 (已有)
 
-test_modules/              # ⭐ 新增: 测试模块
+tests/fixtures/legacy/test_modules/  # ⭐ 新增: 测试模块
 ├── math.js               # 数学模块示例
 └── utils.js              # 工具模块示例
 
-test_module_system.js      # ⭐ 新增: 主测试脚本
-verify_implementation.sh   # ⭐ 新增: 验证脚本
+tests/legacy/sources/test_module_system.js      # ⭐ 新增: 主测试脚本
+tests/legacy/sources/verify_implementation.sh   # ⭐ 新增: 验证脚本
 ```
 
 #### 2.2 关键代码统计
@@ -128,8 +128,8 @@ verify_implementation.sh   # ⭐ 新增: 验证脚本
 
 #### 4.2 集成测试
 ✅ test_module_system.js - 完整工作流测试
-✅ test_modules/math.js - 模块导出测试
-✅ test_modules/utils.js - exports 测试
+✅ tests/fixtures/legacy/test_modules/math.js - 模块导出测试
+✅ tests/fixtures/legacy/test_modules/utils.js - exports 测试
 
 ### 5. 兼容性
 
@@ -173,9 +173,9 @@ verify_implementation.sh   # ⭐ 新增: 验证脚本
 - 技术实现详情
 
 #### 7.2 代码示例
-✅ examples/nodejs_compatibility.js
+✅ examples/basics/nodejs_compatibility.js
 ✅ test_module_system.js
-✅ test_modules/*.js
+✅ tests/fixtures/legacy/test_modules/*.js
 
 ### 8. 下一步计划
 

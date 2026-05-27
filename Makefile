@@ -1,5 +1,5 @@
 # Beejs Build System
-# High-performance JavaScript/TypeScript runtime
+# JavaScript/TypeScript runtime built with Rust and V8
 
 .PHONY: all build test clean run help install dev release
 
@@ -20,7 +20,7 @@ test:
 # Run with specific file
 run: build
 	@echo "Running example..."
-	./target/release/beejs $(file) --verbose
+	./target/release/bee run $(file)
 
 # Clean build artifacts
 clean:
@@ -30,7 +30,7 @@ clean:
 # Install to system
 install: build
 	@echo "Installing Beejs..."
-	sudo cp target/release/beejs /usr/local/bin/
+	sudo cp target/release/bee /usr/local/bin/
 
 # Development build (faster)
 dev: build
@@ -41,26 +41,26 @@ release: build
 # Performance test
 perf: build
 	@echo "Running performance test..."
-	./target/release/beejs examples/performance_test.js --verbose
+	./target/release/bee run examples/performance/performance_test.js
 
 # Hello world example
 hello: build
 	@echo "Running hello world example..."
-	./target/release/beejs examples/hello_world.js --verbose
+	./target/release/bee run examples/basics/hello_world.js
 
 # Check formatting
 fmt:
 	@echo "Checking code formatting..."
-	cargo fmt --check
+	cargo fmt --all -- --check
 
 # Lint code
 lint:
 	@echo "Linting code..."
-	cargo clippy
+	cargo clippy --all-targets -- -D warnings
 
 # Show help
 help:
-	@echo "Beejs - High-performance JavaScript/TypeScript runtime"
+	@echo "Beejs - JavaScript/TypeScript runtime built with Rust and V8"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  build   - Build the project"

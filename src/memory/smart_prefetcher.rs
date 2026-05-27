@@ -3,12 +3,17 @@
 // 实现基于 AI 的预测性内存预取，根据访问模式自动预测并预取数据
 // 支持顺序访问、随机访问、循环访问等多种模式
 
-use anyhow::{Result, anyhow};
-use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};
-use std::collections::{HashMap};
+use crate::memory::{
+    zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy},
+    SendPtr,
+};
+use rand::Rng;
+use std::collections::HashMap;
 use std::ptr::NonNull;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::sync::{Mutex, RwLock};
+use std::time::{Duration, Instant};
+use tokio::sync::{Mutex, RwLock};
 
 /// 访问历史条目
 #[derive(Debug, Clone)]
@@ -137,9 +142,11 @@ impl PatternRecognizer {
         // 计算地址分布的方差
         let addresses: Vec<usize> = accesses.iter().map(|a| a.address).collect();
         let mean: _ = addresses.iter().sum::<usize>() as f64 / addresses.len() as f64;
-        let variance: _ = addresses.iter()
+        let variance: _ = addresses
+            .iter()
             .map(|&addr| (addr as f64 - mean).powi(2))
-            .sum::<f64>() / addresses.len() as f64;
+            .sum::<f64>()
+            / addresses.len() as f64;
         // 方差越大，随机性越强
         let normalized_variance: _ = (variance / 1_000_000_000.0).min(1.0);
         normalized_variance
@@ -168,13 +175,13 @@ impl PatternRecognizer {
             return None;
         }
         // 使用历史地址的统计特性进行预测
-        let addresses: Vec<usize> = self.history.iter()
-            .map(|a| a.address)
-            .collect();
+        let addresses: Vec<usize> = self.history.iter().map(|a| a.address).collect();
         let mean: _ = addresses.iter().sum::<usize>() as f64 / addresses.len() as f64;
-        let variance: _ = addresses.iter()
+        let variance: _ = addresses
+            .iter()
             .map(|&addr| (addr as f64 - mean).powi(2))
-            .sum::<f64>() / addresses.len() as f64;
+            .sum::<f64>()
+            / addresses.len() as f64;
         let std_dev: _ = variance.sqrt();
         // 生成基于正态分布的预测地址
         let mut rng = rand::thread_rng();
@@ -224,7 +231,7 @@ pub struct SmartPrefetcher {
 #[derive(Debug)]
 struct PrefetchTask {
     /// 预取地址
-    pub address: NonNull<u8>,
+    pub address: SendPtr,
     /// 预取大小
     pub size: usize,
     /// 优先级 (0-100, 越高越优先)
@@ -232,6 +239,8 @@ struct PrefetchTask {
     /// 创建时间
     pub created_at: Instant,
 }
+unsafe impl Send for PrefetchTask {}
+unsafe impl Sync for PrefetchTask {}
 /// 预取统计
 #[derive(Debug, Default)]
 pub struct PrefetchStats {
@@ -243,17 +252,14 @@ pub struct PrefetchStats {
 }
 impl SmartPrefetcher {
     /// 创建智能预取器
-    pub fn new(
-        zero_copy: Arc<EnhancedZeroCopy>,
-        strategy: PrefetchStrategy,
-    ) -> Self {
+    pub fn new(zero_copy: Arc<EnhancedZeroCopy>, strategy: PrefetchStrategy) -> Self {
         Self {
-            recognizer: Arc::new(Mutex::new(PatternRecognizer::new())),
+            recognizer: Arc::new(RwLock::new(PatternRecognizer::new())),
             strategy,
             zero_copy,
             prefetch_queue: Arc::new(Mutex::new(Vec::new())),
-            stats: Arc::new(Mutex::new(PrefetchStats::default())),
-            enabled: Arc::new(Mutex::new(AtomicBool::new(true))),
+            stats: Arc::new(PrefetchStats::default()),
+            enabled: Arc::new(AtomicBool::new(true)),
         }
     }
     /// 记录内存访问
@@ -263,7 +269,9 @@ impl SmartPrefetcher {
             recognizer.record_access(address, size);
         }
         // 更新统计
-        self.stats.total_prefetch_requests.fetch_add(1, Ordering::Relaxed);
+        self.stats
+            .total_prefetch_requests
+            .fetch_add(1, Ordering::Relaxed);
         // 如果启用了预测性预取，触发预取
         if self.enabled.load(Ordering::Relaxed) {
             self.trigger_predictive_prefetch().await;
@@ -278,10 +286,13 @@ impl SmartPrefetcher {
         }
         // 获取预测的下一个访问地址
         if let Some(predicted_addr) = recognizer.predict_next_address() {
-            let addr: _ = NonNull::new(predicted_addr as *mut u8).unwrap();
+            let Some(addr) = NonNull::new(predicted_addr as *mut u8) else {
+                self.stats.wasted_prefetches.fetch_add(1, Ordering::Relaxed);
+                return;
+            };
             // 创建预取任务
             let task: _ = PrefetchTask {
-                address: addr,
+                address: SendPtr(addr),
                 size: self.strategy.window_size,
                 priority: (recognizer.confidence * 100.0) as usize,
                 created_at: Instant::now(),
@@ -307,7 +318,9 @@ impl SmartPrefetcher {
             }
             // 执行预取
             if self.execute_prefetch(&task).await {
-                self.stats.successful_prefetches.fetch_add(1, Ordering::Relaxed);
+                self.stats
+                    .successful_prefetches
+                    .fetch_add(1, Ordering::Relaxed);
             } else {
                 self.stats.wasted_prefetches.fetch_add(1, Ordering::Relaxed);
             }
@@ -333,7 +346,9 @@ impl SmartPrefetcher {
     /// 获取当前访问模式
     pub async fn get_current_pattern(&self) -> Option<(AccessPattern, f64)> {
         let recognizer: _ = self.recognizer.read().await;
-        recognizer.current_pattern.map(|p| (p, recognizer.confidence))
+        recognizer
+            .current_pattern
+            .map(|p| (p, recognizer.confidence))
     }
     /// 获取预取统计
     pub async fn get_stats(&self) -> SmartPrefetchStatsSnapshot {
@@ -382,6 +397,8 @@ impl SmartPrefetchStatsSnapshot {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_pattern_recognizer() {
         let mut recognizer = PatternRecognizer::new();
@@ -394,7 +411,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_smart_prefetcher() {
-        let zero_copy = Arc::new(Mutex::new(EnhancedZeroCopy::default()));
+        let zero_copy = Arc::new(EnhancedZeroCopy::default());
         let prefetcher: _ = SmartPrefetcher::new(zero_copy, PrefetchStrategy::default());
         // 记录一些访问
         for i in 0..5 {
@@ -411,6 +428,3 @@ mod tests {
         assert!(strategy.min_confidence > 0.0);
     }
 }
-use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
-use std::time::{Duration, Instant};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

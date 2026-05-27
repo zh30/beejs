@@ -8,48 +8,67 @@ mod compression_stream_tests {
     use std::process::Command;
 
     fn beejs_path() -> PathBuf {
-        PathBuf::from(std::env::var("CARGO_BIN_EXE_BEEJS").unwrap_or_else(|_| "./target/release/beejs".to_string()))
+        PathBuf::from(
+            std::env::var("CARGO_BIN_EXE_bee").unwrap_or_else(|_| "./target/debug/bee".to_string()),
+        )
     }
 
     /// Test 1: CompressionStream constructor with 'gzip' format
     #[test]
     fn test_compression_stream_gzip_constructor() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const cs = new CompressionStream('gzip');
                 console.log('gzip format:', cs.format);
                 console.log('has readable:', cs.readable instanceof ReadableStream);
                 console.log('has writable:', cs.writable instanceof WritableStream);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("gzip format: gzip"), "Expected gzip format");
-        assert!(stdout.contains("has readable: true"), "Expected readable stream");
-        assert!(stdout.contains("has writable: true"), "Expected writable stream");
+        assert!(
+            stdout.contains("has readable: true"),
+            "Expected readable stream"
+        );
+        assert!(
+            stdout.contains("has writable: true"),
+            "Expected writable stream"
+        );
     }
 
     /// Test 2: CompressionStream constructor with 'deflate' format
     #[test]
     fn test_compression_stream_deflate_constructor() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const cs = new CompressionStream('deflate');
                 console.log('deflate format:', cs.format);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("deflate format: deflate"), "Expected deflate format");
+        assert!(
+            stdout.contains("deflate format: deflate"),
+            "Expected deflate format"
+        );
     }
 
     /// Test 3: Basic compression pipeline
     #[test]
     fn test_basic_compression_pipeline() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const cs = new CompressionStream('gzip');
                     const writer = cs.writable.getWriter();
@@ -77,19 +96,25 @@ mod compression_stream_tests {
                     console.log('compression works:', compressed.length > 0);
                 }
                 test().catch(e => console.log('error:', e.message));
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("compression works: true"), "Expected compression to work");
+        assert!(
+            stdout.contains("compression works: true"),
+            "Expected compression to work"
+        );
     }
 
     /// Test 4: Pipe through compression stream
     #[test]
     fn test_pipe_through_compression() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const stream = new ReadableStream({
                         start(controller) {
@@ -102,19 +127,25 @@ mod compression_stream_tests {
                     console.log('pipeThrough works:', compressed instanceof ReadableStream);
                 }
                 test().catch(e => console.log('error:', e.message));
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("pipeThrough works: true"), "Expected pipeThrough to work");
+        assert!(
+            stdout.contains("pipeThrough works: true"),
+            "Expected pipeThrough to work"
+        );
     }
 
     /// Test 5: Decompression with DecompressionStream
     #[test]
     fn test_decompression_stream() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 // Test compression and decompression round-trip
                 const original = 'Hello, World! This is a test of compression and decompression.';
                 const encoder = new TextEncoder();
@@ -132,19 +163,26 @@ mod compression_stream_tests {
 
                 console.log('decompressed length:', decompressed.length);
                 console.log('decompression matches:', decompressedStr === original);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("decompression matches: true"), "Expected decompression to match original. Got: {}", stdout);
+        assert!(
+            stdout.contains("decompression matches: true"),
+            "Expected decompression to match original. Got: {}",
+            stdout
+        );
     }
 
     /// Test 6: Invalid format should throw error
     #[test]
     fn test_invalid_format_throws() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 try {
                     new CompressionStream('invalid');
                     console.log('no error');
@@ -152,21 +190,26 @@ mod compression_stream_tests {
                     console.log('has error:', e instanceof Error);
                     console.log('error message contains:', e.message.length > 0);
                 }
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // Should either throw an error or handle invalid format gracefully
-        assert!(stdout.contains("has error: true") || stdout.contains("no error"),
-            "Expected error for invalid format or graceful handling");
+        assert!(
+            stdout.contains("has error: true") || stdout.contains("no error"),
+            "Expected error for invalid format or graceful handling"
+        );
     }
 
     /// Test 7: Empty data compression
     #[test]
     fn test_empty_data_compression() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const cs = new CompressionStream('gzip');
                     const writer = cs.writable.getWriter();
@@ -183,12 +226,16 @@ mod compression_stream_tests {
                     console.log('empty compressed size:', size);
                 }
                 test().catch(e => console.log('error:', e.message));
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("empty compressed size:"), "Expected to handle empty data");
+        assert!(
+            stdout.contains("empty compressed size:"),
+            "Expected to handle empty data"
+        );
     }
 
     /// Test 8: Large data compression
@@ -225,55 +272,84 @@ mod compression_stream_tests {
                 test().catch(e => console.log('error:', e.message));
             "#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("compression ratio:"), "Expected to compress large data");
+        assert!(
+            stdout.contains("compression ratio:"),
+            "Expected to compress large data"
+        );
     }
 
     /// Test 9: CompressionStream.close() method exists and is callable
     #[test]
     fn test_compression_stream_close_method() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const cs = new CompressionStream('gzip');
                 console.log('close method exists:', typeof cs.close === 'function');
                 console.log('has readable:', cs.readable instanceof ReadableStream);
                 console.log('has writable:', cs.writable instanceof WritableStream);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("close method exists: true"), "Expected close method to exist");
-        assert!(stdout.contains("has readable: true"), "Expected readable stream");
-        assert!(stdout.contains("has writable: true"), "Expected writable stream");
+        assert!(
+            stdout.contains("close method exists: true"),
+            "Expected close method to exist"
+        );
+        assert!(
+            stdout.contains("has readable: true"),
+            "Expected readable stream"
+        );
+        assert!(
+            stdout.contains("has writable: true"),
+            "Expected writable stream"
+        );
     }
 
     /// Test 10: DecompressionStream.close() method exists and is callable
     #[test]
     fn test_decompression_stream_close_method() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ds = new DecompressionStream('gzip');
                 console.log('close method exists:', typeof ds.close === 'function');
                 console.log('has readable:', ds.readable instanceof ReadableStream);
                 console.log('has writable:', ds.writable instanceof WritableStream);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("close method exists: true"), "Expected close method to exist");
-        assert!(stdout.contains("has readable: true"), "Expected readable stream");
-        assert!(stdout.contains("has writable: true"), "Expected writable stream");
+        assert!(
+            stdout.contains("close method exists: true"),
+            "Expected close method to exist"
+        );
+        assert!(
+            stdout.contains("has readable: true"),
+            "Expected readable stream"
+        );
+        assert!(
+            stdout.contains("has writable: true"),
+            "Expected writable stream"
+        );
     }
 
     /// Test 11: Close method actually closes the streams properly
     #[test]
     fn test_close_method_closes_streams() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const cs = new CompressionStream('gzip');
                     const writer = cs.writable.getWriter();
@@ -296,12 +372,16 @@ mod compression_stream_tests {
                     }
                 }
                 test().catch(e => console.log('error:', e.message));
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("close method called successfully"), "Expected close method to work");
+        assert!(
+            stdout.contains("close method called successfully"),
+            "Expected close method to work"
+        );
     }
 
     /// Test 12: Compression round-trip with proper close
@@ -365,9 +445,12 @@ mod compression_stream_tests {
                 test().catch(e => console.log('error:', e.message));
             "#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("round trip success: true"), "Expected successful round-trip compression");
+        assert!(
+            stdout.contains("round trip success: true"),
+            "Expected successful round-trip compression"
+        );
     }
 }

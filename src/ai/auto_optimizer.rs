@@ -3,10 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
-use std::time::{Duration, Instant};
 use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 /// 性能分析数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,13 +150,18 @@ impl AutoOptimizer {
         }
     }
     /// 分析性能数据
-    pub async fn analyze_performance(&self, profile: &ProfileData) -> Result<OptimizationReport, Box<dyn std::error::Error>> {
+    pub async fn analyze_performance(
+        &self,
+        profile: &ProfileData,
+    ) -> Result<OptimizationReport, Box<dyn std::error::Error>> {
         // 模拟性能分析延迟
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
         // 分析性能数据
         let hotspots: _ = self.detect_hotspots(profile).await?;
         let bottlenecks: _ = self.identify_bottlenecks(profile).await?;
-        let suggestions: _ = self.generate_optimization_suggestions(&hotspots, &bottlenecks).await?;
+        let suggestions: _ = self
+            .generate_optimization_suggestions(&hotspots, &bottlenecks)
+            .await?;
         let performance_gain: _ = self.calculate_performance_gain(&suggestions);
         let memory_savings: _ = self.calculate_memory_savings(profile);
         Ok(OptimizationReport {
@@ -168,17 +173,28 @@ impl AutoOptimizer {
         })
     }
     /// 检测性能热点
-    pub async fn detect_hotspots(&self, profile: &ProfileData) -> Result<Vec<Hotspot>, Box<dyn std::error::Error>> {
+    pub async fn detect_hotspots(
+        &self,
+        profile: &ProfileData,
+    ) -> Result<Vec<Hotspot>, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(40)).await;
         let mut hotspots = Vec::new();
         // 分析函数调用找出热点
         for call in &profile.function_calls {
-            if call.total_time > 100 { // 耗时超过 100ms 的函数
-                let impact_score: _ = (call.total_time as f64 / profile.execution_time as f64) * 100.0;
-                let optimization_potential: _ = self.calculate_optimization_potential(call, profile);
-                if impact_score > 5.0 { // 影响分数超过 5%
+            if call.total_time > 100 {
+                // 耗时超过 100ms 的函数
+                let impact_score: _ =
+                    (call.total_time as f64 / profile.execution_time as f64) * 100.0;
+                let optimization_potential: _ =
+                    self.calculate_optimization_potential(call, profile);
+                if impact_score > 5.0 {
+                    // 影响分数超过 5%
                     hotspots.push(Hotspot {
-                        location: format!("{}:{}", call.file.as_deref().unwrap_or("unknown"), call.line.unwrap_or(0)),
+                        location: format!(
+                            "{}:{}",
+                            call.file.as_deref().unwrap_or("unknown"),
+                            call.line.unwrap_or(0)
+                        ),
                         function_name: call.name.clone(),
                         time_consumed: call.total_time,
                         call_count: call.call_count,
@@ -189,16 +205,24 @@ impl AutoOptimizer {
             }
         }
         // 按影响分数排序
-        hotspots.sort_by(|a, b| b.impact_score.partial_cmp(&a.impact_score).unwrap_or(std::cmp::Ordering::Equal));
+        hotspots.sort_by(|a, b| {
+            b.impact_score
+                .partial_cmp(&a.impact_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Ok(hotspots)
     }
     /// 识别性能瓶颈
-    pub async fn identify_bottlenecks(&self, profile: &ProfileData) -> Result<Vec<Bottleneck>, Box<dyn std::error::Error>> {
+    pub async fn identify_bottlenecks(
+        &self,
+        profile: &ProfileData,
+    ) -> Result<Vec<Bottleneck>, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(30)).await;
         let mut bottlenecks = Vec::new();
         // 分析函数调用找出瓶颈
         for call in &profile.function_calls {
-            if call.total_time > profile.execution_time / 10 { // 超过总执行时间 10%
+            if call.total_time > profile.execution_time / 10 {
+                // 超过总执行时间 10%
                 let severity: _ = if call.total_time > profile.execution_time / 2 {
                     BottleneckSeverity::Critical
                 } else if call.total_time > profile.execution_time / 4 {
@@ -280,7 +304,10 @@ impl AutoOptimizer {
         Ok(suggestions)
     }
     /// 生成优化建议
-    pub async fn suggest_optimizations(&self, hotspots: &[Hotspot]) -> Result<Vec<Optimization>, Box<dyn std::error::Error>> {
+    pub async fn suggest_optimizations(
+        &self,
+        hotspots: &[Hotspot],
+    ) -> Result<Vec<Optimization>, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(40)).await;
         let mut suggestions = Vec::new();
         for hotspot in hotspots {
@@ -321,21 +348,33 @@ impl AutoOptimizer {
         Ok(suggestions)
     }
     /// 应用优化
-    pub async fn apply_optimization(&self, code: &str, optimization: &Optimization) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn apply_optimization(
+        &self,
+        code: &str,
+        optimization: &Optimization,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
         // 简单实现：直接返回优化后的代码
         Ok(optimization.optimized_code.clone())
     }
     /// 内存优化建议
-    pub async fn suggest_memory_optimizations(&self, heap_snapshot: &HashMap<String, u64>) -> Result<Vec<MemoryOptimization>, Box<dyn std::error::Error>> {
+    pub async fn suggest_memory_optimizations(
+        &self,
+        heap_snapshot: &HashMap<String, u64>,
+    ) -> Result<Vec<MemoryOptimization>, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let mut optimizations = Vec::new();
         // 分析内存使用
         for (object_type, size) in heap_snapshot {
-            if *size > 1024 * 1024 { // 超过 1MB
+            if *size > 1024 * 1024 {
+                // 超过 1MB
                 optimizations.push(MemoryOptimization {
                     issue_type: "大对象".to_string(),
-                    description: format!("对象类型 {} 占用内存 {}MB", object_type, size / (1024 * 1024)),
+                    description: format!(
+                        "对象类型 {} 占用内存 {}MB",
+                        object_type,
+                        size / (1024 * 1024)
+                    ),
                     fix_suggestion: format!("考虑使用对象池或分片处理 {} 对象", object_type),
                     memory_saved: *size / 2,
                     confidence: 0.85,
@@ -345,7 +384,10 @@ impl AutoOptimizer {
         Ok(optimizations)
     }
     /// 并行化建议
-    pub async fn suggest_parallelization(&self, source: &str) -> Result<Vec<ParallelizationSuggestion>, Box<dyn std::error::Error>> {
+    pub async fn suggest_parallelization(
+        &self,
+        source: &str,
+    ) -> Result<Vec<ParallelizationSuggestion>, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
         let mut suggestions = Vec::new();
         // 检查循环是否可以并行化
@@ -433,7 +475,7 @@ impl PerformanceAnalyzer {
                 hotspot_time_threshold: 100,
                 call_count_threshold: 1000,
                 impact_score_threshold: 5.0,
-            })))
+            }))),
         }
     }
 }
@@ -443,7 +485,11 @@ impl OptimizationValidator {
             validation_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
-    pub async fn validate_optimization(&self, original: &str, optimized: &str) -> Result<ValidationResult, Box<dyn std::error::Error>> {
+    pub async fn validate_optimization(
+        &self,
+        original: &str,
+        optimized: &str,
+    ) -> Result<ValidationResult, Box<dyn std::error::Error>> {
         // 简单的验证逻辑
         let is_valid: _ = optimized.len() > 0;
         let confidence: _ = if is_valid { 0.85 } else { 0.0 };
@@ -488,7 +534,10 @@ mod tests {
                     line: Some(5),
                 },
             ],
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as u64,
         };
         let report: _ = optimizer.analyze_performance(&profile).await.unwrap();
         assert!(!report.hotspots.is_empty());
@@ -501,17 +550,18 @@ mod tests {
         let profile: _ = ProfileData {
             execution_time: 1000,
             memory_usage: 1024,
-            function_calls: vec![
-                FunctionCall {
-                    name: "slowFunction".to_string(),
-                    call_count: 10,
-                    total_time: 600,
-                    self_time: 500,
-                    file: None,
-                    line: None,
-                },
-            ],
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64,
+            function_calls: vec![FunctionCall {
+                name: "slowFunction".to_string(),
+                call_count: 10,
+                total_time: 600,
+                self_time: 500,
+                file: None,
+                line: None,
+            }],
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as u64,
         };
         let hotspots: _ = optimizer.detect_hotspots(&profile).await.unwrap();
         assert!(!hotspots.is_empty());
@@ -521,16 +571,14 @@ mod tests {
     #[tokio::test]
     async fn test_optimization_suggestions() {
         let optimizer: _ = AutoOptimizer::new();
-        let hotspots: _ = vec![
-            Hotspot {
-                location: "app.js:10".to_string(),
-                function_name: "processLoop".to_string(),
-                time_consumed: 500,
-                call_count: 100,
-                impact_score: 50.0,
-                optimization_potential: 30.0,
-            },
-        ];
+        let hotspots: _ = vec![Hotspot {
+            location: "app.js:10".to_string(),
+            function_name: "processLoop".to_string(),
+            time_consumed: 500,
+            call_count: 100,
+            impact_score: 50.0,
+            optimization_potential: 30.0,
+        }];
         let suggestions: _ = optimizer.suggest_optimizations(&hotspots).await.unwrap();
         assert!(!suggestions.is_empty());
         assert_eq!(suggestions[0].title, "循环优化");
@@ -542,7 +590,10 @@ mod tests {
         let mut heap_snapshot = HashMap::new();
         heap_snapshot.insert("User".to_string(), 1024 * 1024 * 2); // 2MB
         heap_snapshot.insert("Post".to_string(), 1024 * 1024); // 1MB
-        let optimizations: _ = optimizer.suggest_memory_optimizations(&heap_snapshot).await.unwrap();
+        let optimizations: _ = optimizer
+            .suggest_memory_optimizations(&heap_snapshot)
+            .await
+            .unwrap();
         assert!(!optimizations.is_empty());
         assert_eq!(optimizations[0].issue_type, "大对象");
         assert!(optimizations[0].memory_saved > 0);
@@ -574,7 +625,10 @@ function processArray() {
             confidence: 0.85,
             optimization_type: OptimizationType::LoopOptimization,
         };
-        let result: _ = optimizer.apply_optimization(original_code, &optimization).await.unwrap();
+        let result: _ = optimizer
+            .apply_optimization(original_code, &optimization)
+            .await
+            .unwrap();
         assert_eq!(result, optimization.optimized_code);
     }
     #[tokio::test]
@@ -612,7 +666,10 @@ function processArray() {
             execution_time: 0,
             memory_usage: 0,
             function_calls: vec![],
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as u64,
         };
         let report: _ = optimizer.analyze_performance(&profile).await.unwrap();
         assert!(report.hotspots.is_empty());

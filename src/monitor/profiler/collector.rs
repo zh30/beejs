@@ -2,11 +2,11 @@
 // 负责收集函数调用、内存分配等性能数据
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 pub use super::storage::{
-    PerformanceEvent, PerformanceEventType, RingBuffer, SamplingStrategy, SamplingConfig,
+    PerformanceEvent, PerformanceEventType, RingBuffer, SamplingConfig, SamplingStrategy,
 };
 /// 函数调用跟踪句柄
 #[derive(Debug, Clone)]
@@ -110,14 +110,20 @@ impl FunctionTracker {
         let decision: _ = self.sampler.should_sample_event(&PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
-            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             metadata: Some(format!("function_start:{}", function_name)),
         });
         if decision.should_sample {
             self.event_buffer.push(PerformanceEvent {
                 event_type: PerformanceEventType::FunctionCall,
                 importance: 0.8,
-                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 metadata: Some(format!("function_start:{}", function_name)),
             });
         }
@@ -142,16 +148,16 @@ impl FunctionTracker {
             self.stats.completed_traces += 1;
         }
         // 更新函数统计
-        let stats: _ = self.update_function_stats(
-            &handle.function_name,
-            execution_time,
-            memory_used,
-        );
+        let stats: _ =
+            self.update_function_stats(&handle.function_name, execution_time, memory_used);
         // 记录函数返回事件
         let event: _ = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
-            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             metadata: Some(format!(
                 "function_end:{}:{:?}:{}",
                 handle.function_name, execution_time, memory_used
@@ -171,8 +177,10 @@ impl FunctionTracker {
         memory_used: usize,
     ) -> Option<FunctionStats> {
         // 创建或获取现有统计
-        let stats: _ = self.function_stats.entry(function_name.to_string()).or_insert_with(|| {
-            FunctionStats {
+        let stats: _ = self
+            .function_stats
+            .entry(function_name.to_string())
+            .or_insert_with(|| FunctionStats {
                 function_name: function_name.to_string(),
                 total_time: Duration::from_nanos(0),
                 avg_time: Duration::from_nanos(0),
@@ -183,8 +191,7 @@ impl FunctionTracker {
                 call_count: 0,
                 total_memory: 0,
                 avg_memory: 0.0,
-            }
-        });
+            });
         // 更新统计信息
         stats.total_time += execution_time;
         stats.call_count += 1;
@@ -197,9 +204,8 @@ impl FunctionTracker {
             stats.max_time = execution_time;
         }
         // 计算平均时间
-        stats.avg_time = Duration::from_nanos(
-            stats.total_time.as_nanos() as u64 / stats.call_count
-        );
+        stats.avg_time =
+            Duration::from_nanos(stats.total_time.as_nanos() as u64 / stats.call_count);
         // 计算平均内存
         stats.avg_memory = stats.total_memory as f64 / stats.call_count as f64;
         // 简化的百分位数计算（实际应用中需要更复杂的算法）
@@ -207,10 +213,10 @@ impl FunctionTracker {
         if stats.call_count >= 20 {
             // 当样本足够多时，估算百分位数
             stats.p95_time = Duration::from_nanos(
-                (stats.total_time.as_nanos() as f64 * 0.95) as u64 / stats.call_count
+                (stats.total_time.as_nanos() as f64 * 0.95) as u64 / stats.call_count,
             );
             stats.p99_time = Duration::from_nanos(
-                (stats.total_time.as_nanos() as f64 * 0.99) as u64 / stats.call_count
+                (stats.total_time.as_nanos() as f64 * 0.99) as u64 / stats.call_count,
             );
         } else {
             stats.p95_time = stats.avg_time;

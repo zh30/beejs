@@ -3,12 +3,12 @@
 
 use crate::monitor::performance_monitor::{MetricType, ThresholdSeverity, ThresholdViolation};
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::time::SystemTime;
 use std::hash::Hash;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use std::time::SystemTime;
 
 /// 告警规则
 #[derive(Debug, Clone)]
@@ -328,9 +328,9 @@ impl AlertSystem {
                 // 生成告警 ID
                 let alert_id: _ = format!("{}_{}", rule.id, current_time);
                 // 检查是否已经存在相同规则的活跃告警
-                let existing_alert: _ = active_alerts.values().find(|alert| {
-                    alert.rule_id == rule.id && alert.status == AlertStatus::Firing
-                });
+                let existing_alert: _ = active_alerts
+                    .values()
+                    .find(|alert| alert.rule_id == rule.id && alert.status == AlertStatus::Firing);
                 if existing_alert.is_some() {
                     continue; // 告警已存在，跳过
                 }
@@ -390,7 +390,9 @@ impl AlertSystem {
     fn generate_alert_message(&self, rule: &AlertRule, current_value: f64) -> String {
         format!(
             "Alert: {} - Current value: {:.2}, Threshold: {:.2}",
-            rule.name, current_value, match &rule.condition {
+            rule.name,
+            current_value,
+            match &rule.condition {
                 AlertCondition::GreaterThan(t) => *t,
                 AlertCondition::LessThan(t) => *t,
                 AlertCondition::Equals(t) => *t,
@@ -437,13 +439,19 @@ impl AlertSystem {
     }
     /// 添加通知渠道
     pub fn add_notification_channel(&self, channel: NotificationChannel) -> Result<(), String> {
-        let mut notification_channels = self.notification_channels.lock().map_err(|e| e.to_string())?;
+        let mut notification_channels = self
+            .notification_channels
+            .lock()
+            .map_err(|e| e.to_string())?;
         notification_channels.insert(channel.id.clone(), channel);
         Ok(())
     }
     /// 发送通知
     fn send_notifications(&self, alert: &AlertInstance) -> Result<(), String> {
-        let notification_channels: _ = self.notification_channels.lock().map_err(|e| e.to_string())?;
+        let notification_channels: _ = self
+            .notification_channels
+            .lock()
+            .map_err(|e| e.to_string())?;
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
         let message: _ = NotificationMessage {
             title: format!("Beejs Alert: {}", alert.severity.as_str()),
@@ -657,10 +665,7 @@ mod tests {
             (AlertCondition::OutOfRange(10.0, 90.0), 95.0, true),
         ];
         for (condition, value, expected) in conditions {
-            assert_eq!(
-                alert_system.evaluate_condition(&condition, value),
-                expected
-            );
+            assert_eq!(alert_system.evaluate_condition(&condition, value), expected);
         }
     }
     #[test]

@@ -9,7 +9,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -21,10 +21,11 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
@@ -39,7 +40,11 @@ fn test_create_private_key_exists() {
 console.log(typeof crypto.createPrivateKey === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createPrivateKey to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createPrivateKey to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -53,85 +58,134 @@ jZGdz7b9c8l8R3T+cBH4qPvE0VJGd5wIz7K2rZPEe5yYJ8EoL3L8v3n8K6V6G
 2V5hB7f4wE4x6yZ2q8R1s5t3u7o6n5m4k3j2i1h0g9f8e7d6c5b4a3
 -----END RSA PRIVATE KEY-----
 "#;
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 console.log(typeof privateKey === 'object' && privateKey !== null ? 'PASS' : 'FAIL');
-"#, rsa_pem);
+"#,
+        rsa_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected createPrivateKey to return object: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createPrivateKey to return object: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_private_key_type_property() {
     let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n+SdBbGhPGhJP2wqE2bF9eDQfyjm1K1J7GQZbXoY9P9BQjCMZXG5u0cJYDNKdW8\n-----END RSA PRIVATE KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 console.log(privateKey.type === 'private' ? 'PASS' : 'FAIL');
-"#, rsa_pem);
+"#,
+        rsa_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected type to be 'private': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected type to be 'private': {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_private_key_asymmetric_key_type_rsa() {
     let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 console.log(privateKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
-"#, rsa_pem);
+"#,
+        rsa_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected asymmetricKeyType to be 'rsa': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected asymmetricKeyType to be 'rsa': {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_private_key_asymmetric_key_type_ec() {
     let ec_pem = "-----BEGIN EC PRIVATE KEY-----\nMHQCAQEEIIrYSSNQFaA2Hwf1duRSxKtLYX5CB04fSeQ6tF1aY/PuoAcGBSuBBAAK\noUQDQgAEqK3xHfL8S4t/1TQ3WHLp1r4P4G2p5Lq5M5n4o3p2q1r0s9t8u7v6w5x4\n-----END EC PRIVATE KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 console.log(privateKey.asymmetricKeyType === 'ec' ? 'PASS' : 'FAIL');
-"#, ec_pem);
+"#,
+        ec_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected asymmetricKeyType to be 'ec': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected asymmetricKeyType to be 'ec': {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_private_key_has_export_method() {
     let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 console.log(typeof privateKey.export === 'function' ? 'PASS' : 'FAIL');
-"#, rsa_pem);
+"#,
+        rsa_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected export method to exist: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export method to exist: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_private_key_export_pem() {
     let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 const exported = privateKey.export('pem');
 console.log(typeof exported === 'string' && exported.includes('BEGIN RSA PRIVATE KEY') ? 'PASS' : 'FAIL');
-"#, rsa_pem);
+"#,
+        rsa_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected export('pem') to return PEM string: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export('pem') to return PEM string: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_private_key_with_object_format() {
     let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey({{ key: `{}` }});
 console.log(typeof privateKey === 'object' ? 'PASS' : 'FAIL');
-"#, rsa_pem);
+"#,
+        rsa_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected createPrivateKey to accept object format: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createPrivateKey to accept object format: {}",
+        output
+    );
 }
 
 #[test]
@@ -150,7 +204,11 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected valid object or error for invalid key format: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected valid object or error for invalid key format: {}",
+        output
+    );
 }
 
 // ==================== createPublicKey Tests ====================
@@ -162,68 +220,107 @@ fn test_create_public_key_exists() {
 console.log(typeof crypto.createPublicKey === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createPublicKey to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createPublicKey to exist: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_public_key_returns_object() {
     let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\nF8CnkK4VK8c9xUHD4lzdAaYx3L+SdBbGhPGhJP2wqE2bF9eDQfyjm1K1J7GQZbXo\nY9P9BQjCMZXG5u0cJYDNKdW8jZGdz7b9c8l8R3T+cBH4qPvE0VJGd5wIz7K2rZPE\ne5yYJ8EoL3L8v3n8K6V6G2V5hB7f4wE4x6yZ2q8R1s5t3u7o6n5m4k3j2i1h0g\n9f8e7d6c5b4a3\n-----END PUBLIC KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const publicKey = crypto.createPublicKey(`{}`);
 console.log(typeof publicKey === 'object' && publicKey !== null ? 'PASS' : 'FAIL');
-"#, pub_pem);
+"#,
+        pub_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected createPublicKey to return object: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createPublicKey to return object: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_public_key_type_property() {
     let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const publicKey = crypto.createPublicKey(`{}`);
 console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
-"#, pub_pem);
+"#,
+        pub_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected type to be 'public': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected type to be 'public': {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_public_key_asymmetric_key_type() {
     let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const publicKey = crypto.createPublicKey(`{}`);
 console.log(publicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
-"#, pub_pem);
+"#,
+        pub_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected asymmetricKeyType to be 'rsa': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected asymmetricKeyType to be 'rsa': {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_public_key_has_export_method() {
     let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const publicKey = crypto.createPublicKey(`{}`);
 console.log(typeof publicKey.export === 'function' ? 'PASS' : 'FAIL');
-"#, pub_pem);
+"#,
+        pub_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected export method to exist: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export method to exist: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_create_public_key_export_pem() {
     let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const publicKey = crypto.createPublicKey(`{}`);
 const exported = publicKey.export('pem');
 console.log(typeof exported === 'string' && exported.includes('BEGIN PUBLIC KEY') ? 'PASS' : 'FAIL');
-"#, pub_pem);
+"#,
+        pub_pem
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected export('pem') to return PEM string: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export('pem') to return PEM string: {}",
+        output
+    );
 }
 
 // ==================== createSecretKey Tests ====================
@@ -235,7 +332,11 @@ fn test_create_secret_key_exists() {
 console.log(typeof crypto.createSecretKey === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createSecretKey to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createSecretKey to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -246,7 +347,11 @@ const secretKey = crypto.createSecretKey(Buffer.from('my-secret-key'));
 console.log(typeof secretKey === 'object' && secretKey !== null ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected createSecretKey to return object: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createSecretKey to return object: {}",
+        output
+    );
 }
 
 #[test]
@@ -257,7 +362,11 @@ const secretKey = crypto.createSecretKey(Buffer.from('my-secret-key'));
 console.log(secretKey.type === 'secret' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected type to be 'secret': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected type to be 'secret': {}",
+        output
+    );
 }
 
 #[test]
@@ -268,7 +377,11 @@ const secretKey = crypto.createSecretKey(Buffer.from('my-secret-key'));
 console.log(secretKey.length === 13 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected length to be 13: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected length to be 13: {}",
+        output
+    );
 }
 
 #[test]
@@ -279,7 +392,11 @@ const secretKey = crypto.createSecretKey(Buffer.from('my-secret-key'));
 console.log(secretKey.asymmetricKeyType === 'secret' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected asymmetricKeyType to be 'secret': {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected asymmetricKeyType to be 'secret': {}",
+        output
+    );
 }
 
 #[test]
@@ -290,7 +407,11 @@ const secretKey = crypto.createSecretKey(Buffer.from('my-secret-key'));
 console.log(typeof secretKey.export === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected export method to exist: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export method to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -303,7 +424,11 @@ console.log(exported instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(exported.length === 13 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected export('raw') to return Uint8Array: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export('raw') to return Uint8Array: {}",
+        output
+    );
 }
 
 #[test]
@@ -315,7 +440,11 @@ const exported = secretKey.export('buffer');
 console.log(exported instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected export('buffer') to return Uint8Array: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export('buffer') to return Uint8Array: {}",
+        output
+    );
 }
 
 #[test]
@@ -328,7 +457,11 @@ console.log(typeof exported === 'string' ? 'PASS' : 'FAIL');
 console.log(exported.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected export('base64') to return string: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected export('base64') to return string: {}",
+        output
+    );
 }
 
 #[test]
@@ -341,7 +474,11 @@ console.log(secretKey.length === 5 ? 'PASS' : 'FAIL');
 console.log(secretKey.type === 'secret' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected createSecretKey to work with Uint8Array: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createSecretKey to work with Uint8Array: {}",
+        output
+    );
 }
 
 #[test]
@@ -353,7 +490,11 @@ console.log(secretKey.length === 14 ? 'PASS' : 'FAIL');
 console.log(secretKey.type === 'secret' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected createSecretKey to work with string: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createSecretKey to work with string: {}",
+        output
+    );
 }
 
 #[test]
@@ -367,7 +508,11 @@ const secretKey = crypto.createSecretKey(buffer);
 console.log(secretKey.length === 8 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected createSecretKey to work with ArrayBuffer: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createSecretKey to work with ArrayBuffer: {}",
+        output
+    );
 }
 
 #[test]
@@ -382,7 +527,11 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected error for invalid key format: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected error for invalid key format: {}",
+        output
+    );
 }
 
 // ==================== KeyObjects Roundtrip Tests ====================
@@ -398,7 +547,11 @@ console.log(imported.length === 14 ? 'PASS' : 'FAIL');
 console.log(imported.type === 'secret' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected roundtrip to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected roundtrip to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -406,15 +559,22 @@ console.log(imported.type === 'secret' ? 'PASS' : 'FAIL');
 fn test_private_public_key_relationship() {
     let rsa_priv = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
     let rsa_pub = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(r#"
+    let code = format!(
+        r#"
 const privateKey = crypto.createPrivateKey(`{}`);
 const publicKey = crypto.createPublicKey(`{}`);
 console.log(privateKey.type === 'private' ? 'PASS' : 'FAIL');
 console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
 console.log(privateKey.asymmetricKeyType === publicKey.asymmetricKeyType ? 'PASS' : 'FAIL');
-"#, rsa_priv, rsa_pub);
+"#,
+        rsa_priv, rsa_pub
+    );
     let output = run_js_test(&code);
-    assert!(output.contains("PASS"), "Expected key types to match: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected key types to match: {}",
+        output
+    );
 }
 
 #[test]
@@ -427,5 +587,9 @@ console.log(key1.length !== key2.length ? 'PASS' : 'FAIL');
 console.log(key1.type === key2.type ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different keys to be independent: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different keys to be independent: {}",
+        output
+    );
 }

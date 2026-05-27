@@ -3,13 +3,9 @@
 // 这个模块是自动性能调优的核心引擎，协调性能分析和自动调优，
 // 提供统一的优化接口。
 
-use super::{
-use std::time::SystemTime;
-    auto_tuner::{AutoTuner, OptimizationFeedback, OptimizationResult},
-    performance_analyzer::{
-        PerformanceAnalyzer, PerformanceMetric, PerformanceMetrics,
-    },
-};
+use super::auto_tuner::{AutoTuner, OptimizationFeedback, OptimizationResult};
+use super::performance_analyzer::{PerformanceAnalyzer, PerformanceMetric, PerformanceMetrics};
+use std::time::{Duration, SystemTime};
 /// 优化引擎
 ///
 /// 协调性能分析和自动调优的主引擎
@@ -78,7 +74,8 @@ impl OptimizerStats {
                 self.min_improvement = result.improvement;
             }
             // 计算平均改进
-            self.average_improvement = self.total_improvement / self.successful_optimizations as f64;
+            self.average_improvement =
+                self.total_improvement / self.successful_optimizations as f64;
         } else {
             self.failed_optimizations += 1;
         }
@@ -157,10 +154,7 @@ impl Optimizer {
     /// # Returns
     ///
     /// 包含详细信息的优化结果
-    pub fn optimize_with_report(
-        &mut self,
-        metrics: &PerformanceMetrics,
-    ) -> OptimizationReport {
+    pub fn optimize_with_report(&mut self, metrics: &PerformanceMetrics) -> OptimizationReport {
         let plan: _ = self.auto_tuner.analyzer.analyze_performance(metrics);
         let result: _ = self.auto_tuner.apply_optimization(&plan);
         // 记录统计信息
@@ -279,7 +273,7 @@ impl Optimizer {
         if plan.suggestions.is_empty() {
             report.push_str("✅ 当前性能良好，无需优化\n");
         } else {
-            report.push_str(&format!("📋 优化建议 ({} 项):\n\n", plan.suggestions.len());
+            report.push_str(&format!("📋 优化建议 ({} 项):\n\n", plan.suggestions.len()));
             for (i, suggestion) in plan.suggestions.iter().enumerate() {
                 report.push_str(&format!(
                     "{}. {} ({})\n",
@@ -298,11 +292,17 @@ impl Optimizer {
                 report.push_str(&format!("   说明: {}\n\n", suggestion.description));
             }
         }
-        report.push_str(&format!("\n=== 统计信息 ===\n"));
+        report.push_str("\n=== 统计信息 ===\n");
         report.push_str(&format!("总优化次数: {}\n", self.stats.total_optimizations));
-        report.push_str(&format!("成功优化次数: {}\n", self.stats.successful_optimizations));
-        report.push_str(&format!("成功率: {:.1}%\n", self.stats.get_success_rate());
-        report.push_str(&format!("平均改进: {:.1}%\n", self.stats.average_improvement));
+        report.push_str(&format!(
+            "成功优化次数: {}\n",
+            self.stats.successful_optimizations
+        ));
+        report.push_str(&format!("成功率: {:.1}%\n", self.stats.get_success_rate()));
+        report.push_str(&format!(
+            "平均改进: {:.1}%\n",
+            self.stats.average_improvement
+        ));
         report
     }
 }
@@ -342,9 +342,9 @@ pub struct PerformanceEvaluation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     use std::collections::HashMap;
-use std::collections::{BTreeMap};
-use std::time::Duration;
+    use std::time::Duration;
 
     fn create_test_metrics() -> PerformanceMetrics {
         let mut metrics = Vec::new();
@@ -352,7 +352,8 @@ use std::time::Duration;
         // CPU 使用率
         for i in 0..10 {
             metrics.push(PerformanceMetric {
-                metric_type: super::super::performance_analyzer::PerformanceMetricType::CpuUtilization,
+                metric_type:
+                    super::super::performance_analyzer::PerformanceMetricType::CpuUtilization,
                 value: 75.0 + i as f64,
                 timestamp: start_time + Duration::from_secs(i as u64),
                 labels: HashMap::new(),
@@ -361,7 +362,8 @@ use std::time::Duration;
         // 内存使用率
         for i in 0..10 {
             metrics.push(PerformanceMetric {
-                metric_type: super::super::performance_analyzer::PerformanceMetricType::MemoryUtilization,
+                metric_type:
+                    super::super::performance_analyzer::PerformanceMetricType::MemoryUtilization,
                 value: 85.0 + i as f64,
                 timestamp: start_time + Duration::from_secs(i as u64),
                 labels: HashMap::new(),
@@ -385,7 +387,10 @@ use std::time::Duration;
         let metrics: _ = create_test_metrics();
         let result: _ = optimizer.optimize(&metrics);
         assert_eq!(optimizer.stats.total_optimizations, 1);
-        assert_eq!(optimizer.stats.successful_optimizations, if result.success { 1 } else { 0 });
+        assert_eq!(
+            optimizer.stats.successful_optimizations,
+            if result.success { 1 } else { 0 }
+        );
     }
     #[test]
     fn test_optimize_with_report() {

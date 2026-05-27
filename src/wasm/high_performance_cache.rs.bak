@@ -95,7 +95,7 @@ impl Default for HighPerfCacheConfig {
         Self {
             max_l1_entries: 5000,      // 增加条目数限制
             max_l1_size: 500 * 1024 * 1024, // 500MB
-            l2_cache_dir: PathBuf::from("./wasm_cache_high_perf"),
+            l2_cache_dir: PathBuf::from("benchmarks/fixtures/wasm_cache_high_perf"),
             enable_l2: true,
             enable_precompile: true,
             batch_size: 100,
@@ -251,7 +251,7 @@ impl HighPerformanceWasmCache {
         entry: &Arc<HighPerfCacheEntry>,
     ) -> Result<()> {
         let wasm_bytes: _ = Arc::clone(&entry.wasm_bytes);
-        let file_path: _ = format!("./wasm_cache_high_perf/{}.wasm", hash));
+        let file_path: _ = format!("benchmarks/fixtures/wasm_cache_high_perf/{}.wasm", hash);
         let mut file = fs::File::create(&file_path).await?;
         file.write_all(&wasm_bytes).await?;
         Ok(())

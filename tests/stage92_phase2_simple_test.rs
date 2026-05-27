@@ -4,23 +4,23 @@
 
 #[cfg(test)]
 mod tests {
+    use std::alloc::GlobalAlloc;
     use std::ptr::NonNull;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_nonnull_creation() {
-        let ptr: _ = NonNull::new(0x1000 as *mut u8).unwrap();
-        assert!(!ptr.as_ptr().is_null());
+        let ptr = NonNull::new(0x1000 as *mut u8).unwrap();
+        assert_eq!(ptr.as_ptr() as usize, 0x1000);
         println!("✓ NonNull creation test passed");
     }
 
     #[test]
     fn test_basic_allocation() {
-        let size: _ = 1024;
-        let layout: _ = std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>()).unwrap();
+        let size = 1024;
+        let layout =
+            std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>()).unwrap();
         unsafe {
-            let ptr: _ = std::alloc::System.alloc(layout);
+            let ptr = std::alloc::System.alloc(layout);
             assert!(!ptr.is_null(), "Allocation should succeed");
 
             std::alloc::System.dealloc(ptr, layout);
@@ -31,15 +31,17 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_concept() {
         // 模拟零拷贝操作
-        let src_size: _ = 1024;
-        let dst_size: _ = 1024;
+        let src_size = 1024;
+        let dst_size = 1024;
 
-        let src_layout: _ = std::alloc::Layout::from_size_align(src_size, std::mem::align_of::<usize>()).unwrap();
-        let dst_layout: _ = std::alloc::Layout::from_size_align(dst_size, std::mem::align_of::<usize>()).unwrap();
+        let src_layout =
+            std::alloc::Layout::from_size_align(src_size, std::mem::align_of::<usize>()).unwrap();
+        let dst_layout =
+            std::alloc::Layout::from_size_align(dst_size, std::mem::align_of::<usize>()).unwrap();
 
         unsafe {
-            let src: _ = std::alloc::System.alloc(src_layout);
-            let dst: _ = std::alloc::System.alloc(dst_layout);
+            let src = std::alloc::System.alloc(src_layout);
+            let dst = std::alloc::System.alloc(dst_layout);
 
             assert!(!src.is_null(), "Source allocation should succeed");
             assert!(!dst.is_null(), "Destination allocation should succeed");
@@ -56,14 +58,15 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_pool_idea() {
         // 模拟内存池概念
-        let pool_size: _ = 10;
+        let pool_size = 10;
         let mut pool = Vec::with_capacity(pool_size);
 
         for i in 0..pool_size {
-            let size: _ = (i + 1) * 1024;
-            let layout: _ = std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>()).unwrap();
+            let size = (i + 1) * 1024;
+            let layout =
+                std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>()).unwrap();
             unsafe {
-                let ptr: _ = std::alloc::System.alloc(layout);
+                let ptr = std::alloc::System.alloc(layout);
                 if !ptr.is_null() {
                     pool.push((ptr, layout));
                 }
@@ -90,10 +93,11 @@ use std::collections::{HashMap, BTreeMap};
 
         // 分配一些内存
         for i in 0..100 {
-            let size: _ = (i % 10 + 1) * 1024;
-            let layout: _ = std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>()).unwrap();
+            let size = (i % 10 + 1) * 1024;
+            let layout =
+                std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>()).unwrap();
             unsafe {
-                let ptr: _ = std::alloc::System.alloc(layout);
+                let ptr = std::alloc::System.alloc(layout);
                 if !ptr.is_null() {
                     allocated.push((ptr, layout, i < 50)); // 标记前50个为"可回收"
                 }
@@ -117,15 +121,15 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_prefetch_concept() {
         // 模拟预取概念
-        let base_addr: _ = 0x1000 as *mut u8;
-        let window_size: _ = 4096;
-        let prefetch_depth: _ = 4;
+        let base_addr = 0x1000 as *mut u8;
+        let window_size = 4096;
+        let prefetch_depth = 4;
 
         // 模拟顺序预取
         for i in 0..prefetch_depth {
-            let prefetch_addr: _ = unsafe { base_addr.add((i + 1) * window_size) };
+            let prefetch_addr = unsafe { base_addr.add((i + 1) * window_size) };
             // 在实际实现中，这里会调用 madvise 或类似的系统调用
-            let _: _ = prefetch_addr;
+            let _ = prefetch_addr;
         }
 
         println!("✓ Prefetch concept test passed");

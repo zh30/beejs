@@ -94,6 +94,9 @@ fn qs_unescape_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let result: _ = percent_encoding::percent_decode_str(&str).decode_utf8().unwrap_or_default().to_string();
+    let result: _ = percent_encoding::percent_decode_str(&str)
+        .decode_utf8()
+        .unwrap_or_default()
+        .to_string();
     retval.set(v8::String::new(scope, &result).unwrap().into());
 }

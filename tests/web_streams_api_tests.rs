@@ -7,7 +7,9 @@ mod web_streams_api_tests {
     use std::process::Command;
 
     fn beejs_path() -> PathBuf {
-        PathBuf::from(std::env::var("CARGO_BIN_EXE_BEEJS").unwrap_or_else(|_| "./target/release/beejs".to_string()))
+        PathBuf::from(
+            std::env::var("CARGO_BIN_EXE_bee").unwrap_or_else(|_| "./target/debug/bee".to_string()),
+        )
     }
 
     #[test]
@@ -15,7 +17,7 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "console.log(typeof ReadableStream)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("function"), "ReadableStream should exist");
@@ -26,10 +28,13 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "const s = new ReadableStream(); const r = s.getReader(); console.log(typeof r.read)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("function"), "Reader should have read method");
+        assert!(
+            stdout.contains("function"),
+            "Reader should have read method"
+        );
     }
 
     #[test]
@@ -37,18 +42,24 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"const s = new ReadableStream(); const r = s.getReader(); console.log(typeof r.read === 'function' && typeof r.releaseLock === 'function' && r.closed instanceof Promise)"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Reader should have correct properties");
+        assert!(
+            stdout.contains("true"),
+            "Reader should have correct properties"
+        );
     }
 
     #[test]
     fn test_readable_stream_locked_property() {
         let output = Command::new(beejs_path())
-            .args(["eval", "const s = new ReadableStream(); console.log(s.locked)"])
+            .args([
+                "eval",
+                "const s = new ReadableStream(); console.log(s.locked)",
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("false"), "New stream should be unlocked");
@@ -59,13 +70,19 @@ mod web_streams_api_tests {
         // Note: locked property remains false in basic scaffold implementation
         // Full implementation would update locked state on getReader() call
         let output = Command::new(beejs_path())
-            .args(["eval", "const s = new ReadableStream(); s.getReader(); console.log(s.locked)"])
+            .args([
+                "eval",
+                "const s = new ReadableStream(); s.getReader(); console.log(s.locked)",
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // Basic implementation: locked stays false
-        assert!(stdout.contains("false"), "Stream locked state (basic implementation)");
+        assert!(
+            stdout.contains("false"),
+            "Stream locked state (basic implementation)"
+        );
     }
 
     #[test]
@@ -73,7 +90,7 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "console.log(typeof WritableStream)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("function"), "WritableStream should exist");
@@ -84,10 +101,13 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "const s = new WritableStream(); const w = s.getWriter(); console.log(typeof w.write)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("function"), "Writer should have write method");
+        assert!(
+            stdout.contains("function"),
+            "Writer should have write method"
+        );
     }
 
     #[test]
@@ -95,21 +115,30 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"const s = new WritableStream(); const w = s.getWriter(); console.log(w.ready instanceof Promise && w.closed instanceof Promise)"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Writer should have ready and closed promises");
+        assert!(
+            stdout.contains("true"),
+            "Writer should have ready and closed promises"
+        );
     }
 
     #[test]
     fn test_writable_stream_locked_property() {
         let output = Command::new(beejs_path())
-            .args(["eval", "const s = new WritableStream(); console.log(s.locked)"])
+            .args([
+                "eval",
+                "const s = new WritableStream(); console.log(s.locked)",
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("false"), "New WritableStream should be unlocked");
+        assert!(
+            stdout.contains("false"),
+            "New WritableStream should be unlocked"
+        );
     }
 
     #[test]
@@ -117,7 +146,7 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "console.log(typeof TransformStream)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("function"), "TransformStream should exist");
@@ -130,21 +159,30 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "const t = new TransformStream(); console.log(typeof t.readable && typeof t.writable)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("object"), "TransformStream should have readable and writable objects");
+        assert!(
+            stdout.contains("object"),
+            "TransformStream should have readable and writable objects"
+        );
     }
 
     #[test]
     fn test_text_decoder_stream_creation() {
         let output = Command::new(beejs_path())
-            .args(["eval", "const d = new TextDecoderStream(); console.log(d.encoding)"])
+            .args([
+                "eval",
+                "const d = new TextDecoderStream(); console.log(d.encoding)",
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("utf-8"), "TextDecoderStream should have utf-8 encoding");
+        assert!(
+            stdout.contains("utf-8"),
+            "TextDecoderStream should have utf-8 encoding"
+        );
     }
 
     #[test]
@@ -152,10 +190,13 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "const d = new TextDecoderStream(); console.log(typeof d.readable && typeof d.writable)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("object"), "TextDecoderStream should have readable and writable");
+        assert!(
+            stdout.contains("object"),
+            "TextDecoderStream should have readable and writable"
+        );
     }
 
     #[test]
@@ -163,7 +204,7 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"performance.mark('s'); for(let i=0;i<100;i++){new ReadableStream(); new WritableStream(); new TransformStream();} performance.mark('e'); performance.measure('m','s','e'); console.log(performance.getEntriesByType('measure')[0].duration < 1000)"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "Stream creation should be fast");
@@ -174,7 +215,9 @@ mod web_streams_api_tests {
     fn test_readable_stream_with_start_and_enqueue() {
         // Test that start() callback is called and can use controller.enqueue()
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let received = null;
                 const stream = new ReadableStream({
                     start(controller) {
@@ -185,19 +228,25 @@ mod web_streams_api_tests {
                 const reader = stream.getReader();
                 reader.read().then(r => { received = r.value; });
                 received
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("hello") || stdout.contains("world"), "Should receive enqueued data");
+        assert!(
+            stdout.contains("hello") || stdout.contains("world"),
+            "Should receive enqueued data"
+        );
     }
 
     #[test]
     fn test_readable_stream_controller_has_enqueue() {
         // Test that controller object has enqueue method
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let hasEnqueue = false;
                 const stream = new ReadableStream({
                     start(controller) {
@@ -205,19 +254,25 @@ mod web_streams_api_tests {
                     }
                 });
                 console.log(hasEnqueue);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Controller should have enqueue method");
+        assert!(
+            stdout.contains("true"),
+            "Controller should have enqueue method"
+        );
     }
 
     #[test]
     fn test_readable_stream_controller_has_close() {
         // Test that controller object has close method
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let hasClose = false;
                 const stream = new ReadableStream({
                     start(controller) {
@@ -225,19 +280,25 @@ mod web_streams_api_tests {
                     }
                 });
                 console.log(hasClose);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Controller should have close method");
+        assert!(
+            stdout.contains("true"),
+            "Controller should have close method"
+        );
     }
 
     #[test]
     fn test_readable_stream_controller_has_error() {
         // Test that controller object has error method
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let hasError = false;
                 const stream = new ReadableStream({
                     start(controller) {
@@ -245,19 +306,25 @@ mod web_streams_api_tests {
                     }
                 });
                 console.log(hasError);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Controller should have error method");
+        assert!(
+            stdout.contains("true"),
+            "Controller should have error method"
+        );
     }
 
     #[test]
     fn test_readable_stream_multiple_chunks() {
         // Test reading multiple chunks from a stream
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const chunks = [];
                 const stream = new ReadableStream({
                     start(controller) {
@@ -278,19 +345,25 @@ mod web_streams_api_tests {
                     chunks.push(r3.value);
                     console.log(chunks.join(','));
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("chunk1,chunk2,chunk3"), "Should receive all chunks");
+        assert!(
+            stdout.contains("chunk1,chunk2,chunk3"),
+            "Should receive all chunks"
+        );
     }
 
     #[test]
     fn test_readable_stream_close_after_enqueue() {
         // Test that stream is done after close
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let doneValues = [];
                 const stream = new ReadableStream({
                     start(controller) {
@@ -305,13 +378,17 @@ mod web_streams_api_tests {
                     doneValues.push(r2.done);
                     console.log(doneValues.join(','));
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // First read should have data, second should be done
-        assert!(stdout.contains("false,true") || stdout.contains("true"), "Should be done after all chunks read");
+        assert!(
+            stdout.contains("false,true") || stdout.contains("true"),
+            "Should be done after all chunks read"
+        );
     }
 
     // v0.3.284: Tests for WritableStream start() callback and write queue
@@ -319,7 +396,9 @@ mod web_streams_api_tests {
     fn test_writable_stream_with_start_callback() {
         // Test that start() callback is called
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let startCalled = false;
                 const stream = new WritableStream({
                     start() {
@@ -327,9 +406,10 @@ mod web_streams_api_tests {
                     }
                 });
                 console.log(startCalled);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "Start callback should be called");
@@ -339,7 +419,9 @@ mod web_streams_api_tests {
     fn test_writable_stream_write_adds_to_queue() {
         // Test that write() adds chunks to the write queue
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const stream = new WritableStream();
                 const writer = stream.getWriter();
                 // Write some data
@@ -347,19 +429,25 @@ mod web_streams_api_tests {
                 writer.write('test2');
                 // Check that queue has entries (internal state check via locked)
                 console.log(typeof stream._writeQueue === 'object');
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "WritableStream should have write queue");
+        assert!(
+            stdout.contains("true"),
+            "WritableStream should have write queue"
+        );
     }
 
     #[test]
     fn test_writable_stream_close_changes_state() {
         // Test that close() changes the stream state
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const stream = new WritableStream();
                 const writer = stream.getWriter();
                 // Initially state should be 0 (Open)
@@ -369,19 +457,25 @@ mod web_streams_api_tests {
                 // After close, state should be 1 (Closed)
                 const closedState = stream._state;
                 console.log(initialState === 0 && closedState === 1);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "State should change from 0 to 1 on close");
+        assert!(
+            stdout.contains("true"),
+            "State should change from 0 to 1 on close"
+        );
     }
 
     #[test]
     fn test_writable_stream_abort_changes_state() {
         // Test that abort() changes the stream state to errored
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const stream = new WritableStream();
                 const writer = stream.getWriter();
                 // Initially state should be 0 (Open)
@@ -391,19 +485,25 @@ mod web_streams_api_tests {
                 // After abort, state should be 2 (Errored)
                 const erroredState = stream._state;
                 console.log(initialState === 0 && erroredState === 2);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "State should change from 0 to 2 on abort");
+        assert!(
+            stdout.contains("true"),
+            "State should change from 0 to 2 on abort"
+        );
     }
 
     #[test]
     fn test_writable_stream_write_rejects_when_closed() {
         // Test that write() doesn't add to queue when stream is closed
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const stream = new WritableStream();
                 const writer = stream.getWriter();
                 // Get initial queue length
@@ -414,9 +514,10 @@ mod web_streams_api_tests {
                 writer.write('should not be added');
                 // Queue should not have changed (or may have the pre-close entries)
                 console.log(typeof stream._writeQueue.length === 'number');
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "Write queue should exist");
@@ -426,7 +527,9 @@ mod web_streams_api_tests {
     fn test_transform_stream_transform_function_call() {
         // Test that TransformStream with transformer works correctly
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ts = new TransformStream({
                     transform(chunk, controller) {
                         controller.enqueue(chunk.toString().toUpperCase());
@@ -434,12 +537,16 @@ mod web_streams_api_tests {
                 });
                 // Check that transform function reference is stored
                 console.log(ts.readable !== undefined && ts.writable !== undefined);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "TransformStream should have readable and writable");
+        assert!(
+            stdout.contains("true"),
+            "TransformStream should have readable and writable"
+        );
     }
 
     #[test]
@@ -457,17 +564,22 @@ mod web_streams_api_tests {
                 console.log(typeof writer.write === 'function' && typeof writer.close === 'function' && typeof writer.abort === 'function');
             "#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Writer should have write, close, abort methods");
+        assert!(
+            stdout.contains("true"),
+            "Writer should have write, close, abort methods"
+        );
     }
 
     #[test]
     fn test_transform_stream_readable_has_get_reader() {
         // Test that TransformStream readable side has getReader
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ts = new TransformStream({
                     transform(chunk, controller) {
                         controller.enqueue(chunk);
@@ -476,12 +588,16 @@ mod web_streams_api_tests {
                 // Readable should have getReader
                 const reader = ts.readable.getReader();
                 console.log(typeof reader.read === 'function' && reader.closed instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Readable should have read method and closed Promise");
+        assert!(
+            stdout.contains("true"),
+            "Readable should have read method and closed Promise"
+        );
     }
 
     // v0.3.287: Tests for TransformStream transform() end-to-end data flow
@@ -489,7 +605,9 @@ mod web_streams_api_tests {
     fn test_transform_stream_end_to_end_transform() {
         // Test that transform() actually transforms data from writable to readable
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ts = new TransformStream({
                     transform(chunk, controller) {
                         controller.enqueue(chunk.toString().toUpperCase());
@@ -515,19 +633,25 @@ mod web_streams_api_tests {
                     results.push(r.value);
                     console.log(results.join(','));
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("HELLO,WORLD"), "Transform should uppercase input");
+        assert!(
+            stdout.contains("HELLO,WORLD"),
+            "Transform should uppercase input"
+        );
     }
 
     #[test]
     fn test_transform_stream_with_flush() {
         // Test transform with flush callback
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let flushCalled = false;
                 const ts = new TransformStream({
                     transform(chunk, controller) {
@@ -552,19 +676,25 @@ mod web_streams_api_tests {
                     results.push(r.value);
                     console.log(results.join(',') + ':' + flushCalled);
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("data,[END]") && stdout.contains("true"), "Flush should be called and add termination chunk");
+        assert!(
+            stdout.contains("data,[END]") && stdout.contains("true"),
+            "Flush should be called and add termination chunk"
+        );
     }
 
     #[test]
     fn test_transform_stream_error_propagation() {
         // Test that errors in transform are properly handled
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ts = new TransformStream({
                     transform(chunk, controller) {
                         if (chunk === 'error') {
@@ -579,12 +709,16 @@ mod web_streams_api_tests {
                 writer.write('ok').then(() => {
                     console.log('ok written');
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("ok written"), "Normal transform should work");
+        assert!(
+            stdout.contains("ok written"),
+            "Normal transform should work"
+        );
     }
 
     // v0.3.288: Tests for pipeTo() method
@@ -592,22 +726,30 @@ mod web_streams_api_tests {
     fn test_readable_stream_pipe_to_method_exists() {
         // Test that ReadableStream has pipeTo method
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const rs = new ReadableStream();
                 console.log(typeof rs.pipeTo === 'function');
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "ReadableStream should have pipeTo method");
+        assert!(
+            stdout.contains("true"),
+            "ReadableStream should have pipeTo method"
+        );
     }
 
     #[test]
     fn test_readable_stream_pipe_to_writable() {
         // Test basic pipeTo functionality - data flows from readable to writable
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const chunks = [];
                 const writable = new WritableStream({
                     write(chunk) {
@@ -626,30 +768,37 @@ mod web_streams_api_tests {
                 // Use pipeTo to connect readable to writable
                 readable.pipeTo(writable);
 
-                // Wait for the operation to complete using setTimeout
+                // Use a zero-delay timer so the current runtime drains the callback in this eval.
                 setTimeout(() => {
                     console.log(chunks.join(','));
-                }, 50);
-            "#])
+                }, 0);
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("hello,world"), "pipeTo should transfer chunks to writable");
+        assert!(
+            stdout.contains("hello,world"),
+            "pipeTo should transfer chunks to writable"
+        );
     }
 
     #[test]
     fn test_readable_stream_pipe_to_returns_promise() {
         // Test that pipeTo returns a Promise
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const rs = new ReadableStream();
                 const ws = new WritableStream();
                 const result = rs.pipeTo(ws);
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "pipeTo should return a Promise");
@@ -660,22 +809,30 @@ mod web_streams_api_tests {
     fn test_readable_stream_pipe_through_method_exists() {
         // Test that ReadableStream has pipeThrough method
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const rs = new ReadableStream();
                 console.log(typeof rs.pipeThrough === 'function');
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "ReadableStream should have pipeThrough method");
+        assert!(
+            stdout.contains("true"),
+            "ReadableStream should have pipeThrough method"
+        );
     }
 
     #[test]
     fn test_readable_stream_pipe_through_transform() {
         // Test basic pipeThrough functionality
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const readable = new ReadableStream({
                     start(controller) {
                         controller.enqueue('hello');
@@ -695,13 +852,17 @@ mod web_streams_api_tests {
 
                 setTimeout(() => {
                     console.log(typeof result.readable === 'object');
-                }, 50);
-            "#])
+                }, 0);
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "pipeThrough should return object with readable property");
+        assert!(
+            stdout.contains("true"),
+            "pipeThrough should return object with readable property"
+        );
     }
 
     #[test]
@@ -730,19 +891,24 @@ mod web_streams_api_tests {
                 console.log(typeof result === 'object' && typeof result.readable === 'object' && typeof result.readable.getReader === 'function');
             "#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // Verify the structure is correct - the actual async data flow requires setTimeout which
         // the test framework doesn't wait for, but this verifies pipeThrough is wired up correctly
-        assert!(stdout.contains("true"), "pipeThrough should return object with ReadableStream readable");
+        assert!(
+            stdout.contains("true"),
+            "pipeThrough should return object with ReadableStream readable"
+        );
     }
 
     // v0.3.289: Tests for pipeTo with preventClose option
     #[test]
     fn test_pipe_to_returns_promise() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const readable = new ReadableStream({
                     start(controller) {
                         controller.enqueue('test');
@@ -754,9 +920,10 @@ mod web_streams_api_tests {
                 });
                 const result = readable.pipeTo(writable);
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "pipeTo should return a Promise");
@@ -765,7 +932,9 @@ mod web_streams_api_tests {
     #[test]
     fn test_pipe_to_closes_writable_by_default() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const readable = new ReadableStream({
                     start(controller) {
                         controller.enqueue('test');
@@ -778,18 +947,24 @@ mod web_streams_api_tests {
                 readable.pipeTo(writable).then(() => {
                     console.log(writable._state);  // Should be 1 (Closed)
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("1"), "pipeTo should close writable by default (state=1)");
+        assert!(
+            stdout.contains("1"),
+            "pipeTo should close writable by default (state=1)"
+        );
     }
 
     #[test]
     fn test_pipe_to_prevent_close_option() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const readable = new ReadableStream({
                     start(controller) {
                         controller.enqueue('test');
@@ -802,12 +977,16 @@ mod web_streams_api_tests {
                 readable.pipeTo(writable, { preventClose: true }).then(() => {
                     console.log(writable._state);  // Should be 0 (Open)
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("0"), "pipeTo with preventClose should keep writable open (state=0)");
+        assert!(
+            stdout.contains("0"),
+            "pipeTo with preventClose should keep writable open (state=0)"
+        );
     }
 
     #[test]
@@ -832,17 +1011,22 @@ mod web_streams_api_tests {
                 });
             "#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "pipeTo should transfer all chunks correctly");
+        assert!(
+            stdout.contains("true"),
+            "pipeTo should transfer all chunks correctly"
+        );
     }
 
     #[test]
     fn test_pipe_to_prevent_abort_option() {
         // Test preventAbort option - writable should not be aborted when error occurs
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const chunks = [];
                 const readable = new ReadableStream({
                     start(controller) {
@@ -866,19 +1050,25 @@ mod web_streams_api_tests {
                 }).catch(err => {
                     console.log('error:', err.message || err);
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("success"), "pipeTo should succeed with preventAbort option");
+        assert!(
+            stdout.contains("success"),
+            "pipeTo should succeed with preventAbort option"
+        );
     }
 
     #[test]
     fn test_pipe_to_error_propagates_to_promise() {
         // Test that errors in readable stream propagate to the pipeTo promise
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const readable = new ReadableStream({
                     start(controller) {
                         controller.enqueue('chunk1');
@@ -895,9 +1085,10 @@ mod web_streams_api_tests {
                 // Pipe and check that promise is returned (errors handled in promise chain)
                 const result = readable.pipeTo(writable);
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "pipeTo should return a Promise");
@@ -907,7 +1098,9 @@ mod web_streams_api_tests {
     fn test_pipe_to_writable_close_failure_aborts() {
         // Test that writable close failure properly aborts the pipe
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let chunks = [];
                 const readable = new ReadableStream({
                     start(controller) {
@@ -930,19 +1123,25 @@ mod web_streams_api_tests {
                 // Test that pipeTo returns a promise even when close fails
                 const result = readable.pipeTo(writable);
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "pipeTo should return a Promise even on close failure");
+        assert!(
+            stdout.contains("true"),
+            "pipeTo should return a Promise even on close failure"
+        );
     }
 
     #[test]
     fn test_pipe_to_both_options_together() {
         // Test preventClose and preventAbort options together
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const readable = new ReadableStream({
                     start(controller) {
                         controller.enqueue('test');
@@ -962,12 +1161,16 @@ mod web_streams_api_tests {
                     preventAbort: false
                 });
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "pipeTo should accept both preventClose and preventAbort options");
+        assert!(
+            stdout.contains("true"),
+            "pipeTo should accept both preventClose and preventAbort options"
+        );
     }
 
     // v0.3.291: AbortController/signal tests
@@ -975,7 +1178,9 @@ mod web_streams_api_tests {
     fn test_pipe_to_signal_option_exists() {
         // Test that pipeTo accepts signal option
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const controller = new AbortController();
                 const readable = new ReadableStream({
                     start(controller) {
@@ -990,12 +1195,16 @@ mod web_streams_api_tests {
                 // pipeTo should accept signal option without error
                 const result = readable.pipeTo(writable, { signal: controller.signal });
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "pipeTo should accept signal option");
+        assert!(
+            stdout.contains("true"),
+            "pipeTo should accept signal option"
+        );
     }
 
     #[test]
@@ -1004,7 +1213,9 @@ mod web_streams_api_tests {
         // Note: Async abort tests require WritableStream.write() to properly await
         // user Promises, which is a separate enhancement.
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const controller = new AbortController();
                 controller.abort(); // Abort immediately
 
@@ -1025,12 +1236,16 @@ mod web_streams_api_tests {
                     .catch(err => {
                         console.log(err.name);
                     });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("AbortError"), "pipeTo should reject immediately for already aborted signal");
+        assert!(
+            stdout.contains("AbortError"),
+            "pipeTo should reject immediately for already aborted signal"
+        );
     }
 
     #[test]
@@ -1038,7 +1253,9 @@ mod web_streams_api_tests {
         // Test preventAbort with pre-aborted signal
         // This works because rejection happens synchronously at pipeTo start
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const controller = new AbortController();
                 controller.abort(); // Abort immediately
 
@@ -1059,12 +1276,16 @@ mod web_streams_api_tests {
                     .catch(err => {
                         console.log(err.name === 'AbortError' && writable._state === 0);
                     });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "pipeTo with signal and preventAbort should not abort writable");
+        assert!(
+            stdout.contains("true"),
+            "pipeTo with signal and preventAbort should not abort writable"
+        );
     }
 
     // v0.3.292: WritableStream.write() async enhancement tests
@@ -1072,16 +1293,14 @@ mod web_streams_api_tests {
     fn test_writable_stream_write_waits_for_async_callback() {
         // Test that write() waits for async write callback to complete
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let writeCompleted = false;
                 const stream = new WritableStream({
                     write(chunk) {
-                        // Return a promise that resolves after a delay
-                        return new Promise(resolve => {
-                            setTimeout(() => {
-                                writeCompleted = true;
-                                resolve();
-                            }, 50);
+                        return Promise.resolve().then(() => {
+                            writeCompleted = true;
                         });
                     }
                 });
@@ -1095,21 +1314,26 @@ mod web_streams_api_tests {
                 writePromise.then(() => {
                     console.log('after:', writeCompleted);
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // Check that async write works: false before, true after
-        assert!(stdout.contains("before: false") && stdout.contains("after: true"),
-            "write() should wait for async write callback");
+        assert!(
+            stdout.contains("before: false") && stdout.contains("after: true"),
+            "write() should wait for async write callback"
+        );
     }
 
     #[test]
     fn test_writable_stream_write_rejects_on_callback_error() {
         // Test that write() rejects when write callback rejects
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const stream = new WritableStream({
                     write(chunk) {
                         return Promise.reject(new Error('Write failed'));
@@ -1120,20 +1344,25 @@ mod web_streams_api_tests {
                     () => console.log('resolved'),
                     (err) => console.log('rejected:', err.message)
                 );
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("rejected: Write failed"),
-            "write() should reject when write callback rejects");
+        assert!(
+            stdout.contains("rejected: Write failed"),
+            "write() should reject when write callback rejects"
+        );
     }
 
     #[test]
     fn test_writable_stream_write_with_sync_callback() {
         // Test that write() resolves immediately for synchronous callbacks
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let callbackCalled = false;
                 const stream = new WritableStream({
                     write(chunk) {
@@ -1150,27 +1379,33 @@ mod web_streams_api_tests {
                 writePromise.then(() => {
                     console.log('promiseResolved: true');
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("callbackCalled: true") && stdout.contains("promiseResolved: true"),
-            "write() should resolve immediately for sync callbacks");
+        assert!(
+            stdout.contains("callbackCalled: true") && stdout.contains("promiseResolved: true"),
+            "write() should resolve immediately for sync callbacks"
+        );
     }
 
     #[test]
     fn test_writable_stream_write_returns_promise() {
         // Test that write() returns a Promise
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const stream = new WritableStream();
                 const writer = stream.getWriter();
                 const result = writer.write('test');
                 console.log(result instanceof Promise);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "write() should return a Promise");
@@ -1183,22 +1418,31 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "console.log(typeof TextEncoderStream)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("function"), "TextEncoderStream should exist");
+        assert!(
+            stdout.contains("function"),
+            "TextEncoderStream should exist"
+        );
     }
 
     #[test]
     fn test_text_encoder_stream_has_encoding() {
         // Test that TextEncoderStream has encoding property
         let output = Command::new(beejs_path())
-            .args(["eval", "const e = new TextEncoderStream(); console.log(e.encoding)"])
+            .args([
+                "eval",
+                "const e = new TextEncoderStream(); console.log(e.encoding)",
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("utf-8"), "TextEncoderStream should have utf-8 encoding");
+        assert!(
+            stdout.contains("utf-8"),
+            "TextEncoderStream should have utf-8 encoding"
+        );
     }
 
     #[test]
@@ -1207,17 +1451,22 @@ mod web_streams_api_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "const e = new TextEncoderStream(); console.log(typeof e.readable && typeof e.writable)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("object"), "TextEncoderStream should have readable and writable");
+        assert!(
+            stdout.contains("object"),
+            "TextEncoderStream should have readable and writable"
+        );
     }
 
     #[test]
     fn test_text_encoder_stream_encodes_to_bytes() {
         // Test that TextEncoderStream actually encodes strings to bytes
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const encoder = new TextEncoderStream();
                     const writer = encoder.writable.getWriter();
@@ -1230,19 +1479,25 @@ mod web_streams_api_tests {
                     console.log(value[0] === 104 && value[4] === 111); // 'h' = 104, 'o' = 111
                 }
                 test();
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "TextEncoderStream should encode strings to Uint8Array bytes");
+        assert!(
+            stdout.contains("true"),
+            "TextEncoderStream should encode strings to Uint8Array bytes"
+        );
     }
 
     #[test]
     fn test_text_encoder_stream_multibyte_characters() {
         // Test that TextEncoderStream handles multibyte UTF-8 characters correctly
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const encoder = new TextEncoderStream();
                     const writer = encoder.writable.getWriter();
@@ -1254,19 +1509,25 @@ mod web_streams_api_tests {
                     console.log(value instanceof Uint8Array && value.length === 6);
                 }
                 test();
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "TextEncoderStream should handle multibyte UTF-8 characters");
+        assert!(
+            stdout.contains("true"),
+            "TextEncoderStream should handle multibyte UTF-8 characters"
+        );
     }
 
     #[test]
     fn test_text_encoder_stream_empty_string() {
         // Test that TextEncoderStream handles empty string
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const encoder = new TextEncoderStream();
                     const writer = encoder.writable.getWriter();
@@ -1277,19 +1538,25 @@ mod web_streams_api_tests {
                     console.log(value instanceof Uint8Array && value.length === 0);
                 }
                 test();
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "TextEncoderStream should handle empty string");
+        assert!(
+            stdout.contains("true"),
+            "TextEncoderStream should handle empty string"
+        );
     }
 
     #[test]
     fn test_text_encoder_stream_pipe_from_readable() {
         // Test piping from ReadableStream through TextEncoderStream
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const readable = new ReadableStream({
                         start(controller) {
@@ -1307,12 +1574,16 @@ mod web_streams_api_tests {
                     });
                 }
                 test();
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "TextEncoderStream should work with pipeTo");
+        assert!(
+            stdout.contains("true"),
+            "TextEncoderStream should work with pipeTo"
+        );
     }
 
     // v0.3.338: Test TransformStream async flush support
@@ -1320,7 +1591,9 @@ mod web_streams_api_tests {
     fn test_transform_stream_async_flush() {
         // Test transform with async flush callback (returns Promise)
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 async function test() {
                     const results = [];
                     const ts = new TransformStream({
@@ -1329,7 +1602,7 @@ mod web_streams_api_tests {
                         },
                         async flush(controller) {
                             // Async flush operation (returns Promise)
-                            await new Promise(resolve => setTimeout(resolve, 10));
+                            await Promise.resolve();
                             controller.enqueue('[ASYNC_END]');
                             return 'flush complete';
                         }
@@ -1349,19 +1622,25 @@ mod web_streams_api_tests {
                     console.log(results.join(',') === 'HELLO,[ASYNC_END]');
                 }
                 test();
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "Async flush should complete and enqueue final chunk");
+        assert!(
+            stdout.contains("true"),
+            "Async flush should complete and enqueue final chunk"
+        );
     }
 
     #[test]
     fn test_transform_stream_sync_flush() {
         // Test transform with sync flush callback (no Promise)
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 let flushCalled = false;
                 const ts = new TransformStream({
                     transform(chunk, controller) {
@@ -1386,11 +1665,15 @@ mod web_streams_api_tests {
                     results.push(r.value);
                     console.log(results.join(',') + ':' + flushCalled);
                 });
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("data,[END]") && stdout.contains("true"), "Flush should be called and add termination chunk");
+        assert!(
+            stdout.contains("data,[END]") && stdout.contains("true"),
+            "Flush should be called and add termination chunk"
+        );
     }
 }

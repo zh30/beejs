@@ -19,7 +19,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent constructor should be available");
+        assert!(
+            result.is_ok(),
+            "CustomEvent constructor should be available"
+        );
         assert_eq!(result.unwrap().trim(), "function");
     }
 
@@ -102,7 +105,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent should have preventDefault method");
+        assert!(
+            result.is_ok(),
+            "CustomEvent should have preventDefault method"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -126,7 +132,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent should support complex data in detail");
+        assert!(
+            result.is_ok(),
+            "CustomEvent should support complex data in detail"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -142,7 +151,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent should have all required properties");
+        assert!(
+            result.is_ok(),
+            "CustomEvent should have all required properties"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -157,7 +169,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent should work as custom event type");
+        assert!(
+            result.is_ok(),
+            "CustomEvent should work as custom event type"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -172,7 +187,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent should have preventDefault function");
+        assert!(
+            result.is_ok(),
+            "CustomEvent should have preventDefault function"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -227,7 +245,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent should support AI workload event data");
+        assert!(
+            result.is_ok(),
+            "CustomEvent should support AI workload event data"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 }

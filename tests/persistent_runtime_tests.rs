@@ -32,9 +32,7 @@ mod persistent_runtime_tests {
         let runtime = Runtime::new_default();
 
         // 定义一个函数
-        let result1 = runtime.execute_code(
-            "function add(a, b) { return a + b; }",
-        );
+        let result1 = runtime.execute_code("function add(a, b) { return a + b; }");
         assert!(result1.is_ok());
 
         // 在后续调用中使用同一个函数
@@ -97,15 +95,11 @@ mod persistent_runtime_tests {
         let runtime = Runtime::new_default();
 
         // 第一次执行 TypeScript
-        let result1 = runtime.execute_code(
-            "let num: number = 42; num * 2;",
-        );
+        let result1 = runtime.execute_code("let num: number = 42; num * 2;");
         assert!(result1.is_ok());
 
         // 后续执行也支持 TypeScript
-        let result2 = runtime.execute_code(
-            "let str: string = 'hello'; str.length;",
-        );
+        let result2 = runtime.execute_code("let str: string = 'hello'; str.length;");
         assert!(result2.is_ok());
         assert!(result2.unwrap().contains("5"));
     }

@@ -21,7 +21,11 @@ fn test_process_version() {
     assert!(result.is_ok());
     let binding = result.unwrap();
     let output = binding.trim();
-    assert!(output.starts_with("v"), "Expected version to start with 'v', got: {}", output);
+    assert!(
+        output.starts_with("v"),
+        "Expected version to start with 'v', got: {}",
+        output
+    );
 }
 
 #[test]

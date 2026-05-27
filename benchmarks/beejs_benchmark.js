@@ -27,7 +27,7 @@ function runBeejsCode(code, iterations = 1) {
 
     for (let i = 0; i < iterations; i++) {
         try {
-            const output = execSync(`/Users/henry/code/beejs/target/release/beejs --eval '${code}'`, {
+            const output = execSync(`/Users/henry/code/beejs/target/release/bee eval '${code}'`, {
                 encoding: 'utf8',
                 timeout: 5000
             });
@@ -49,7 +49,7 @@ function benchmarkStartup() {
     for (let i = 0; i < BENCHMARK_ITERATIONS; i++) {
         const start = performance.now();
         try {
-            execSync('/Users/henry/code/beejs/target/release/beejs --eval "1"', {
+            execSync('/Users/henry/code/beejs/target/release/bee eval "1"', {
                 encoding: 'utf8',
                 timeout: 1000
             });

@@ -7,7 +7,8 @@ use serial_test::serial;
 #[test]
 #[serial]
 fn test_listener_warning_exceeds_max() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -31,14 +32,19 @@ fn test_listener_warning_exceeds_max() {
         warningCount >= 1;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Warning should be emitted when exceeding maxListeners");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Warning should be emitted when exceeding maxListeners"
+    );
 }
 
 /// Test no warning when at maxListeners
 #[test]
 #[serial]
 fn test_no_warning_at_max() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -60,14 +66,19 @@ fn test_no_warning_at_max() {
         warningCount === 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "No warning should be emitted when at maxListeners");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "No warning should be emitted when at maxListeners"
+    );
 }
 
 /// Test no warning when under maxListeners
 #[test]
 #[serial]
 fn test_no_warning_under_max() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -90,14 +101,19 @@ fn test_no_warning_under_max() {
         warningCount === 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "No warning should be emitted when under maxListeners");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "No warning should be emitted when under maxListeners"
+    );
 }
 
 /// Test warning contains MaxListenersExceeded
 #[test]
 #[serial]
 fn test_warning_contains_max_listeners_exceeded() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -117,14 +133,19 @@ fn test_warning_contains_max_listeners_exceeded() {
         warningMessage.includes('MaxListenersExceeded') || warningMessage.includes('warning');
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Warning should mention MaxListenersExceeded");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Warning should mention MaxListenersExceeded"
+    );
 }
 
 /// Test default maxListeners is 10
 #[test]
 #[serial]
 fn test_default_max_listeners_is_10() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -138,20 +159,26 @@ fn test_default_max_listeners_is_10() {
 #[test]
 #[serial]
 fn test_process_set_max_listeners_affects_events() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         process.setMaxListeners(15);
         process.getMaxListeners() === 15;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "process.setMaxListeners should set the value");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "process.setMaxListeners should set the value"
+    );
 }
 
 /// Test unlimited maxListeners (0)
 #[test]
 #[serial]
 fn test_unlimited_max_listeners() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -173,14 +200,19 @@ fn test_unlimited_max_listeners() {
         warningCount === 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "No warning should be emitted with unlimited maxListeners");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "No warning should be emitted with unlimited maxListeners"
+    );
 }
 
 /// Test once() also triggers warning
 #[test]
 #[serial]
 fn test_once_warning_exceeds_max() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const EventEmitter = require('events').EventEmitter;
         const emitter = new EventEmitter();
@@ -202,5 +234,9 @@ fn test_once_warning_exceeds_max() {
         warningCount >= 1;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Warning should be emitted for once() when exceeding maxListeners");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Warning should be emitted for once() when exceeding maxListeners"
+    );
 }

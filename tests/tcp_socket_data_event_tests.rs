@@ -1,8 +1,8 @@
 // TCP Socket Data Event Tests - v0.3.72
 // 测试 Socket data 事件和真实数据接收
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 /// 测试：Socket 支持 data 事件
 #[test]
@@ -156,7 +156,11 @@ fn test_socket_pause_resume() {
         typeof socket.resume === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should have pause and resume methods");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should have pause and resume methods"
+    );
 }
 
 /// 测试：setTimeout 方法
@@ -172,7 +176,11 @@ fn test_socket_set_timeout() {
         socket.timeout === 5000;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should have setTimeout method");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should have setTimeout method"
+    );
 }
 
 /// 测试：setEncoding 方法
@@ -187,5 +195,9 @@ fn test_socket_set_encoding() {
         typeof socket.setEncoding === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should have setEncoding method");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should have setEncoding method"
+    );
 }

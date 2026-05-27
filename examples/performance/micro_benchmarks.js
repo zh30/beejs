@@ -273,7 +273,7 @@ console.log("\n测试完成! 🎉");
  * 运行基准测试
  *
  * 命令:
- * beejs run examples/performance/micro_benchmarks.js
+ * bee run examples/performance/micro_benchmarks.js
  *
  * 输出示例:
  * === Beejs 微基准测试 ===

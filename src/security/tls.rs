@@ -2,14 +2,12 @@
 //
 // 提供 TLS 1.3 配置和证书管理功能
 
-use std::sync::{Arc, Mutex, atomic::Ordering};
-
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::SystemTime;
-use std::sync::atomic::Ordering;
+use thiserror::Error;
 /// TLS 错误
 #[derive(Error, Debug)]
 pub enum TlsError {
@@ -53,15 +51,19 @@ pub struct TlsConfig {
 #[derive(Debug)]
 pub struct CertificateManager {
     // 证书存储
-    certificates: std::collections::HashMap<String, Certificate>,
+    certificates: HashMap<String, Certificate>,
 }
 impl CertificateManager {
     pub fn new() -> Result<Self, TlsError> {
         Ok(Self {
-            certificates: std::collections::HashMap::new(),
+            certificates: HashMap::new(),
         })
     }
-    pub async fn load_certificate(&mut self, cert_data: &[u8], key_data: &[u8]) -> Result<String, TlsError> {
+    pub async fn load_certificate(
+        &mut self,
+        cert_data: &[u8],
+        key_data: &[u8],
+    ) -> Result<String, TlsError> {
         // 简化的证书加载（生产环境应使用真实的 X.509 解析）
         let cert_id: _ = format!("cert-{}", cert_data.len());
         let certificate: _ = Certificate {
@@ -74,14 +76,16 @@ impl CertificateManager {
         Ok(cert_id)
     }
     pub async fn get_certificate(&self, cert_id: &str) -> Result<&Certificate, TlsError> {
-        self.certificates.get(cert_id)
-            .ok_or_else(|| TlsError::CertificateError(format!("Certificate not found: {}", cert_id))
+        self.certificates.get(cert_id).ok_or_else(|| {
+            TlsError::CertificateError(format!("Certificate not found: {}", cert_id))
+        })
     }
     pub async fn validate_certificate(&self, cert_id: &str) -> Result<bool, TlsError> {
         // 简化的证书验证（生产环境应验证证书链、过期时间等）
-        self.certificates.contains_key(cert_id)
+        self.certificates
+            .contains_key(cert_id)
             .then(|| true)
-            .ok_or_else(|| TlsError::CertificateError("Invalid certificate".to_string())
+            .ok_or_else(|| TlsError::CertificateError("Invalid certificate".to_string()))
     }
 }
 /// 证书
@@ -101,7 +105,9 @@ impl TlsConfig {
                 CipherSuite::Chacha20Poly1305,
                 CipherSuite::Aes128Gcm,
             ],
-            cert_manager: Arc::new(Mutex::new(CertificateManager::new()),.expect("Failed to create certificate manager")),
+            cert_manager: Arc::new(
+                CertificateManager::new().expect("Failed to create certificate manager"),
+            ),
         }
     }
     pub fn with_min_version(mut self, version: TlsVersion) -> Self {

@@ -6,7 +6,7 @@
  * when file changes are detected.
  *
  * Usage:
- *   1. Start beejs in watch mode: beejs run app.js --watch
+ *   1. Start beejs in watch mode: bee run app.js --watch
  *   2. Include this script in your HTML page
  *   3. The page will automatically reload when files change
  *

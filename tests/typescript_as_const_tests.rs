@@ -18,10 +18,16 @@ console.log(obj);
                 println!("as const 基础转译结果:");
                 println!("{}", output.js_code);
                 // as const 断言应该被移除，但表达式应该保留
-                assert!(output.js_code.contains("const obj"),
-                    "Should contain const obj: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const obj"),
+                    "Should contain const obj: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 // 运行时应正确工作
                 println!("✅ Basic as const test passed");
             }
@@ -42,10 +48,16 @@ console.log(nums);
             Ok(output) => {
                 println!("as const 数组转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const nums"),
-                    "Should contain const nums: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const nums"),
+                    "Should contain const nums: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ As const array test passed");
             }
             Err(e) => {
@@ -71,10 +83,16 @@ console.log(nested);
             Ok(output) => {
                 println!("as const 嵌套对象转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const nested"),
-                    "Should contain const nested: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const nested"),
+                    "Should contain const nested: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ As const nested object test passed");
             }
             Err(e) => {
@@ -94,8 +112,11 @@ console.log(greeting);
             Ok(output) => {
                 println!("as const 字符串字面量转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const greeting"),
-                    "Should contain const greeting: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const greeting"),
+                    "Should contain const greeting: {}",
+                    output.js_code
+                );
                 println!("✅ As const string literal test passed");
             }
             Err(e) => {
@@ -115,10 +136,16 @@ console.log(num);
             Ok(output) => {
                 println!("as const 数字字面量转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const num"),
-                    "Should contain const num: {}", output.js_code);
-                assert!(output.js_code.contains("42"),
-                    "Should contain 42: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const num"),
+                    "Should contain const num: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("42"),
+                    "Should contain 42: {}",
+                    output.js_code
+                );
                 println!("✅ As const number literal test passed");
             }
             Err(e) => {
@@ -143,10 +170,16 @@ console.log(getConfig());
             Ok(output) => {
                 println!("as const 函数返回转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("function getConfig"),
-                    "Should contain function: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("function getConfig"),
+                    "Should contain function: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ As const in function test passed");
             }
             Err(e) => {
@@ -166,10 +199,16 @@ console.log(value);
             Ok(output) => {
                 println!("as type 断言转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const value"),
-                    "Should contain const value: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const value"),
+                    "Should contain const value: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ As type assertion test passed");
             }
             Err(e) => {
@@ -189,10 +228,16 @@ console.log(tuple);
             Ok(output) => {
                 println!("as const 元组转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const tuple"),
-                    "Should contain const tuple: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const tuple"),
+                    "Should contain const tuple: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ As const tuple test passed");
             }
             Err(e) => {
@@ -216,10 +261,16 @@ console.log(Colors);
             Ok(output) => {
                 println!("as const 枚举对象转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const Colors"),
-                    "Should contain const Colors: {}", output.js_code);
-                assert!(output.js_code.contains("Red"),
-                    "Should contain Red: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const Colors"),
+                    "Should contain const Colors: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("Red"),
+                    "Should contain Red: {}",
+                    output.js_code
+                );
                 println!("✅ As const enum-like test passed");
             }
             Err(e) => {

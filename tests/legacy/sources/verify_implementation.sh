@@ -21,8 +21,8 @@ echo ""
 
 echo "3. 测试文件准备："
 echo "   ✓ test_module_system.js - 主测试脚本"
-echo "   ✓ test_modules/math.js - 数学模块"
-echo "   ✓ test_modules/utils.js - 工具模块"
+echo "   ✓ tests/fixtures/legacy/test_modules/math.js - 数学模块"
+echo "   ✓ tests/fixtures/legacy/test_modules/utils.js - 工具模块"
 echo ""
 
 echo "4. 实现亮点："

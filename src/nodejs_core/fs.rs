@@ -7,7 +7,10 @@ use std::path::Path;
 
 /// 创建 Buffer 对象（v8::ArrayBuffer）- v0.3.66
 /// 用于 'buffer' 编码读取时返回二进制数据
-fn create_buffer_from_bytes<'a>(scope: &mut v8::HandleScope<'a>, bytes: &[u8]) -> v8::Local<'a, v8::Value> {
+fn create_buffer_from_bytes<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    bytes: &[u8],
+) -> v8::Local<'a, v8::Value> {
     let _buffer: v8::Local<v8::ArrayBuffer> = v8::ArrayBuffer::new(scope, bytes.len());
     // Note: rusty_v8 0.22 不支持直接访问 backing_store
     // 创建一个具有 _length 属性的对象来模拟 Buffer
@@ -398,7 +401,10 @@ enum Encoding {
 }
 
 /// 提取编码选项 - v0.3.66
-fn extract_encoding_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>) -> Encoding {
+fn extract_encoding_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+) -> Encoding {
     if options.is_undefined() || options.is_null() {
         return Encoding::Utf8;
     }
@@ -443,7 +449,8 @@ fn fs_promises_read_file_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args.get(0)
+    let path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -471,115 +478,135 @@ fn fs_promises_read_file_callback(
     thenable_obj.set(scope, encoding_key.into(), encoding_val.into());
 
     // then 方法 - 从 thenable 对象获取路径和编码 - v0.3.66
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        // 从 this 获取路径和编码
-        let path_key = v8::String::new(scope, "__path").unwrap();
-        let encoding_key = v8::String::new(scope, "__encoding").unwrap();
+            // 从 this 获取路径和编码
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let encoding_key = v8::String::new(scope, "__encoding").unwrap();
 
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let encoding_val = this.get(scope, encoding_key.into()).unwrap_or(v8::undefined(scope).into());
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let encoding_val = this
+                .get(scope, encoding_key.into())
+                .unwrap_or(v8::undefined(scope).into());
 
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
-        let encoding_str = encoding_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let encoding_str = encoding_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        // 根据编码类型读取文件 - v0.3.66
-        let read_result: Result<String, String> = {
-            match encoding_str.as_str() {
-                "utf-8" | "utf8" => {
-                    // UTF-8 文本读取
-                    match std::fs::read_to_string(&path_str) {
-                        Ok(content) => Ok(content),
-                        Err(e) => Err(format!("Error reading file: {}", e)),
-                    }
-                }
-                "base64" => {
-                    // Base64 编码读取
-                    match std::fs::read(&path_str) {
-                        Ok(bytes) => {
-                            use base64::{Engine as _, engine::general_purpose::STANDARD};
-                            Ok(STANDARD.encode(&bytes))
+            // 根据编码类型读取文件 - v0.3.66
+            let read_result: Result<String, String> = {
+                match encoding_str.as_str() {
+                    "utf-8" | "utf8" => {
+                        // UTF-8 文本读取
+                        match std::fs::read_to_string(&path_str) {
+                            Ok(content) => Ok(content),
+                            Err(e) => Err(format!("Error reading file: {}", e)),
                         }
-                        Err(e) => Err(format!("Error reading file: {}", e)),
                     }
-                }
-                "hex" => {
-                    // Hex 编码读取
-                    match std::fs::read(&path_str) {
-                        Ok(bytes) => {
-                            Ok(hex::encode(&bytes))
+                    "base64" => {
+                        // Base64 编码读取
+                        match std::fs::read(&path_str) {
+                            Ok(bytes) => {
+                                use base64::{engine::general_purpose::STANDARD, Engine as _};
+                                Ok(STANDARD.encode(&bytes))
+                            }
+                            Err(e) => Err(format!("Error reading file: {}", e)),
                         }
-                        Err(e) => Err(format!("Error reading file: {}", e)),
                     }
-                }
-                "buffer" | "raw" => {
-                    // 返回 Buffer 对象
-                    match std::fs::read(&path_str) {
-                        Ok(bytes) => {
-                            // 创建 Buffer 对象
-                            let buffer_val = create_buffer_from_bytes(scope, &bytes);
-                            if on_fulfilled.is_function() {
-                                if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                                    let undefined = v8::undefined(scope);
-                                    let result = func.call(scope, undefined.into(), &[buffer_val.into()]);
-                                    if let Some(r) = result {
-                                        let result_key = v8::String::new(scope, "__result__").unwrap();
-                                        this.set(scope, result_key.into(), r);
+                    "hex" => {
+                        // Hex 编码读取
+                        match std::fs::read(&path_str) {
+                            Ok(bytes) => Ok(hex::encode(&bytes)),
+                            Err(e) => Err(format!("Error reading file: {}", e)),
+                        }
+                    }
+                    "buffer" | "raw" => {
+                        // 返回 Buffer 对象
+                        match std::fs::read(&path_str) {
+                            Ok(bytes) => {
+                                // 创建 Buffer 对象
+                                let buffer_val = create_buffer_from_bytes(scope, &bytes);
+                                if on_fulfilled.is_function() {
+                                    if let Ok(func) =
+                                        v8::Local::<v8::Function>::try_from(on_fulfilled)
+                                    {
+                                        let undefined = v8::undefined(scope);
+                                        let result = func.call(
+                                            scope,
+                                            undefined.into(),
+                                            &[buffer_val.into()],
+                                        );
+                                        if let Some(r) = result {
+                                            let result_key =
+                                                v8::String::new(scope, "__result__").unwrap();
+                                            this.set(scope, result_key.into(), r);
+                                        }
                                     }
                                 }
+                                retval.set(this.into());
+                                return;
                             }
-                            retval.set(this.into());
-                            return;
+                            Err(e) => Err(format!("Error reading file: {}", e)),
                         }
-                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    }
+                    _ => {
+                        // 默认 UTF-8
+                        match std::fs::read_to_string(&path_str) {
+                            Ok(content) => Ok(content),
+                            Err(e) => Err(format!("Error reading file: {}", e)),
+                        }
                     }
                 }
-                _ => {
-                    // 默认 UTF-8
-                    match std::fs::read_to_string(&path_str) {
-                        Ok(content) => Ok(content),
-                        Err(e) => Err(format!("Error reading file: {}", e)),
-                    }
-                }
-            }
-        };
+            };
 
-        match read_result {
-            Ok(content) => {
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let content_val = v8::String::new(scope, &content).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[content_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+            match read_result {
+                Ok(content) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let content_val = v8::String::new(scope, &content).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[content_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_val = v8::String::new(scope, &e).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_val = v8::String::new(scope, &e).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
-                        }
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();
@@ -594,11 +621,13 @@ fn fs_promises_write_file_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args.get(0)
+    let path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let data: String = args.get(1)
+    let data: String = args
+        .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -613,51 +642,66 @@ fn fs_promises_write_file_callback(
     thenable_obj.set(scope, path_key.into(), path_val.into());
     thenable_obj.set(scope, data_key.into(), data_val.into());
 
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        let path_key = v8::String::new(scope, "__path").unwrap();
-        let data_key = v8::String::new(scope, "__data").unwrap();
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let data_val = this.get(scope, data_key.into()).unwrap_or(v8::undefined(scope).into());
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
-        let data_str = data_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let data_key = v8::String::new(scope, "__data").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let data_val = this
+                .get(scope, data_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let data_str = data_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        match std::fs::write(&path_str, &data_str) {
-            Ok(()) => {
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+            match std::fs::write(&path_str, &data_str) {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error writing file: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error writing file: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
-                        }
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();
@@ -672,7 +716,8 @@ fn fs_promises_mkdir_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args.get(0)
+    let path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -683,48 +728,58 @@ fn fs_promises_mkdir_callback(
     let path_key = v8::String::new(scope, "__path").unwrap();
     thenable_obj.set(scope, path_key.into(), path_val.into());
 
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        let path_key = v8::String::new(scope, "__path").unwrap();
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        match std::fs::create_dir_all(&path_str) {
-            Ok(()) => {
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+            match std::fs::create_dir_all(&path_str) {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error creating directory: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error creating directory: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
-                        }
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();
@@ -739,7 +794,8 @@ fn fs_promises_readdir_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args.get(0)
+    let path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -750,54 +806,64 @@ fn fs_promises_readdir_callback(
     let path_key = v8::String::new(scope, "__path").unwrap();
     thenable_obj.set(scope, path_key.into(), path_val.into());
 
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        let path_key = v8::String::new(scope, "__path").unwrap();
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        match std::fs::read_dir(&path_str) {
-            Ok(entries) => {
-                let names: Vec<String> = entries
-                    .filter_map(|entry| entry.ok())
-                    .filter_map(|entry| entry.file_name().to_str().map(|s| s.to_string()))
-                    .collect();
+            match std::fs::read_dir(&path_str) {
+                Ok(entries) => {
+                    let names: Vec<String> = entries
+                        .filter_map(|entry| entry.ok())
+                        .filter_map(|entry| entry.file_name().to_str().map(|s| s.to_string()))
+                        .collect();
 
-                let array = v8::Array::new(scope, names.len() as i32);
-                for (i, name) in names.iter().enumerate() {
-                    let value = v8::String::new(scope, name).unwrap();
-                    array.set_index(scope, i as u32, value.into());
+                    let array = v8::Array::new(scope, names.len() as i32);
+                    for (i, name) in names.iter().enumerate() {
+                        let value = v8::String::new(scope, name).unwrap();
+                        array.set_index(scope, i as u32, value.into());
+                    }
+
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[array.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
                 }
-
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[array.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error reading directory: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            func.call(scope, undefined.into(), &[error_val.into()]);
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error reading directory: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
-                        let undefined = v8::undefined(scope);
-                        func.call(scope, undefined.into(), &[error_val.into()]);
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();
@@ -812,7 +878,8 @@ fn fs_promises_stat_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args.get(0)
+    let path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -823,81 +890,101 @@ fn fs_promises_stat_callback(
     let path_key = v8::String::new(scope, "__path").unwrap();
     thenable_obj.set(scope, path_key.into(), path_val.into());
 
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        let path_key = v8::String::new(scope, "__path").unwrap();
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        match std::fs::metadata(&path_str) {
-            Ok(metadata) => {
-                let stat_obj = v8::Object::new(scope);
-                let is_file = metadata.is_file();
-                let is_dir = metadata.is_dir();
+            match std::fs::metadata(&path_str) {
+                Ok(metadata) => {
+                    let stat_obj = v8::Object::new(scope);
+                    let is_file = metadata.is_file();
+                    let is_dir = metadata.is_dir();
 
-                // v0.3.64: isFile should be a function that returns a boolean
-                // Use integer flag instead of closure to avoid V8 FunctionTemplate issues
-                // Note: These flags are stored for potential future use with cross-beam scope
-                let _is_file_flag: i32 = if is_file { 1 } else { 0 };
-                let _is_dir_flag: i32 = if is_dir { 1 } else { 0 };
+                    // v0.3.64: isFile should be a function that returns a boolean
+                    // Use integer flag instead of closure to avoid V8 FunctionTemplate issues
+                    // Note: These flags are stored for potential future use with cross-beam scope
+                    let _is_file_flag: i32 = if is_file { 1 } else { 0 };
+                    let _is_dir_flag: i32 = if is_dir { 1 } else { 0 };
 
-                let is_file_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    // Use persistent state via closure capture (V8 restriction workaround)
-                    // We can't use the flags directly, so just return true for now
-                    // This is a limitation of the current implementation
-                    retval.set(v8::Boolean::new(scope, true).into());
-                });
-                let is_file_instance = is_file_func.get_function(scope).unwrap();
-                let is_file_key = v8::String::new(scope, "isFile").unwrap();
-                stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
+                    let is_file_func = v8::FunctionTemplate::new(
+                        scope,
+                        |scope: &mut v8::HandleScope,
+                         _args: v8::FunctionCallbackArguments,
+                         mut retval: v8::ReturnValue| {
+                            // Use persistent state via closure capture (V8 restriction workaround)
+                            // We can't use the flags directly, so just return true for now
+                            // This is a limitation of the current implementation
+                            retval.set(v8::Boolean::new(scope, true).into());
+                        },
+                    );
+                    let is_file_instance = is_file_func.get_function(scope).unwrap();
+                    let is_file_key = v8::String::new(scope, "isFile").unwrap();
+                    stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
 
-                // isDirectory function
-                let is_dir_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                    retval.set(v8::Boolean::new(scope, false).into());
-                });
-                let is_dir_instance = is_dir_func.get_function(scope).unwrap();
-                let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
-                stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
+                    // isDirectory function
+                    let is_dir_func = v8::FunctionTemplate::new(
+                        scope,
+                        |scope: &mut v8::HandleScope,
+                         _args: v8::FunctionCallbackArguments,
+                         mut retval: v8::ReturnValue| {
+                            retval.set(v8::Boolean::new(scope, false).into());
+                        },
+                    );
+                    let is_dir_instance = is_dir_func.get_function(scope).unwrap();
+                    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
+                    stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
 
-                // size as a number (not a function)
-                let size_key = v8::String::new(scope, "size").unwrap();
-                let size_val = v8::Number::new(scope, metadata.len() as f64);
-                stat_obj.set(scope, size_key.into(), size_val.into());
+                    // size as a number (not a function)
+                    let size_key = v8::String::new(scope, "size").unwrap();
+                    let size_val = v8::Number::new(scope, metadata.len() as f64);
+                    stat_obj.set(scope, size_key.into(), size_val.into());
 
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[stat_obj.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[stat_obj.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error getting file metadata: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error getting file metadata: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
-                        }
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();
@@ -912,7 +999,8 @@ fn fs_promises_unlink_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args.get(0)
+    let path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -923,48 +1011,58 @@ fn fs_promises_unlink_callback(
     let path_key = v8::String::new(scope, "__path").unwrap();
     thenable_obj.set(scope, path_key.into(), path_val.into());
 
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        let path_key = v8::String::new(scope, "__path").unwrap();
-        let path_val = this.get(scope, path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let path_str = path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        match std::fs::remove_file(&path_str) {
-            Ok(()) => {
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+            match std::fs::remove_file(&path_str) {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error deleting file: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error deleting file: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
-                        }
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();
@@ -979,11 +1077,13 @@ fn fs_promises_rename_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let old_path: String = args.get(0)
+    let old_path: String = args
+        .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let new_path: String = args.get(1)
+    let new_path: String = args
+        .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -997,51 +1097,66 @@ fn fs_promises_rename_callback(
     thenable_obj.set(scope, old_path_key.into(), old_path_val.into());
     thenable_obj.set(scope, new_path_key.into(), new_path_val.into());
 
-    let then_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let on_fulfilled = args.get(0);
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
 
-        let old_path_key = v8::String::new(scope, "__oldPath").unwrap();
-        let new_path_key = v8::String::new(scope, "__newPath").unwrap();
-        let old_path_val = this.get(scope, old_path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let new_path_val = this.get(scope, new_path_key.into()).unwrap_or(v8::undefined(scope).into());
-        let old_path_str = old_path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
-        let new_path_str = new_path_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+            let old_path_key = v8::String::new(scope, "__oldPath").unwrap();
+            let new_path_key = v8::String::new(scope, "__newPath").unwrap();
+            let old_path_val = this
+                .get(scope, old_path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let new_path_val = this
+                .get(scope, new_path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let old_path_str = old_path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let new_path_str = new_path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
 
-        match std::fs::rename(&old_path_str, &new_path_str) {
-            Ok(()) => {
-                if on_fulfilled.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
+            match std::fs::rename(&old_path_str, &new_path_str) {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error renaming file: {}", e);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            // v0.3.64: Store result on thenable for test access
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
                         }
                     }
                 }
             }
-            Err(e) => {
-                let on_rejected = args.get(1);
-                if on_rejected.is_function() {
-                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
-                        let error_msg = format!("Error renaming file: {}", e);
-                        let error_val = v8::String::new(scope, &error_msg).unwrap();
-                        let undefined = v8::undefined(scope);
-                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
-                        // v0.3.64: Store result on thenable for test access
-                        if let Some(r) = result {
-                            let result_key = v8::String::new(scope, "__result__").unwrap();
-                            this.set(scope, result_key.into(), r);
-                        }
-                    }
-                }
-            }
-        }
-        // v0.3.64: Return this thenable so execute_code can access __result__
-        retval.set(this.into());
-    });
+            // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
 
     let then_instance = then_func.get_function(scope).unwrap();
     let then_key = v8::String::new(scope, "then").unwrap();

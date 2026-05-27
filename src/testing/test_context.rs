@@ -15,11 +15,7 @@ pub struct TestCase {
 unsafe impl Send for TestCase {}
 unsafe impl Sync for TestCase {}
 impl TestCase {
-    pub fn new(
-        name: String,
-        function: v8::Global<v8::Function>,
-        timeout: Duration,
-    ) -> Self {
+    pub fn new(name: String, function: v8::Global<v8::Function>, timeout: Duration) -> Self {
         TestCase {
             name,
             function,

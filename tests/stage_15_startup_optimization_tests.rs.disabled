@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod startup_optimization_tests {
     use beejs::{RuntimeLite, profiler::{Profiler, ProfilingMode}};
-    use std::time::Duration;
+    use std::time::{Duration, SystemTime};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 

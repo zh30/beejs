@@ -2,9 +2,59 @@
 name = "beejs"
 version = "0.1.0"
 edition = "2021"
+autobins = false
 authors = ["Henry Zhang"]
-description = "High-performance JavaScript/TypeScript runtime built with Rust and V8"
+description = "JavaScript/TypeScript runtime built with Rust and V8"
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/zh30/beejs"
+homepage = "https://github.com/zh30/beejs"
+documentation = "https://docs.rs/beejs"
+keywords = ["javascript", "typescript", "runtime", "v8"]
+categories = ["command-line-utilities", "development-tools"]
+include = [
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/LICENSE",
+    "/src/lib.rs",
+    "/src/main.rs",
+    "/src/event_loop.rs",
+    "/src/runtime_minimal.rs",
+    "/src/package_manager.rs",
+    "/src/watcher.rs",
+    "/src/watcher_websocket.rs",
+    "/src/ecosystem_lite.rs",
+    "/src/performance_analyzer.rs",
+    "/src/performance_comparison.rs",
+    "/src/performance_regression.rs",
+    "/src/performance_reporter.rs",
+    "/src/ai/*.rs",
+    "/src/ai_inference/*.rs",
+    "/src/aiops/**/*.rs",
+    "/src/benchmarks/*.rs",
+    "/src/cloud_native/**/*.rs",
+    "/src/error/*.rs",
+    "/src/fallback/*.rs",
+    "/src/memory/*.rs",
+    "/src/monitor/**/*.rs",
+    "/src/multilang/*.rs",
+    "/src/nodejs_core/*.rs",
+    "/src/observability/**/*.rs",
+    "/src/platform/*.rs",
+    "/src/security/*.rs",
+    "/src/testing/**/*.rs",
+    "/src/typescript/*.rs",
+    "/src/v8_snapshot/*.rs",
+    "/src/web_api/*.rs",
+    "/tests/*.rs",
+    "/tests/integration/*.rs",
+    "/examples/basics/*.js",
+    "/examples/basics/*.ts",
+    "/examples/testing/*.js",
+    "/docs/CLI_USAGE_GUIDE.md",
+    "/docs/QUICK_START.md",
+]
 
 [dependencies]
 # V8 - Google's high-performance JavaScript engine with Rust bindings
@@ -97,14 +147,14 @@ rayon = "1.10"
 filetime = "0.2"
 
 # Stage 30.5: Observability dependencies
-prometheus = "0.13"
-opentelemetry = "0.21"
-opentelemetry_sdk = "0.21"
-opentelemetry-prometheus = "0.14"
-opentelemetry-jaeger = "0.20"
-opentelemetry-http = "0.10"
+prometheus = { version = "0.13", optional = true }
+opentelemetry = { version = "0.21", optional = true }
+opentelemetry_sdk = { version = "0.21", optional = true }
+opentelemetry-prometheus = { version = "0.14", optional = true }
+opentelemetry-jaeger = { version = "0.20", optional = true }
+opentelemetry-http = { version = "0.10", optional = true }
 tracing-appender = "0.2"
-tracing-opentelemetry = "0.22"
+tracing-opentelemetry = { version = "0.22", optional = true }
 uuid = { version = "1.0", features = ["v4"] }
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 serde_yaml = "0.9"
@@ -128,11 +178,11 @@ encoding_rs = "0.8"
 tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
 
 # Stage 88: Multi-language support
-pyo3 = { version = "0.24", features = ["auto-initialize"] }  # Python integration
+pyo3 = { version = "0.24", features = ["auto-initialize"], optional = true }  # Python integration
 # go-vm = "0.5"  # Go VM integration (placeholder, not published yet)
 
 # Stage 89: V8 API 兼容性修复 - 启用前向兼容性
-pyo3-build-config = { version = "0.24", features = ["resolve-config"] }  # 支持前向兼容构建
+pyo3-build-config = { version = "0.24", features = ["resolve-config"], optional = true }  # 支持前向兼容构建
 
 # Stage 91 Phase 4.2: Enhanced REPL dependencies
 rustyline = "14.0"  # Enhanced readline with tab completion and history
@@ -140,12 +190,12 @@ syntect = "5.0"     # Syntax highlighting for code display
 colored = "2.0"     # Terminal colors and formatting
 
 # Stage 83: Enterprise Kubernetes & DevOps dependencies
-kube = { version = "0.87", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.20", default-features = false, features = ["schemars", "v1_28"] }
-kube-runtime = "0.87"
-schemars = { version = "0.8", features = ["derive"] }
-elasticsearch = { version = "9.1.0-alpha.1", default-features = false }
-git2 = "0.18"
+kube = { version = "0.87", features = ["runtime", "derive"], optional = true }
+k8s-openapi = { version = "0.20", default-features = false, features = ["schemars", "v1_28"], optional = true }
+kube-runtime = { version = "0.87", optional = true }
+schemars = { version = "0.8", features = ["derive"], optional = true }
+elasticsearch = { version = "9.1.0-alpha.1", default-features = false, optional = true }
+git2 = { version = "0.18", optional = true }
 
 # Stage 84: Security & Compliance dependencies
 rust-crypto = "0.2"
@@ -179,7 +229,7 @@ serial_test = "3.0"
 # path = "tools/benchmark_runner.rs"
 
 [[bin]]
-name = "beejs"
+name = "bee"
 path = "src/main.rs"
 
 # [[bin]]
@@ -202,6 +252,12 @@ path = "src/main.rs"
 default = []
 verbose_logging = []  # Enable verbose logging for debugging
 tch = ["dep:tch"]     # Enable PyTorch/Tch support for ML workloads
+multilang = ["dep:pyo3", "dep:pyo3-build-config"]
+cloudnative = ["dep:kube", "dep:kube-runtime", "dep:k8s-openapi"]
+enterprise = ["dep:elasticsearch", "dep:git2", "dep:schemars"]
+observability = ["dep:prometheus", "dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-prometheus", "dep:opentelemetry-jaeger", "dep:opentelemetry-http", "dep:tracing-opentelemetry"]
+ai = []
+benchmarks = []
 
 [profile.release]
 opt-level = 3

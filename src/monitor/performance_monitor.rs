@@ -3,13 +3,13 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::time::SystemTime;
 use std::hash::Hash;
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -152,7 +152,7 @@ impl PerformanceMonitor {
                 },
                 ThresholdConfig {
                     metric_type: MetricType::ExecutionTime,
-                    warning: 1000.0, // 1ms
+                    warning: 1000.0,  // 1ms
                     critical: 5000.0, // 5ms
                     enabled: true,
                 },
@@ -434,8 +434,6 @@ mod tests {
     #[test]
     fn test_custom_metric_type() {
         let custom_type: _ = MetricType::Custom("custom_metric".to_string());
-        assert_eq!(
-            custom_type,
-            MetricType::Custom("custom_metric".to_string()));
+        assert_eq!(custom_type, MetricType::Custom("custom_metric".to_string()));
     }
 }

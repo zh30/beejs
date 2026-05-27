@@ -5,7 +5,7 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_crypto_generateKeyPair_exists() {
+fn test_crypto_generate_key_pair_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.generateKeyPair");
     assert!(result.is_ok());
@@ -14,7 +14,7 @@ fn test_crypto_generateKeyPair_exists() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_rsa_with_callback() {
+fn test_generate_key_pair_rsa_with_callback() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // Simple test - just verify the callback is invoked
     let code = r#"
@@ -32,7 +32,7 @@ fn test_generateKeyPair_rsa_with_callback() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_ec_with_callback() {
+fn test_generate_key_pair_ec_with_callback() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('ec', {
@@ -49,7 +49,7 @@ fn test_generateKeyPair_ec_with_callback() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_rsa_key_format() {
+fn test_generate_key_pair_rsa_key_format() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('rsa', {
@@ -66,7 +66,7 @@ fn test_generateKeyPair_rsa_key_format() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_ec_key_format() {
+fn test_generate_key_pair_ec_key_format() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('ec', {
@@ -83,7 +83,7 @@ fn test_generateKeyPair_ec_key_format() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_unsupported_type() {
+fn test_generate_key_pair_unsupported_type() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('dsa', { modulusLength: 2048 }, function(err, publicKey, privateKey) {
@@ -98,7 +98,7 @@ fn test_generateKeyPair_unsupported_type() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_missing_callback_throws() {
+fn test_generate_key_pair_missing_callback_throws() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         try {
@@ -115,7 +115,7 @@ fn test_generateKeyPair_missing_callback_throws() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_non_function_callback_throws() {
+fn test_generate_key_pair_non_function_callback_throws() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         try {
@@ -132,7 +132,7 @@ fn test_generateKeyPair_non_function_callback_throws() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_default_options() {
+fn test_generate_key_pair_default_options() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('rsa', function(err, publicKey, privateKey) {
@@ -147,7 +147,7 @@ fn test_generateKeyPair_default_options() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_with_encoding_options() {
+fn test_generate_key_pair_with_encoding_options() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('rsa', {
@@ -166,7 +166,7 @@ fn test_generateKeyPair_with_encoding_options() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_key_usage_in_signing() {
+fn test_generate_key_pair_key_usage_in_signing() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('rsa', { modulusLength: 2048 }, function(err, publicKey, privateKey) {
@@ -188,7 +188,7 @@ fn test_generateKeyPair_key_usage_in_signing() {
 
 #[test]
 #[serial]
-fn test_generateKeyPair_callback_sets_result() {
+fn test_generate_key_pair_callback_sets_result() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         crypto.generateKeyPair('rsa', function(err, publicKey, privateKey) {

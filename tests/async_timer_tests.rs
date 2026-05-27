@@ -2,9 +2,9 @@
 // 测试 delay > 0 的 setTimeout/setInterval 实际延迟执行
 // 注意：由于 V8 闭包限制，AsyncTimerManager 只负责调度，回调由 V8 主线程执行
 
+use beejs::event_loop::AsyncTimerManager;
 use std::time::Duration;
 use tokio::time::sleep;
-use beejs::event_loop::AsyncTimerManager;
 
 /// 测试异步 setTimeout 调度功能
 /// 验证定时器被正确调度且可以被取消
@@ -13,7 +13,8 @@ async fn test_async_set_timeout_scheduling() {
     let manager = AsyncTimerManager::new();
 
     // 创建一个延迟 10ms 的定时器
-    let id = manager.schedule_timeout(Duration::from_millis(10), || {});
+    let id = 1;
+    manager.schedule_timeout(Duration::from_millis(10), id, || {});
 
     assert!(id > 0, "Timer ID should be positive");
 
@@ -31,7 +32,8 @@ async fn test_async_set_timeout_scheduling() {
 async fn test_async_set_interval_scheduling() {
     let manager = AsyncTimerManager::new();
 
-    let id = manager.schedule_interval(Duration::from_millis(10), 3, || {});
+    let id = 2;
+    manager.schedule_interval(Duration::from_millis(10), 3, id, || {});
 
     assert!(id > 0, "Timer ID should be positive");
 
@@ -40,7 +42,10 @@ async fn test_async_set_interval_scheduling() {
 
     // 验证定时器可以取消
     let cancelled = manager.cancel(id);
-    assert!(cancelled, "Cancel should return true for scheduled interval");
+    assert!(
+        cancelled,
+        "Cancel should return true for scheduled interval"
+    );
 }
 
 /// 测试 clearTimeout 取消功能
@@ -50,7 +55,8 @@ async fn test_clear_timeout_cancels() {
     let manager = AsyncTimerManager::new();
 
     // 创建一个延迟 100ms 的定时器
-    let id = manager.schedule_timeout(Duration::from_millis(100), || {});
+    let id = 3;
+    manager.schedule_timeout(Duration::from_millis(100), id, || {});
 
     // 等待定时器注册完成
     sleep(Duration::from_millis(5)).await;
@@ -67,9 +73,12 @@ async fn test_multiple_timers_scheduling() {
     let manager = AsyncTimerManager::new();
 
     // 创建不同延迟的定时器
-    let id1 = manager.schedule_timeout(Duration::from_millis(50), || {});
-    let id2 = manager.schedule_timeout(Duration::from_millis(10), || {});
-    let id3 = manager.schedule_timeout(Duration::from_millis(30), || {});
+    let id1 = 11;
+    let id2 = 12;
+    let id3 = 13;
+    manager.schedule_timeout(Duration::from_millis(50), id1, || {});
+    manager.schedule_timeout(Duration::from_millis(10), id2, || {});
+    manager.schedule_timeout(Duration::from_millis(30), id3, || {});
 
     // 验证 ID 递增
     assert!(id1 < id2, "Later timer should have larger ID");
@@ -90,9 +99,12 @@ async fn test_clear_all_timers() {
     let manager = AsyncTimerManager::new();
 
     // 创建多个定时器
-    let _id1 = manager.schedule_timeout(Duration::from_millis(50), || {});
-    let _id2 = manager.schedule_timeout(Duration::from_millis(100), || {});
-    let _id3 = manager.schedule_interval(Duration::from_millis(25), 5, || {});
+    let _id1 = 21;
+    let _id2 = 22;
+    let _id3 = 23;
+    manager.schedule_timeout(Duration::from_millis(50), _id1, || {});
+    manager.schedule_timeout(Duration::from_millis(100), _id2, || {});
+    manager.schedule_interval(Duration::from_millis(25), 5, _id3, || {});
 
     // 等待注册完成
     sleep(Duration::from_millis(5)).await;
@@ -100,7 +112,5 @@ async fn test_clear_all_timers() {
     // 清除所有定时器
     manager.clear();
 
-    // 验证清除命令发送成功（clear 是 fire-and-forget）
-    // 注意：由于是异步消息队列，清除操作会尽快执行
-    assert!(true, "Clear command should be sent successfully");
+    // clear is fire-and-forget; this test verifies the call path does not panic.
 }

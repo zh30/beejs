@@ -3,8 +3,8 @@
 // 注意: 这些测试验证服务器是否正确监听和接收请求
 // v0.3.97: 添加测试隔离和清理功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::thread;
@@ -16,7 +16,7 @@ use std::time::Duration;
 fn setup_test_environment() {
     use beejs::nodejs_core::http::reset_http_server_channel;
     // 重置消息通道以清除任何残留消息
-    let _ = reset_http_server_channel();
+    reset_http_server_channel();
     // 等待更长时间让 TIME_WAIT 端口释放 (macOS TIME_WAIT 可达 60s)
     // 使用 SO_REUSEADDR 后，延迟可以更短，但仍需要一定时间
     thread::sleep(Duration::from_millis(500));
@@ -41,8 +41,12 @@ fn close_test_server(runtime: &mut MinimalRuntime) {
 /// v0.3.95: Updated to use non-blocking pattern for message channel tests
 fn send_request_and_get_response(port: u16, request: &str, runtime: &mut MinimalRuntime) -> String {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).expect("Failed to connect");
-    stream.set_nonblocking(true).expect("set_nonblocking failed");
-    stream.write_all(request.as_bytes()).expect("Failed to write");
+    stream
+        .set_nonblocking(true)
+        .expect("set_nonblocking failed");
+    stream
+        .write_all(request.as_bytes())
+        .expect("Failed to write");
     let _ = stream.shutdown(std::net::Shutdown::Write);
 
     let mut response = String::new();
@@ -167,9 +171,18 @@ fn test_http_server_handles_multiple_connections() {
     wait_for_server(3532);
 
     // Send multiple requests
-    assert!(send_http_request(3532, "GET /1 HTTP/1.1\r\nHost: localhost\r\n\r\n"), "Request 1 failed");
-    assert!(send_http_request(3532, "GET /2 HTTP/1.1\r\nHost: localhost\r\n\r\n"), "Request 2 failed");
-    assert!(send_http_request(3532, "GET /3 HTTP/1.1\r\nHost: localhost\r\n\r\n"), "Request 3 failed");
+    assert!(
+        send_http_request(3532, "GET /1 HTTP/1.1\r\nHost: localhost\r\n\r\n"),
+        "Request 1 failed"
+    );
+    assert!(
+        send_http_request(3532, "GET /2 HTTP/1.1\r\nHost: localhost\r\n\r\n"),
+        "Request 2 failed"
+    );
+    assert!(
+        send_http_request(3532, "GET /3 HTTP/1.1\r\nHost: localhost\r\n\r\n"),
+        "Request 3 failed"
+    );
 }
 
 #[test]
@@ -215,13 +228,25 @@ fn test_http_server_request_method_detection() {
     wait_for_server(3534);
 
     // Test GET
-    assert!(send_http_request(3534, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"), "GET request failed");
+    assert!(
+        send_http_request(3534, "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"),
+        "GET request failed"
+    );
 
     // Test POST
-    assert!(send_http_request(3534, "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nHello"), "POST request failed");
+    assert!(
+        send_http_request(
+            3534,
+            "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nHello"
+        ),
+        "POST request failed"
+    );
 
     // Test DELETE
-    assert!(send_http_request(3534, "DELETE /resource HTTP/1.1\r\nHost: localhost\r\n\r\n"), "DELETE request failed");
+    assert!(
+        send_http_request(3534, "DELETE /resource HTTP/1.1\r\nHost: localhost\r\n\r\n"),
+        "DELETE request failed"
+    );
 }
 
 #[test]
@@ -371,7 +396,10 @@ fn test_create_http_response() {
     assert_eq!(response.headers.get("Content-Type").unwrap(), "text/plain");
     assert_eq!(response.headers.get("Content-Length").unwrap(), "11");
     // v0.3.97: Connection 头不再由 create_http_response 设置，由服务器添加
-    assert!(response.headers.get("Connection").is_none(), "Connection header should not be set by create_http_response");
+    assert!(
+        !response.headers.contains_key("Connection"),
+        "Connection header should not be set by create_http_response"
+    );
 }
 
 // v0.3.90: 测试 init_http_server_channel 全局初始化
@@ -396,7 +424,9 @@ fn test_http_server_channel_initialization() {
 #[test]
 #[serial]
 fn test_try_recv_http_request_empty() {
-    use beejs::nodejs_core::http::{try_recv_http_request, init_http_server_channel, reset_http_server_channel};
+    use beejs::nodejs_core::http::{
+        init_http_server_channel, reset_http_server_channel, try_recv_http_request,
+    };
 
     // 重置通道以确保没有残留消息
     let _channel = init_http_server_channel();
@@ -404,7 +434,10 @@ fn test_try_recv_http_request_empty() {
 
     // 尝试接收请求，应该返回 None（因为没有请求）
     let result = try_recv_http_request();
-    assert!(result.is_none(), "Should return None when no requests pending");
+    assert!(
+        result.is_none(),
+        "Should return None when no requests pending"
+    );
 }
 
 // v0.3.91: 端到端 HTTP Server 测试
@@ -432,9 +465,15 @@ fn test_http_server_response_headers() {
 
     // 发送请求并读取响应
     let mut stream = TcpStream::connect(("127.0.0.1", 3540)).expect("Failed to connect");
-    stream.set_read_timeout(Some(Duration::from_secs(12))).expect("set_read_timeout failed");
-    stream.set_nonblocking(true).expect("set_nonblocking failed");
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(12)))
+        .expect("set_read_timeout failed");
+    stream
+        .set_nonblocking(true)
+        .expect("set_nonblocking failed");
+    stream
+        .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        .expect("Failed to write");
 
     // v0.3.94: 使用非阻塞 pump，持续轮询直到收到响应
     // 由于 pump 现在是非阻塞的，我们需要持续调用它
@@ -464,7 +503,10 @@ fn test_http_server_response_headers() {
                     break;
                 }
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut => {
+            Err(ref e)
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut =>
+            {
                 // 还没收到数据，继续轮询
             }
             Err(e) => {
@@ -477,8 +519,16 @@ fn test_http_server_response_headers() {
     }
 
     // 验证响应包含正确的状态行
-    assert!(response_received, "Response should have 200 status, got: {}", response);
-    assert!(response.contains("Content-Type: text/plain"), "Should have Content-Type header, got: {}", response);
+    assert!(
+        response_received,
+        "Response should have 200 status, got: {}",
+        response
+    );
+    assert!(
+        response.contains("Content-Type: text/plain"),
+        "Should have Content-Type header, got: {}",
+        response
+    );
 }
 
 /// 测试服务器处理 POST 请求并读取 body
@@ -505,8 +555,16 @@ fn test_http_server_post_with_body() {
     let response = send_request_and_get_response(3541, request, &mut runtime);
 
     // 验证 POST 方法被正确传递
-    assert!(response.contains("POST"), "Should handle POST method, got: {}", response);
-    assert!(response.contains("/api/users"), "Should have correct path, got: {}", response);
+    assert!(
+        response.contains("POST"),
+        "Should handle POST method, got: {}",
+        response
+    );
+    assert!(
+        response.contains("/api/users"),
+        "Should have correct path, got: {}",
+        response
+    );
 }
 
 /// 测试服务器处理不同的 HTTP 方法
@@ -537,7 +595,11 @@ fn test_http_server_different_methods() {
     // v0.3.97: 关闭测试服务器
     close_test_server(&mut runtime);
 
-    assert!(response.contains("DELETE"), "Should handle DELETE method, got: {}", response);
+    assert!(
+        response.contains("DELETE"),
+        "Should handle DELETE method, got: {}",
+        response
+    );
 }
 
 /// 测试服务器正确设置多个响应头
@@ -565,8 +627,16 @@ fn test_http_server_multiple_headers() {
     let request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
     let response = send_request_and_get_response(3543, request, &mut runtime);
 
-    assert!(response.contains("X-Custom-Header: custom-value"), "Should have custom header, got: {}", response);
-    assert!(response.contains("X-Another-Header: another-value"), "Should have another header, got: {}", response);
+    assert!(
+        response.contains("X-Custom-Header: custom-value"),
+        "Should have custom header, got: {}",
+        response
+    );
+    assert!(
+        response.contains("X-Another-Header: another-value"),
+        "Should have another header, got: {}",
+        response
+    );
 }
 
 /// 测试服务器处理请求头
@@ -593,7 +663,11 @@ fn test_http_server_request_headers() {
     let request = "GET / HTTP/1.1\r\nHost: localhost\r\nUser-Agent: BeejsTest/1.0\r\n\r\n";
     let response = send_request_and_get_response(3544, request, &mut runtime);
 
-    assert!(response.contains("BeejsTest/1.0"), "Should echo back user agent, got: {}", response);
+    assert!(
+        response.contains("BeejsTest/1.0"),
+        "Should echo back user agent, got: {}",
+        response
+    );
 }
 
 /// 测试服务器响应 404
@@ -623,7 +697,11 @@ fn test_http_server_404_response() {
     // v0.3.97: 关闭测试服务器
     close_test_server(&mut runtime);
 
-    assert!(response.contains("HTTP/1.1 404"), "Should return 404 status, got: {}", response);
+    assert!(
+        response.contains("HTTP/1.1 404"),
+        "Should return 404 status, got: {}",
+        response
+    );
     assert!(response.contains("Not Found"), "Should have Not Found body");
 }
 
@@ -652,7 +730,9 @@ fn test_pump_http_messages() {
             res.end('handled');
         };
     "#;
-    runtime.set_http_request_handler(handler_code).expect("Failed to set handler");
+    runtime
+        .set_http_request_handler(handler_code)
+        .expect("Failed to set handler");
 
     // 泵送消息（应该处理 0 个请求）
     let processed = runtime.pump_http_messages();
@@ -686,7 +766,11 @@ fn test_http_server_body_transmission() {
     // v0.3.97: 关闭测试服务器
     close_test_server(&mut runtime);
 
-    assert!(response.contains("This is a longer response body"), "Should have full body, got: {}", response);
+    assert!(
+        response.contains("This is a longer response body"),
+        "Should have full body, got: {}",
+        response
+    );
 }
 
 /// v0.3.97: 测试 HTTP Keep-Alive 连接
@@ -714,10 +798,14 @@ fn test_http_server_keep_alive() {
 
     // 使用非阻塞 I/O
     let mut stream = TcpStream::connect(("127.0.0.1", 3547)).expect("Failed to connect");
-    stream.set_nonblocking(true).expect("set_nonblocking failed");
+    stream
+        .set_nonblocking(true)
+        .expect("set_nonblocking failed");
 
     // 发送第一个请求
-    stream.write_all(b"GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+    stream
+        .write_all(b"GET /first HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        .expect("Failed to write");
 
     // 读取第一个响应（需要交替调用 pump_http_messages）
     let mut response1 = String::new();
@@ -759,11 +847,21 @@ fn test_http_server_keep_alive() {
     }
 
     // 验证第一个响应
-    assert!(response1.contains("Connection: keep-alive"), "Should have Connection: keep-alive, got: {}", response1);
-    assert!(response1.contains("Request 1 received"), "Should handle first request, got: {}", response1);
+    assert!(
+        response1.contains("Connection: keep-alive"),
+        "Should have Connection: keep-alive, got: {}",
+        response1
+    );
+    assert!(
+        response1.contains("Request 1 received"),
+        "Should handle first request, got: {}",
+        response1
+    );
 
     // 发送第二个请求（复用同一个连接）
-    stream.write_all(b"GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n").expect("Failed to write");
+    stream
+        .write_all(b"GET /second HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        .expect("Failed to write");
 
     // 读取第二个响应
     let mut response2 = String::new();
@@ -790,7 +888,11 @@ fn test_http_server_keep_alive() {
     }
 
     // 验证第二个响应
-    assert!(response2.contains("Request 2 received"), "Should handle second request, got: {}", response2);
+    assert!(
+        response2.contains("Request 2 received"),
+        "Should handle second request, got: {}",
+        response2
+    );
 
     // 关闭连接
     drop(stream);
@@ -822,8 +924,12 @@ fn test_http_server_connection_close() {
 
     // 发送带有 Connection: close 的请求
     let mut stream = TcpStream::connect(("127.0.0.1", 3548)).expect("Failed to connect");
-    stream.set_nonblocking(true).expect("set_nonblocking failed");
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n").expect("Failed to write");
+    stream
+        .set_nonblocking(true)
+        .expect("set_nonblocking failed");
+    stream
+        .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .expect("Failed to write");
     let _ = stream.shutdown(std::net::Shutdown::Write);
 
     let mut response = String::new();
@@ -859,10 +965,17 @@ fn test_http_server_connection_close() {
     }
 
     // 验证响应包含 Connection: close
-    assert!(response.contains("Connection: close"), "Should have Connection: close, got: {}", response);
-    assert!(response.contains("Close connection"), "Should have body, got: {}", response);
+    assert!(
+        response.contains("Connection: close"),
+        "Should have Connection: close, got: {}",
+        response
+    );
+    assert!(
+        response.contains("Close connection"),
+        "Should have body, got: {}",
+        response
+    );
 
     // v0.3.97: 关闭测试服务器
     close_test_server(&mut runtime);
 }
-

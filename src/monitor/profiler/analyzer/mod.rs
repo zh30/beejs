@@ -3,13 +3,14 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-pub mod stack_analyzer;
 pub mod hotspot;
+pub mod stack_analyzer;
 
-pub use stack_analyzer::{
-    CallStackAnalyzer, StackFrame, CallStackAnalysis, Bottleneck,
-    BottleneckType, RecursionInfo, DepthStats, AnalyzerStats as StackAnalyzerStats,
-};
 pub use hotspot::{
-    HotspotAnalyzer, Hotspot, HotspotType, TimeStats, MemoryStats, AnalyzerStats as HotspotAnalyzerStats,
+    AnalyzerStats as HotspotAnalyzerStats, Hotspot, HotspotAnalyzer, HotspotType, MemoryStats,
+    TimeStats,
+};
+pub use stack_analyzer::{
+    AnalyzerStats as StackAnalyzerStats, Bottleneck, BottleneckType, CallStackAnalysis,
+    CallStackAnalyzer, DepthStats, RecursionInfo, StackFrame,
 };

@@ -1,6 +1,6 @@
 // Performance Benchmark
 // Provides high-level benchmarking interface
-
+use super::{PerfTestConfig, PerfTestReporter, PerfTestResult, PerfTestRunner};
 
 /// Benchmark result
 #[derive(Debug, Clone)]
@@ -53,10 +53,13 @@ impl BenchmarkRunner {
             runner: perf_runner,
         }
     }
+    pub fn config(&self) -> &BenchmarkConfig {
+        &self.config
+    }
     /// Run a single benchmark
     pub fn benchmark<F>(&self, name: &str, test_fn: F) -> BenchmarkResult
     where
-        F: FnOnce() + Send,
+        F: Fn() + Send + Sync,
     {
         let result: _ = self.runner.run_test(name, test_fn);
         let summary: _ = BenchmarkSummary {
@@ -75,20 +78,24 @@ impl BenchmarkRunner {
         }
     }
     /// Run multiple benchmarks
-    pub fn benchmark_group(&self, name: &str, benchmarks: Vec<(&str, Box<dyn Fn() + Send>)>) -> BenchmarkResult {
+    pub fn benchmark_group(
+        &self,
+        name: &str,
+        benchmarks: Vec<(&str, Box<dyn Fn() + Send + Sync>)>,
+    ) -> BenchmarkResult {
         let mut results = Vec::new();
         let mut passed = 0;
         let mut failed = 0;
         let mut total_ops = 0.0;
         for (benchmark_name, test_fn) in benchmarks {
             let result: _ = self.runner.run_test(benchmark_name, || test_fn());
-            results.push(result);
             if result.passed {
                 passed += 1;
             } else {
                 failed += 1;
             }
             total_ops += result.statistics.ops_per_second;
+            results.push(result);
         }
         // Find fastest and slowest
         let mut fastest = None;
@@ -121,10 +128,14 @@ impl BenchmarkRunner {
         }
     }
     /// Run multiple benchmark groups
-    pub fn run_benchmarks(&self, groups: Vec<(&str, Vec<(&str, Box<dyn Fn() + Send>)>)>) -> Vec<BenchmarkResult> {
-        groups.into_iter().map(|(name, benchmarks)| {
-            self.benchmark_group(name, benchmarks)
-        }).collect()
+    pub fn run_benchmarks(
+        &self,
+        groups: Vec<(&str, Vec<(&str, Box<dyn Fn() + Send + Sync>)>)>,
+    ) -> Vec<BenchmarkResult> {
+        groups
+            .into_iter()
+            .map(|(name, benchmarks)| self.benchmark_group(name, benchmarks))
+            .collect()
     }
     /// Compare benchmarks
     pub fn compare_benchmarks(&self, results: &[BenchmarkResult]) -> String {
@@ -136,7 +147,10 @@ impl BenchmarkRunner {
             output.push_str(&format!("  Tests: {}\n", result.summary.total_tests));
             output.push_str(&format!("  Passed: {}\n", result.summary.passed_tests));
             output.push_str(&format!("  Failed: {}\n", result.summary.failed_tests));
-            output.push_str(&format!("  Avg ops/sec: {:.2}\n", result.summary.average_ops_per_second));
+            output.push_str(&format!(
+                "  Avg ops/sec: {:.2}\n",
+                result.summary.average_ops_per_second
+            ));
             if let Some(ref fastest) = result.summary.fastest {
                 output.push_str(&format!("  Fastest: {}\n", fastest));
             }
@@ -148,11 +162,12 @@ impl BenchmarkRunner {
         output
     }
     /// Save results to file
-    pub fn save_results(&self, results: &[BenchmarkResult], file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_results(
+        &self,
+        results: &[BenchmarkResult],
+        file_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
-use std::collections::{BTreeMap, HashMap};
-use std::fs::File;
-use std::time::Duration;
         let mut file = std::fs::File::create(file_path)?;
         writeln!(file, "Benchmark Results")?;
         writeln!(file, "=================")?;
@@ -162,7 +177,11 @@ use std::time::Duration;
             writeln!(file, "  Total tests: {}", result.summary.total_tests)?;
             writeln!(file, "  Passed: {}", result.summary.passed_tests)?;
             writeln!(file, "  Failed: {}", result.summary.failed_tests)?;
-            writeln!(file, "  Avg ops/sec: {:.2}", result.summary.average_ops_per_second)?;
+            writeln!(
+                file,
+                "  Avg ops/sec: {:.2}",
+                result.summary.average_ops_per_second
+            )?;
             writeln!(file)?;
         }
         Ok(())
@@ -192,13 +211,13 @@ macro_rules! benchmark_group {
 pub struct BuiltinBenchmarks;
 impl BuiltinBenchmarks {
     /// Simple computation benchmark
-    pub fn fibonacci_benchmark(n: u32) -> Box<dyn Fn() + Send> {
+    pub fn fibonacci_benchmark(n: u32) -> Box<dyn Fn() + Send + Sync> {
         Box::new(move || {
             let _: _ = Self::fibonacci(n);
         })
     }
     /// String manipulation benchmark
-    pub fn string_manipulation_benchmark(iterations: usize) -> Box<dyn Fn() + Send> {
+    pub fn string_manipulation_benchmark(iterations: usize) -> Box<dyn Fn() + Send + Sync> {
         Box::new(move || {
             let mut s = String::new();
             for i in 0..iterations {
@@ -208,13 +227,13 @@ impl BuiltinBenchmarks {
         })
     }
     /// Array operation benchmark
-    pub fn array_operation_benchmark(size: usize) -> Box<dyn Fn() + Send> {
+    pub fn array_operation_benchmark(size: usize) -> Box<dyn Fn() + Send + Sync> {
         Box::new(move || {
             let mut arr = Vec::with_capacity(size);
             for i in 0..size {
                 arr.push(i * 2);
             }
-            let _sum: i64 = arr.iter().sum();
+            let _sum: usize = arr.iter().sum();
         })
     }
     /// Recursive fibonacci
@@ -228,6 +247,9 @@ impl BuiltinBenchmarks {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::testing::perf::ConsolePerfTestReporter;
+
     #[test]
     fn test_benchmark_runner() {
         let config: _ = BenchmarkConfig::default();
@@ -247,8 +269,16 @@ mod tests {
         let result: _ = runner.benchmark_group(
             "group1",
             vec![
-                ("test1", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(1)) as Box<dyn Fn() + Send>),
-                ("test2", Box::new(|| std::thread::sleep(std::time::Duration::from_millis(2)) as Box<dyn Fn() + Send>),
+                (
+                    "test1",
+                    Box::new(|| std::thread::sleep(std::time::Duration::from_millis(1)))
+                        as Box<dyn Fn() + Send + Sync>,
+                ),
+                (
+                    "test2",
+                    Box::new(|| std::thread::sleep(std::time::Duration::from_millis(2)))
+                        as Box<dyn Fn() + Send + Sync>,
+                ),
             ],
         );
         assert_eq!(result.name, "group1");
@@ -261,8 +291,12 @@ mod tests {
         let reporter: _ = Box::new(ConsolePerfTestReporter::new(false));
         let runner: _ = BenchmarkRunner::new(config, reporter);
         let results: _ = vec![
-            runner.benchmark("test1", || std::thread::sleep(std::time::Duration::from_millis(1)),
-            runner.benchmark("test2", || std::thread::sleep(std::time::Duration::from_millis(2)),
+            runner.benchmark("test1", || {
+                std::thread::sleep(std::time::Duration::from_millis(1))
+            }),
+            runner.benchmark("test2", || {
+                std::thread::sleep(std::time::Duration::from_millis(2))
+            }),
         ];
         let comparison: _ = runner.compare_benchmarks(&results);
         assert!(comparison.contains("test1"));

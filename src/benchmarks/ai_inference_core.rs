@@ -29,23 +29,19 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "onnx_inference_latency_small",
-            MetricType::Latency,
-            || {
-                // 模拟小型模型推理延迟（< 5ms）
-                // 模拟模型加载和推理过程
-                let start: _ = Instant::now();
-                // 模拟输入数据处理
-                let _input_data: _ = vec![0.0f32; 784]; // MNIST 输入大小
-                // 模拟 ONNX 推理
-                std::thread::sleep(Duration::from_micros(2000)); // 2ms 模拟推理时间
-                // 模拟输出处理
-                let _output: _ = vec![0.0f32; 10]; // 10 类输出
-                let elapsed: _ = start.elapsed();
-                elapsed.as_micros() as u64
-            },
-        )
+        framework.run_benchmark("onnx_inference_latency_small", MetricType::Latency, || {
+            // 模拟小型模型推理延迟（< 5ms）
+            // 模拟模型加载和推理过程
+            let start: _ = Instant::now();
+            // 模拟输入数据处理
+            let _input_data: _ = vec![0.0f32; 784]; // MNIST 输入大小
+                                                    // 模拟 ONNX 推理
+            std::thread::sleep(Duration::from_micros(2000)); // 2ms 模拟推理时间
+                                                             // 模拟输出处理
+            let _output: _ = vec![0.0f32; 10]; // 10 类输出
+            let elapsed: _ = start.elapsed();
+            elapsed.as_micros() as u64
+        })
     }
     /// ONNX Runtime 推理延迟测试（中型模型）
     pub fn onnx_inference_latency_medium(&self) -> BenchmarkResult {
@@ -57,22 +53,18 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "onnx_inference_latency_medium",
-            MetricType::Latency,
-            || {
-                // 模拟中型模型推理延迟（5-20ms）
-                let start: _ = Instant::now();
-                // 模拟更大的输入数据
-                let _input_data: _ = vec![0.0f32; 4096]; // 中型模型输入
-                // 模拟 ONNX 推理
-                std::thread::sleep(Duration::from_millis(10)); // 10ms 模拟推理时间
-                // 模拟输出处理
-                let _output: _ = vec![0.0f32; 1000];
-                let elapsed: _ = start.elapsed();
-                elapsed.as_millis() as u64
-            },
-        )
+        framework.run_benchmark("onnx_inference_latency_medium", MetricType::Latency, || {
+            // 模拟中型模型推理延迟（5-20ms）
+            let start: _ = Instant::now();
+            // 模拟更大的输入数据
+            let _input_data: _ = vec![0.0f32; 4096]; // 中型模型输入
+                                                     // 模拟 ONNX 推理
+            std::thread::sleep(Duration::from_millis(10)); // 10ms 模拟推理时间
+                                                           // 模拟输出处理
+            let _output: _ = vec![0.0f32; 1000];
+            let elapsed: _ = start.elapsed();
+            elapsed.as_millis() as u64
+        })
     }
     /// ONNX Runtime GPU 加速测试
     pub fn onnx_gpu_acceleration_benchmark(&self) -> BenchmarkResult {
@@ -84,22 +76,18 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "onnx_gpu_acceleration",
-            MetricType::ExecutionTime,
-            || {
-                // 模拟 GPU 加速推理
-                let start: _ = Instant::now();
-                // 模拟数据传输到 GPU
-                std::thread::sleep(Duration::from_millis(1));
-                // 模拟 GPU 推理
-                std::thread::sleep(Duration::from_millis(3));
-                // 模拟结果从 GPU 传回
-                std::thread::sleep(Duration::from_millis(1));
-                let elapsed: _ = start.elapsed();
-                elapsed.as_millis() as u64
-            },
-        )
+        framework.run_benchmark("onnx_gpu_acceleration", MetricType::ExecutionTime, || {
+            // 模拟 GPU 加速推理
+            let start: _ = Instant::now();
+            // 模拟数据传输到 GPU
+            std::thread::sleep(Duration::from_millis(1));
+            // 模拟 GPU 推理
+            std::thread::sleep(Duration::from_millis(3));
+            // 模拟结果从 GPU 传回
+            std::thread::sleep(Duration::from_millis(1));
+            let elapsed: _ = start.elapsed();
+            elapsed.as_millis() as u64
+        })
     }
     /// PyTorch TorchScript 推理延迟测试
     pub fn pytorch_inference_latency(&self) -> BenchmarkResult {
@@ -111,25 +99,21 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "pytorch_inference_latency",
-            MetricType::Latency,
-            || {
-                // 模拟 PyTorch TorchScript 推理延迟（< 3ms）
-                let start: _ = Instant::now();
-                // 模拟 TorchScript 模型加载
-                // 注意：实际实现会使用 tch crate
-                let _model_loaded: _ = true;
-                // 模拟输入数据
-                let _input: _ = vec![0.0f32; 512];
-                // 模拟 TorchScript 推理
-                std::thread::sleep(Duration::from_micros(1500)); // 1.5ms 模拟推理时间
-                // 模拟输出
-                let _output: _ = vec![0.0f32; 256];
-                let elapsed: _ = start.elapsed();
-                elapsed.as_micros() as u64
-            },
-        )
+        framework.run_benchmark("pytorch_inference_latency", MetricType::Latency, || {
+            // 模拟 PyTorch TorchScript 推理延迟（< 3ms）
+            let start: _ = Instant::now();
+            // 模拟 TorchScript 模型加载
+            // 注意：实际实现会使用 tch crate
+            let _model_loaded: _ = true;
+            // 模拟输入数据
+            let _input: _ = vec![0.0f32; 512];
+            // 模拟 TorchScript 推理
+            std::thread::sleep(Duration::from_micros(1500)); // 1.5ms 模拟推理时间
+                                                             // 模拟输出
+            let _output: _ = vec![0.0f32; 256];
+            let elapsed: _ = start.elapsed();
+            elapsed.as_micros() as u64
+        })
     }
     /// 批处理推理吞吐量测试
     pub fn batch_inference_throughput(&self) -> BenchmarkResult {
@@ -141,24 +125,20 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "batch_inference_throughput",
-            MetricType::Throughput,
-            || {
-                // 模拟批处理吞吐量测试
-                let batch_size: _ = 64;
-                let start: _ = Instant::now();
-                // 模拟批处理推理
-                for _ in 0..batch_size {
-                    // 每个样本的推理时间
-                    std::thread::sleep(Duration::from_micros(500));
-                }
-                let elapsed: _ = start.elapsed();
-                let throughput: _ = batch_size as f64 / elapsed.as_secs_f64();
-                // 返回吞吐量（样本/秒）
-                throughput as u64
-            },
-        )
+        framework.run_benchmark("batch_inference_throughput", MetricType::Throughput, || {
+            // 模拟批处理吞吐量测试
+            let batch_size: _ = 64;
+            let start: _ = Instant::now();
+            // 模拟批处理推理
+            for _ in 0..batch_size {
+                // 每个样本的推理时间
+                std::thread::sleep(Duration::from_micros(500));
+            }
+            let elapsed: _ = start.elapsed();
+            let throughput: _ = batch_size as f64 / elapsed.as_secs_f64();
+            // 返回吞吐量（样本/秒）
+            throughput as u64
+        })
     }
     /// 流式推理延迟测试
     pub fn streaming_inference_latency(&self) -> BenchmarkResult {
@@ -170,20 +150,16 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "streaming_inference_latency",
-            MetricType::Latency,
-            || {
-                // 模拟流式推理延迟
-                let start: _ = Instant::now();
-                // 模拟流式输入处理
-                for _ in 0..10 {
-                    std::thread::sleep(Duration::from_micros(100));
-                }
-                let elapsed: _ = start.elapsed();
-                elapsed.as_micros() as u64
-            },
-        )
+        framework.run_benchmark("streaming_inference_latency", MetricType::Latency, || {
+            // 模拟流式推理延迟
+            let start: _ = Instant::now();
+            // 模拟流式输入处理
+            for _ in 0..10 {
+                std::thread::sleep(Duration::from_micros(100));
+            }
+            let elapsed: _ = start.elapsed();
+            elapsed.as_micros() as u64
+        })
     }
     /// 动态批处理优化测试
     pub fn dynamic_batch_optimization(&self) -> BenchmarkResult {
@@ -229,21 +205,17 @@ impl AIInferenceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "zero_copy_data_transfer",
-            MetricType::ExecutionTime,
-            || {
-                // 模拟零拷贝数据传输
-                let data_size: _ = 1024 * 1024; // 1MB
-                let _data: _ = vec![0u8; data_size];
-                // 模拟零拷贝操作（不需要实际复制数据）
-                let _data_ptr: _ = _data.as_ptr();
-                let _data_len: _ = _data.len();
-                // 模拟快速处理
-                std::thread::sleep(Duration::from_micros(100));
-                _data_len
-            },
-        )
+        framework.run_benchmark("zero_copy_data_transfer", MetricType::ExecutionTime, || {
+            // 模拟零拷贝数据传输
+            let data_size: _ = 1024 * 1024; // 1MB
+            let _data: _ = vec![0u8; data_size];
+            // 模拟零拷贝操作（不需要实际复制数据）
+            let _data_ptr: _ = _data.as_ptr();
+            let _data_len: _ = _data.len();
+            // 模拟快速处理
+            std::thread::sleep(Duration::from_micros(100));
+            _data_len
+        })
     }
     /// 运行所有 AI 推理基准测试
     pub fn run_all_benchmarks(&self) -> Vec<BenchmarkResult> {
@@ -296,7 +268,10 @@ impl AIInferenceBenchmark {
             report.push_str("\n");
         }
         // 分析批处理优化效果
-        if let Some(batch_result) = results.iter().find(|r| r.name == "batch_inference_throughput") {
+        if let Some(batch_result) = results
+            .iter()
+            .find(|r| r.name == "batch_inference_throughput")
+        {
             report.push_str("## 批处理优化效果\n\n");
             report.push_str(&format!(
                 "- 批处理吞吐量: {:.0} 样本/秒\n",
@@ -310,7 +285,10 @@ impl AIInferenceBenchmark {
         // 性能目标检查
         report.push_str("## 性能目标检查\n\n");
         report.push_str("### 延迟目标（< 5ms 小型模型）\n\n");
-        if let Some(small_result) = results.iter().find(|r| r.name == "onnx_inference_latency_small") {
+        if let Some(small_result) = results
+            .iter()
+            .find(|r| r.name == "onnx_inference_latency_small")
+        {
             let latency_ms: _ = small_result.avg_duration.as_secs_f64() * 1000.0;
             let target_met: _ = latency_ms < 5.0;
             report.push_str(&format!(
@@ -320,7 +298,10 @@ impl AIInferenceBenchmark {
             ));
         }
         report.push_str("### 延迟目标（< 20ms 中型模型）\n\n");
-        if let Some(medium_result) = results.iter().find(|r| r.name == "onnx_inference_latency_medium") {
+        if let Some(medium_result) = results
+            .iter()
+            .find(|r| r.name == "onnx_inference_latency_medium")
+        {
             let latency_ms: _ = medium_result.avg_duration.as_secs_f64() * 1000.0;
             let target_met: _ = latency_ms < 20.0;
             report.push_str(&format!(

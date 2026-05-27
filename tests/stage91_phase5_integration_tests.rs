@@ -4,11 +4,9 @@
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+
     use tempfile::TempDir;
     use tokio::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
     /// ========== 端到端工作流测试 ==========
 
@@ -18,11 +16,11 @@ use std::collections::{HashMap, BTreeMap};
         println!("✓ Complete project lifecycle test started");
 
         // 1. 项目初始化
-        let temp_dir: _ = TempDir::new().unwrap();
+        let _temp_dir = TempDir::new().unwrap();
         println!("✓ Project initialization");
 
         // 2. 代码编写
-        let test_code: _ = r#"
+        let _test_code = r#"
 const fs = require('fs');
 console.log('Project initialized successfully');
         "#;
@@ -43,9 +41,9 @@ console.log('Project initialized successfully');
         // 测试多文件模块加载
         println!("✓ Multi-file module loading test started");
 
-        let temp_dir: _ = TempDir::new().unwrap();
-        let main_file: _ = temp_dir.path().join("main.js");
-        let module_file: _ = temp_dir.path().join("module.js");
+        let temp_dir = TempDir::new().unwrap();
+        let _main_file = temp_dir.path().join("main.js");
+        let _module_file = temp_dir.path().join("module.js");
 
         println!("✓ Module files created");
 
@@ -91,7 +89,7 @@ console.log('Project initialized successfully');
         // 测试热重载集成
         println!("✓ Hot reload integration test started");
 
-        let temp_dir: _ = TempDir::new().unwrap();
+        let _temp_dir = TempDir::new().unwrap();
 
         // 模拟文件监控
         println!("✓ File watcher initialization");

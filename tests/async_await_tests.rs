@@ -4,10 +4,12 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime_minimal::MinimalRuntime;
+    use beejs::runtime_minimal::MinimalRuntime;
+    use serial_test::serial;
 
     /// 测试1: 基本 async 函数
     #[test]
+    #[serial]
     fn test_basic_async_function() {
         let code = r#"
             async function greet(name) {
@@ -18,11 +20,15 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "Async function should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Async function should execute without errors"
+        );
     }
 
     /// 测试2: 基本 await 语法
     #[test]
+    #[serial]
     fn test_basic_await() {
         let code = r#"
             async function test() {
@@ -39,6 +45,7 @@ mod tests {
 
     /// 测试3: Async/await 错误处理
     #[test]
+    #[serial]
     fn test_async_error_handling() {
         let code = r#"
             async function test() {
@@ -58,6 +65,7 @@ mod tests {
 
     /// 测试4: Promise.all 支持
     #[test]
+    #[serial]
     fn test_promise_all() {
         let code = r#"
             async function test() {
@@ -79,6 +87,7 @@ mod tests {
 
     /// 测试5: 多个 await 操作
     #[test]
+    #[serial]
     fn test_multiple_awaits() {
         let code = r#"
             async function test() {
@@ -97,6 +106,7 @@ mod tests {
 
     /// 测试6: Async 箭头函数
     #[test]
+    #[serial]
     fn test_async_arrow_function() {
         let code = r#"
             const add = async (a, b) => {

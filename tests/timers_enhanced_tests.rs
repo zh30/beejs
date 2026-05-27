@@ -1,10 +1,12 @@
 // Tests for timers API (setTimeout, setInterval) - v0.4.0
 // Enhanced timer functionality for AI workloads
-// v0.3.249: Updated to accept number return type from timers.rs
+// v0.3.271: Default runtime returns Node-compatible Timer handle objects.
 // v0.3.256: Added cleanup calls to prevent V8 handle errors
 
+use beejs::nodejs_core::timers::{
+    clear_all_async_timers, clear_all_timer_callbacks, clear_all_timers,
+};
 use serial_test::serial;
-use beejs::nodejs_core::timers::{clear_all_timers, clear_all_async_timers, clear_all_timer_callbacks};
 
 /// Helper function to clean up timer state before runtime is dropped
 /// This prevents "Handle hosted by disposed Isolate" errors
@@ -17,7 +19,8 @@ fn cleanup_timers() {
 #[test]
 #[serial]
 fn test_set_timeout_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof setTimeout;
     "#;
@@ -29,21 +32,31 @@ fn test_set_timeout_exists() {
 #[test]
 #[serial]
 fn test_set_timeout_returns_timer_id() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 100);
-        // v0.3.249: Timer returns number ID
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' &&
+        timerId !== null &&
+        Number(timerId) > 0 &&
+        typeof timerId.unref === 'function' &&
+        typeof timerId.ref === 'function' &&
+        typeof timerId.refresh === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setTimeout should return a timer number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setTimeout should return a Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_set_timeout_basic_execution() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     // For synchronous execution, callback should be called
     let code = r#"
         let executed = false;
@@ -51,94 +64,133 @@ fn test_set_timeout_basic_execution() {
         executed;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setTimeout callback should execute synchronously with delay 0");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setTimeout callback should execute synchronously with delay 0"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_set_timeout_with_delay() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 100);
         timerId > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setTimeout should accept delay parameter");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setTimeout should accept delay parameter"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_set_timeout_with_arguments() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         let result = null;
         setTimeout(function(a, b, c) { result = a + b + c; }, 0, 1, 2, 3);
         result === 6;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setTimeout should pass arguments to callback");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setTimeout should pass arguments to callback"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_clear_timeout_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof clearTimeout;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "clearTimeout should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "clearTimeout should be a function"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_clear_timeout_basic() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
         clearTimeout(timerId);
-        // v0.3.249: Timer is now a number
+        // v0.3.271: Timer is a handle object that clearTimeout accepts.
         typeof timerId;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "number", "clearTimeout should accept timer number ID");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "clearTimeout should accept Timer handles"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_set_interval_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof setInterval;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "setInterval should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "setInterval should be a function"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_set_interval_returns_timer_id() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setInterval(function() {}, 100);
-        // v0.3.249: Timer returns number ID
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' &&
+        timerId !== null &&
+        Number(timerId) > 0 &&
+        typeof timerId.unref === 'function' &&
+        typeof timerId.ref === 'function' &&
+        typeof timerId.refresh === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setInterval should return a timer number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setInterval should return a Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_set_interval_basic_execution() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     // Note: setInterval is async - callback won't execute in same tick
     // We test that it returns a valid timer ID
     let code = r#"
@@ -146,56 +198,74 @@ fn test_set_interval_basic_execution() {
         timerId > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setInterval should return valid timer ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setInterval should return valid timer ID"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_clear_interval_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof clearInterval;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "clearInterval should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "clearInterval should be a function"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_clear_interval_basic() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setInterval(function() {}, 100);
         clearInterval(timerId);
-        // v0.3.249: Timer is now a number
+        // v0.3.271: Timer is a handle object that clearInterval accepts.
         typeof timerId;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "number", "clearInterval should accept timer number ID");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "clearInterval should accept Timer handles"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_ids_are_numbers() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timeoutId = setTimeout(function() {}, 100);
         const intervalId = setInterval(function() {}, 100);
-        // v0.3.249: Timer IDs are now numbers
-        typeof timeoutId === 'number' && typeof intervalId === 'number' && timeoutId > 0 && intervalId > 0;
+        typeof timeoutId === 'object' &&
+        typeof intervalId === 'object' &&
+        Number(timeoutId) > 0 &&
+        Number(intervalId) > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Both timer IDs should be numbers");
+    assert_eq!(result.trim(), "true", "Both timers should be handles");
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_multiple_timers() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const ids = [];
         ids.push(setTimeout(function() {}, 100));
@@ -212,64 +282,82 @@ fn test_multiple_timers() {
 #[test]
 #[serial]
 fn test_timer_zero_delay() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         let executed = false;
         setTimeout(function() { executed = true; }, 0);
         executed;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Timer with 0ms delay should execute synchronously");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Timer with 0ms delay should execute synchronously"
+    );
     cleanup_timers();
 }
 
-// v0.3.249: Tests for timer ID functionality (number-based)
+// v0.3.271: Tests for Timer handle functionality.
 #[test]
 #[serial]
-fn test_settimeout_returns_number() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+fn test_settimeout_returns_timer_handle() {
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
-        // v0.3.249: Timer returns number ID
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' && Number(timerId) > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setTimeout should return a timer number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setTimeout should return a Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
-fn test_setinterval_returns_number() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+fn test_setinterval_returns_timer_handle() {
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setInterval(function() {}, 1000);
-        // v0.3.249: Timer returns number ID
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' && Number(timerId) > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setInterval should return a timer number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setInterval should return a Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
-fn test_setimmediate_returns_number() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+fn test_setimmediate_returns_timer_handle() {
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setImmediate(function() {});
-        // v0.3.249: Timer returns number ID
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' && Number(timerId) > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setImmediate should return a timer number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setImmediate should return a Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_ids_are_unique() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const id1 = setTimeout(function() {}, 100);
         const id2 = setTimeout(function() {}, 100);
@@ -280,70 +368,80 @@ fn test_timer_ids_are_unique() {
     cleanup_timers();
 }
 
-// v0.3.249: Basic timer functionality tests
-// Note: unref/ref/refresh methods are not available in the simplified implementation
+// v0.3.271: Basic Timer handle functionality tests.
 
 #[test]
 #[serial]
 fn test_timer_has_unref_method() {
-    // v0.3.249: Simplified implementation - timers are numbers
-    // This test verifies basic timer creation
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId.unref === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Timer should be created as number ID");
+    assert_eq!(result.trim(), "true", "Timer should expose unref()");
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_has_ref_method() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
-        typeof timerId === 'number';
+        typeof timerId.ref === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Timer should be a number");
+    assert_eq!(result.trim(), "true", "Timer should expose ref()");
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_unref_is_callable() {
-    // v0.3.249: clearTimeout works with number IDs
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    // v0.3.271: clearTimeout works with Timer handles.
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
         clearTimeout(timerId);
         'success';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "success", "clearTimeout should work with number ID");
+    assert_eq!(
+        result.trim(),
+        "success",
+        "clearTimeout should work with Timer handles"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_ref_is_callable() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
         clearTimeout(timerId);
         'success';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "success", "clearTimeout should work with number ID");
+    assert_eq!(
+        result.trim(),
+        "success",
+        "clearTimeout should work with Timer handles"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_unref_ref_chain() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId1 = setTimeout(function() {}, 1000);
         const timerId2 = setTimeout(function() {}, 1000);
@@ -352,47 +450,60 @@ fn test_timer_unref_ref_chain() {
         'success';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "success", "Multiple clearTimeout calls should work");
+    assert_eq!(
+        result.trim(),
+        "success",
+        "Multiple clearTimeout calls should work"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_interval_timer_has_unref_ref() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setInterval(function() {}, 1000);
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' && Number(timerId) > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setInterval should return number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setInterval should return Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_immediate_timer_has_unref_ref() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setImmediate(function() {});
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId === 'object' && Number(timerId) > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "setImmediate should return number ID");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "setImmediate should return Timer handle"
+    );
     cleanup_timers();
 }
 
 #[test]
 #[serial]
 fn test_timer_has_refresh_method_alias() {
-    // v0.3.249: Simplified implementation - refresh is not available
-    // This test verifies basic timer functionality
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setTimeout(function() {}, 1000);
-        typeof timerId === 'number' && timerId > 0;
+        typeof timerId.refresh === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Timer should be created as number");
+    assert_eq!(result.trim(), "true", "Timer should expose refresh()");
     cleanup_timers();
 }

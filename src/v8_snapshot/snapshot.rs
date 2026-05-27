@@ -40,10 +40,7 @@ impl V8Snapshot {
     }
     /// 获取快照年龄（秒）
     pub fn age(&self) -> u64 {
-        self.created_at
-            .elapsed()
-            .map(|d| d.as_secs())
-            .unwrap_or(0)
+        self.created_at.elapsed().map(|d| d.as_secs()).unwrap_or(0)
     }
     /// 获取快照数据大小（人类可读格式）
     pub fn size_human(&self) -> String {
@@ -51,9 +48,7 @@ impl V8Snapshot {
     }
     /// 验证快照完整性
     pub fn validate(&self) -> bool {
-        !self.snapshot_data.is_empty()
-            && !self.version.is_empty()
-            && self.size_bytes > 0
+        !self.snapshot_data.is_empty() && !self.version.is_empty() && self.size_bytes > 0
     }
 }
 /// 格式化文件大小为人类可读格式
@@ -73,12 +68,7 @@ mod tests {
     #[test]
     fn test_v8_snapshot_creation() {
         let data: _ = vec![1, 2, 3, 4, 5];
-        let snapshot: _ = V8Snapshot::new(
-            data.clone(),
-            "v1.0.0".to_string(),
-            false,
-            true,
-        );
+        let snapshot: _ = V8Snapshot::new(data.clone(), "v1.0.0".to_string(), false, true);
         assert_eq!(snapshot.snapshot_data.len(), 5);
         assert_eq!(snapshot.version, "v1.0.0");
         assert!(snapshot.builtin_warmup);
@@ -86,12 +76,7 @@ mod tests {
     }
     #[test]
     fn test_v8_snapshot_validation() {
-        let empty_snapshot: _ = V8Snapshot::new(
-            vec![],
-            "v1.0.0".to_string(),
-            false,
-            true,
-        );
+        let empty_snapshot: _ = V8Snapshot::new(vec![], "v1.0.0".to_string(), false, true);
         assert!(!empty_snapshot.validate());
     }
     #[test]

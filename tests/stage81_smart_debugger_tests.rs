@@ -1,21 +1,21 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 // Stage 81 智能调试建议测试套件
 // 测试 AI 驱动的错误诊断、根因分析和修复建议功能
+#![allow(dead_code)]
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-    use std::sync::Arc;
+
+    use std::time::SystemTime;
     use tokio::runtime::Runtime;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
     // 模拟智能调试器的结构
+    #[derive(Clone, Debug)]
     pub struct MockSmartDebugger {
         pub diagnosis_delay_ms: u64,
         pub accuracy_rate: f64,
     }
 
+    #[derive(Clone, Debug)]
     pub struct ErrorInfo {
         pub error_type: String,
         pub message: String,
@@ -23,12 +23,14 @@ use std::collections::{HashMap, BTreeMap};
         pub context: Option<String>,
     }
 
+    #[derive(Clone, Debug)]
     pub struct StackFrame {
         pub file: String,
         pub line: u32,
         pub function: String,
     }
 
+    #[derive(Clone, Debug)]
     pub struct Diagnosis {
         pub error_type: String,
         pub root_cause: RootCause,
@@ -36,12 +38,14 @@ use std::collections::{HashMap, BTreeMap};
         pub confidence: f64,
     }
 
+    #[derive(Clone, Debug)]
     pub struct RootCause {
         pub description: String,
         pub location: String,
         pub related_code: Option<String>,
     }
 
+    #[derive(Clone, Debug)]
     pub struct FixSuggestion {
         pub title: String,
         pub description: String,
@@ -50,11 +54,13 @@ use std::collections::{HashMap, BTreeMap};
         pub explanation: String,
     }
 
+    #[derive(Clone, Debug)]
     pub struct DebugPath {
         pub optimized_breakpoints: Vec<BreakpointSuggestion>,
         pub estimated_time_saved: u32,
     }
 
+    #[derive(Clone, Debug)]
     pub struct BreakpointSuggestion {
         pub file: String,
         pub line: u32,
@@ -78,7 +84,7 @@ use std::collections::{HashMap, BTreeMap};
             }
 
             // 基于错误类型生成诊断
-            let diagnosis: _ = match error.error_type.as_str() {
+            let diagnosis = match error.error_type.as_str() {
                 "TypeError" => self.diagnose_type_error(error),
                 "ReferenceError" => self.diagnose_reference_error(error),
                 "SyntaxError" => self.diagnose_syntax_error(error),
@@ -88,17 +94,26 @@ use std::collections::{HashMap, BTreeMap};
             Ok(diagnosis)
         }
 
-        pub async fn find_root_cause(&self, stack_trace: &[StackFrame]) -> Result<RootCause, String> {
-            tokio::time::sleep(std::time::Duration::from_millis(self.diagnosis_delay_ms / 2)).await;
+        pub async fn find_root_cause(
+            &self,
+            stack_trace: &[StackFrame],
+        ) -> Result<RootCause, String> {
+            tokio::time::sleep(std::time::Duration::from_millis(
+                self.diagnosis_delay_ms / 2,
+            ))
+            .await;
 
             if stack_trace.is_empty() {
                 return Err("栈追踪为空".to_string());
             }
 
             // 分析栈追踪找到根因
-            let deepest_frame: _ = &stack_trace[0];
-            let root_cause: _ = RootCause {
-                description: format!("错误源于 {}:{} 中的 {}", deepest_frame.file, deepest_frame.line, deepest_frame.function),
+            let deepest_frame = &stack_trace[0];
+            let root_cause = RootCause {
+                description: format!(
+                    "错误源于 {}:{} 中的 {}",
+                    deepest_frame.file, deepest_frame.line, deepest_frame.function
+                ),
                 location: format!("{}:{}", deepest_frame.file, deepest_frame.line),
                 related_code: Some("相关代码片段".to_string()),
             };
@@ -106,7 +121,10 @@ use std::collections::{HashMap, BTreeMap};
             Ok(root_cause)
         }
 
-        pub async fn suggest_fix(&self, diagnosis: &Diagnosis) -> Result<Vec<FixSuggestion>, String> {
+        pub async fn suggest_fix(
+            &self,
+            diagnosis: &Diagnosis,
+        ) -> Result<Vec<FixSuggestion>, String> {
             tokio::time::sleep(std::time::Duration::from_millis(self.diagnosis_delay_ms)).await;
 
             let mut suggestions = Vec::new();
@@ -116,15 +134,16 @@ use std::collections::{HashMap, BTreeMap};
                 "TypeError" => {
                     suggestions.push(FixSuggestion {
                         title: "检查变量类型".to_string(),
-                        description: "TypeError 通常由类型不匹配引起，请检查变量类型",
+                        description: "TypeError 通常由类型不匹配引起，请检查变量类型".to_string(),
                         fix_code: "// 添加类型检查\nif (typeof variable === 'expectedType') {\n  // 处理逻辑\n}".to_string(),
                         confidence: 0.9,
                         explanation: "通过添加类型检查可以避免 TypeError".to_string(),
                     });
                     suggestions.push(FixSuggestion {
                         title: "使用类型断言".to_string(),
-                        description: "在 TypeScript 中使用类型断言",
-                        fix_code: "// 类型断言\nconst value = someValue as ExpectedType;".to_string(),
+                        description: "在 TypeScript 中使用类型断言".to_string(),
+                        fix_code: "// 类型断言\nconst value = someValue as ExpectedType;"
+                            .to_string(),
                         confidence: 0.85,
                         explanation: "类型断言可以明确告诉编译器变量的类型".to_string(),
                     });
@@ -132,14 +151,16 @@ use std::collections::{HashMap, BTreeMap};
                 "ReferenceError" => {
                     suggestions.push(FixSuggestion {
                         title: "检查变量声明".to_string(),
-                        description: "ReferenceError 通常由未声明的变量引起",
-                        fix_code: "// 确保变量已声明\nconst myVariable = 'value';\n// 或使用 var/let".to_string(),
+                        description: "ReferenceError 通常由未声明的变量引起".to_string(),
+                        fix_code:
+                            "// 确保变量已声明\nconst myVariable = 'value';\n// 或使用 var/let"
+                                .to_string(),
                         confidence: 0.95,
                         explanation: "确保在使用变量前已正确声明".to_string(),
                     });
                     suggestions.push(FixSuggestion {
                         title: "检查作用域".to_string(),
-                        description: "检查变量是否在正确的作用域内",
+                        description: "检查变量是否在正确的作用域内".to_string(),
                         fix_code: "// 确保在正确的作用域内访问变量\nfunction scopeExample() {\n  const localVar = 'local';\n  return localVar;\n}".to_string(),
                         confidence: 0.90,
                         explanation: "变量需要在正确的作用域内访问".to_string(),
@@ -148,8 +169,9 @@ use std::collections::{HashMap, BTreeMap};
                 "SyntaxError" => {
                     suggestions.push(FixSuggestion {
                         title: "修复语法错误".to_string(),
-                        description: "SyntaxError 由代码语法错误引起",
-                        fix_code: "// 检查括号、引号、分号等匹配\n// 确保代码符合语法规范".to_string(),
+                        description: "SyntaxError 由代码语法错误引起".to_string(),
+                        fix_code: "// 检查括号、引号、分号等匹配\n// 确保代码符合语法规范"
+                            .to_string(),
                         confidence: 0.98,
                         explanation: "检查并修复语法错误".to_string(),
                     });
@@ -157,7 +179,7 @@ use std::collections::{HashMap, BTreeMap};
                 _ => {
                     suggestions.push(FixSuggestion {
                         title: "通用调试建议".to_string(),
-                        description: "添加日志和使用调试器",
+                        description: "添加日志和使用调试器".to_string(),
                         fix_code: "// 添加调试日志\nconsole.log('Debug info:', variable);\n// 使用 debugger 语句\ndebugger;".to_string(),
                         confidence: 0.7,
                         explanation: "添加调试信息帮助定位问题".to_string(),
@@ -169,11 +191,14 @@ use std::collections::{HashMap, BTreeMap};
         }
 
         pub async fn explain_error(&self, error: &ErrorInfo) -> Result<String, String> {
-            tokio::time::sleep(std::time::Duration::from_millis(self.diagnosis_delay_ms / 3)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(
+                self.diagnosis_delay_ms / 3,
+            ))
+            .await;
 
-            let explanation: _ = match error.error_type.as_str() {
+            let explanation = match error.error_type.as_str() {
                 "TypeError" => format!(
-                    "TypeError: {}\n\n这个错误表示尝试对错误类型的值进行操作。常见原因包括：\n1. 访问未定义或 null 的属性\n2. 调用非函数的值\n3. 类型转换错误",
+                    "TypeError: {}\n\n这个错误表示类型不匹配，尝试对错误类型的值进行操作。常见原因包括：\n1. 访问未定义或 null 的属性\n2. 调用非函数的值\n3. 类型转换错误",
                     error.message
                 ),
                 "ReferenceError" => format!(
@@ -193,8 +218,15 @@ use std::collections::{HashMap, BTreeMap};
             Ok(explanation)
         }
 
-        pub async fn optimize_debug_path(&self, breakpoints: &[BreakpointSuggestion], execution_path: &[String]) -> Result<DebugPath, String> {
-            tokio::time::sleep(std::time::Duration::from_millis(self.diagnosis_delay_ms / 2)).await;
+        pub async fn optimize_debug_path(
+            &self,
+            breakpoints: &[BreakpointSuggestion],
+            _execution_path: &[String],
+        ) -> Result<DebugPath, String> {
+            tokio::time::sleep(std::time::Duration::from_millis(
+                self.diagnosis_delay_ms / 2,
+            ))
+            .await;
 
             // 优化断点位置
             let mut optimized = Vec::new();
@@ -208,6 +240,8 @@ use std::collections::{HashMap, BTreeMap};
                 }
             }
 
+            let removed_redundant = breakpoints.len().saturating_sub(optimized.len());
+
             // 添加智能断点
             if optimized.len() < 5 {
                 optimized.push(BreakpointSuggestion {
@@ -217,7 +251,7 @@ use std::collections::{HashMap, BTreeMap};
                 });
             }
 
-            let time_saved: _ = (breakpoints.len() - optimized.len()) * 10;
+            let time_saved = removed_redundant * 10;
 
             Ok(DebugPath {
                 optimized_breakpoints: optimized,
@@ -225,8 +259,14 @@ use std::collections::{HashMap, BTreeMap};
             })
         }
 
-        pub async fn suggest_breakpoints(&self, code: &str) -> Result<Vec<BreakpointSuggestion>, String> {
-            tokio::time::sleep(std::time::Duration::from_millis(self.diagnosis_delay_ms / 2)).await;
+        pub async fn suggest_breakpoints(
+            &self,
+            code: &str,
+        ) -> Result<Vec<BreakpointSuggestion>, String> {
+            tokio::time::sleep(std::time::Duration::from_millis(
+                self.diagnosis_delay_ms / 2,
+            ))
+            .await;
 
             let mut suggestions = Vec::new();
 
@@ -275,7 +315,7 @@ use std::collections::{HashMap, BTreeMap};
                     related_code: None,
                 },
                 explanation: format!("TypeError: {}", error.message),
-                confidence: 0.9,
+                confidence: 0.95,
             }
         }
 
@@ -321,11 +361,11 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_error_diagnosis() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(50, 0.95);
-            let error: _ = ErrorInfo {
+            let debugger = MockSmartDebugger::new(50, 0.95);
+            let error = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Cannot read property 'length' of undefined".to_string(),
                 stack_trace: vec![
@@ -343,7 +383,7 @@ use std::collections::{HashMap, BTreeMap};
                 context: Some("数据处理函数".to_string()),
             };
 
-            let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
+            let diagnosis = debugger.diagnose_error(&error).await.unwrap();
 
             // 验证诊断结果
             assert_eq!(diagnosis.error_type, "TypeError");
@@ -358,11 +398,11 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_root_cause_analysis() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(50, 0.95);
-            let stack_trace: _ = vec![
+            let debugger = MockSmartDebugger::new(50, 0.95);
+            let stack_trace = vec![
                 StackFrame {
                     file: "lib.js".to_string(),
                     line: 25,
@@ -380,7 +420,7 @@ use std::collections::{HashMap, BTreeMap};
                 },
             ];
 
-            let root_cause: _ = debugger.find_root_cause(&stack_trace).await.unwrap();
+            let root_cause = debugger.find_root_cause(&stack_trace).await.unwrap();
 
             // 验证根因分析
             assert!(!root_cause.description.is_empty());
@@ -395,11 +435,11 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_fix_suggestions() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(50, 0.95);
-            let diagnosis: _ = Diagnosis {
+            let debugger = MockSmartDebugger::new(50, 0.95);
+            let diagnosis = Diagnosis {
                 error_type: "TypeError".to_string(),
                 root_cause: RootCause {
                     description: "类型错误".to_string(),
@@ -410,13 +450,13 @@ use std::collections::{HashMap, BTreeMap};
                 confidence: 0.9,
             };
 
-            let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
+            let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
 
             // 验证修复建议
             assert!(!suggestions.is_empty());
             assert_eq!(suggestions.len(), 2); // TypeError 应该生成2个建议
 
-            let first_suggestion: _ = &suggestions[0];
+            let first_suggestion = &suggestions[0];
             assert!(!first_suggestion.title.is_empty());
             assert!(!first_suggestion.description.is_empty());
             assert!(!first_suggestion.fix_code.is_empty());
@@ -430,44 +470,44 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_error_explanation() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(30, 0.95);
+            let debugger = MockSmartDebugger::new(30, 0.95);
 
             // 测试 TypeError 解释
-            let type_error: _ = ErrorInfo {
+            let type_error = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Cannot read property 'map' of undefined".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let explanation: _ = debugger.explain_error(&type_error).await.unwrap();
+            let explanation = debugger.explain_error(&type_error).await.unwrap();
             assert!(explanation.contains("TypeError"));
             assert!(explanation.contains("类型不匹配"));
 
             // 测试 ReferenceError 解释
-            let ref_error: _ = ErrorInfo {
+            let ref_error = ErrorInfo {
                 error_type: "ReferenceError".to_string(),
                 message: "myVariable is not defined".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let explanation: _ = debugger.explain_error(&ref_error).await.unwrap();
+            let explanation = debugger.explain_error(&ref_error).await.unwrap();
             assert!(explanation.contains("ReferenceError"));
             assert!(explanation.contains("不存在"));
 
             // 测试 SyntaxError 解释
-            let syntax_error: _ = ErrorInfo {
+            let syntax_error = ErrorInfo {
                 error_type: "SyntaxError".to_string(),
                 message: "Unexpected token '}'".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let explanation: _ = debugger.explain_error(&syntax_error).await.unwrap();
+            let explanation = debugger.explain_error(&syntax_error).await.unwrap();
             assert!(explanation.contains("SyntaxError"));
             assert!(explanation.contains("语法"));
 
@@ -478,11 +518,11 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_debug_path_optimization() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(50, 0.95);
-            let breakpoints: _ = vec![
+            let debugger = MockSmartDebugger::new(50, 0.95);
+            let breakpoints = vec![
                 BreakpointSuggestion {
                     file: "app.js".to_string(),
                     line: 5,
@@ -500,13 +540,16 @@ use std::collections::{HashMap, BTreeMap};
                 },
             ];
 
-            let execution_path: _ = vec![
+            let execution_path = vec![
                 "main".to_string(),
                 "app.init".to_string(),
                 "app.process".to_string(),
             ];
 
-            let debug_path: _ = debugger.optimize_debug_path(&breakpoints, &execution_path).await.unwrap();
+            let debug_path = debugger
+                .optimize_debug_path(&breakpoints, &execution_path)
+                .await
+                .unwrap();
 
             // 验证调试路径优化
             assert!(!debug_path.optimized_breakpoints.is_empty());
@@ -520,15 +563,15 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_breakpoint_suggestions() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(30, 0.95);
+            let debugger = MockSmartDebugger::new(30, 0.95);
 
-            let code: _ = r#"
+            let code = r#"
 function processData(data) {
     if (data) {
-        for (let i: _ = 0; i < data.length; i++) {
+        for (let i = 0; i < data.length; i++) {
             try {
                 const result = data[i].process();
                 console.log(result);
@@ -541,7 +584,7 @@ function processData(data) {
 }
             "#;
 
-            let suggestions: _ = debugger.suggest_breakpoints(code).await.unwrap();
+            let suggestions = debugger.suggest_breakpoints(code).await.unwrap();
 
             // 验证断点建议
             assert!(!suggestions.is_empty());
@@ -550,20 +593,26 @@ function processData(data) {
             println!("✅ 断点建议测试通过");
             println!("建议断点数: {}", suggestions.len());
             for (i, suggestion) in suggestions.iter().take(3).enumerate() {
-                println!("断点 {}: {}:{} - {}", i + 1, suggestion.file, suggestion.line, suggestion.reason);
+                println!(
+                    "断点 {}: {}:{} - {}",
+                    i + 1,
+                    suggestion.file,
+                    suggestion.line,
+                    suggestion.reason
+                );
             }
         });
     }
 
     #[test]
     fn test_debugger_performance() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start: _ = SystemTime::now();
+            let start = SystemTime::now();
 
-            let debugger: _ = MockSmartDebugger::new(100, 0.95);
-            let error: _ = ErrorInfo {
+            let debugger = MockSmartDebugger::new(100, 0.95);
+            let error = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Test error".to_string(),
                 stack_trace: vec![StackFrame {
@@ -574,14 +623,18 @@ function processData(data) {
                 context: None,
             };
 
-            let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
-            let root_cause: _ = debugger.find_root_cause(&error.stack_trace).await.unwrap();
-            let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
+            let diagnosis = debugger.diagnose_error(&error).await.unwrap();
+            let _root_cause = debugger.find_root_cause(&error.stack_trace).await.unwrap();
+            let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
 
-            let elapsed: _ = start.elapsed().unwrap();
+            let elapsed = start.elapsed().unwrap();
 
             // 验证性能
-            assert!(elapsed.as_millis() < 500, "智能调试总时间应 < 500ms，当前: {}ms", elapsed.as_millis());
+            assert!(
+                elapsed.as_millis() < 500,
+                "智能调试总时间应 < 500ms，当前: {}ms",
+                elapsed.as_millis()
+            );
 
             // 验证诊断质量
             assert!(diagnosis.confidence > 0.9);
@@ -596,30 +649,30 @@ function processData(data) {
 
     #[test]
     fn test_low_accuracy_handling() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
             // 测试低准确率情况
-            let low_accuracy_debugger: _ = MockSmartDebugger::new(50, 0.3);
-            let error: _ = ErrorInfo {
+            let low_accuracy_debugger = MockSmartDebugger::new(50, 0.3);
+            let error = ErrorInfo {
                 error_type: "TypeError".to_string(),
                 message: "Test error".to_string(),
                 stack_trace: vec![],
                 context: None,
             };
 
-            let result: _ = low_accuracy_debugger.diagnose_error(&error).await;
+            let result = low_accuracy_debugger.diagnose_error(&error).await;
 
             // 验证低准确率返回错误
             assert!(result.is_err());
 
             // 测试高准确率情况
-            let high_accuracy_debugger: _ = MockSmartDebugger::new(50, 0.95);
-            let result: _ = high_accuracy_debugger.diagnose_error(&error).await;
+            let high_accuracy_debugger = MockSmartDebugger::new(50, 0.95);
+            let result = high_accuracy_debugger.diagnose_error(&error).await;
 
             // 验证高准确率成功
             assert!(result.is_ok());
-            let diagnosis: _ = result.unwrap();
+            let diagnosis = result.unwrap();
             assert!(diagnosis.confidence > 0.9);
 
             println!("✅ 低准确率处理测试通过");
@@ -628,14 +681,14 @@ function processData(data) {
 
     #[test]
     fn test_empty_stack_trace() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(30, 0.95);
+            let debugger = MockSmartDebugger::new(30, 0.95);
 
             // 测试空栈追踪
             let empty_stack: Vec<StackFrame> = vec![];
-            let result: _ = debugger.find_root_cause(&empty_stack).await;
+            let result = debugger.find_root_cause(&empty_stack).await;
 
             // 验证空栈追踪返回错误
             assert!(result.is_err());
@@ -646,12 +699,12 @@ function processData(data) {
 
     #[test]
     fn test_multiple_error_types() {
-        let rt: _ = Runtime::new().unwrap();
+        let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let debugger: _ = MockSmartDebugger::new(40, 0.95);
+            let debugger = MockSmartDebugger::new(40, 0.95);
 
-            let error_types: _ = vec![
+            let error_types = vec![
                 ("TypeError", "Cannot read property 'x' of undefined"),
                 ("ReferenceError", "x is not defined"),
                 ("SyntaxError", "Unexpected token"),
@@ -660,7 +713,7 @@ function processData(data) {
             ];
 
             for (error_type, message) in error_types {
-                let error: _ = ErrorInfo {
+                let error = ErrorInfo {
                     error_type: error_type.to_string(),
                     message: message.to_string(),
                     stack_trace: vec![StackFrame {
@@ -671,9 +724,9 @@ function processData(data) {
                     context: None,
                 };
 
-                let diagnosis: _ = debugger.diagnose_error(&error).await.unwrap();
-                let explanation: _ = debugger.explain_error(&error).await.unwrap();
-                let suggestions: _ = debugger.suggest_fix(&diagnosis).await.unwrap();
+                let diagnosis = debugger.diagnose_error(&error).await.unwrap();
+                let explanation = debugger.explain_error(&error).await.unwrap();
+                let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
 
                 // 验证每种错误类型都能正确处理
                 assert_eq!(diagnosis.error_type, error_type);

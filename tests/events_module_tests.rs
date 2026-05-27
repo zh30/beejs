@@ -1,8 +1,8 @@
 // Events 模块测试 - v0.3.46
 // 测试 EventEmitter 功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -39,9 +39,8 @@ fn test_event_emitter_instance() {
 #[serial]
 fn test_event_emitter_on_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.on"
-    );
+    let result =
+        runtime.execute_code("const emitter = new events.EventEmitter(); typeof emitter.on");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -50,9 +49,8 @@ fn test_event_emitter_on_method() {
 #[serial]
 fn test_event_emitter_once_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.once"
-    );
+    let result =
+        runtime.execute_code("const emitter = new events.EventEmitter(); typeof emitter.once");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -61,9 +59,8 @@ fn test_event_emitter_once_method() {
 #[serial]
 fn test_event_emitter_emit_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.emit"
-    );
+    let result =
+        runtime.execute_code("const emitter = new events.EventEmitter(); typeof emitter.emit");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -72,9 +69,8 @@ fn test_event_emitter_emit_method() {
 #[serial]
 fn test_event_emitter_remove_listener_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.removeListener"
-    );
+    let result = runtime
+        .execute_code("const emitter = new events.EventEmitter(); typeof emitter.removeListener");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -84,7 +80,7 @@ fn test_event_emitter_remove_listener_method() {
 fn test_event_emitter_remove_all_listeners_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.removeAllListeners"
+        "const emitter = new events.EventEmitter(); typeof emitter.removeAllListeners",
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
@@ -94,9 +90,8 @@ fn test_event_emitter_remove_all_listeners_method() {
 #[serial]
 fn test_event_emitter_listeners_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.listeners"
-    );
+    let result =
+        runtime.execute_code("const emitter = new events.EventEmitter(); typeof emitter.listeners");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -105,9 +100,8 @@ fn test_event_emitter_listeners_method() {
 #[serial]
 fn test_event_emitter_event_names_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.eventNames"
-    );
+    let result = runtime
+        .execute_code("const emitter = new events.EventEmitter(); typeof emitter.eventNames");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -116,9 +110,8 @@ fn test_event_emitter_event_names_method() {
 #[serial]
 fn test_event_emitter_get_max_listeners_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.getMaxListeners"
-    );
+    let result = runtime
+        .execute_code("const emitter = new events.EventEmitter(); typeof emitter.getMaxListeners");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -127,9 +120,8 @@ fn test_event_emitter_get_max_listeners_method() {
 #[serial]
 fn test_event_emitter_set_max_listeners_method() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const emitter = new events.EventEmitter(); typeof emitter.setMaxListeners"
-    );
+    let result = runtime
+        .execute_code("const emitter = new events.EventEmitter(); typeof emitter.setMaxListeners");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -138,9 +130,7 @@ fn test_event_emitter_set_max_listeners_method() {
 #[serial]
 fn test_event_emitter_listener_count_static() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "typeof events.EventEmitter.listenerCount"
-    );
+    let result = runtime.execute_code("typeof events.EventEmitter.listenerCount");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -149,13 +139,15 @@ fn test_event_emitter_listener_count_static() {
 #[serial]
 fn test_basic_event_on_emit() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let called = false;
         emitter.on('test', () => { called = true; });
         emitter.emit('test');
         called
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -164,13 +156,15 @@ fn test_basic_event_on_emit() {
 #[serial]
 fn test_event_with_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let receivedData = null;
         emitter.on('data', (data) => { receivedData = data; });
         emitter.emit('data', 'hello world');
         receivedData
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "hello world");
 }
@@ -179,13 +173,15 @@ fn test_event_with_data() {
 #[serial]
 fn test_multiple_args_emit() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let receivedArgs = null;
         emitter.on('multi', (...args) => { receivedArgs = args; });
         emitter.emit('multi', 1, 'two', true);
         JSON.stringify(receivedArgs)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     let output = result.unwrap();
     assert!(output.contains("1") && output.contains("two") && output.contains("true"));
@@ -195,7 +191,8 @@ fn test_multiple_args_emit() {
 #[serial]
 fn test_once_event_only_fires_once() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let count = 0;
         emitter.once('once', () => { count++; });
@@ -203,7 +200,8 @@ fn test_once_event_only_fires_once() {
         emitter.emit('once');
         emitter.emit('once');
         count
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "1");
 }
@@ -212,7 +210,8 @@ fn test_once_event_only_fires_once() {
 #[serial]
 fn test_remove_listener() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let count = 0;
         const listener = () => { count++; };
@@ -221,7 +220,8 @@ fn test_remove_listener() {
         emitter.removeListener('test', listener);
         emitter.emit('test');
         count
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "1");
 }
@@ -232,7 +232,8 @@ fn test_remove_all_listeners() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // Note: removeAllListeners clears all global listeners, not just per-emitter
     // This is a simplified implementation - each code execution gets fresh listeners
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let count = 0;
         const handler = () => { count++; };
@@ -244,7 +245,8 @@ fn test_remove_all_listeners() {
         emitter.emit('a');
         emitter.emit('b');
         count
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "3"); // a (1), b (1), a removed so only b (1)
 }
@@ -253,7 +255,8 @@ fn test_remove_all_listeners() {
 #[serial]
 fn test_listeners_returns_array() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const fn1 = () => {};
         const fn2 = () => {};
@@ -261,7 +264,8 @@ fn test_listeners_returns_array() {
         emitter.on('test', fn2);
         const listeners = emitter.listeners('test');
         listeners.length
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "2");
 }
@@ -270,13 +274,15 @@ fn test_listeners_returns_array() {
 #[serial]
 fn test_event_names() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.on('event1', () => {});
         emitter.on('event2', () => {});
         const names = emitter.eventNames();
         JSON.stringify(names)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     let output = result.unwrap();
     assert!(output.contains("event1") && output.contains("event2"));
@@ -286,10 +292,12 @@ fn test_event_names() {
 #[serial]
 fn test_default_max_listeners() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.getMaxListeners()
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "10");
 }
@@ -298,11 +306,13 @@ fn test_default_max_listeners() {
 #[serial]
 fn test_set_max_listeners() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.setMaxListeners(20);
         emitter.getMaxListeners()
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "20");
 }
@@ -311,12 +321,14 @@ fn test_set_max_listeners() {
 #[serial]
 fn test_listener_count_static() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.on('test', () => {});
         emitter.on('test', () => {});
         events.EventEmitter.listenerCount(emitter, 'test')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "2");
 }
@@ -325,11 +337,13 @@ fn test_listener_count_static() {
 #[serial]
 fn test_emit_returns_true_with_listeners() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.on('test', () => {});
         emitter.emit('test')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -338,10 +352,12 @@ fn test_emit_returns_true_with_listeners() {
 #[serial]
 fn test_emit_returns_false_without_listeners() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.emit('nonexistent')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
 }
@@ -350,10 +366,12 @@ fn test_emit_returns_false_without_listeners() {
 #[serial]
 fn test_prepend_listener_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         typeof emitter.prependListener
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -362,13 +380,15 @@ fn test_prepend_listener_exists() {
 #[serial]
 fn test_prepend_listener_basic() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let called = false;
         emitter.prependListener('test', () => { called = true; });
         emitter.emit('test');
         called
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -379,34 +399,44 @@ fn test_prepend_listener_execution_order() {
     // v0.3.257: 测试 prependListener 的执行顺序
     // prependListener 添加的监听器应该比后续 on 添加的监听器先执行
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const order = [];
         emitter.on('test', () => { order.push('second'); });
         emitter.prependListener('test', () => { order.push('first'); });
         emitter.emit('test');
         JSON.stringify(order)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     let output = result.unwrap();
-    assert!(output.contains("first") && output.contains("second"),
-        "prependListener should execute before on listeners, got: {}", output);
+    assert!(
+        output.contains("first") && output.contains("second"),
+        "prependListener should execute before on listeners, got: {}",
+        output
+    );
     // Verify order: first element should be 'first'
-    assert!(output.starts_with("[\"first\""),
-        "prependListener should be first in execution order, got: {}", output);
+    assert!(
+        output.starts_with("[\"first\""),
+        "prependListener should be first in execution order, got: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_prepend_listener_with_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let receivedData = null;
         emitter.prependListener('data', (data) => { receivedData = data; });
         emitter.emit('data', 'hello prepend');
         receivedData
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "hello prepend");
 }
@@ -415,11 +445,13 @@ fn test_prepend_listener_with_data() {
 #[serial]
 fn test_prepend_listener_returns_emitter() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const result = emitter.prependListener('test', () => {});
         result === emitter
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -429,11 +461,13 @@ fn test_prepend_listener_returns_emitter() {
 fn test_prepend_listener_requires_function() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // v0.3.257: prependListener returns null when callback is not a function (consistent with on)
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const result = emitter.prependListener('test', 'not a function');
         result === null
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -442,12 +476,14 @@ fn test_prepend_listener_requires_function() {
 #[serial]
 fn test_prepend_listener_count() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.prependListener('test', () => {});
         emitter.on('test', () => {});
         events.EventEmitter.listenerCount(emitter, 'test')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "2");
 }
@@ -456,7 +492,8 @@ fn test_prepend_listener_count() {
 #[serial]
 fn test_prepend_listener_warning_exceeds_max() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.setMaxListeners(2);
         emitter.prependListener('test', () => {});
@@ -464,7 +501,8 @@ fn test_prepend_listener_warning_exceeds_max() {
         // This should trigger warning but still work
         emitter.prependListener('test', () => {});
         events.EventEmitter.listenerCount(emitter, 'test')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "3");
 }
@@ -475,10 +513,12 @@ fn test_prepend_listener_warning_exceeds_max() {
 #[serial]
 fn test_prepend_once_listener_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         typeof emitter.prependOnceListener
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -487,13 +527,15 @@ fn test_prepend_once_listener_exists() {
 #[serial]
 fn test_prepend_once_listener_basic() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let called = false;
         emitter.prependOnceListener('test', () => { called = true; });
         emitter.emit('test');
         called
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -503,7 +545,8 @@ fn test_prepend_once_listener_basic() {
 fn test_prepend_once_listener_only_fires_once() {
     // v0.3.258: prependOnceListener 只执行一次
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let count = 0;
         emitter.prependOnceListener('once', () => { count++; });
@@ -511,7 +554,8 @@ fn test_prepend_once_listener_only_fires_once() {
         emitter.emit('once');
         emitter.emit('once');
         count
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "1");
 }
@@ -522,34 +566,44 @@ fn test_prepend_once_listener_execution_order() {
     // v0.3.258: prependOnceListener 的执行顺序优先级
     // prependOnceListener 应该比 once 先执行
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const order = [];
         emitter.once('test', () => { order.push('second'); });
         emitter.prependOnceListener('test', () => { order.push('first'); });
         emitter.emit('test');
         JSON.stringify(order)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     let output = result.unwrap();
-    assert!(output.contains("first") && output.contains("second"),
-        "prependOnceListener should execute before once, got: {}", output);
+    assert!(
+        output.contains("first") && output.contains("second"),
+        "prependOnceListener should execute before once, got: {}",
+        output
+    );
     // Verify order: first element should be 'first'
-    assert!(output.starts_with("[\"first\""),
-        "prependOnceListener should be first in execution order, got: {}", output);
+    assert!(
+        output.starts_with("[\"first\""),
+        "prependOnceListener should be first in execution order, got: {}",
+        output
+    );
 }
 
 #[test]
 #[serial]
 fn test_prepend_once_listener_with_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         let receivedData = null;
         emitter.prependOnceListener('data', (data) => { receivedData = data; });
         emitter.emit('data', 'hello prependOnce');
         receivedData
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "hello prependOnce");
 }
@@ -558,11 +612,13 @@ fn test_prepend_once_listener_with_data() {
 #[serial]
 fn test_prepend_once_listener_returns_emitter() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const result = emitter.prependOnceListener('test', () => {});
         result === emitter
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -572,11 +628,13 @@ fn test_prepend_once_listener_returns_emitter() {
 fn test_prepend_once_listener_requires_function() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // v0.3.258: prependOnceListener returns null when callback is not a function
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const result = emitter.prependOnceListener('test', 'not a function');
         result === null
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -585,12 +643,14 @@ fn test_prepend_once_listener_requires_function() {
 #[serial]
 fn test_prepend_once_listener_count() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.prependOnceListener('test', () => {});
         emitter.once('test', () => {});
         events.EventEmitter.listenerCount(emitter, 'test')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "2");
 }
@@ -599,7 +659,8 @@ fn test_prepend_once_listener_count() {
 #[serial]
 fn test_prepend_once_listener_warning_exceeds_max() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         emitter.setMaxListeners(2);
         emitter.prependOnceListener('test', () => {});
@@ -607,7 +668,8 @@ fn test_prepend_once_listener_warning_exceeds_max() {
         // This should trigger warning but still work
         emitter.prependOnceListener('test', () => {});
         events.EventEmitter.listenerCount(emitter, 'test')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "3");
 }
@@ -618,7 +680,8 @@ fn test_prepend_once_listener_mixed_with_prepend_listener() {
     // v0.3.258: 混合使用 prependOnceListener 和 prependListener
     // 执行顺序: prependOnceListener -> prependListener -> once
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const emitter = new events.EventEmitter();
         const order = [];
         emitter.once('test', () => { order.push('once'); });
@@ -626,10 +689,14 @@ fn test_prepend_once_listener_mixed_with_prepend_listener() {
         emitter.prependOnceListener('test', () => { order.push('prependOnce'); });
         emitter.emit('test');
         JSON.stringify(order)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     let output = result.unwrap();
     // Expected order: prependOnce, prepend, once
-    assert!(output.starts_with("[\"prependOnce\",\"prepend\",\"once\""),
-        "Expected prependOnce -> prepend -> once order, got: {}", output);
+    assert!(
+        output.starts_with("[\"prependOnce\",\"prepend\",\"once\""),
+        "Expected prependOnce -> prepend -> once order, got: {}",
+        output
+    );
 }

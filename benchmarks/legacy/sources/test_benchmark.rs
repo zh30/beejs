@@ -119,7 +119,7 @@ console.log("Parsed count:", parsed.count);
 
     // Generate reports
     let config = ReportConfig {
-        output_dir: "./benchmark_reports".to_string(),
+        output_dir: "benchmarks/reports/generated".to_string(),
         ..Default::default()
     };
 
@@ -153,7 +153,7 @@ console.log("Parsed count:", parsed.count);
     println!("=" .repeat(60));
 
     println!("\n✅ Stage 37.0 Performance Comparison Engine test completed!");
-    println!("📁 Reports saved to: ./benchmark_reports/");
+    println!("📁 Reports saved to: benchmarks/reports/generated/");
 
     Ok(())
 }

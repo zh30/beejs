@@ -1,13 +1,11 @@
 // Go Runtime Integration
 // Provides seamless integration between Beejs and Go
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use std::sync::RwLock;
-use std::hash::Hash;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{mpsc, RwLock};
 
 /// Go VM (Virtual Machine) wrapper
 #[derive(Debug)]
@@ -50,7 +48,7 @@ pub enum GoMessage {
 /// Bee API exposed to Go
 #[derive(Debug)]
 pub struct BeeAPI {
-    runtime: Arc<dyn BeeRuntimeInterface>,
+    pub(crate) runtime: Arc<dyn BeeRuntimeInterface>,
 }
 /// Interface for Bee runtime operations
 pub trait BeeRuntimeInterface: Send + Sync {
@@ -74,10 +72,10 @@ impl GoVM {
 impl GoRuntime {
     /// Create a new Go runtime
     pub fn new(bee_api: Arc<BeeAPI>) -> Result<Self> {
-        let vm: _ = Arc::new(Mutex::new(GoVM::new()),?);
-        let goroutines: _ = Arc::new(Mutex::new(HashMap::new()),;
-        let executor: _ = Arc::new(Mutex::new(GoExecutor {)),
-            bee_runtime: bee_api.runtime.clone())
+        let vm: _ = Arc::new(GoVM::new()?);
+        let goroutines: _ = Arc::new(RwLock::new(HashMap::new()));
+        let executor: _ = Arc::new(GoExecutor {
+            bee_runtime: bee_api.runtime.clone(),
         });
         Ok(GoRuntime {
             vm,
@@ -102,7 +100,7 @@ impl GoRuntime {
     }
     /// Spawn a new Go routine
     pub async fn spawn_goroutine(&self, script: &str) -> Result<GoRoutineId> {
-        let id: _ = GoRoutineId(format!("goroutine_{}", uuid::Uuid::new_v4());
+        let id: _ = GoRoutineId(format!("goroutine_{}", uuid::Uuid::new_v4()));
         let (tx, mut rx) = mpsc::unbounded_channel::<GoMessage>();
         let goroutine: _ = GoRoutine {
             id: id.clone(),
@@ -149,7 +147,7 @@ impl GoRuntime {
         }
     }
     /// Get all active goroutines
-    pub async fn list_goroutines(&self) -> Result<Vec<GoRoutineId> {
+    pub async fn list_goroutines(&self) -> Result<Vec<GoRoutineId>> {
         let map: _ = self.goroutines.read().await;
         Ok(map.keys().cloned().collect())
     }
@@ -192,12 +190,17 @@ async fn execute_go_script(script: &str, bee_api: &BeeAPI) -> Result<String> {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    fn bee_api() -> Arc<BeeAPI> {
+        Arc::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime),
+        })
+    }
+
     #[tokio::test]
     async fn test_go_basic_execution() {
-        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),
-            runtime: Arc::new(MockBeeRuntime))
-        });
-        let runtime: _ = GoRuntime::new(bee_api).unwrap();
+        let runtime: _ = GoRuntime::new(bee_api()).unwrap();
         let code: _ = r#"
 package main
 import "fmt"
@@ -210,10 +213,7 @@ func main() {
     }
     #[tokio::test]
     async fn test_go_goroutine_spawn() {
-        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),
-            runtime: Arc::new(MockBeeRuntime))
-        });
-        let runtime: _ = GoRuntime::new(bee_api).unwrap();
+        let runtime: _ = GoRuntime::new(bee_api()).unwrap();
         let script: _ = r#"
 go func() {
     fmt.Println("Running in goroutine")
@@ -227,17 +227,15 @@ go func() {
     }
     #[tokio::test]
     async fn test_go_bee_interop() {
-        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),
-            runtime: Arc::new(MockBeeRuntime))
-        });
-        let runtime: _ = GoRuntime::new(bee_api).unwrap();
-        let bridge: _ = GoBeeBridge::new(
-            Arc::new(Mutex::new(MockBeeRuntime)))
-            Arc::new(Mutex::new(GoVM::new()),.unwrap()),
-        );
-        let result: _ = bridge.call_bee_from_go("console.log('Hello from Go calling Bee')").await;
+        let runtime: _ = GoRuntime::new(bee_api()).unwrap();
+        let bridge: _ = GoBeeBridge::new(Arc::new(MockBeeRuntime), Arc::new(GoVM::new().unwrap()));
+        let result: _ = bridge
+            .call_bee_from_go("console.log('Hello from Go calling Bee')")
+            .await;
         assert!(result.is_ok());
-        let result: _ = bridge.execute_go_from_bee("fmt.Println('Hello from Bee calling Go')").await;
+        let result: _ = bridge
+            .execute_go_from_bee("fmt.Println('Hello from Bee calling Go')")
+            .await;
         assert!(result.is_ok());
     }
     struct MockBeeRuntime;

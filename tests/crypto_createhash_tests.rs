@@ -45,7 +45,10 @@ fn test_create_hash_sha256() {
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+    assert_eq!(
+        result.unwrap().trim(),
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+    );
 }
 
 #[test]
@@ -60,7 +63,10 @@ fn test_create_hash_sha1() {
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d");
+    assert_eq!(
+        result.unwrap().trim(),
+        "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+    );
 }
 
 #[test]

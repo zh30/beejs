@@ -6,10 +6,10 @@
 
 ```bash
 # 运行 JavaScript 文件
-./target/release/beejs run example.js
+./target/release/bee run example.js
 
 # 运行 TypeScript 文件 (开发中)
-./target/release/beejs run example.ts
+./target/release/bee run example.ts
 ```
 
 ## 基础功能

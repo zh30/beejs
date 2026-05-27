@@ -1,9 +1,11 @@
 // 性能预测器
 // 基于机器学习的性能预测模型
 
-
+use crate::ai::ai_performance_engine::{
+    AiPerformanceEngineConfig, OptimizationSuggestion, OptimizationType, PerformanceMetrics,
+    PerformancePrediction,
+};
 use serde::{Deserialize, Serialize};
-use crate::ai::ai_performance_engine::{PerformanceMetrics, PerformancePrediction, OptimizationSuggestion, OptimizationType, AiPerformanceEngineConfig};
 /// 特征向量
 #[derive(Debug, Clone)]
 struct FeatureVector {
@@ -83,7 +85,8 @@ impl ModelWeights {
             let mut execution_time_bias_grad = 0.0;
             let mut memory_bias_grad = 0.0;
             let mut throughput_bias_grad = 0.0;
-            for (features, actual_execution_time, actual_memory, actual_throughput) in training_data {
+            for (features, actual_execution_time, actual_memory, actual_throughput) in training_data
+            {
                 // 执行时间预测和梯度
                 let predicted_execution_time: _ = self.predict_execution_time(features);
                 let error_execution_time: _ = predicted_execution_time - actual_execution_time;
@@ -144,7 +147,10 @@ impl PerformancePredictor {
         }
     }
     /// 预测性能
-    pub fn predict(&self, metrics_history: &[PerformanceMetrics]) -> Result<PerformancePrediction, Box<dyn std::error::Error>> {
+    pub fn predict(
+        &self,
+        metrics_history: &[PerformanceMetrics],
+    ) -> Result<PerformancePrediction, Box<dyn std::error::Error>> {
         if metrics_history.is_empty() {
             return Err("没有历史数据".into());
         }
@@ -164,7 +170,8 @@ impl PerformancePredictor {
         // 计算置信度（基于历史数据的方差）
         let confidence: _ = self.calculate_confidence(metrics_history);
         // 生成优化建议
-        let optimization_suggestions: _ = self.generate_optimization_suggestions(&features, &latest_metrics);
+        let optimization_suggestions: _ =
+            self.generate_optimization_suggestions(&features, &latest_metrics);
         Ok(PerformancePrediction {
             predicted_execution_time,
             predicted_memory,
@@ -216,7 +223,11 @@ impl PerformancePredictor {
         let recent_metrics: _ = &metrics_history[metrics_history.len().saturating_sub(10)..];
         let latencies: Vec<f64> = recent_metrics.iter().map(|m| m.latency).collect();
         let mean_latency: f64 = latencies.iter().sum::<f64>() / latencies.len() as f64;
-        let variance: _ = latencies.iter().map(|l| (l - mean_latency).powi(2)).sum::<f64>() / latencies.len() as f64;
+        let variance: _ = latencies
+            .iter()
+            .map(|l| (l - mean_latency).powi(2))
+            .sum::<f64>()
+            / latencies.len() as f64;
         let std_dev: _ = variance.sqrt();
         // 方差越小，置信度越高
         let confidence: _ = 1.0 / (1.0 + std_dev / mean_latency);
@@ -284,8 +295,8 @@ impl PerformancePredictor {
 mod tests {
     use super::*;
     use crate::ai::ai_performance_engine::AiPerformanceEngineConfig;
-use std::collections::{HashMap, BTreeMap};
-use std::time::Instant;
+    use std::collections::{BTreeMap, HashMap};
+    use std::time::Instant;
     #[test]
     fn test_model_prediction() {
         let config: _ = AiPerformanceEngineConfig::default();

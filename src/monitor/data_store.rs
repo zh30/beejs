@@ -3,11 +3,11 @@
 
 use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 /// 导出格式
 #[derive(Debug, Clone, PartialEq)]
@@ -117,11 +117,13 @@ impl DataStore {
             config,
             memory_cache: Arc::new(Mutex::new(VecDeque::new())),
             compressed_storage: Arc::new(Mutex::new(HashMap::new())),
-            query_index: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(QueryIndex {
-                time_index: Vec::new(),
-                type_index: HashMap::new(),
-                last_update: Instant::now(),
-            }))))),
+            query_index: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(
+                QueryIndex {
+                    time_index: Vec::new(),
+                    type_index: HashMap::new(),
+                    last_update: Instant::now(),
+                },
+            ))))),
             stats: Arc::new(Mutex::new(DataStoreStats {
                 total_data_points: 0,
                 memory_cache_size: 0,
@@ -140,7 +142,7 @@ impl DataStore {
             max_memory_bytes: 100 * 1024 * 1024, // 100MB
             compression_threshold: 1000,
             retention_period: Duration::from_secs(86400), // 24小时
-            cleanup_interval: Duration::from_secs(3600), // 1小时
+            cleanup_interval: Duration::from_secs(3600),  // 1小时
             compression_level: 6,
         };
         Self::new(config)
@@ -242,8 +244,16 @@ impl DataStore {
         }
         let metric_type: _ = data_points[0].value.metric_type.clone();
         let time_range: _ = (
-            data_points.iter().map(|dp| dp.value.timestamp).min().unwrap(),
-            data_points.iter().map(|dp| dp.value.timestamp).max().unwrap(),
+            data_points
+                .iter()
+                .map(|dp| dp.value.timestamp)
+                .min()
+                .unwrap(),
+            data_points
+                .iter()
+                .map(|dp| dp.value.timestamp)
+                .max()
+                .unwrap(),
         );
         // 序列化数据
         let mut serialized = Vec::new();
@@ -350,7 +360,11 @@ impl DataStore {
         true
     }
     /// 检查压缩数据条件匹配
-    fn matches_compressed_condition(&self, compressed: &CompressedData, condition: &QueryCondition) -> bool {
+    fn matches_compressed_condition(
+        &self,
+        compressed: &CompressedData,
+        condition: &QueryCondition,
+    ) -> bool {
         if let Some(ref metric_type) = condition.metric_type {
             if &compressed.metric_type != metric_type {
                 return false;
@@ -371,8 +385,11 @@ impl DataStore {
     /// 更新查询索引
     fn update_index(&self, metric: &MetricValue) -> Result<(), String> {
         let mut query_index = self.query_index.lock().map_err(|e| e.to_string())?;
-        query_index.time_index.push((metric.timestamp, metric.metric_type.clone()));
-        query_index.type_index
+        query_index
+            .time_index
+            .push((metric.timestamp, metric.metric_type.clone()));
+        query_index
+            .type_index
             .entry(metric.metric_type.clone())
             .or_insert_with(Vec::new)
             .push(metric.timestamp);
@@ -393,7 +410,11 @@ impl DataStore {
         Ok(())
     }
     /// 导出数据
-    pub fn export(&self, condition: QueryCondition, format: ExportFormat) -> Result<String, String> {
+    pub fn export(
+        &self,
+        condition: QueryCondition,
+        format: ExportFormat,
+    ) -> Result<String, String> {
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
         stats.export_count += 1;
         let data: _ = self.query(condition)?;
@@ -405,8 +426,8 @@ impl DataStore {
     }
     /// 导出为 JSON 格式
     fn export_json(&self, data: &[MetricValue]) -> Result<String, String> {
-        let json: _ = serde_json::to_string(data)
-            .map_err(|e| format!("JSON export failed: {}", e))?;
+        let json: _ =
+            serde_json::to_string(data).map_err(|e| format!("JSON export failed: {}", e))?;
         Ok(json)
     }
     /// 导出为 CSV 格式
@@ -456,7 +477,10 @@ impl DataStore {
             let line: _ = if labels.is_empty() {
                 format!("{} {} {}\n", metric_name, metric.value, metric.timestamp)
             } else {
-                format!("{}{{{}}} {} {}\n", metric_name, labels, metric.value, metric.timestamp)
+                format!(
+                    "{}{{{}}} {} {}\n",
+                    metric_name, labels, metric.value, metric.timestamp
+                )
             };
             prometheus.push_str(&line);
         }
@@ -472,10 +496,8 @@ impl DataStore {
         let mut memory_cache = self.memory_cache.lock().map_err(|e| e.to_string())?;
         let mut compressed_storage = self.compressed_storage.lock().map_err(|e| e.to_string())?;
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;
-        let cutoff_time: _ = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            - self.config.retention_period;
+        let cutoff_time: _ =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap() - self.config.retention_period;
         let mut cleaned_count = 0;
         // 清理内存缓存
         while let Some(data_point) = memory_cache.front() {

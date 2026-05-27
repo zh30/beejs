@@ -1,12 +1,11 @@
 // Traffic management for Istio
+use super::types::{
+    Abort, Delay, Destination, HttpFaultInjection, HttpMatchRequest, HttpRoute,
+    HttpRouteDestination, Percent, PortSelector, StringMatch, VirtualService, VirtualServiceSpec,
+};
 /// Provides routing, load balancing, and traffic splitting capabilities
 use kube::Api;
 use tracing::info;
-use super::types::{
-    VirtualService, VirtualServiceSpec, HttpRoute, HttpRouteDestination,
-    Destination, PortSelector, HttpMatchRequest, StringMatch,
-    HttpFaultInjection, Delay, Abort, Percent,
-};
 /// Traffic manager for Istio
 pub struct TrafficManager {
     /// Kubernetes client
@@ -37,30 +36,25 @@ impl TrafficManager {
         let routes: _ = vec![
             // Canary route (header-based)
             HttpRoute {
-                r#match: Some(vec![
-                    HttpMatchRequest {
-                        uri: None,
-                        headers: Some(HashMap::from([
-                            ("x-canary".to_string(), StringMatch {
-                                exact: Some("true".to_string()),
-                                prefix: None,
-                                regex: None,
-                            }),
-                        ])),
-                    },
-                ]),
-                route: Some(vec![
-                    HttpRouteDestination {
-                        destination: Destination {
-                            host: service.to_string(),
-                            subset: Some(canary_version.to_string()),
-                            port: Some(PortSelector {
-                                number: Some(8080),
-                            }),
+                r#match: Some(vec![HttpMatchRequest {
+                    uri: None,
+                    headers: Some(HashMap::from([(
+                        "x-canary".to_string(),
+                        StringMatch {
+                            exact: Some("true".to_string()),
+                            prefix: None,
+                            regex: None,
                         },
-                        weight: Some(canary_percent as i32),
+                    )])),
+                }]),
+                route: Some(vec![HttpRouteDestination {
+                    destination: Destination {
+                        host: service.to_string(),
+                        subset: Some(canary_version.to_string()),
+                        port: Some(PortSelector { number: Some(8080) }),
                     },
-                ]),
+                    weight: Some(canary_percent as i32),
+                }]),
                 fault: None,
                 timeout: None,
                 retries: None,
@@ -68,18 +62,14 @@ impl TrafficManager {
             // Stable route (remaining traffic)
             HttpRoute {
                 r#match: None,
-                route: Some(vec![
-                    HttpRouteDestination {
-                        destination: Destination {
-                            host: service.to_string(),
-                            subset: Some(stable_version.to_string()),
-                            port: Some(PortSelector {
-                                number: Some(8080),
-                            }),
-                        },
-                        weight: Some((100 - canary_percent) as i32),
+                route: Some(vec![HttpRouteDestination {
+                    destination: Destination {
+                        host: service.to_string(),
+                        subset: Some(stable_version.to_string()),
+                        port: Some(PortSelector { number: Some(8080) }),
                     },
-                ]),
+                    weight: Some((100 - canary_percent) as i32),
+                }]),
                 fault: None,
                 timeout: None,
                 retries: None,
@@ -113,30 +103,25 @@ impl TrafficManager {
         let routes: _ = vec![
             // Version A (header-based)
             HttpRoute {
-                r#match: Some(vec![
-                    HttpMatchRequest {
-                        uri: None,
-                        headers: Some(HashMap::from([
-                            ("x-experiment".to_string(), StringMatch {
-                                exact: Some("version-a".to_string()),
-                                prefix: None,
-                                regex: None,
-                            }),
-                        ])),
-                    },
-                ]),
-                route: Some(vec![
-                    HttpRouteDestination {
-                        destination: Destination {
-                            host: service.to_string(),
-                            subset: Some(version_a.to_string()),
-                            port: Some(PortSelector {
-                                number: Some(8080),
-                            }),
+                r#match: Some(vec![HttpMatchRequest {
+                    uri: None,
+                    headers: Some(HashMap::from([(
+                        "x-experiment".to_string(),
+                        StringMatch {
+                            exact: Some("version-a".to_string()),
+                            prefix: None,
+                            regex: None,
                         },
-                        weight: Some(split_percent as i32),
+                    )])),
+                }]),
+                route: Some(vec![HttpRouteDestination {
+                    destination: Destination {
+                        host: service.to_string(),
+                        subset: Some(version_a.to_string()),
+                        port: Some(PortSelector { number: Some(8080) }),
                     },
-                ]),
+                    weight: Some(split_percent as i32),
+                }]),
                 fault: None,
                 timeout: None,
                 retries: None,
@@ -144,18 +129,14 @@ impl TrafficManager {
             // Version B (remaining traffic)
             HttpRoute {
                 r#match: None,
-                route: Some(vec![
-                    HttpRouteDestination {
-                        destination: Destination {
-                            host: service.to_string(),
-                            subset: Some(version_b.to_string()),
-                            port: Some(PortSelector {
-                                number: Some(8080),
-                            }),
-                        },
-                        weight: Some((100 - split_percent) as i32),
+                route: Some(vec![HttpRouteDestination {
+                    destination: Destination {
+                        host: service.to_string(),
+                        subset: Some(version_b.to_string()),
+                        port: Some(PortSelector { number: Some(8080) }),
                     },
-                ]),
+                    weight: Some((100 - split_percent) as i32),
+                }]),
                 fault: None,
                 timeout: None,
                 retries: None,
@@ -189,25 +170,32 @@ impl TrafficManager {
         let vs: _ = virtual_services.get(service).await?;
         // Build updated spec with fault injection
         let updated_http: _ = vs.spec.http.map(|routes| {
-            routes.into_iter().map(|mut route| {
-                route.fault = Some(HttpFaultInjection {
-                    delay: match fault_type {
-                        FaultType::Delay => Some(Delay {
-                            fixed_delay: Some("5s".to_string()),
-                            percentage: Some(Percent { value: percentage as f64 }),
-                        }),
-                        FaultType::Abort => None,
-                    },
-                    abort: match fault_type {
-                        FaultType::Abort => Some(Abort {
-                            http_status: Some(500),
-                            percentage: Some(Percent { value: percentage as f64 }),
-                        }),
-                        FaultType::Delay => None,
-                    },
-                });
-                route
-            }).collect::<Vec<HttpRoute>>()
+            routes
+                .into_iter()
+                .map(|mut route| {
+                    route.fault = Some(HttpFaultInjection {
+                        delay: match fault_type {
+                            FaultType::Delay => Some(Delay {
+                                fixed_delay: Some("5s".to_string()),
+                                percentage: Some(Percent {
+                                    value: percentage as f64,
+                                }),
+                            }),
+                            FaultType::Abort => None,
+                        },
+                        abort: match fault_type {
+                            FaultType::Abort => Some(Abort {
+                                http_status: Some(500),
+                                percentage: Some(Percent {
+                                    value: percentage as f64,
+                                }),
+                            }),
+                            FaultType::Delay => None,
+                        },
+                    });
+                    route
+                })
+                .collect::<Vec<HttpRoute>>()
         });
         // Update virtual service
         let params: _ = kube::api::PatchParams::default();
@@ -216,7 +204,9 @@ impl TrafficManager {
                 "http": updated_http
             }
         });
-        virtual_services.patch(service, &params, &kube::api::Patch::Merge(&patch)).await?;
+        virtual_services
+            .patch(service, &params, &kube::api::Patch::Merge(&patch))
+            .await?;
         info!("Applied fault injection for service: {}", service);
         Ok(())
     }
@@ -229,10 +219,13 @@ impl TrafficManager {
         let vs: _ = virtual_services.get(service).await?;
         // Remove fault injection from HTTP routes
         let updated_http: _ = vs.spec.http.map(|routes| {
-            routes.into_iter().map(|mut route| {
-                route.fault = None;
-                route
-            }).collect::<Vec<_>>()
+            routes
+                .into_iter()
+                .map(|mut route| {
+                    route.fault = None;
+                    route
+                })
+                .collect::<Vec<_>>()
         });
         // Update virtual service
         let params: _ = kube::api::PatchParams::default();
@@ -241,7 +234,9 @@ impl TrafficManager {
                 "http": updated_http
             }
         });
-        virtual_services.patch(service, &params, &kube::api::Patch::Merge(&patch)).await?;
+        virtual_services
+            .patch(service, &params, &kube::api::Patch::Merge(&patch))
+            .await?;
         info!("Removed fault injection for service: {}", service);
         Ok(())
     }
@@ -298,10 +293,7 @@ mod tests {
     fn test_traffic_split_creation() {
         let split: _ = TrafficSplit {
             service: "beejs-api".to_string(),
-            splits: vec![
-                ("v1".to_string(), 90),
-                ("v2".to_string(), 10),
-            ],
+            splits: vec![("v1".to_string(), 90), ("v2".to_string(), 10)],
         };
         assert_eq!(split.service, "beejs-api");
         assert_eq!(split.splits.len(), 2);

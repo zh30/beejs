@@ -1,13 +1,12 @@
 // Container security scanner
 // Scans container images for vulnerabilities and compliance issues
 
-
-use std::path::Path;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
-use tracing::info;
-use std::io::Read;
 use std::hash::Hash;
+use std::io::Read;
+use std::path::Path;
+use tracing::info;
 /// Security scanner for container images
 pub struct SecurityScanner {
     /// Vulnerability database
@@ -33,7 +32,8 @@ impl SecurityScanner {
         // Scan for secrets
         let secrets: _ = self.scan_secrets(image).await?;
         // Calculate overall risk score
-        let risk_score: _ = self.calculate_risk_score(&vulnerabilities, &compliance_issues, &secrets);
+        let risk_score: _ =
+            self.calculate_risk_score(&vulnerabilities, &compliance_issues, &secrets);
         let report: _ = ScanReport {
             image_name: image.name.clone(),
             image_digest: image.digest.clone(),
@@ -44,11 +44,17 @@ impl SecurityScanner {
             risk_score,
             recommendations: self.generate_recommendations(&vulnerabilities, &compliance_issues),
         };
-        info!("Completed scan for image: {}. Risk score: {}", image.name, risk_score);
+        info!(
+            "Completed scan for image: {}. Risk score: {}",
+            image.name, risk_score
+        );
         Ok(report)
     }
     /// Scan for vulnerabilities
-    async fn scan_vulnerabilities(&self, image: &ContainerImage) -> Result<Vec<Vulnerability>, Error> {
+    async fn scan_vulnerabilities(
+        &self,
+        image: &ContainerImage,
+    ) -> Result<Vec<Vulnerability>, Error> {
         let mut vulnerabilities = Vec::new();
         // Scan each layer for vulnerabilities
         for layer in &image.layers {
@@ -61,7 +67,10 @@ impl SecurityScanner {
         Ok(vulnerabilities)
     }
     /// Scan a single layer for vulnerabilities
-    async fn scan_layer_vulnerabilities(&self, layer: &ImageLayer) -> Result<Vec<Vulnerability>, Error> {
+    async fn scan_layer_vulnerabilities(
+        &self,
+        layer: &ImageLayer,
+    ) -> Result<Vec<Vulnerability>, Error> {
         let mut vulnerabilities = Vec::new();
         // Check against vulnerability database
         for vuln in self.vulnerability_db.get_vulnerabilities() {
@@ -76,14 +85,15 @@ impl SecurityScanner {
     fn is_vulnerability_relevant(&self, vuln: &Vulnerability, layer: &ImageLayer) -> bool {
         // Check if vulnerability affects the base image
         if layer.is_base_layer() {
-            return vuln.affected_packages.iter().any(|pkg| {
-                layer.packages.contains(pkg)
-            });
+            return vuln
+                .affected_packages
+                .iter()
+                .any(|pkg| layer.packages.contains(pkg));
         }
         // Check if vulnerability affects installed packages
-        vuln.affected_packages.iter().any(|pkg| {
-            layer.packages.contains(pkg)
-        })
+        vuln.affected_packages
+            .iter()
+            .any(|pkg| layer.packages.contains(pkg))
     }
     /// Scan for compliance issues
     async fn scan_compliance(&self, image: &ContainerImage) -> Result<Vec<ComplianceIssue>, Error> {
@@ -141,11 +151,23 @@ impl SecurityScanner {
         let mut secrets = Vec::new();
         // Define secret patterns
         let secret_patterns: _ = vec![
-            ("AWS_ACCESS_KEY_ID", r#"(?i)aws_access_key_id\s*[=:]\s*['\"]?[A-Z0-9]{16,}['\"]?"#),
-            ("AWS_SECRET_ACCESS_KEY", r#"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Z0-9/+=]{40,}['\"]?"#),
+            (
+                "AWS_ACCESS_KEY_ID",
+                r#"(?i)aws_access_key_id\s*[=:]\s*['\"]?[A-Z0-9]{16,}['\"]?"#,
+            ),
+            (
+                "AWS_SECRET_ACCESS_KEY",
+                r#"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Z0-9/+=]{40,}['\"]?"#,
+            ),
             ("PRIVATE_KEY", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
-            ("API_KEY", r#"(?i)(api[_-]?key|apikey)\s*[=:]\s*['\"]?[a-zA-Z0-9]{32,}['\"]?"#),
-            ("PASSWORD", r#"(?i)password\s*[=:]\s*['\"]?[a-zA-Z0-9]{8,}['\"]?"#),
+            (
+                "API_KEY",
+                r#"(?i)(api[_-]?key|apikey)\s*[=:]\s*['\"]?[a-zA-Z0-9]{32,}['\"]?"#,
+            ),
+            (
+                "PASSWORD",
+                r#"(?i)password\s*[=:]\s*['\"]?[a-zA-Z0-9]{8,}['\"]?"#,
+            ),
         ];
         // Scan files for secrets
         for file_path in &layer.files {
@@ -222,16 +244,18 @@ impl SecurityScanner {
     ) -> Vec<String> {
         let mut recommendations = Vec::new();
         // Critical vulnerability recommendations
-        if vulnerabilities.iter().any(|v| v.severity == VulnerabilitySeverity::Critical) {
-            recommendations.push(
-                "Address critical vulnerabilities immediately".to_string()
-            );
+        if vulnerabilities
+            .iter()
+            .any(|v| v.severity == VulnerabilitySeverity::Critical)
+        {
+            recommendations.push("Address critical vulnerabilities immediately".to_string());
         }
         // Compliance recommendations
-        if compliance_issues.iter().any(|i| i.severity == ComplianceSeverity::High) {
-            recommendations.push(
-                "Implement high-priority compliance recommendations".to_string()
-            );
+        if compliance_issues
+            .iter()
+            .any(|i| i.severity == ComplianceSeverity::High)
+        {
+            recommendations.push("Implement high-priority compliance recommendations".to_string());
         }
         // General recommendations
         recommendations.extend(vec![
@@ -246,8 +270,8 @@ impl SecurityScanner {
     /// Check if image has non-root user
     fn has_non_root_user(&self, image: &ContainerImage) -> bool {
         image.layers.iter().any(|layer| {
-            layer.files.contains(&"/etc/passwd".to_string()) &&
-            layer.files.contains(&"/etc/shadow".to_string())
+            layer.files.contains(&"/etc/passwd".to_string())
+                && layer.files.contains(&"/etc/shadow".to_string())
         })
     }
     /// Check if image has read-only root filesystem
@@ -387,11 +411,13 @@ impl ScanReport {
     }
     /// Get high severity issue count
     pub fn high_severity_issue_count(&self) -> usize {
-        let vuln_count: _ = self.vulnerabilities
+        let vuln_count: _ = self
+            .vulnerabilities
             .iter()
             .filter(|v| v.severity == VulnerabilitySeverity::High)
             .count();
-        let compliance_count: _ = self.compliance_issues
+        let compliance_count: _ = self
+            .compliance_issues
             .iter()
             .filter(|i| i.severity == ComplianceSeverity::High)
             .count();
@@ -399,9 +425,9 @@ impl ScanReport {
     }
     /// Check if scan passed
     pub fn passed(&self) -> bool {
-        self.risk_score < 70.0 &&
-        self.critical_vulnerability_count() == 0 &&
-        self.secrets.is_empty()
+        self.risk_score < 70.0
+            && self.critical_vulnerability_count() == 0
+            && self.secrets.is_empty()
     }
 }
 /// Vulnerability database
@@ -482,7 +508,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::SystemTime;
+    use std::time::SystemTime;
     #[test]
     fn test_vulnerability_severity_ordering() {
         assert!(VulnerabilitySeverity::Critical > VulnerabilitySeverity::High);
@@ -501,16 +527,14 @@ use std::time::SystemTime;
             image_name: "test-image".to_string(),
             image_digest: "sha256:123".to_string(),
             scan_timestamp: std::time::SystemTime::now(),
-            vulnerabilities: vec![
-                Vulnerability {
-                    id: "CVE-2023-1234".to_string(),
-                    severity: VulnerabilitySeverity::Medium,
-                    description: "Test".to_string(),
-                    affected_packages: vec![],
-                    fixed_version: None,
-                    cvss_score: None,
-                },
-            ],
+            vulnerabilities: vec![Vulnerability {
+                id: "CVE-2023-1234".to_string(),
+                severity: VulnerabilitySeverity::Medium,
+                description: "Test".to_string(),
+                affected_packages: vec![],
+                fixed_version: None,
+                cvss_score: None,
+            }],
             compliance_issues: vec![],
             secrets: vec![],
             risk_score: 50.0,
@@ -524,25 +548,21 @@ use std::time::SystemTime;
             image_name: "test-image".to_string(),
             image_digest: "sha256:123".to_string(),
             scan_timestamp: std::time::SystemTime::now(),
-            vulnerabilities: vec![
-                Vulnerability {
-                    id: "CVE-2023-1234".to_string(),
-                    severity: VulnerabilitySeverity::Critical,
-                    description: "Test".to_string(),
-                    affected_packages: vec![],
-                    fixed_version: None,
-                    cvss_score: None,
-                },
-            ],
+            vulnerabilities: vec![Vulnerability {
+                id: "CVE-2023-1234".to_string(),
+                severity: VulnerabilitySeverity::Critical,
+                description: "Test".to_string(),
+                affected_packages: vec![],
+                fixed_version: None,
+                cvss_score: None,
+            }],
             compliance_issues: vec![],
-            secrets: vec![
-                Secret {
-                    secret_type: "AWS_ACCESS_KEY_ID".to_string(),
-                    file_path: "/etc/secret".to_string(),
-                    line_number: Some(1),
-                    remediation: "Remove secret".to_string(),
-                },
-            ],
+            secrets: vec![Secret {
+                secret_type: "AWS_ACCESS_KEY_ID".to_string(),
+                file_path: "/etc/secret".to_string(),
+                line_number: Some(1),
+                remediation: "Remove secret".to_string(),
+            }],
             risk_score: 80.0,
             recommendations: vec![],
         };

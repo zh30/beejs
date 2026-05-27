@@ -4,10 +4,10 @@
 # ==============================================================================
 
 # 阶段 1: 构建阶段
-FROM rust:1.75-slim AS builder
+FROM rust:1-slim-bookworm AS builder
 
 # 安装构建依赖
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libssl-dev \
@@ -17,19 +17,19 @@ RUN apt-get update && apt-get install -y \
 # 设置工作目录
 WORKDIR /app
 
+# Docker builds should be reliable on standard CI runners.
+ENV CARGO_PROFILE_RELEASE_LTO=false
+ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
+ENV CARGO_BUILD_JOBS=1
+
 # 复制依赖文件
 COPY Cargo.toml Cargo.lock ./
 
-# 创建虚拟 src 目录以避免 Cargo.toml 路径问题
-RUN mkdir src && echo 'fn main() {}' > src/main.rs
-
-# 构建依赖项（缓存层）
-RUN cargo build --release && rm src/main.rs
+# 预取依赖项（缓存层）
+RUN cargo fetch --locked
 
 # 复制源代码
 COPY src ./src
-COPY tests ./tests
-COPY wasm_cache_high_perf ./wasm_cache_high_perf
 
 # 构建生产版本
 RUN cargo build --release
@@ -38,7 +38,7 @@ RUN cargo build --release
 FROM debian:bookworm-slim AS runtime
 
 # 安装运行时依赖
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
@@ -50,8 +50,7 @@ RUN groupadd -r beejs && useradd -r -g beejs beejs
 WORKDIR /app
 
 # 从构建阶段复制二进制文件
-COPY --from=builder /app/target/release/beejs /usr/local/bin/beejs
-COPY --from=builder /app/target/release/beejs-benchmark /usr/local/bin/beejs-benchmark
+COPY --from=builder /app/target/release/bee /usr/local/bin/bee
 
 # 创建必要的目录
 RUN mkdir -p /app/cache /app/logs /app/tmp && \
@@ -77,10 +76,10 @@ EXPOSE 3000
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD beejs --health-check || exit 1
+    CMD bee --version >/dev/null || exit 1
 
 # 启动命令
-CMD ["beejs", "serve", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["bee", "serve", "--host", "0.0.0.0", "--port", "3000"]
 
 # ==============================================================================
 # 多阶段构建说明:

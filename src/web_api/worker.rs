@@ -3,10 +3,10 @@
 // Enables running JavaScript in separate threads/processes with message passing
 
 use anyhow::Result;
-use rusty_v8 as v8;
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use rusty_v8 as v8;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 // Static worker registry to track active workers
 static WORKER_REGISTRY: Lazy<Arc<Mutex<HashMap<u32, WorkerStateInfo>>>> =
@@ -92,8 +92,12 @@ fn worker_constructor_callback(
     let global = context.global(scope);
 
     // Create worker ID
-    let worker_id = WORKER_REGISTRY.lock().unwrap()
-        .keys().max().map_or(0, |k| k + 1);
+    let worker_id = WORKER_REGISTRY
+        .lock()
+        .unwrap()
+        .keys()
+        .max()
+        .map_or(0, |k| k + 1);
 
     // Create Worker object
     let worker_obj = v8::Object::new(scope);
@@ -131,12 +135,15 @@ fn worker_constructor_callback(
     worker_obj.set(scope, terminated_key.into(), false_val.into());
 
     // Register worker
-    WORKER_REGISTRY.lock().unwrap().insert(worker_id, WorkerStateInfo {
+    WORKER_REGISTRY.lock().unwrap().insert(
         worker_id,
-        script_url,
-        is_terminated: false,
-        created_at: std::time::Instant::now(),
-    });
+        WorkerStateInfo {
+            worker_id,
+            script_url,
+            is_terminated: false,
+            created_at: std::time::Instant::now(),
+        },
+    );
 
     rv.set(worker_obj.into());
 }

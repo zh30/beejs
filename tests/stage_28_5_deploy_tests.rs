@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::SystemTime;
 // Stage 28.5: 部署与打包测试套件
 //
 // 测试覆盖:
@@ -79,6 +79,12 @@ pub struct ResourcePacker {
     resources: Vec<EmbeddedResource>,
 }
 
+impl Default for ResourcePacker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResourcePacker {
     pub fn new() -> Self {
         Self {
@@ -116,6 +122,12 @@ pub struct CrossCompileTarget {
 #[derive(Debug)]
 pub struct CrossCompiler {
     targets: Vec<CrossCompileTarget>,
+}
+
+impl Default for CrossCompiler {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CrossCompiler {
@@ -196,16 +208,17 @@ impl DockerBuilder {
     }
 
     pub fn generate_dockerfile(&self) -> String {
-        format!(r#"
+        r#"
 FROM rust:1.70 as builder
 WORKDIR /app
 COPY . .
 RUN cargo build --release
 
 FROM debian:bullseye-slim
-COPY --from=builder /app/target/release/beejs /usr/local/bin/
-ENTRYPOINT ["beejs"]
-"#)
+COPY --from=builder /app/target/release/bee /usr/local/bin/
+ENTRYPOINT ["bee"]
+"#
+        .to_string()
     }
 }
 
@@ -236,6 +249,12 @@ pub struct DeployConfig {
 pub struct ConfigGenerator {
     configs: HashMap<String, DeployConfig>,
 }
+impl Default for ConfigGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConfigGenerator {
     pub fn new() -> Self {
         Self {
@@ -249,7 +268,8 @@ impl ConfigGenerator {
 
     pub fn generate_kubernetes(&self, name: &str) -> String {
         if let Some(config) = self.configs.get(name) {
-            format!(r#"
+            format!(
+                r#"
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -285,9 +305,17 @@ spec:
   - port: {}
     targetPort: {}
 "#,
-                name, config.replicas, name, name,
-                config.port, config.cpu_limit, config.memory_limit,
-                name, name, config.port, config.port
+                name,
+                config.replicas,
+                name,
+                name,
+                config.port,
+                config.cpu_limit,
+                config.memory_limit,
+                name,
+                name,
+                config.port,
+                config.port
             )
         } else {
             String::new()
@@ -296,7 +324,8 @@ spec:
 
     pub fn generate_docker_compose(&self, name: &str) -> String {
         if let Some(config) = self.configs.get(name) {
-            format!(r#"
+            format!(
+                r#"
 version: '3.8'
 services:
   {}:
@@ -310,8 +339,12 @@ services:
           cpus: '{}'
           memory: '{}'
 "#,
-                name, config.port, config.port, config.replicas,
-                config.cpu_limit, config.memory_limit
+                name,
+                config.port,
+                config.port,
+                config.replicas,
+                config.cpu_limit,
+                config.memory_limit
             )
         } else {
             String::new()
@@ -326,12 +359,10 @@ services:
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_single_file_bundler_creation() {
-        let config: _ = BundleConfig {
+        let config = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -339,13 +370,13 @@ use std::collections::{HashMap, BTreeMap};
             optimize_level: 3,
         };
 
-        let bundler: _ = SingleFileBundler::new(config);
+        let bundler = SingleFileBundler::new(config);
         assert_eq!(bundler.config.optimize_level, 3);
     }
 
     #[test]
     fn test_bundling_process() {
-        let config: _ = BundleConfig {
+        let config = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -353,13 +384,10 @@ use std::collections::{HashMap, BTreeMap};
             optimize_level: 3,
         };
 
-        let bundler: _ = SingleFileBundler::new(config);
-        let sources: _ = vec![
-            PathBuf::from("src/main.rs"),
-            PathBuf::from("src/lib.rs"),
-        ];
+        let bundler = SingleFileBundler::new(config);
+        let sources = vec![PathBuf::from("src/main.rs"), PathBuf::from("src/lib.rs")];
 
-        let result: _ = bundler.bundle(sources);
+        let result = bundler.bundle(sources);
 
         assert!(result.success);
         assert!(result.size_bytes > 0);
@@ -367,7 +395,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_output_validation() {
-        let config: _ = BundleConfig {
+        let config = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -375,20 +403,20 @@ use std::collections::{HashMap, BTreeMap};
             optimize_level: 3,
         };
 
-        let bundler: _ = SingleFileBundler::new(config);
+        let bundler = SingleFileBundler::new(config);
         assert!(bundler.validate_output(Path::new("/tmp/beejs")));
     }
 
     #[test]
     fn test_resource_packer_creation() {
-        let packer: _ = ResourcePacker::new();
+        let packer = ResourcePacker::new();
         assert_eq!(packer.resources.len(), 0);
     }
 
     #[test]
     fn test_add_resource() {
         let mut packer = ResourcePacker::new();
-        let resource: _ = EmbeddedResource {
+        let resource = EmbeddedResource {
             name: "index.html".to_string(),
             content: b"<!DOCTYPE html>".to_vec(),
             mime_type: "text/html".to_string(),
@@ -401,14 +429,14 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_get_resource() {
         let mut packer = ResourcePacker::new();
-        let resource: _ = EmbeddedResource {
+        let resource = EmbeddedResource {
             name: "style.css".to_string(),
             content: b"body { color: red; }".to_vec(),
             mime_type: "text/css".to_string(),
         };
 
         packer.add_resource(resource.clone());
-        let retrieved: _ = packer.get_resource("style.css");
+        let retrieved = packer.get_resource("style.css");
 
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().name, "style.css");
@@ -416,14 +444,14 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cross_compiler_creation() {
-        let compiler: _ = CrossCompiler::new();
+        let compiler = CrossCompiler::new();
         assert_eq!(compiler.targets.len(), 2);
     }
 
     #[test]
     fn test_add_cross_compile_target() {
         let mut compiler = CrossCompiler::new();
-        let target: _ = CrossCompileTarget {
+        let target = CrossCompileTarget {
             os: "windows".to_string(),
             arch: "x86_64".to_string(),
             vendor: "pc".to_string(),
@@ -436,8 +464,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_list_targets() {
-        let compiler: _ = CrossCompiler::new();
-        let targets: _ = compiler.list_targets();
+        let compiler = CrossCompiler::new();
+        let targets = compiler.list_targets();
 
         assert_eq!(targets.len(), 2);
         assert_eq!(targets[0].os, "linux");
@@ -445,8 +473,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_cross_compilation() {
-        let compiler: _ = CrossCompiler::new();
-        let target: _ = CrossCompileTarget {
+        let compiler = CrossCompiler::new();
+        let target = CrossCompileTarget {
             os: "linux".to_string(),
             arch: "x86_64".to_string(),
             vendor: "unknown".to_string(),
@@ -458,28 +486,28 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_docker_builder_creation() {
-        let config: _ = DockerBuildConfig {
+        let config = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder: _ = DockerBuilder::new(config);
+        let builder = DockerBuilder::new(config);
         assert_eq!(builder.config.image_name, "beejs");
     }
 
     #[test]
     fn test_docker_build() {
-        let config: _ = DockerBuildConfig {
+        let config = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder: _ = DockerBuilder::new(config);
-        let result: _ = builder.build();
+        let builder = DockerBuilder::new(config);
+        let result = builder.build();
 
         assert!(result.success);
         assert!(!result.image_id.is_empty());
@@ -487,30 +515,30 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_dockerfile_generation() {
-        let config: _ = DockerBuildConfig {
+        let config = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder: _ = DockerBuilder::new(config);
-        let dockerfile: _ = builder.generate_dockerfile();
+        let builder = DockerBuilder::new(config);
+        let dockerfile = builder.generate_dockerfile();
 
         assert!(dockerfile.contains("FROM"));
-        assert!(dockerfile.contains("beejs"));
+        assert!(dockerfile.contains("bee"));
     }
 
     #[test]
     fn test_config_generator_creation() {
-        let generator: _ = ConfigGenerator::new();
+        let generator = ConfigGenerator::new();
         assert_eq!(generator.configs.len(), 0);
     }
 
     #[test]
     fn test_add_deploy_config() {
         let mut generator = ConfigGenerator::new();
-        let config: _ = DeployConfig {
+        let config = DeployConfig {
             environment: DeployEnvironment::Production,
             replicas: 3,
             cpu_limit: "1000m".to_string(),
@@ -525,7 +553,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_generate_kubernetes_config() {
         let mut generator = ConfigGenerator::new();
-        let config: _ = DeployConfig {
+        let config = DeployConfig {
             environment: DeployEnvironment::Production,
             replicas: 3,
             cpu_limit: "1000m".to_string(),
@@ -534,7 +562,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         generator.add_config("production", config);
-        let k8s: _ = generator.generate_kubernetes("production");
+        let k8s = generator.generate_kubernetes("production");
 
         assert!(k8s.contains("apiVersion: apps/v1"));
         assert!(k8s.contains("Deployment"));
@@ -544,7 +572,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_generate_docker_compose_config() {
         let mut generator = ConfigGenerator::new();
-        let config: _ = DeployConfig {
+        let config = DeployConfig {
             environment: DeployEnvironment::Development,
             replicas: 1,
             cpu_limit: "500m".to_string(),
@@ -553,7 +581,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         generator.add_config("development", config);
-        let compose: _ = generator.generate_docker_compose("development");
+        let compose = generator.generate_docker_compose("development");
 
         assert!(compose.contains("version: '3.8'"));
         assert!(compose.contains("development"));
@@ -563,7 +591,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_stage_28_5_deploy_integration() {
         // 单文件打包
-        let bundle_config: _ = BundleConfig {
+        let bundle_config = BundleConfig {
             target_os: "linux".to_string(),
             target_arch: "x86_64".to_string(),
             output_path: PathBuf::from("/tmp/beejs"),
@@ -571,10 +599,8 @@ use std::collections::{HashMap, BTreeMap};
             optimize_level: 3,
         };
 
-        let bundler: _ = SingleFileBundler::new(bundle_config);
-        let bundle_result: _ = bundler.bundle(vec![
-            PathBuf::from("src/main.rs"),
-        ]);
+        let bundler = SingleFileBundler::new(bundle_config);
+        let bundle_result = bundler.bundle(vec![PathBuf::from("src/main.rs")]);
         assert!(bundle_result.success);
 
         // 资源打包
@@ -584,12 +610,12 @@ use std::collections::{HashMap, BTreeMap};
             content: b"{}".to_vec(),
             mime_type: "application/json".to_string(),
         });
-        let resources: _ = packer.pack();
+        let resources = packer.pack();
         assert_eq!(resources.len(), 1);
 
         // 交叉编译
-        let compiler: _ = CrossCompiler::new();
-        let target: _ = CrossCompileTarget {
+        let compiler = CrossCompiler::new();
+        let target = CrossCompileTarget {
             os: "linux".to_string(),
             arch: "x86_64".to_string(),
             vendor: "unknown".to_string(),
@@ -598,20 +624,20 @@ use std::collections::{HashMap, BTreeMap};
         assert!(compiler.compile_for(&target).is_ok());
 
         // Docker 构建
-        let docker_config: _ = DockerBuildConfig {
+        let docker_config = DockerBuildConfig {
             image_name: "beejs".to_string(),
             tag: "latest".to_string(),
             dockerfile_path: PathBuf::from("Dockerfile"),
             build_context: PathBuf::from("."),
         };
 
-        let builder: _ = DockerBuilder::new(docker_config);
-        let build_result: _ = builder.build();
+        let builder = DockerBuilder::new(docker_config);
+        let build_result = builder.build();
         assert!(build_result.success);
 
         // 部署配置生成
         let mut generator = ConfigGenerator::new();
-        let deploy_config: _ = DeployConfig {
+        let deploy_config = DeployConfig {
             environment: DeployEnvironment::Production,
             replicas: 2,
             cpu_limit: "1000m".to_string(),
@@ -620,17 +646,17 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         generator.add_config("prod", deploy_config);
-        let k8s: _ = generator.generate_kubernetes("prod");
+        let k8s = generator.generate_kubernetes("prod");
         assert!(!k8s.is_empty());
     }
 
     #[test]
     fn test_stage_28_5_deploy_performance() {
-        let start: _ = SystemTime::now();
+        let start = SystemTime::now();
 
         // 执行 100 次打包操作
         for i in 0..100 {
-            let config: _ = BundleConfig {
+            let config = BundleConfig {
                 target_os: "linux".to_string(),
                 target_arch: "x86_64".to_string(),
                 output_path: PathBuf::from(format!("/tmp/beejs_{}", i)),
@@ -638,14 +664,17 @@ use std::collections::{HashMap, BTreeMap};
                 optimize_level: 3,
             };
 
-            let bundler: _ = SingleFileBundler::new(config);
-            let _: _ = bundler.bundle(vec![PathBuf::from("src/main.rs")]);
+            let bundler = SingleFileBundler::new(config);
+            let _ = bundler.bundle(vec![PathBuf::from("src/main.rs")]);
         }
 
-        let duration: _ = start.elapsed().unwrap();
+        let duration = start.elapsed().unwrap();
 
         // 性能要求: 100次打包 < 100ms
-        assert!(duration < std::time::Duration::from_millis(100),
-                "Deployment operations took {}ms, expected < 100ms", duration.as_millis());
+        assert!(
+            duration < std::time::Duration::from_millis(100),
+            "Deployment operations took {}ms, expected < 100ms",
+            duration.as_millis()
+        );
     }
 }

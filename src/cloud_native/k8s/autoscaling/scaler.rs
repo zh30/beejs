@@ -1,9 +1,9 @@
 // Scaler for applying scale actions to Kubernetes resources
+use super::super::crd::ScalePolicy;
+use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
 /// Implements the actual scaling logic for Deployments and StatefulSets
 use kube::Api;
-use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
-use tracing::{info, warn, error};
-use super::super::crd::ScalePolicy;
+use tracing::{error, info, warn};
 /// Scaler for managing resource scaling
 pub struct Scaler {
     /// Kubernetes client
@@ -22,7 +22,10 @@ impl Scaler {
         replicas: u32,
         policy: Option<&ScalePolicy>,
     ) -> Result<ScalingResult, Error> {
-        info!("Scaling Deployment {}/{} to {} replicas", namespace, name, replicas);
+        info!(
+            "Scaling Deployment {}/{} to {} replicas",
+            namespace, name, replicas
+        );
         let deployments: Api<Deployment> = Api::namespaced(self.client.clone(), namespace);
         // Get current deployment
         let mut deployment = deployments.get(name).await?;
@@ -32,7 +35,10 @@ impl Scaler {
             .and_then(|s| s.replicas)
             .unwrap_or(0) as u32;
         if current_replicas == replicas {
-            info!("Deployment is already at desired replica count: {}", replicas);
+            info!(
+                "Deployment is already at desired replica count: {}",
+                replicas
+            );
             return Ok(ScalingResult {
                 resource_type: ResourceType::Deployment,
                 name: name.to_string(),
@@ -60,7 +66,10 @@ impl Scaler {
                 "replicas": final_replicas
             }
         });
-        match deployments.patch(name, &params, &kube::api::Patch::Merge(&patch)).await {
+        match deployments
+            .patch(name, &params, &kube::api::Patch::Merge(&patch))
+            .await
+        {
             Ok(_) => {
                 info!(
                     "Successfully scaled Deployment {}/{} from {} to {} replicas",
@@ -80,10 +89,7 @@ impl Scaler {
                 })
             }
             Err(e) => {
-                error!(
-                    "Failed to scale Deployment {}/{}: {}",
-                    namespace, name, e
-                );
+                error!("Failed to scale Deployment {}/{}: {}", namespace, name, e);
                 Err(Error::Kube(e))
             }
         }
@@ -96,7 +102,10 @@ impl Scaler {
         replicas: u32,
         policy: Option<&ScalePolicy>,
     ) -> Result<ScalingResult, Error> {
-        info!("Scaling StatefulSet {}/{} to {} replicas", namespace, name, replicas);
+        info!(
+            "Scaling StatefulSet {}/{} to {} replicas",
+            namespace, name, replicas
+        );
         let statefulsets: Api<StatefulSet> = Api::namespaced(self.client.clone(), namespace);
         // Get current statefulset
         let mut statefulset = statefulsets.get(name).await?;
@@ -106,7 +115,10 @@ impl Scaler {
             .and_then(|s| s.replicas)
             .unwrap_or(0) as u32;
         if current_replicas == replicas {
-            info!("StatefulSet is already at desired replica count: {}", replicas);
+            info!(
+                "StatefulSet is already at desired replica count: {}",
+                replicas
+            );
             return Ok(ScalingResult {
                 resource_type: ResourceType::StatefulSet,
                 name: name.to_string(),
@@ -134,7 +146,10 @@ impl Scaler {
                 "replicas": final_replicas
             }
         });
-        match statefulsets.patch(name, &params, &kube::api::Patch::Merge(&patch)).await {
+        match statefulsets
+            .patch(name, &params, &kube::api::Patch::Merge(&patch))
+            .await
+        {
             Ok(_) => {
                 info!(
                     "Successfully scaled StatefulSet {}/{} from {} to {} replicas",
@@ -154,10 +169,7 @@ impl Scaler {
                 })
             }
             Err(e) => {
-                error!(
-                    "Failed to scale StatefulSet {}/{}: {}",
-                    namespace, name, e
-                );
+                error!("Failed to scale StatefulSet {}/{}: {}", namespace, name, e);
                 Err(Error::Kube(e))
             }
         }
@@ -284,7 +296,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_scaling_result() {
         let result: _ = ScalingResult {

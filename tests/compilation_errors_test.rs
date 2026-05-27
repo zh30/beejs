@@ -3,15 +3,15 @@
 
 #[cfg(test)]
 mod compilation_error_tests {
-    use std::process::Command;
     use std::path::Path;
+    use std::process::Command;
 
     /// 测试：验证编译状态
     #[test]
     fn test_compilation_status() {
         // 运行 cargo check 来验证编译状态
         let output = Command::new("cargo")
-            .args(&["check", "--quiet"])
+            .args(["check", "--quiet"])
             .current_dir(env!("CARGO_MANIFEST_DIR"))
             .output()
             .expect("Failed to execute cargo check");
@@ -24,11 +24,21 @@ mod compilation_error_tests {
             println!("{}", stderr);
 
             // 分析错误类型
-            let rwlock_errors = stderr.matches("the name `RwLock` is defined multiple times").count();
-            let duration_errors = stderr.matches("the name `Duration` is defined multiple times").count();
-            let instant_errors = stderr.matches("the name `Instant` is defined multiple times").count();
-            let mutex_errors = stderr.matches("the name `Mutex` is defined multiple times").count();
-            let hashmap_errors = stderr.matches("the name `HashMap` is defined multiple times").count();
+            let rwlock_errors = stderr
+                .matches("the name `RwLock` is defined multiple times")
+                .count();
+            let duration_errors = stderr
+                .matches("the name `Duration` is defined multiple times")
+                .count();
+            let instant_errors = stderr
+                .matches("the name `Instant` is defined multiple times")
+                .count();
+            let mutex_errors = stderr
+                .matches("the name `Mutex` is defined multiple times")
+                .count();
+            let hashmap_errors = stderr
+                .matches("the name `HashMap` is defined multiple times")
+                .count();
             let unresolved_errors = stderr.matches("unresolved import").count();
 
             println!("\n错误分类统计:");
@@ -52,7 +62,7 @@ mod compilation_error_tests {
     #[test]
     fn test_specific_errors_fixed() {
         let output = Command::new("cargo")
-            .args(&["check", "--quiet"])
+            .args(["check", "--quiet"])
             .current_dir(env!("CARGO_MANIFEST_DIR"))
             .output()
             .expect("Failed to execute cargo check");
@@ -96,18 +106,14 @@ mod compilation_error_tests {
     #[test]
     fn test_fix_scripts_exist() {
         let scripts = vec![
-            "fix_duplicate_imports.py",
-            "fix_all_duplicates.py",
-            "fix_final_use_syntax.py",
+            "scripts/maintenance/fix_duplicate_imports.py",
+            "scripts/maintenance/fix_all_duplicates.py",
+            "scripts/maintenance/fix_final_use_syntax.py",
         ];
 
         for script in scripts {
-            let script_path = Path::new(script);
-            assert!(
-                script_path.exists(),
-                "修复脚本 {} 不存在",
-                script
-            );
+            let script_path = Path::new(env!("CARGO_MANIFEST_DIR")).join(script);
+            assert!(script_path.exists(), "修复脚本 {} 不存在", script);
             println!("✅ 修复脚本 {} 存在", script);
         }
     }
@@ -116,7 +122,7 @@ mod compilation_error_tests {
     #[test]
     fn test_print_progress() {
         let output = Command::new("cargo")
-            .args(&["check", "--quiet"])
+            .args(["check", "--quiet"])
             .current_dir(env!("CARGO_MANIFEST_DIR"))
             .output()
             .expect("Failed to execute cargo check");

@@ -31,7 +31,7 @@ export default function HomeComponent() {
 
           <div className="flex items-center justify-between">
             <span className="hud-tag">{home.kicker}</span>
-            <span className="text-[10px] uppercase tracking-[0.4em] text-hud-muted">SYS-93</span>
+            <span className="text-[10px] uppercase tracking-[0.4em] text-hud-muted">v0.1</span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 mt-10">
@@ -138,6 +138,7 @@ export default function HomeComponent() {
                 key={system.title}
                 title={system.title}
                 desc={system.desc}
+                label={home.systemsLabel}
                 icon={<Icon className="w-5 h-5 text-hud-accent" />}
               />
             )
@@ -192,13 +193,23 @@ function BenchmarkCard({ label, value, unit, delta }: { label: string; value: st
   )
 }
 
-function SystemCard({ title, desc, icon }: { title: string; desc: string; icon: ReactNode }) {
+function SystemCard({
+  title,
+  desc,
+  label,
+  icon,
+}: {
+  title: string
+  desc: string
+  label: string
+  icon: ReactNode
+}) {
   return (
     <div className="hud-panel-soft p-6 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         {icon}
         <span className="text-[10px] uppercase tracking-[0.35em] text-hud-muted">
-          {home.systemsLabel}
+          {label}
         </span>
       </div>
       <h4 className="text-xl font-display uppercase tracking-[0.18em]">{title}</h4>

@@ -111,7 +111,8 @@ impl TestDiscoverer {
         let _code = result.map_err(|e| {
             std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e))
         })?;
-        let file_name = path.file_name()
+        let file_name = path
+            .file_name()
             .and_then(|s| s.to_str())
             .unwrap_or("unknown");
         let suite = TestSuite {

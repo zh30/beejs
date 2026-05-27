@@ -23,17 +23,32 @@ console.log(config);
                 println!("嵌套对象类型转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留对象结构，移除类型注解
-                assert!(output.js_code.contains("database"),
-                    "Should contain database: {}", output.js_code);
-                assert!(output.js_code.contains("host"),
-                    "Should contain host: {}", output.js_code);
-                assert!(output.js_code.contains("port"),
-                    "Should contain port: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("database"),
+                    "Should contain database: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("host"),
+                    "Should contain host: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("port"),
+                    "Should contain port: {}",
+                    output.js_code
+                );
                 // 类型注解应该被移除
-                assert!(!output.js_code.contains("string"),
-                    "Should not contain string type annotation: {}", output.js_code);
-                assert!(!output.js_code.contains("number"),
-                    "Should not contain number type annotation: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("string"),
+                    "Should not contain string type annotation: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("number"),
+                    "Should not contain number type annotation: {}",
+                    output.js_code
+                );
                 println!("✅ Nested object type test passed");
             }
             Err(e) => {
@@ -61,8 +76,11 @@ console.log(value);
                 println!("交叉类型转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留对象，移除交叉类型注解
-                assert!(output.js_code.contains("a:"),
-                    "Should contain a property: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("a:"),
+                    "Should contain a property: {}",
+                    output.js_code
+                );
                 println!("✅ Intersection type test passed");
             }
             Err(e) => {
@@ -87,13 +105,22 @@ console.log(result);
                 println!("泛型函数转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留函数结构，移除类型注解
-                assert!(output.js_code.contains("function identity"),
-                    "Should contain identity function: {}", output.js_code);
-                assert!(output.js_code.contains("return value"),
-                    "Should contain return statement: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("function identity"),
+                    "Should contain identity function: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("return value"),
+                    "Should contain return statement: {}",
+                    output.js_code
+                );
                 // 泛型参数应该被移除
-                assert!(!output.js_code.contains("<T>"),
-                    "Should not contain generic parameter: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("<T>"),
+                    "Should not contain generic parameter: {}",
+                    output.js_code
+                );
                 println!("✅ Generic function type test passed");
             }
             Err(e) => {
@@ -116,8 +143,11 @@ console.log(obj);
                 println!("映射类型转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留对象，移除类型注解
-                assert!(output.js_code.contains("x: 1"),
-                    "Should contain x property: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("x: 1"),
+                    "Should contain x property: {}",
+                    output.js_code
+                );
                 println!("✅ Mapped type test passed");
             }
             Err(e) => {
@@ -140,8 +170,11 @@ console.log(result);
                 println!("条件类型转译结果:");
                 println!("{}", output.js_code);
                 // 类型别名应该被移除
-                assert!(!output.js_code.contains("type IsString"),
-                    "Should not contain type alias: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type IsString"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
                 println!("✅ Conditional type test passed");
             }
             Err(e) => {
@@ -164,8 +197,11 @@ console.log(email);
                 println!("模板字面量类型转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留原始表达式
-                assert!(output.js_code.contains("user@example.com"),
-                    "Should contain email value: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("user@example.com"),
+                    "Should contain email value: {}",
+                    output.js_code
+                );
                 println!("✅ Template literal type test passed");
             }
             Err(e) => {
@@ -189,8 +225,11 @@ console.log(name);
                 println!("索引访问类型转译结果:");
                 println!("{}", output.js_code);
                 // 类型注解应该被移除
-                assert!(!output.js_code.contains("Person[\"name\"]"),
-                    "Should not contain indexed access type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("Person[\"name\"]"),
+                    "Should not contain indexed access type: {}",
+                    output.js_code
+                );
                 println!("✅ Indexed access type test passed");
             }
             Err(e) => {
@@ -213,8 +252,11 @@ console.log(Num);
                 println!("infer 类型转译结果:");
                 println!("{}", output.js_code);
                 // 类型定义应该被移除
-                assert!(!output.js_code.contains("infer"),
-                    "Should not contain infer keyword: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("infer"),
+                    "Should not contain infer keyword: {}",
+                    output.js_code
+                );
                 println!("✅ Infer type test passed");
             }
             Err(e) => {
@@ -242,13 +284,22 @@ console.log(instance.value);
                 println!("构造函数类型转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留类结构，移除类型注解
-                assert!(output.js_code.contains("class Container"),
-                    "Should contain Container class: {}", output.js_code);
-                assert!(output.js_code.contains("constructor"),
-                    "Should contain constructor: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("class Container"),
+                    "Should contain Container class: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("constructor"),
+                    "Should contain constructor: {}",
+                    output.js_code
+                );
                 // 泛型参数应该被移除
-                assert!(!output.js_code.contains("<T>"),
-                    "Should not contain generic parameter: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("<T>"),
+                    "Should not contain generic parameter: {}",
+                    output.js_code
+                );
                 println!("✅ Constructor type test passed");
             }
             Err(e) => {
@@ -275,17 +326,32 @@ console.log(config);
                 println!("修饰符转译结果:");
                 println!("{}", output.js_code);
                 // 应该保留对象结构，移除类型注解和修饰符
-                assert!(output.js_code.contains("host"),
-                    "Should contain host: {}", output.js_code);
-                assert!(output.js_code.contains("port"),
-                    "Should contain port: {}", output.js_code);
-                assert!(output.js_code.contains("8080"),
-                    "Should contain port value: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("host"),
+                    "Should contain host: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("port"),
+                    "Should contain port: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("8080"),
+                    "Should contain port value: {}",
+                    output.js_code
+                );
                 // 类型注解和修饰符应该被移除
-                assert!(!output.js_code.contains("string"),
-                    "Should not contain string type: {}", output.js_code);
-                assert!(!output.js_code.contains("number"),
-                    "Should not contain number type: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("string"),
+                    "Should not contain string type: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("number"),
+                    "Should not contain number type: {}",
+                    output.js_code
+                );
                 println!("✅ Modifiers test passed");
             }
             Err(e) => {

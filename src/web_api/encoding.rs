@@ -1,8 +1,8 @@
 // TextEncoder/TextDecoder API implementation
 /// Provides text encoding and decoding functionality per Web standards
 use anyhow::Result;
-use rusty_v8 as v8;
 use base64::Engine;
+use rusty_v8 as v8;
 /// Setup TextEncoder and TextDecoder APIs in V8 context
 pub fn setup_encoding_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -64,7 +64,8 @@ fn text_encoder_encode(
     let input_str: _ = if input.is_undefined() || input.is_null() {
         String::new()
     } else {
-        input.to_string(scope)
+        input
+            .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default()
     };
@@ -77,11 +78,7 @@ fn text_encoder_encode(
     unsafe {
         let data: _ = backing_store.data();
         if !data.is_null() {
-            std::ptr::copy_nonoverlapping(
-                bytes.as_ptr(),
-                data as *mut u8,
-                bytes.len(),
-            );
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), data as *mut u8, bytes.len());
         }
     }
     let uint8_array: _ = v8::Uint8Array::new(scope, array_buffer, 0, bytes.len()).unwrap();
@@ -97,12 +94,14 @@ fn text_encoder_encode_into(
     let destination: _ = args.get(1);
     // Validate destination is Uint8Array
     if !destination.is_uint8_array() {
-        let error: _ = v8::String::new(scope, "encodeInto: destination must be Uint8Array").unwrap();
+        let error: _ =
+            v8::String::new(scope, "encodeInto: destination must be Uint8Array").unwrap();
         let error_obj: _ = v8::Exception::type_error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
     }
-    let input_str: _ = input.to_string(scope)
+    let input_str: _ = input
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let bytes: _ = input_str.as_bytes();
@@ -132,7 +131,8 @@ fn text_decoder_constructor(
     let encoding_str: _ = if encoding.is_undefined() || encoding.is_null() {
         "utf-8".to_string()
     } else {
-        encoding.to_string(scope)
+        encoding
+            .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope).to_lowercase())
             .unwrap_or_else(|| "utf-8".to_string())
     };
@@ -142,7 +142,11 @@ fn text_decoder_constructor(
         "utf-8"
     } else {
         // For now, only support UTF-8
-        let error: _ = v8::String::new(scope, &format!("TextDecoder: unsupported encoding '{}'", encoding_str)).unwrap();
+        let error: _ = v8::String::new(
+            scope,
+            &format!("TextDecoder: unsupported encoding '{}'", encoding_str),
+        )
+        .unwrap();
         let error_obj: _ = v8::Exception::range_error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
@@ -182,7 +186,8 @@ fn text_decoder_decode(
     }
     // Get bytes from input (Uint8Array, ArrayBuffer, etc.)
     let bytes: Vec<u8> = if input.is_uint8_array() {
-        let array: v8::Local<v8::Uint8Array> = v8::Local::<v8::Uint8Array>::try_from(input).unwrap();
+        let array: v8::Local<v8::Uint8Array> =
+            v8::Local::<v8::Uint8Array>::try_from(input).unwrap();
         let len = array.byte_length();
         let byte_offset = array.byte_offset();
         let array_buffer = array.buffer(scope).unwrap();
@@ -201,11 +206,7 @@ fn text_decoder_decode(
         unsafe {
             let ptr: _ = backing_store.data();
             if !ptr.is_null() {
-                std::ptr::copy_nonoverlapping(
-                    ptr as *const u8,
-                    buffer.as_mut_ptr(),
-                    len,
-                );
+                std::ptr::copy_nonoverlapping(ptr as *const u8, buffer.as_mut_ptr(), len);
             }
         }
         buffer
@@ -216,7 +217,8 @@ fn text_decoder_decode(
         view.copy_contents(&mut buffer);
         buffer
     } else {
-        let error: _ = v8::String::new(scope, "decode: input must be ArrayBuffer or TypedArray").unwrap();
+        let error: _ =
+            v8::String::new(scope, "decode: input must be ArrayBuffer or TypedArray").unwrap();
         let error_obj: _ = v8::Exception::type_error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
@@ -248,11 +250,12 @@ fn atob_callback(
         scope.throw_exception(error_obj.into());
         return;
     }
-    let encoded: _ = input.to_string(scope)
+    let encoded: _ = input
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     // Use base64 decoding
-    use base64::{Engine, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine};
     match STANDARD.decode(&encoded) {
         Ok(bytes) => {
             // Convert bytes to string (treating as Latin-1)
@@ -280,13 +283,18 @@ fn btoa_callback(
         scope.throw_exception(error_obj.into());
         return;
     }
-    let to_encode: _ = input.to_string(scope)
+    let to_encode: _ = input
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     // Check for non-Latin1 characters
     for c in to_encode.chars() {
         if c as u32 > 255 {
-            let error: _ = v8::String::new(scope, "btoa: string contains characters outside Latin-1 range").unwrap();
+            let error: _ = v8::String::new(
+                scope,
+                "btoa: string contains characters outside Latin-1 range",
+            )
+            .unwrap();
             let error_obj: _ = v8::Exception::error(scope, error);
             scope.throw_exception(error_obj.into());
             return;
@@ -307,7 +315,9 @@ mod tests {
     fn test_base64_encode_decode() {
         let original: _ = "Hello, World!";
         let encoded: _ = base64::engine::general_purpose::STANDARD.encode(original);
-        let decoded_bytes: _ = base64::engine::general_purpose::STANDARD.decode(&encoded).unwrap();
+        let decoded_bytes: _ = base64::engine::general_purpose::STANDARD
+            .decode(&encoded)
+            .unwrap();
         let decoded: _ = String::from_utf8(decoded_bytes).unwrap();
         assert_eq!(original, decoded);
     }

@@ -28,15 +28,27 @@ console.log(myColor, myStatus);
                 println!("基本枚举转译结果:");
                 println!("{}", output.js_code);
                 // 枚举被转译为 JavaScript 对象
-                assert!(output.js_code.contains("var Color"),
-                    "Should contain var Color: {}", output.js_code);
-                assert!(output.js_code.contains("var Status"),
-                    "Should contain var Status: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var Color"),
+                    "Should contain var Color: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("var Status"),
+                    "Should contain var Status: {}",
+                    output.js_code
+                );
                 // 验证枚举成员值
-                assert!(output.js_code.contains("Red: \"red\""),
-                    "Should contain Red with string value: {}", output.js_code);
-                assert!(output.js_code.contains("Active: 1"),
-                    "Should contain Active with number value: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("Red: \"red\""),
+                    "Should contain Red with string value: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("Active: 1"),
+                    "Should contain Active with number value: {}",
+                    output.js_code
+                );
                 println!("✅ Basic enum test passed");
             }
             Err(e) => {
@@ -67,12 +79,21 @@ console.log(moveUp);
                 println!("{}", output.js_code);
                 // const enum 被转译为普通对象（当前实现）
                 // 注意：真正的 const enum 应该内联值，但当前实现保持对象形式
-                assert!(output.js_code.contains("var Direction"),
-                    "Should contain var Direction: {}", output.js_code);
-                assert!(output.js_code.contains("Up: \"UP\""),
-                    "Should contain Up with value: {}", output.js_code);
-                assert!(output.js_code.contains("moveUp"),
-                    "Should contain moveUp variable: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var Direction"),
+                    "Should contain var Direction: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("Up: \"UP\""),
+                    "Should contain Up with value: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("moveUp"),
+                    "Should contain moveUp variable: {}",
+                    output.js_code
+                );
                 println!("✅ Const enum test passed");
             }
             Err(e) => {
@@ -99,12 +120,21 @@ console.log(code);
             Ok(output) => {
                 println!("数值枚举转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("var HttpStatus"),
-                    "Should contain var HttpStatus: {}", output.js_code);
-                assert!(output.js_code.contains("OK: 200"),
-                    "Should contain OK with value 200: {}", output.js_code);
-                assert!(output.js_code.contains("NotFound: 404"),
-                    "Should contain NotFound with value 404: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var HttpStatus"),
+                    "Should contain var HttpStatus: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("OK: 200"),
+                    "Should contain OK with value 200: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("NotFound: 404"),
+                    "Should contain NotFound with value 404: {}",
+                    output.js_code
+                );
                 println!("✅ Numeric enum test passed");
             }
             Err(e) => {
@@ -133,17 +163,29 @@ console.log(val1, val2, val3);
             Ok(output) => {
                 println!("混合枚举转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("var Mixed"),
-                    "Should contain var Mixed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var Mixed"),
+                    "Should contain var Mixed: {}",
+                    output.js_code
+                );
                 // 验证字符串值
-                assert!(output.js_code.contains("StringValue: \"str\""),
-                    "Should contain StringValue with string: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("StringValue: \"str\""),
+                    "Should contain StringValue with string: {}",
+                    output.js_code
+                );
                 // 验证数值
-                assert!(output.js_code.contains("NumericValue: 42"),
-                    "Should contain NumericValue: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("NumericValue: 42"),
+                    "Should contain NumericValue: {}",
+                    output.js_code
+                );
                 // 验证自动赋值 (从最后一个数值递增)
-                assert!(output.js_code.contains("AutoNumeric: 43"),
-                    "Should contain AutoNumeric with auto value 43 (last value + 1): {}", output.js_code);
+                assert!(
+                    output.js_code.contains("AutoNumeric: 43"),
+                    "Should contain AutoNumeric with auto value 43 (last value + 1): {}",
+                    output.js_code
+                );
                 println!("✅ Mixed enum test passed");
             }
             Err(e) => {
@@ -170,13 +212,22 @@ console.log(a, b);
             Ok(output) => {
                 println!("枚举反向映射转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("var Status"),
-                    "Should contain var Status: {}", output.js_code);
-                assert!(output.js_code.contains("Active: 1"),
-                    "Should contain Active: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var Status"),
+                    "Should contain var Status: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("Active: 1"),
+                    "Should contain Active: {}",
+                    output.js_code
+                );
                 // 反向映射语法保留
-                assert!(output.js_code.contains("Status[1]"),
-                    "Should contain reverse mapping: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("Status[1]"),
+                    "Should contain reverse mapping: {}",
+                    output.js_code
+                );
                 println!("✅ Enum reverse mapping test passed");
             }
             Err(e) => {
@@ -208,12 +259,21 @@ console.log(config.level);
             Ok(output) => {
                 println!("枚举在对象中使用转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("var LogLevel"),
-                    "Should contain var LogLevel: {}", output.js_code);
-                assert!(output.js_code.contains("config"),
-                    "Should contain config object: {}", output.js_code);
-                assert!(output.js_code.contains("LogLevel.Info"),
-                    "Should contain LogLevel.Info access: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var LogLevel"),
+                    "Should contain var LogLevel: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("config"),
+                    "Should contain config object: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("LogLevel.Info"),
+                    "Should contain LogLevel.Info access: {}",
+                    output.js_code
+                );
                 println!("✅ Enum in object test passed");
             }
             Err(e) => {
@@ -243,15 +303,27 @@ console.log(v1, v2, v3);
             Ok(output) => {
                 println!("计算值枚举转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("var Custom"),
-                    "Should contain var Custom: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var Custom"),
+                    "Should contain var Custom: {}",
+                    output.js_code
+                );
                 // 验证数值被保留
-                assert!(output.js_code.contains("First: 100"),
-                    "Should contain First: {}", output.js_code);
-                assert!(output.js_code.contains("Second: 200"),
-                    "Should contain Second: {}", output.js_code);
-                assert!(output.js_code.contains("Third: 300"),
-                    "Should contain Third: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("First: 100"),
+                    "Should contain First: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("Second: 200"),
+                    "Should contain Second: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("Third: 300"),
+                    "Should contain Third: {}",
+                    output.js_code
+                );
                 println!("✅ Enum computed values test passed");
             }
             Err(e) => {
@@ -282,13 +354,22 @@ console.log(r1, r2);
             Ok(output) => {
                 println!("枚举函数返回类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("var Result"),
-                    "Should contain var Result: {}", output.js_code);
-                assert!(output.js_code.contains("function process"),
-                    "Should contain process function: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("var Result"),
+                    "Should contain var Result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("function process"),
+                    "Should contain process function: {}",
+                    output.js_code
+                );
                 // 验证函数参数类型注解被移除
-                assert!(!output.js_code.contains("success: boolean"),
-                    "Should remove type annotation: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("success: boolean"),
+                    "Should remove type annotation: {}",
+                    output.js_code
+                );
                 println!("✅ Enum function return test passed");
             }
             Err(e) => {

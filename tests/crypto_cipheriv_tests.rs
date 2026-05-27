@@ -8,7 +8,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -20,10 +20,11 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
@@ -38,7 +39,11 @@ fn test_create_cipheriv_function_exists() {
 console.log(typeof crypto.createCipheriv === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createCipheriv to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createCipheriv to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -52,7 +57,11 @@ const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 console.log(cipher && typeof cipher.update === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected AES-256-CBC cipheriv to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected AES-256-CBC cipheriv to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -66,7 +75,11 @@ const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
 console.log(cipher && typeof cipher.update === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected AES-128-CBC cipheriv to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected AES-128-CBC cipheriv to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -80,7 +93,11 @@ const cipher = crypto.createCipheriv('aes-192-cbc', key, iv);
 console.log(cipher && typeof cipher.update === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected AES-192-CBC cipheriv to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected AES-192-CBC cipheriv to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -93,7 +110,11 @@ const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 console.log(typeof cipher.update === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected cipher to have update method: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected cipher to have update method: {}",
+        output
+    );
 }
 
 #[test]
@@ -106,7 +127,11 @@ const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 console.log(typeof cipher.final === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected cipher to have final method: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected cipher to have final method: {}",
+        output
+    );
 }
 
 #[test]
@@ -121,7 +146,11 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected error for invalid algorithm: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected error for invalid algorithm: {}",
+        output
+    );
 }
 
 #[test]
@@ -137,7 +166,11 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected error for invalid key length: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected error for invalid key length: {}",
+        output
+    );
 }
 
 #[test]
@@ -153,7 +186,11 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected error for invalid IV length: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected error for invalid IV length: {}",
+        output
+    );
 }
 
 #[test]
@@ -167,7 +204,11 @@ const encrypted = cipher.update('Hello, World!', 'utf8', 'hex') + cipher.final('
 console.log(encrypted.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected cipher to produce encrypted output: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected cipher to produce encrypted output: {}",
+        output
+    );
 }
 
 #[test]
@@ -181,7 +222,11 @@ const encrypted = cipher.update(Buffer.from('Hello'), 'utf8', 'hex') + cipher.fi
 console.log(encrypted.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected cipher to work with Buffer input: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected cipher to work with Buffer input: {}",
+        output
+    );
 }
 
 #[test]
@@ -203,7 +248,11 @@ const decrypted = decipher.update(encrypted, 'hex', 'utf8') + decipher.final('ut
 console.log(decrypted === original ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected encrypt/decrypt round trip to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected encrypt/decrypt round trip to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -213,7 +262,11 @@ fn test_create_decipheriv_function_exists() {
 console.log(typeof crypto.createDecipheriv === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createDecipheriv to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createDecipheriv to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -226,7 +279,11 @@ const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 console.log(typeof decipher.update === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected decipher to have update method: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected decipher to have update method: {}",
+        output
+    );
 }
 
 #[test]
@@ -239,7 +296,11 @@ const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 console.log(typeof decipher.final === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected decipher to have final method: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected decipher to have final method: {}",
+        output
+    );
 }
 
 #[test]
@@ -254,5 +315,9 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected error for invalid algorithm: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected error for invalid algorithm: {}",
+        output
+    );
 }

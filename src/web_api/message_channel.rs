@@ -16,7 +16,9 @@ pub fn setup_message_channel_api(
     // Create MessageChannel constructor function
     let message_channel_fn = v8::FunctionTemplate::new(
         scope,
-        |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
             // Create the MessageChannel object
             let channel_obj: v8::Local<v8::Object> = v8::Object::new(scope);
 
@@ -76,16 +78,17 @@ pub fn setup_message_channel_api(
     // Set MessageChannel on global
     let message_channel_key = v8::String::new(scope, "MessageChannel").unwrap();
     let message_channel_val = message_channel_fn.get_function(scope).unwrap();
-    global.set(scope, message_channel_key.into(), message_channel_val.into());
+    global.set(
+        scope,
+        message_channel_key.into(),
+        message_channel_val.into(),
+    );
 
     Ok(())
 }
 
 /// Setup MessagePort properties (postMessage, onmessage, start, close, etc.)
-fn setup_message_port_properties(
-    scope: &mut v8::HandleScope,
-    port: v8::Local<v8::Object>,
-) {
+fn setup_message_port_properties(scope: &mut v8::HandleScope, port: v8::Local<v8::Object>) {
     // Create postMessage function
     let post_message_fn = v8::FunctionTemplate::new(
         scope,

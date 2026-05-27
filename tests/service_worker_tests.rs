@@ -1,8 +1,15 @@
 // ServiceWorker API tests for Beejs runtime
 // v0.3.324: Tests for ServiceWorker, Cache, and CacheStorage APIs
 
-use std::process::{Command, Stdio};
 use std::fs;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+
+fn bee_path() -> PathBuf {
+    PathBuf::from(
+        std::env::var("CARGO_BIN_EXE_bee").unwrap_or_else(|_| "./target/debug/bee".to_string()),
+    )
+}
 
 #[cfg(test)]
 mod service_worker_tests {
@@ -20,8 +27,16 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(output.status.success(), "ServiceWorker should exist: {}", stdout);
-        assert!(stdout.contains("SUCCESS: navigator.serviceWorker exists"), "Output: {}", stdout);
+        assert!(
+            output.status.success(),
+            "ServiceWorker should exist: {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("SUCCESS: navigator.serviceWorker exists"),
+            "Output: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -38,7 +53,11 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "register should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "register should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -58,7 +77,11 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Should return Promise: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Should return Promise: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -81,7 +104,11 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Registration should have scope: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Registration should have scope: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -104,7 +131,11 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Registration should have installing: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Registration should have installing: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -127,7 +158,11 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Registration should have active: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Registration should have active: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -146,7 +181,11 @@ mod service_worker_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Ready property should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Ready property should exist: {}",
+            stdout
+        );
     }
 }
 
@@ -167,7 +206,11 @@ mod cache_api_tests {
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(output.status.success(), "caches should exist: {}", stdout);
-        assert!(stdout.contains("SUCCESS: global caches object exists"), "Output: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: global caches object exists"),
+            "Output: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -182,7 +225,11 @@ mod cache_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "caches.open should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "caches.open should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -197,7 +244,11 @@ mod cache_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "caches.keys should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "caches.keys should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -212,7 +263,11 @@ mod cache_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "caches.has should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "caches.has should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -227,7 +282,11 @@ mod cache_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "caches.delete should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "caches.delete should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -255,7 +314,11 @@ mod cache_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "caches.open should return Promise: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "caches.open should return Promise: {}",
+            stdout
+        );
     }
 }
 
@@ -283,7 +346,11 @@ mod cache_object_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Cache.addAll should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Cache.addAll should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -306,7 +373,11 @@ mod cache_object_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Cache.match should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Cache.match should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -329,7 +400,11 @@ mod cache_object_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Cache.put should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Cache.put should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -352,7 +427,11 @@ mod cache_object_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Cache.delete should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Cache.delete should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -375,7 +454,11 @@ mod cache_object_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Cache.keys should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Cache.keys should exist: {}",
+            stdout
+        );
     }
 }
 
@@ -414,7 +497,11 @@ mod integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Full flow should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Full flow should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -443,7 +530,11 @@ mod integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Cache flow should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Cache flow should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -467,7 +558,11 @@ mod integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Scope option should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Scope option should work: {}",
+            stdout
+        );
     }
 }
 
@@ -488,7 +583,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "InstallEvent should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "InstallEvent should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -504,7 +603,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "ActivateEvent should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "ActivateEvent should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -520,7 +623,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "FetchEvent should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "FetchEvent should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -541,7 +648,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "InstallEvent creation should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "InstallEvent creation should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -562,7 +673,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "ActivateEvent creation should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "ActivateEvent creation should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -584,7 +699,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "FetchEvent creation should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "FetchEvent creation should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -601,7 +720,11 @@ mod lifecycle_event_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "ServiceWorkerState should have 6 states: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "ServiceWorkerState should have 6 states: {}",
+            stdout
+        );
     }
 }
 
@@ -616,14 +739,14 @@ fn run_script(script: &str) -> std::process::Output {
     fs::write(&temp_file, script).unwrap();
 
     // Run beejs with the script
-    let output = Command::new("./target/release/beejs")
+    let output = Command::new(bee_path())
         .arg("run")
         .arg(&temp_file)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .expect("Failed to run beejs");
+        .expect("Failed to run bee");
 
     // Clean up
     drop(temp_dir);

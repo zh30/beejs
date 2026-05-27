@@ -2,10 +2,10 @@
 // 分析函数调用栈，识别热点路径和性能瓶颈
 
 use std::collections::BTreeMap;
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 /// 调用栈帧
 #[derive(Debug, Clone)]
@@ -169,7 +169,8 @@ impl CallStackAnalyzer {
             self.stats.max_call_depth = depth;
         }
         // 更新调用计数
-        *self.function_call_counts
+        *self
+            .function_call_counts
             .entry(function_name.to_string())
             .or_insert(0) += 1;
         // 检查递归
@@ -212,7 +213,8 @@ impl CallStackAnalyzer {
         if self
             .recursion_tracker
             .current_recursion_stack
-            .iter().any(|s| s == function_name)
+            .iter()
+            .any(|s| s == function_name)
         {
             // 检测到递归
             let depth: _ = self
@@ -290,10 +292,7 @@ impl CallStackAnalyzer {
                 bottlenecks.push(Bottleneck {
                     function: function_name.clone(),
                     bottleneck_type: BottleneckType::SlowExecution,
-                    description: format!(
-                        "Average execution time: {:?}",
-                        avg_execution_time
-                    ),
+                    description: format!("Average execution time: {:?}", avg_execution_time),
                     impact: 0.8,
                 });
             }
@@ -312,10 +311,7 @@ impl CallStackAnalyzer {
             bottlenecks.push(Bottleneck {
                 function: "Deep Nesting".to_string(),
                 bottleneck_type: BottleneckType::DeepNesting,
-                description: format!(
-                    "Maximum call depth: {}",
-                    self.stats.max_call_depth
-                ),
+                description: format!("Maximum call depth: {}", self.stats.max_call_depth),
                 impact: 0.7,
             });
         }
@@ -334,9 +330,7 @@ impl CallStackAnalyzer {
     fn calculate_depth_stats(&self) -> DepthStats {
         let mut depth_distribution: HashMap<usize, usize> = HashMap::new();
         for frame in &self.call_history {
-            *depth_distribution
-                .entry(frame.depth)
-                .or_insert(0) += 1;
+            *depth_distribution.entry(frame.depth).or_insert(0) += 1;
         }
         let total_calls: _ = self.call_history.len() as f64;
         let avg_depth: _ = if total_calls > 0.0 {
@@ -383,7 +377,8 @@ impl CallStackAnalyzer {
     pub fn is_recursive_call(&self, function_name: &str) -> bool {
         self.recursion_tracker
             .current_recursion_stack
-            .iter().any(|s| s == function_name)
+            .iter()
+            .any(|s| s == function_name)
     }
     /// 获取当前递归深度
     pub fn get_current_recursion_depth(&self) -> usize {
@@ -400,10 +395,16 @@ mod tests {
     #[test]
     fn test_enter_and_exit_function() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let start_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.enter_function("test_func", None, None, None, start_time);
         std::thread::sleep(Duration::from_millis(10));
-        let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let end_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         let frame: _ = analyzer.exit_function("test_func", end_time, 1024);
         assert!(frame.is_some());
         let frame_data: _ = frame.unwrap();
@@ -413,23 +414,35 @@ mod tests {
     #[test]
     fn test_recursion_detection() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let start_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.enter_function("recursive_func", None, None, None, start_time);
         assert!(!analyzer.is_recursive_call("recursive_func"));
         analyzer.enter_function("recursive_func", None, None, None, start_time);
         assert!(analyzer.is_recursive_call("recursive_func"));
-        let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let end_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.exit_function("recursive_func", end_time, 0);
         assert!(!analyzer.is_recursive_call("recursive_func"));
     }
     #[test]
     fn test_analyze_stack() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let start_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         // 模拟函数调用
         analyzer.enter_function("func_a", None, None, None, start_time);
         analyzer.enter_function("func_b", None, None, None, start_time);
-        let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let end_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.exit_function("func_b", end_time, 0);
         analyzer.exit_function("func_a", end_time, 0);
         let analysis: _ = analyzer.analyze_stack();
@@ -441,31 +454,33 @@ mod tests {
         let mut analyzer = CallStackAnalyzer::new(10);
         // 模拟频繁调用的函数
         for _ in 0..1100 {
-            let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+            let start_time: _ = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as u64;
             analyzer.enter_function("frequent_func", None, None, None, start_time);
-            let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+            let end_time: _ = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as u64;
             analyzer.exit_function("frequent_func", end_time, 0);
         }
         let analysis: _ = analyzer.analyze_stack();
         let has_frequency_bottleneck: _ = analysis.bottlenecks.iter().any(|b| {
-            b.function == "frequent_func"
-                && b.bottleneck_type == BottleneckType::HighCallFrequency
+            b.function == "frequent_func" && b.bottleneck_type == BottleneckType::HighCallFrequency
         });
         assert!(has_frequency_bottleneck);
     }
     #[test]
     fn test_max_depth_limit() {
         let mut analyzer = CallStackAnalyzer::new(3);
-        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let start_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         // 尝试超过最大深度
         for i in 0..5 {
-            analyzer.enter_function(
-                &format!("func_{}", i),
-                None,
-                None,
-                None,
-                start_time,
-            );
+            analyzer.enter_function(&format!("func_{}", i), None, None, None, start_time);
         }
         let stats: _ = analyzer.get_stats();
         assert_eq!(stats.max_call_depth, 4); // 从0开始计数
@@ -473,9 +488,15 @@ mod tests {
     #[test]
     fn test_clear() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let start_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.enter_function("test_func", None, None, None, start_time);
-        let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let end_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.exit_function("test_func", end_time, 0);
         analyzer.clear();
         assert_eq!(analyzer.get_stats().total_calls, 0);
@@ -484,11 +505,17 @@ mod tests {
     #[test]
     fn test_depth_statistics() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let start_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         // 不同深度的调用
         analyzer.enter_function("depth_0", None, None, None, start_time);
         analyzer.enter_function("depth_1", None, None, None, start_time);
-        let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let end_time: _ = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
         analyzer.exit_function("depth_1", end_time, 0);
         analyzer.exit_function("depth_0", end_time, 0);
         let analysis: _ = analyzer.analyze_stack();

@@ -1,8 +1,8 @@
 // TCP Connection Tests - v0.3.69
 // 测试 net 模块 TCP 连接功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -27,7 +27,11 @@ fn test_net_connect_function_exists() {
         typeof net.connect;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "net.connect should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "net.connect should be a function"
+    );
 }
 
 #[test]
@@ -41,7 +45,11 @@ fn test_net_create_connection_alias() {
         typeof net.connect === 'function' && typeof net.createConnection === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "createConnection should be a function like connect");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "createConnection should be a function like connect"
+    );
 }
 
 #[test]
@@ -58,7 +66,11 @@ fn test_net_connect_with_port_and_host() {
         typeof socket;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "net.connect should return a socket object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "net.connect should return a socket object"
+    );
 }
 
 #[test]
@@ -114,7 +126,11 @@ fn test_net_connect_returns_socket_with_connect_event() {
         typeof socket.connect;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "socket should have connect property");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "socket should have connect property"
+    );
 }
 
 #[test]
@@ -128,7 +144,11 @@ fn test_net_connect_localhost_default() {
         typeof socket.localAddress;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "socket should have localAddress property");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "socket should have localAddress property"
+    );
 }
 
 #[test]
@@ -142,7 +162,11 @@ fn test_net_socket_pending_state() {
         socket.connecting;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should be connecting initially");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should be connecting initially"
+    );
 }
 
 #[test]
@@ -156,7 +180,11 @@ fn test_net_socket_remote_family() {
         typeof socket.remoteFamily;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "socket should have remoteFamily property");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "socket should have remoteFamily property"
+    );
 }
 
 #[test]
@@ -170,7 +198,11 @@ fn test_net_socket_remote_port() {
         socket.remotePort;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "8080", "socket should have correct remotePort");
+    assert_eq!(
+        result.trim(),
+        "8080",
+        "socket should have correct remotePort"
+    );
 }
 
 #[test]
@@ -187,7 +219,11 @@ fn test_net_socket_remote_address() {
         socket.remoteAddress;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "127.0.0.1", "socket should have correct remoteAddress");
+    assert_eq!(
+        result.trim(),
+        "127.0.0.1",
+        "socket should have correct remoteAddress"
+    );
 }
 
 #[test]
@@ -201,7 +237,11 @@ fn test_net_socket_destroy_method() {
         typeof socket.destroy;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "socket should have destroy method");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "socket should have destroy method"
+    );
 }
 
 #[test]
@@ -218,7 +258,11 @@ fn test_net_connect_timeout_option() {
         typeof socket;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "socket should be created with timeout option");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "socket should be created with timeout option"
+    );
 }
 
 #[test]
@@ -232,7 +276,11 @@ fn test_net_socket_set_timeout() {
         typeof socket.setTimeout;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "socket should have setTimeout method");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "socket should have setTimeout method"
+    );
 }
 
 #[test]
@@ -258,7 +306,11 @@ fn test_net_create_server_function() {
         typeof net.createServer;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "net.createServer should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "net.createServer should be a function"
+    );
 }
 
 #[test]
@@ -272,7 +324,11 @@ fn test_net_server_returns_server_object() {
         typeof server;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "createServer should return server object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "createServer should return server object"
+    );
 }
 
 #[test]
@@ -286,7 +342,11 @@ fn test_net_server_listen_method() {
         typeof server.listen;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "server should have listen method");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "server should have listen method"
+    );
 }
 
 #[test]
@@ -314,7 +374,11 @@ fn test_net_server_connection_event() {
         typeof server.on;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "server should have on method for events");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "server should have on method for events"
+    );
 }
 
 #[test]
@@ -366,7 +430,11 @@ fn test_net_is_ip_invalid() {
         net.isIP('not-an-ip');
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "0", "net.isIP should return 0 for invalid IP");
+    assert_eq!(
+        result.trim(),
+        "0",
+        "net.isIP should return 0 for invalid IP"
+    );
 }
 
 #[test]

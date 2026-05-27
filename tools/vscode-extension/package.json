@@ -48,7 +48,7 @@
       "properties": {
         "beejs.runtimePath": {
           "type": "string",
-          "default": "beejs",
+          "default": "bee",
           "description": "Path to the Beejs executable",
           "order": 1
         },

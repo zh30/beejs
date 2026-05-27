@@ -3,35 +3,32 @@
 // 该模块利用因果推断、变更关联分析和知识图谱来快速定位系统故障的根本原因。
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::Duration;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::time::SystemTime;
-use std::hash::Hash;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+use tokio::sync::RwLock;
 
 /// 事件类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IncidentType {
-    ServiceOutage,      // 服务中断
-    HighLatency,        // 高延迟
-    HighMemoryUsage,    // 高内存使用
-    DiskFull,           // 磁盘满
-    NetworkIssue,       // 网络问题
-    DatabaseIssue,      // 数据库问题
-    DeploymentFailure,  // 部署失败
-    SecurityIncident,   // 安全事件
+    ServiceOutage,     // 服务中断
+    HighLatency,       // 高延迟
+    HighMemoryUsage,   // 高内存使用
+    DiskFull,          // 磁盘满
+    NetworkIssue,      // 网络问题
+    DatabaseIssue,     // 数据库问题
+    DeploymentFailure, // 部署失败
+    SecurityIncident,  // 安全事件
 }
 /// 变更类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ChangeType {
-    Configuration,      // 配置变更
-    Code,              // 代码变更
-    Database,          // 数据库变更
-    Infrastructure,    // 基础设施变更
-    Deployment,        // 部署变更
-    Production,        // 生产环境变更
+    Configuration,  // 配置变更
+    Code,           // 代码变更
+    Database,       // 数据库变更
+    Infrastructure, // 基础设施变更
+    Deployment,     // 部署变更
+    Production,     // 生产环境变更
 }
 /// 事件严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -85,11 +82,11 @@ pub struct Change {
 /// 因果关系类型
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CausalityType {
-    Causes,            // 直接导致
-    ContributesTo,     // 促成
-    CorrelatesWith,    // 相关
-    Precedes,          // 先于
-    Blocks,            // 阻塞
+    Causes,         // 直接导致
+    ContributesTo,  // 促成
+    CorrelatesWith, // 相关
+    Precedes,       // 先于
+    Blocks,         // 阻塞
 }
 /// 因果关系
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,7 +94,7 @@ pub struct Causality {
     pub cause_id: String,
     pub effect_id: String,
     pub causality_type: CausalityType,
-    pub strength: f64, // 0.0 - 1.0
+    pub strength: f64,   // 0.0 - 1.0
     pub confidence: f64, // 0.0 - 1.0
     pub evidence: Vec<String>,
 }
@@ -156,12 +153,15 @@ pub struct EventCollector {
 impl EventCollector {
     pub fn new() -> Self {
         Self {
-            incidents: Arc::new(Mutex::new(Vec::new()))
-            changes: Arc::new(Mutex::new(Vec::new()))
+            incidents: Arc::new(RwLock::new(Vec::new())),
+            changes: Arc::new(RwLock::new(Vec::new())),
         }
     }
     /// 收集事件
-    pub async fn collect_incident(&self, incident: Incident) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn collect_incident(
+        &self,
+        incident: Incident,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut incidents = self.incidents.write().await;
         incidents.push(incident);
         Ok(())
@@ -173,19 +173,31 @@ impl EventCollector {
         Ok(())
     }
     /// 获取相关事件
-    pub async fn get_related_events(&self, service: &str, timeframe: Duration) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
+    pub async fn get_related_events(
+        &self,
+        service: &str,
+        timeframe: Duration,
+    ) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
         let cutoff_time: _ = SystemTime::now() - timeframe;
         let service_str: _ = service.to_string();
         let incidents: _ = self.incidents.read().await;
         let changes: _ = self.changes.read().await;
         let related_incidents: Vec<Incident> = incidents
             .iter()
-            .filter(|i| i.timestamp > cutoff_time && (i.affected_services.contains(&service_str) || i.affected_components.contains(&service_str))
+            .filter(|i| {
+                i.timestamp > cutoff_time
+                    && (i.affected_services.contains(&service_str)
+                        || i.affected_components.contains(&service_str))
+            })
             .cloned()
             .collect();
         let related_changes: Vec<Change> = changes
             .iter()
-            .filter(|c| c.timestamp > cutoff_time && (c.affected_services.contains(&service_str) || c.affected_components.contains(&service_str))
+            .filter(|c| {
+                c.timestamp > cutoff_time
+                    && (c.affected_services.contains(&service_str)
+                        || c.affected_components.contains(&service_str))
+            })
             .cloned()
             .collect();
         Ok((related_incidents, related_changes))
@@ -206,29 +218,42 @@ impl ChangeCorrelator {
         Self { event_collector }
     }
     /// 关联变更和事件
-    pub async fn correlate_changes_with_incidents(&self, timeframe: Duration) -> Result<Vec<(Change, Incident)>, Box<dyn std::error::Error>> {
+    pub async fn correlate_changes_with_incidents(
+        &self,
+        timeframe: Duration,
+    ) -> Result<Vec<(Change, Incident)>, Box<dyn std::error::Error>> {
         let (incidents, changes) = self.get_all_events().await?;
         let mut correlations = Vec::new();
         for change in &changes {
             for incident in &incidents {
                 // 检查时间和组件重叠
                 if self.has_temporal_correlation(change, incident, &timeframe)?
-                    && self.has_component_overlap(change, incident) {
-                    correlations.push((change.clone(), incident.clone());
+                    && self.has_component_overlap(change, incident)
+                {
+                    correlations.push((change.clone(), incident.clone()));
                 }
             }
         }
         Ok(correlations)
     }
     /// 查找可疑变更
-    pub async fn find_suspect_changes(&self, incident: &Incident, timeframe: Duration) -> Result<Vec<Change>, Box<dyn std::error::Error>> {
+    pub async fn find_suspect_changes(
+        &self,
+        incident: &Incident,
+        timeframe: Duration,
+    ) -> Result<Vec<Change>, Box<dyn std::error::Error>> {
         let (incidents, changes) = self.get_all_events().await?;
         let mut suspect_changes = Vec::new();
         for change in &changes {
             // 检查变更是否在事件发生前
             if change.timestamp < incident.timestamp
-                && incident.timestamp.duration_since(change.timestamp).unwrap_or_default() < timeframe
-                && self.has_component_overlap(change, incident) {
+                && incident
+                    .timestamp
+                    .duration_since(change.timestamp)
+                    .unwrap_or_default()
+                    < timeframe
+                && self.has_component_overlap(change, incident)
+            {
                 // 计算可疑度分数
                 let suspicion_score: _ = self.calculate_suspicion_score(change, incident);
                 if suspicion_score > 0.5 {
@@ -238,20 +263,35 @@ impl ChangeCorrelator {
         }
         Ok(suspect_changes)
     }
-    fn has_temporal_correlation(&self, change: &Change, incident: &Incident, timeframe: &Duration) -> Result<bool, Box<dyn std::error::Error>> {
+    fn has_temporal_correlation(
+        &self,
+        change: &Change,
+        incident: &Incident,
+        timeframe: &Duration,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
         let time_diff: _ = if change.timestamp < incident.timestamp {
-            incident.timestamp.duration_since(change.timestamp).unwrap_or_default()
+            incident
+                .timestamp
+                .duration_since(change.timestamp)
+                .unwrap_or_default()
         } else {
-            change.timestamp.duration_since(incident.timestamp).unwrap_or_default()
+            change
+                .timestamp
+                .duration_since(incident.timestamp)
+                .unwrap_or_default()
         };
         Ok(time_diff <= *timeframe)
     }
     fn has_component_overlap(&self, change: &Change, incident: &Incident) -> bool {
-        let change_components: HashSet<&str> = change.affected_services.iter()
+        let change_components: HashSet<&str> = change
+            .affected_services
+            .iter()
             .chain(change.affected_components.iter())
             .map(|s| s.as_str())
             .collect();
-        let incident_components: HashSet<&str> = incident.affected_services.iter()
+        let incident_components: HashSet<&str> = incident
+            .affected_services
+            .iter()
             .chain(incident.affected_components.iter())
             .map(|s| s.as_str())
             .collect();
@@ -271,33 +311,43 @@ impl ChangeCorrelator {
         // 基于风险级别加分
         score += change.risk_level * 0.3;
         // 基于时间接近度加分
-        let time_diff: _ = incident.timestamp.duration_since(change.timestamp).unwrap_or_default();
-        if time_diff.as_secs() < 3600 { // 1小时内
+        let time_diff: _ = incident
+            .timestamp
+            .duration_since(change.timestamp)
+            .unwrap_or_default();
+        if time_diff.as_secs() < 3600 {
+            // 1小时内
             score += 0.2;
-        } else if time_diff.as_secs() < 86400 { // 1天内
+        } else if time_diff.as_secs() < 86400 {
+            // 1天内
             score += 0.1;
         }
         score.min(1.0)
     }
-    async fn get_all_events(&self) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
+    async fn get_all_events(
+        &self,
+    ) -> Result<(Vec<Incident>, Vec<Change>), Box<dyn std::error::Error>> {
         let incidents: _ = self.event_collector.incidents.read().await;
         let changes: _ = self.event_collector.changes.read().await;
-        Ok((incidents.clone(), changes.clone())
+        Ok((incidents.clone(), changes.clone()))
     }
 }
 /// 因果推断引擎
 #[derive(Debug)]
 pub struct CausalInferenceEngine {
-    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>,
+    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>>,
 }
 impl CausalInferenceEngine {
     pub fn new() -> Self {
         Self {
-            causal_graph: Arc::new(Mutex::new(HashMap::new()))
+            causal_graph: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     /// 构建因果图
-    pub async fn build_causal_graph(&self, events: &[Incident]) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn build_causal_graph(
+        &self,
+        events: &[Incident],
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut graph = self.causal_graph.write().await;
         // 清除现有图
         graph.clear();
@@ -305,7 +355,8 @@ impl CausalInferenceEngine {
         for (i, event1) in events.iter().enumerate() {
             for event2 in events.iter().skip(i + 1) {
                 if let Some(causality) = self.infer_causality(event1, event2)? {
-                    graph.entry(event1.id.clone())
+                    graph
+                        .entry(event1.id.clone())
                         .or_insert_with(Vec::new)
                         .push(causality);
                 }
@@ -314,16 +365,24 @@ impl CausalInferenceEngine {
         Ok(())
     }
     /// 推断因果关系
-    fn infer_causality(&self, event1: &Incident, event2: &Incident) -> Result<Option<Causality>, Box<dyn std::error::Error>> {
+    fn infer_causality(
+        &self,
+        event1: &Incident,
+        event2: &Incident,
+    ) -> Result<Option<Causality>, Box<dyn std::error::Error>> {
         // 检查时间顺序
         if event1.timestamp >= event2.timestamp {
             return Ok(None);
         }
-        let time_diff: _ = event2.timestamp.duration_since(event1.timestamp).unwrap_or_default();
+        let time_diff: _ = event2
+            .timestamp
+            .duration_since(event1.timestamp)
+            .unwrap_or_default();
         // 检查组件重叠
         let overlap: _ = self.calculate_component_overlap(event1, event2);
         // 如果有时间关系和组件重叠，推断因果关系
-        if time_diff.as_secs() < 3600 && overlap > 0.3 { // 1小时内且有组件重叠
+        if time_diff.as_secs() < 3600 && overlap > 0.3 {
+            // 1小时内且有组件重叠
             Ok(Some(Causality {
                 cause_id: event1.id.clone(),
                 effect_id: event2.id.clone(),
@@ -340,11 +399,15 @@ impl CausalInferenceEngine {
         }
     }
     fn calculate_component_overlap(&self, event1: &Incident, event2: &Incident) -> f64 {
-        let components1: HashSet<&str> = event1.affected_services.iter()
+        let components1: HashSet<&str> = event1
+            .affected_services
+            .iter()
             .chain(event1.affected_components.iter())
             .map(|s| s.as_str())
             .collect();
-        let components2: HashSet<&str> = event2.affected_services.iter()
+        let components2: HashSet<&str> = event2
+            .affected_services
+            .iter()
             .chain(event2.affected_components.iter())
             .map(|s| s.as_str())
             .collect();
@@ -357,7 +420,10 @@ impl CausalInferenceEngine {
         }
     }
     /// 推断根因
-    pub async fn infer_root_causes(&self, incident: &Incident) -> Result<Vec<RootCause>, Box<dyn std::error::Error>> {
+    pub async fn infer_root_causes(
+        &self,
+        incident: &Incident,
+    ) -> Result<Vec<RootCause>, Box<dyn std::error::Error>> {
         let graph: _ = self.causal_graph.read().await;
         // 查找可能导致此事件的原因
         let mut root_causes = Vec::new();
@@ -392,37 +458,52 @@ pub struct RootCauseAnalyzer {
 }
 impl RootCauseAnalyzer {
     pub fn new() -> Self {
-        let event_collector: _ = Arc::new(Mutex::new(EventCollector::new()),;
+        let event_collector: _ = Arc::new(EventCollector::new());
         Self {
-            event_collector: Arc::new(Mutex::new(EventCollector::new()))
-            causal_inference_engine: Arc::new(Mutex::new(CausalInferenceEngine::new()))
-            change_correlator: Arc::new(Mutex::new(ChangeCorrelator::new(event_collector.clone()))
+            event_collector: event_collector.clone(),
+            causal_inference_engine: Arc::new(CausalInferenceEngine::new()),
+            change_correlator: Arc::new(ChangeCorrelator::new(event_collector)),
         }
     }
     /// 分析根因
-    pub async fn analyze_root_cause(&self, incident: &Incident) -> Result<RootCauseAnalysis, Box<dyn std::error::Error>> {
+    pub async fn analyze_root_cause(
+        &self,
+        incident: &Incident,
+    ) -> Result<RootCauseAnalysis, Box<dyn std::error::Error>> {
         // 收集相关事件
         let timeframe: _ = Duration::from_secs(86400); // 24小时
-        let (related_incidents, related_changes) = self.event_collector.get_related_events(
-            &incident.affected_services[0],
-            timeframe,
-        ).await?;
+        let (related_incidents, related_changes) = self
+            .event_collector
+            .get_related_events(&incident.affected_services[0], timeframe)
+            .await?;
         // 构建因果图
         let all_events: _ = vec![incident.clone()]
             .into_iter()
             .chain(related_incidents.into_iter())
-            .collect::<Vec<_>();
-        self.causal_inference_engine.build_causal_graph(&all_events).await?;
+            .collect::<Vec<_>>();
+        self.causal_inference_engine
+            .build_causal_graph(&all_events)
+            .await?;
         // 推断根因
-        let root_causes: _ = self.causal_inference_engine.infer_root_causes(incident).await?;
+        let root_causes: _ = self
+            .causal_inference_engine
+            .infer_root_causes(incident)
+            .await?;
         // 查找促成因素
-        let contributing_factors: _ = self.identify_contributing_factors(incident, &related_changes).await?;
+        let contributing_factors: _ = self
+            .identify_contributing_factors(incident, &related_changes)
+            .await?;
         // 计算置信度
-        let confidence_score: _ = self.calculate_confidence_score(&root_causes, &contributing_factors)?;
+        let confidence_score: _ =
+            self.calculate_confidence_score(&root_causes, &contributing_factors)?;
         // 关联变更
-        let correlated_changes: _ = self.change_correlator.find_suspect_changes(incident, timeframe).await?;
+        let correlated_changes: _ = self
+            .change_correlator
+            .find_suspect_changes(incident, timeframe)
+            .await?;
         // 生成建议
-        let recommendations: _ = self.generate_recommendations(&root_causes, &contributing_factors)?;
+        let recommendations: _ =
+            self.generate_recommendations(&root_causes, &contributing_factors)?;
         Ok(RootCauseAnalysis {
             incident_id: incident.id.clone(),
             root_causes,
@@ -434,7 +515,10 @@ impl RootCauseAnalyzer {
         })
     }
     /// 分析变更影响
-    pub async fn analyze_change_impact(&self, change: &Change) -> Result<ChangeImpactAnalysis, Box<dyn std::error::Error>> {
+    pub async fn analyze_change_impact(
+        &self,
+        change: &Change,
+    ) -> Result<ChangeImpactAnalysis, Box<dyn std::error::Error>> {
         let mut potential_impacts = Vec::new();
         // 基于变更类型推断潜在影响
         match change.change_type {
@@ -502,11 +586,16 @@ impl RootCauseAnalyzer {
         })
     }
     /// 识别促成因素
-    async fn identify_contributing_factors(&self, incident: &Incident, changes: &[Change]) -> Result<Vec<ContributingFactor>, Box<dyn std::error::Error>> {
+    async fn identify_contributing_factors(
+        &self,
+        incident: &Incident,
+        changes: &[Change],
+    ) -> Result<Vec<ContributingFactor>, Box<dyn std::error::Error>> {
         let mut factors = Vec::new();
         // 检查最近的变更作为促成因素
         for change in changes {
-            if change.timestamp > incident.timestamp - Duration::from_secs(7200) { // 2小时内
+            if change.timestamp > incident.timestamp - Duration::from_secs(7200) {
+                // 2小时内
                 factors.push(ContributingFactor {
                     factor_id: change.id.clone(),
                     description: format!("Recent change: {}", change.title),
@@ -518,26 +607,39 @@ impl RootCauseAnalyzer {
         Ok(factors)
     }
     /// 计算置信度分数
-    fn calculate_confidence_score(&self, root_causes: &[RootCause], contributing_factors: &[ContributingFactor]) -> Result<f64, Box<dyn std::error::Error>> {
+    fn calculate_confidence_score(
+        &self,
+        root_causes: &[RootCause],
+        contributing_factors: &[ContributingFactor],
+    ) -> Result<f64, Box<dyn std::error::Error>> {
         if root_causes.is_empty() {
             return Ok(0.0);
         }
-        let avg_confidence: f64 = root_causes.iter()
-            .map(|rc| rc.confidence)
-            .sum::<f64>() / root_causes.len() as f64;
+        let avg_confidence: f64 =
+            root_causes.iter().map(|rc| rc.confidence).sum::<f64>() / root_causes.len() as f64;
         let factor_bonus: _ = (contributing_factors.len() as f64 * 0.1).min(0.3);
         Ok((avg_confidence + factor_bonus).min(1.0))
     }
     /// 生成建议
-    fn generate_recommendations(&self, root_causes: &[RootCause], contributing_factors: &[ContributingFactor]) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    fn generate_recommendations(
+        &self,
+        root_causes: &[RootCause],
+        contributing_factors: &[ContributingFactor],
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut recommendations = Vec::new();
         for root_cause in root_causes {
             if root_cause.cause_type == "event" {
-                recommendations.push(format!("Investigate root cause event: {}", root_cause.cause_id));
+                recommendations.push(format!(
+                    "Investigate root cause event: {}",
+                    root_cause.cause_id
+                ));
             }
         }
         for factor in contributing_factors {
-            recommendations.push(format!("Address contributing factor: {}", factor.description));
+            recommendations.push(format!(
+                "Address contributing factor: {}",
+                factor.description
+            ));
         }
         // 通用建议
         recommendations.push("Implement monitoring and alerting".to_string());

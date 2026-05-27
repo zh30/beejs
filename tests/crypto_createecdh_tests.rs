@@ -9,7 +9,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -21,11 +21,12 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     // Parse output - skip the "🐝 Running Beejs on:" line and "Result:" line
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
@@ -40,7 +41,11 @@ fn test_create_ecdh_exists() {
 console.log(typeof crypto.createECDH === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected createECDH to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected createECDH to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -51,7 +56,11 @@ const ecdh = crypto.createECDH('prime256v1');
 console.log(typeof ecdh === 'object' && ecdh !== null ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected createECDH to return object: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected createECDH to return object: {}",
+        output
+    );
 }
 
 #[test]
@@ -78,7 +87,11 @@ console.log(hasSetPublicKey ? 'PASS' : 'FAIL');
 console.log(hasSetPrivateKey ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected all ECDH properties to exist: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected all ECDH properties to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -90,7 +103,11 @@ console.log(ecdh.privateKey.length > 0 ? 'PASS' : 'FAIL');
 console.log(ecdh.publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected ECDH with prime256v1: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected ECDH with prime256v1: {}",
+        output
+    );
 }
 
 #[test]
@@ -102,7 +119,11 @@ console.log(ecdh.privateKey.length > 0 ? 'PASS' : 'FAIL');
 console.log(ecdh.publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected ECDH with secp256r1: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected ECDH with secp256r1: {}",
+        output
+    );
 }
 
 #[test]
@@ -114,7 +135,11 @@ console.log(ecdh.privateKey.length > 0 ? 'PASS' : 'FAIL');
 console.log(ecdh.publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected ECDH with secp384r1: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected ECDH with secp384r1: {}",
+        output
+    );
 }
 
 #[test]
@@ -126,7 +151,11 @@ console.log(ecdh.privateKey.length > 0 ? 'PASS' : 'FAIL');
 console.log(ecdh.publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected ECDH with secp521r1: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected ECDH with secp521r1: {}",
+        output
+    );
 }
 
 #[test]
@@ -145,7 +174,11 @@ console.log(bobSecret.length > 0 ? 'PASS' : 'FAIL');
 console.log(aliceSecret.length === bobSecret.length ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -162,7 +195,11 @@ console.log(typeof aliceSecret === 'string' ? 'PASS' : 'FAIL');
 console.log(aliceSecret.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with hex encoding: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with hex encoding: {}",
+        output
+    );
 }
 
 #[test]
@@ -179,7 +216,11 @@ console.log(typeof aliceSecret === 'string' ? 'PASS' : 'FAIL');
 console.log(aliceSecret.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with base64 encoding: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with base64 encoding: {}",
+        output
+    );
 }
 
 #[test]
@@ -194,7 +235,11 @@ console.log(typeof keys.publicKey === 'string' ? 'PASS' : 'FAIL');
 console.log(keys.publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected generateKeys to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected generateKeys to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -208,7 +253,11 @@ console.log(typeof publicKey === 'string' ? 'PASS' : 'FAIL');
 console.log(publicKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected getPublicKey to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected getPublicKey to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -222,7 +271,11 @@ console.log(typeof privateKey === 'string' ? 'PASS' : 'FAIL');
 console.log(privateKey.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected getPrivateKey to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected getPrivateKey to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -242,7 +295,11 @@ bob.setPublicKey(originalPublicKey);
 console.log(bob.getPublicKey() === originalPublicKey ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected setPublicKey to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected setPublicKey to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -262,7 +319,11 @@ bob.setPrivateKey(originalPrivateKey);
 console.log(bob.getPrivateKey() === originalPrivateKey ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected setPrivateKey to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected setPrivateKey to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -277,7 +338,11 @@ console.log(privateKeyHex ? 'PASS' : 'FAIL');
 console.log(publicKeyHex ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected keys to be hex strings: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected keys to be hex strings: {}",
+        output
+    );
 }
 
 #[test]
@@ -291,7 +356,11 @@ console.log(ecdh1.privateKey !== ecdh2.privateKey ? 'PASS' : 'FAIL');
 console.log(ecdh1.publicKey !== ecdh2.publicKey ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different instances to have different keys: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different instances to have different keys: {}",
+        output
+    );
 }
 
 #[test]
@@ -309,7 +378,11 @@ console.log(aliceSecret instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(aliceSecret.length > 0 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected computeSecret with buffer: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret with buffer: {}",
+        output
+    );
 }
 
 #[test]
@@ -339,7 +412,11 @@ console.log(equal ? 'PASS' : 'FAIL');
 console.log(aliceShared.length === 32 ? 'PASS' : 'FAIL'); // 256-bit / 32 bytes
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected key exchange roundtrip: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected key exchange roundtrip: {}",
+        output
+    );
 }
 
 #[test]
@@ -356,7 +433,11 @@ try {
 }
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected error for invalid curve: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected error for invalid curve: {}",
+        output
+    );
 }
 
 #[test]
@@ -379,5 +460,9 @@ try {
 "#;
     let output = run_js_test(code);
     // Should handle gracefully without panicking
-    assert!(output.contains("PASS"), "Expected computeSecret to handle missing peer key gracefully: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected computeSecret to handle missing peer key gracefully: {}",
+        output
+    );
 }

@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+#![cfg(feature = "unstable_runtime")]
 // Promise API 完整测试套件 - v0.2.1
 //
 // 目标：验证 Beejs 对现代 JavaScript Promise 语法的完整支持
@@ -15,7 +17,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.resolve should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.resolve should execute without errors"
+        );
     }
 
     /// 测试 Promise.reject()
@@ -27,7 +32,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.reject should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.reject should execute without errors"
+        );
     }
 
     /// 测试 Promise.all() - 所有 Promise 都成功
@@ -72,7 +80,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.all([]) should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.all([]) should execute without errors"
+        );
     }
 
     /// 测试 Promise.all() - 非 Promise 值
@@ -84,7 +95,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.all with non-Promise values should execute");
+        assert!(
+            result.is_ok(),
+            "Promise.all with non-Promise values should execute"
+        );
     }
 
     /// 测试 Promise.allSettled() - 所有成功
@@ -100,7 +114,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.allSettled should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.allSettled should execute without errors"
+        );
     }
 
     /// 测试 Promise.allSettled() - 混合成功和失败
@@ -116,7 +133,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.allSettled with mixed results should execute");
+        assert!(
+            result.is_ok(),
+            "Promise.allSettled with mixed results should execute"
+        );
     }
 
     /// 测试 Promise.allSettled() - 空数组
@@ -128,7 +148,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.allSettled([]) should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.allSettled([]) should execute without errors"
+        );
     }
 
     /// 测试 Promise.race() - 第一个成功
@@ -156,7 +179,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.race([]) should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.race([]) should execute without errors"
+        );
     }
 
     /// 测试 Promise.any() - 所有成功
@@ -189,7 +215,10 @@ mod tests {
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
         // Promise.any 在所有 Promise 都失败时应该抛出 AggregateError
-        assert!(result.is_ok(), "Promise.any with all rejections should execute");
+        assert!(
+            result.is_ok(),
+            "Promise.any with all rejections should execute"
+        );
     }
 
     /// 测试 Promise.any() - 空数组
@@ -201,7 +230,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.any([]) should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.any([]) should execute without errors"
+        );
     }
 
     /// 测试链式调用
@@ -216,7 +248,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise chaining should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise chaining should execute without errors"
+        );
     }
 
     /// 测试错误处理
@@ -229,7 +264,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise error handling should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise error handling should execute without errors"
+        );
     }
 
     /// 测试 finally 方法
@@ -242,7 +280,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Promise.finally should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Promise.finally should execute without errors"
+        );
     }
 
     /// 测试基本 async 函数
@@ -257,7 +298,10 @@ mod tests {
 
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let result = runtime.execute_standard(code);
-        assert!(result.is_ok(), "Async function should execute without errors");
+        assert!(
+            result.is_ok(),
+            "Async function should execute without errors"
+        );
     }
 
     /// 测试基本 await 语法

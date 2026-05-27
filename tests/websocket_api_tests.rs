@@ -6,7 +6,6 @@
 #[cfg(test)]
 mod tests {
     use beejs::MinimalRuntime;
-    use std::result::Result as StdResult;
 
     /// 测试 WebSocket 构造函数可用性
     #[test]
@@ -15,7 +14,7 @@ mod tests {
             typeof WebSocket
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket constructor should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -29,7 +28,7 @@ mod tests {
             ws.readyState
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket instance should be created");
     }
@@ -42,7 +41,7 @@ mod tests {
             ws.readyState === 0 || ws.readyState === 1
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket readyState should be accessible");
     }
@@ -55,9 +54,12 @@ mod tests {
             ws.url
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "WebSocket URL property should be accessible");
+        assert!(
+            result.is_ok(),
+            "WebSocket URL property should be accessible"
+        );
     }
 
     /// 测试 WebSocket OPEN 状态常量
@@ -67,7 +69,7 @@ mod tests {
             WebSocket.OPEN === 1
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket.OPEN should equal 1");
     }
@@ -79,7 +81,7 @@ mod tests {
             WebSocket.CLOSED === 3
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket.CLOSED should equal 3");
     }
@@ -93,7 +95,7 @@ mod tests {
             typeof ws.onopen
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket onopen should be settable");
     }
@@ -107,7 +109,7 @@ mod tests {
             typeof ws.onmessage
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket onmessage should be settable");
     }
@@ -121,7 +123,7 @@ mod tests {
             typeof ws.onerror
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket onerror should be settable");
     }
@@ -135,7 +137,7 @@ mod tests {
             typeof ws.onclose
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket onclose should be settable");
     }
@@ -148,7 +150,7 @@ mod tests {
             typeof ws.send
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket send method should exist");
     }
@@ -161,7 +163,7 @@ mod tests {
             typeof ws.close
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket close method should exist");
     }
@@ -174,9 +176,12 @@ mod tests {
             typeof ws.bufferedAmount
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "WebSocket bufferedAmount should be accessible");
+        assert!(
+            result.is_ok(),
+            "WebSocket bufferedAmount should be accessible"
+        );
     }
 
     /// 测试 WebSocket binaryType 属性
@@ -188,7 +193,7 @@ mod tests {
             ws.binaryType
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket binaryType should be settable");
     }
@@ -202,7 +207,7 @@ mod tests {
             ws1 !== ws2 && ws1.readyState !== ws2.readyState
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Multiple WebSocket instances should work");
     }
@@ -216,9 +221,12 @@ mod tests {
             event.type === 'open'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "WebSocket event object structure should work");
+        assert!(
+            result.is_ok(),
+            "WebSocket event object structure should work"
+        );
     }
 
     /// 测试 WSS (WebSocket Secure) URL
@@ -229,7 +237,7 @@ mod tests {
             ws.url.indexOf('wss://') === 0
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WSS URLs should be supported");
     }
@@ -242,7 +250,7 @@ mod tests {
             ws.url.indexOf('token=abc123') > 0
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket URLs with parameters should work");
     }
@@ -258,7 +266,7 @@ mod tests {
             typeof ws.extensions
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket extensions property should exist");
         assert_eq!(result.unwrap().trim(), "string");
@@ -272,7 +280,7 @@ mod tests {
             typeof ws.protocol
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket protocol property should exist");
     }
@@ -286,7 +294,7 @@ mod tests {
             ws.binaryType === 'blob'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket binaryType should support 'blob'");
     }
@@ -298,7 +306,7 @@ mod tests {
             WebSocket.CONNECTING === 0
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket.CONNECTING should equal 0");
     }
@@ -310,7 +318,7 @@ mod tests {
             WebSocket.CLOSING === 2
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket.CLOSING should equal 2");
     }
@@ -323,7 +331,7 @@ mod tests {
             typeof ws.addEventListener
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket addEventListener should exist");
         assert_eq!(result.unwrap().trim(), "function");
@@ -337,7 +345,7 @@ mod tests {
             typeof ws.removeEventListener
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket removeEventListener should exist");
         assert_eq!(result.unwrap().trim(), "function");
@@ -356,9 +364,12 @@ mod tests {
             ws.binaryType === 'arraybuffer'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "WebSocket binaryType='arraybuffer' should work");
+        assert!(
+            result.is_ok(),
+            "WebSocket binaryType='arraybuffer' should work"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -375,7 +386,7 @@ mod tests {
             ws.binaryType === 'arraybuffer' && typeof ArrayBuffer !== 'undefined'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "ArrayBuffer type check should work");
         assert_eq!(result.unwrap().trim(), "true");
@@ -390,9 +401,12 @@ mod tests {
             typeof Blob !== 'undefined'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "ArrayBuffer and related globals should be available");
+        assert!(
+            result.is_ok(),
+            "ArrayBuffer and related globals should be available"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -404,7 +418,7 @@ mod tests {
             buf.byteLength === 16 && buf instanceof ArrayBuffer
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "ArrayBuffer creation should work");
         assert_eq!(result.unwrap().trim(), "true");
@@ -419,7 +433,7 @@ mod tests {
             view.length === 4 && view.buffer === buf
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Uint8Array on ArrayBuffer should work");
         assert_eq!(result.unwrap().trim(), "true");
@@ -434,7 +448,7 @@ mod tests {
             blob instanceof Blob && blob.size === 8
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Blob creation should work");
         assert_eq!(result.unwrap().trim(), "true");
@@ -449,7 +463,7 @@ mod tests {
             typeof ErrorEvent
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "ErrorEvent constructor should be available");
         assert_eq!(result.unwrap().trim(), "function");
@@ -471,7 +485,7 @@ mod tests {
             event.colno === 5
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "ErrorEvent creation should work");
         assert_eq!(result.unwrap().trim(), "true");
@@ -487,7 +501,7 @@ mod tests {
             typeof event.composed === 'boolean'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "ErrorEvent should inherit Event properties");
         assert_eq!(result.unwrap().trim(), "true");
@@ -502,7 +516,7 @@ mod tests {
             event.error === err
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "ErrorEvent should contain error object");
         assert_eq!(result.unwrap().trim(), "true");
@@ -516,7 +530,7 @@ mod tests {
             typeof ws.onerror === 'function'
         "#;
 
-        let runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "WebSocket should have onerror handler");
         assert_eq!(result.unwrap().trim(), "true");

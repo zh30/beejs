@@ -3,13 +3,13 @@
 // Stage 90 Phase 2.1: 实现高效的零拷贝内存管理
 // 支持小、中、大对象的分层内存池管理
 
+use crate::memory::GLOBAL_MEMORY_STATS;
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
-use std::ptr::NonNull;
-use std::time::{Duration, Instant};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::VecDeque;
+use std::ptr::NonNull;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// 内存块
 #[derive(Debug)]
@@ -57,11 +57,11 @@ pub struct MemoryPoolConfig {
 impl Default for MemoryPoolConfig {
     fn default() -> Self {
         Self {
-            small_pool_size: 1024 * 1024,      // 1MB
-            medium_pool_size: 64 * 1024 * 1024, // 64MB
+            small_pool_size: 1024 * 1024,        // 1MB
+            medium_pool_size: 64 * 1024 * 1024,  // 64MB
             large_pool_size: 1024 * 1024 * 1024, // 1GB
-            small_threshold: 1024,             // 1KB
-            medium_threshold: 64 * 1024,       // 64KB
+            small_threshold: 1024,               // 1KB
+            medium_threshold: 64 * 1024,         // 64KB
             cleanup_interval: Duration::from_secs(30),
             max_block_age: Duration::from_secs(300), // 5分钟
         }
@@ -162,7 +162,7 @@ impl OptimizedMemoryPool {
             small_pool: Arc::new(Mutex::new(VecDeque::new())),
             medium_pool: Arc::new(Mutex::new(VecDeque::new())),
             large_pool: Arc::new(Mutex::new(VecDeque::new())),
-            stats: Arc::new(Mutex::new(MemoryPoolStats::default())),
+            stats: Arc::new(MemoryPoolStats::default()),
         }
     }
     /// 创建默认配置的内存池
@@ -171,8 +171,8 @@ impl OptimizedMemoryPool {
     }
     /// 分配内存
     pub fn allocate(&self, size: usize) -> Result<NonNull<u8>, &'static str> {
-        let pool_type: _ = self.determine_pool_type(size);
-        match self.try_get_from_pool(pool_type, size) {
+        let pool_type = self.determine_pool_type(size);
+        let ptr = match self.try_get_from_pool(pool_type, size) {
             Some(ptr) => {
                 // 缓存命中
                 match pool_type {
@@ -180,21 +180,25 @@ impl OptimizedMemoryPool {
                     PoolType::Medium => self.stats.medium_pool_hits.fetch_add(1, Ordering::Relaxed),
                     PoolType::Large => self.stats.large_pool_hits.fetch_add(1, Ordering::Relaxed),
                 };
-                // 记录分配
-                self.stats.total_allocations.fetch_add(1, Ordering::Relaxed);
-                GLOBAL_MEMORY_STATS.record_allocation(size);
-                Ok(ptr)
+                ptr
             }
             None => {
                 // 缓存未命中，从系统分配
                 match pool_type {
                     PoolType::Small => self.stats.small_pool_misses.fetch_add(1, Ordering::Relaxed),
-                    PoolType::Medium => self.stats.medium_pool_misses.fetch_add(1, Ordering::Relaxed),
+                    PoolType::Medium => self
+                        .stats
+                        .medium_pool_misses
+                        .fetch_add(1, Ordering::Relaxed),
                     PoolType::Large => self.stats.large_pool_misses.fetch_add(1, Ordering::Relaxed),
                 };
-                self.allocate_from_system(size, pool_type)
+                self.allocate_from_system(size, pool_type)?
             }
-        }
+        };
+        // 记录分配
+        self.stats.total_allocations.fetch_add(1, Ordering::Relaxed);
+        GLOBAL_MEMORY_STATS.record_allocation(size);
+        Ok(ptr)
     }
     /// 释放内存
     pub fn deallocate(&self, ptr: NonNull<u8>, size: usize) -> Result<(), &'static str> {
@@ -203,7 +207,9 @@ impl OptimizedMemoryPool {
         let block: _ = MemoryBlock::new(ptr, size);
         self.add_to_pool(pool_type, block)?;
         // 记录释放
-        self.stats.total_deallocations.fetch_add(1, Ordering::Relaxed);
+        self.stats
+            .total_deallocations
+            .fetch_add(1, Ordering::Relaxed);
         GLOBAL_MEMORY_STATS.record_deallocation(size);
         Ok(())
     }
@@ -238,7 +244,11 @@ impl OptimizedMemoryPool {
         None
     }
     /// 从系统分配内存
-    fn allocate_from_system(&self, size: usize, pool_type: PoolType) -> Result<NonNull<u8>, &'static str> {
+    fn allocate_from_system(
+        &self,
+        size: usize,
+        _pool_type: PoolType,
+    ) -> Result<NonNull<u8>, &'static str> {
         let layout: _ = Layout::from_size_align(size, std::mem::align_of::<usize>())
             .map_err(|_| "Invalid layout")?;
         // 使用系统分配器分配内存
@@ -276,7 +286,10 @@ impl OptimizedMemoryPool {
             if let Some(old_block) = pool_guard.pop_front() {
                 // 释放旧块
                 unsafe {
-                    let layout: _ = Layout::from_size_align_unchecked(old_block.size(), std::mem::align_of::<usize>());
+                    let layout: _ = Layout::from_size_align_unchecked(
+                        old_block.size(),
+                        std::mem::align_of::<usize>(),
+                    );
                     System.dealloc(old_block.ptr(), layout);
                 }
             }
@@ -296,7 +309,7 @@ impl OptimizedMemoryPool {
         self.cleanup_pool(&self.large_pool, &now);
     }
     /// 清理单个池
-    fn cleanup_pool(&self, pool: &Arc<Mutex<VecDeque<MemoryBlock>>>, now: &Instant) {
+    fn cleanup_pool(&self, pool: &Arc<Mutex<VecDeque<MemoryBlock>>>, _now: &Instant) {
         let mut pool_guard = pool.lock().unwrap();
         let mut i = 0;
         while i < pool_guard.len() {
@@ -304,7 +317,10 @@ impl OptimizedMemoryPool {
                 if block.age() > self.config.max_block_age {
                     // 释放内存
                     unsafe {
-                        let layout: _ = Layout::from_size_align_unchecked(block.size(), std::mem::align_of::<usize>());
+                        let layout: _ = Layout::from_size_align_unchecked(
+                            block.size(),
+                            std::mem::align_of::<usize>(),
+                        );
                         System.dealloc(block.ptr(), layout);
                     }
                     pool_guard.remove(i);
@@ -373,6 +389,8 @@ impl PoolStats {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_memory_pool_creation() {
         let pool: _ = OptimizedMemoryPool::default();

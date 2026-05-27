@@ -5,7 +5,7 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_crypto_createSign_exists() {
+fn test_crypto_create_sign_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.createSign");
     assert!(result.is_ok());
@@ -14,7 +14,7 @@ fn test_crypto_createSign_exists() {
 
 #[test]
 #[serial]
-fn test_createSign_returns_sign_object() {
+fn test_create_sign_returns_sign_object() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // Use a valid PEM format private key for testing
     let code = r#"

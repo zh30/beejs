@@ -4,7 +4,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use crate::ai_inference::{engine_interface::{InferenceResult, ModelHandle}, tensor_ops::Tensor};
+use crate::ai_inference::{
+    engine_interface::{InferenceResult, ModelHandle},
+    tensor_ops::Tensor,
+};
 use anyhow::Result;
 use std::sync::RwLock;
 
@@ -125,12 +128,12 @@ impl BatchProcessor {
         let should_process: _ = match &self.strategy {
             BatchStrategy::Fixed(size) => batch_size >= *size,
             BatchStrategy::Dynamic(config) => {
-                batch_size >= config.min_batch_size ||
-                self.should_timeout(config.batch_timeout_ms).await
+                batch_size >= config.min_batch_size
+                    || self.should_timeout(config.batch_timeout_ms).await
             }
             BatchStrategy::Adaptive(config) => {
-                batch_size >= config.initial_batch_size ||
-                self.should_timeout(100).await // 默认超时
+                batch_size >= config.initial_batch_size || self.should_timeout(100).await
+                // 默认超时
             }
         };
         if should_process {
@@ -186,8 +189,10 @@ impl BatchProcessor {
                 stats.total_batches += 1;
                 stats.total_items += items_count as u64;
                 stats.average_batch_size = stats.total_items as f64 / stats.total_batches as f64;
-                stats.average_latency_ms = (stats.average_latency_ms + processing_time.as_secs_f64() * 1000.0) / 2.0;
-                stats.throughput = stats.total_items as f64 / (stats.total_batches as f64 * processing_time.as_secs_f64());
+                stats.average_latency_ms =
+                    (stats.average_latency_ms + processing_time.as_secs_f64() * 1000.0) / 2.0;
+                stats.throughput = stats.total_items as f64
+                    / (stats.total_batches as f64 * processing_time.as_secs_f64());
             }
         });
         // 保存任务句柄
@@ -294,7 +299,8 @@ impl SmartBatchProcessor {
     pub async fn add_request(&self, model: &ModelHandle, input: Tensor) -> Result<InferenceResult> {
         let result: _ = self.processor.add_request(model, input).await?;
         // 记录性能指标
-        self.performance_monitor.record_latency(result.inference_time_ms);
+        self.performance_monitor
+            .record_latency(result.inference_time_ms);
         // 自适应调整批处理大小
         self.adapt_batch_size().await?;
         Ok(result)
@@ -309,15 +315,15 @@ impl SmartBatchProcessor {
         if avg_latency > params.latency_target {
             // 延迟过高，减少批处理大小
             if params.current_batch_size > params.min_batch_size {
-                let new_size: _ = (params.current_batch_size as f64 *
-                    (1.0 - params.adjustment_factor)) as usize;
+                let new_size: _ =
+                    (params.current_batch_size as f64 * (1.0 - params.adjustment_factor)) as usize;
                 params.current_batch_size = new_size.max(params.min_batch_size);
             }
         } else if current_throughput < params.throughput_target {
             // 吞吐量不足，增加批处理大小
             if params.current_batch_size < params.max_batch_size {
-                let new_size: _ = (params.current_batch_size as f64 *
-                    (1.0 + params.adjustment_factor)) as usize;
+                let new_size: _ =
+                    (params.current_batch_size as f64 * (1.0 + params.adjustment_factor)) as usize;
                 params.current_batch_size = new_size.min(params.max_batch_size);
             }
         }
@@ -397,7 +403,7 @@ impl PerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_batch_processor_fixed() -> Result<()> {
         let processor: _ = BatchProcessor::new(BatchStrategy::Fixed(4));

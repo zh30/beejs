@@ -1,21 +1,11 @@
 // Stage 89 Phase 2: 错误处理模块
 // 提供统一的错误处理、自动恢复和错误上下文管理
-pub mod types;
 pub mod recovery;
-pub use types::{
-    BeejsError,
-    ErrorContext,
-    SourceLocation,
-    StackFrame,
-    ErrorSeverity,
-};
+pub mod types;
 pub use recovery::{
-    AutoRecovery,
-    RetryPolicy,
-    AutoRecoveryConfig,
-    RecoveryStats,
-    FallbackStrategyFn,
+    AutoRecovery, AutoRecoveryConfig, FallbackStrategyFn, RecoveryStats, RetryPolicy,
 };
+pub use types::{BeejsError, ErrorContext, ErrorSeverity, SourceLocation, StackFrame};
 /// 创建错误上下文的便捷函数
 pub fn create_error_context(
     error: BeejsError,
@@ -68,12 +58,8 @@ impl ErrorHandler {
             Ok(result) => Ok(result),
             Err(original_error) => {
                 // 创建错误上下文
-                let context: _ = ErrorContext::new(
-                    original_error,
-                    file.to_string(),
-                    line,
-                    function.to_string(),
-                );
+                let context: _ =
+                    ErrorContext::new(original_error, file.to_string(), line, function.to_string());
                 // 记录错误
                 if GlobalErrorConfig::default().enable_error_logging {
                     eprintln!("Error context: {}", context);
@@ -85,9 +71,9 @@ impl ErrorHandler {
     }
     /// 安全执行可能出错的操作
     pub async fn safe_execute<F, T, Fut>(
-        file: &'static str,
-        line: u32,
-        function: &'static str,
+        _file: &'static str,
+        _line: u32,
+        _function: &'static str,
         f: F,
     ) -> Result<T>
     where
@@ -104,7 +90,11 @@ impl ErrorHandler {
         }
     }
     /// 转换任意错误为 BeejsError
-    pub fn convert_error<E: std::fmt::Display>(error: E) -> BeejsError {
+    pub fn convert_error<E: std::fmt::Display + 'static>(error: E) -> BeejsError {
+        let any = &error as &dyn std::any::Any;
+        if let Some(beejs_err) = any.downcast_ref::<BeejsError>() {
+            return beejs_err.clone();
+        }
         BeejsError::RuntimeError(error.to_string())
     }
 }
@@ -124,7 +114,7 @@ macro_rules! beejs_try {
             Ok(value) => value,
             Err(error) => {
                 let context: _ = $crate::error::ErrorContext::new_without_location(
-                    $crate::error::ErrorHandler::convert_error(error)
+                    $crate::error::ErrorHandler::convert_error(error),
                 );
                 eprintln!("Error context: {}", context);
                 return Err(context.error_type);
@@ -162,7 +152,7 @@ macro_rules! beejs_try_async {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+
     #[tokio::test]
     async fn test_error_context_creation() {
         let error: _ = BeejsError::V8Error("Test error".to_string());
@@ -187,19 +177,26 @@ use std::collections::{HashMap, BTreeMap};
     async fn test_error_conversion() {
         let std_error: _ = "Standard error";
         let beejs_error: _ = ErrorHandler::convert_error(std_error);
-        assert!(matches!(beejs_error, BeejsError::RuntimeError(_));
+        assert!(matches!(beejs_error, BeejsError::RuntimeError(_)));
     }
     #[test]
-    fn test_beejs_try_macro() {
+    fn test_beejs_try_macro() -> Result<()> {
         let result: Result<i32> = Ok(42);
         let value: _ = beejs_try!(result);
         assert_eq!(value, 42);
+        Ok(())
     }
     #[test]
     fn test_beejs_try_macro_error() {
-        let result: Result<i32> = Err(BeejsError::V8Error("Test".to_string());
-        let error: _ = beejs_try!(result);
-        // 这个测试验证宏能正确传播错误
-        assert!(matches!(error, 0)); // 不会执行到这里
+        fn helper() -> Result<()> {
+            let result: Result<i32> = Err(BeejsError::V8Error("Test".to_string()));
+            let _error: _ = beejs_try!(result);
+            // This test verifies macro propagates error
+            assert!(false); // Should not reach here
+            Ok(())
+        }
+        let res = helper();
+        assert!(res.is_err());
+        assert!(matches!(res.err().unwrap(), BeejsError::V8Error(_)));
     }
 }

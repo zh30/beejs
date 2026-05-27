@@ -1,8 +1,8 @@
 // Real TCP Connection Integration Tests - v0.3.70
 // 测试 TCP Socket API（真实网络连接需要后续 tokio 集成）
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 /// 测试：能够创建 TCP Socket 连接对象
 #[test]
@@ -21,7 +21,11 @@ fn test_tcp_socket_creation() {
         socket.remoteAddress === 'localhost';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should be created with correct properties");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should be created with correct properties"
+    );
 }
 
 /// 测试：Socket 对象包含正确的属性
@@ -41,7 +45,11 @@ fn test_socket_properties() {
         socket.localPort === 12345;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should have correct properties");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should have correct properties"
+    );
 }
 
 /// 测试：Socket 支持 write、end、read 和 destroy 方法
@@ -58,7 +66,11 @@ fn test_socket_methods() {
         typeof socket.read === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "socket should have all required methods");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "socket should have all required methods"
+    );
 }
 
 /// 测试：Socket 支持事件方法
@@ -91,7 +103,11 @@ fn test_ip_detection_functions() {
         net.isIPv4('::1') === false;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "IP detection functions should work correctly");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "IP detection functions should work correctly"
+    );
 }
 
 /// 测试：net.createServer 创建服务器对象
@@ -107,7 +123,11 @@ fn test_create_server() {
         typeof server.close === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "createServer should return server object with correct methods");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "createServer should return server object with correct methods"
+    );
 }
 
 /// 测试：net.createConnection 与 net.connect 功能相同
@@ -138,5 +158,9 @@ fn test_socket_read_returns_null() {
         data === null;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "read() should return null when no data available");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "read() should return null when no data available"
+    );
 }

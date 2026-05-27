@@ -1,12 +1,11 @@
 // Rust Native Optimizations
 // Provides zero-copy optimizations and performance enhancements for Rust-Beejs integration
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::Duration;
-use std::time::SystemTime;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Shared memory region for zero-copy operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,7 +67,7 @@ impl SharedMemoryRegion {
             id,
             address: 0, // In real implementation, would allocate actual memory
             size,
-            ref_count: Arc::new(Mutex::new(1)))
+            ref_count: Arc::new(RwLock::new(1)),
         }
     }
     /// Increment reference count
@@ -95,13 +94,13 @@ impl MemoryPool {
     /// Create a new memory pool
     pub fn new(block_size: usize, max_blocks: usize) -> Self {
         MemoryPool {
-            pool: Arc::new(Mutex::new(Vec::with_capacity(block_size * max_blocks)))
+            pool: Arc::new(RwLock::new(Vec::with_capacity(block_size * max_blocks))),
             block_size,
             max_blocks,
         }
     }
     /// Allocate a block from the pool
-    pub async fn allocate(&self, size: usize) -> Result<Vec<u8> {
+    pub async fn allocate(&self, size: usize) -> Result<Vec<u8>> {
         if size > self.block_size {
             return Err(anyhow!("Size exceeds block size"));
         }
@@ -120,7 +119,7 @@ impl ZeroCopyBridge {
     /// Create a new zero-copy bridge
     pub fn new(memory_pool: Arc<MemoryPool>) -> Self {
         ZeroCopyBridge {
-            shared_memory: Arc::new(Mutex::new(HashMap::new()))
+            shared_memory: Arc::new(RwLock::new(HashMap::new())),
             memory_pool,
         }
     }
@@ -146,7 +145,7 @@ impl ZeroCopyBridge {
         Ok(())
     }
     /// Fast path call with zero-copy arguments
-    pub async fn fast_path_call(&self, target: &str, args: &[u8]) -> Result<Vec<u8> {
+    pub async fn fast_path_call(&self, target: &str, args: &[u8]) -> Result<Vec<u8>> {
         // In real implementation, would use shared memory for zero-copy
         // For now, simulate fast path
         tokio::time::sleep(tokio::time::Duration::from_nanos(1)).await;
@@ -157,8 +156,8 @@ impl JITCompiler {
     /// Create a new JIT compiler
     pub fn new() -> Self {
         JITCompiler {
-            cache: Arc::new(Mutex::new(HashMap::new()))
-            hot_paths: Arc::new(Mutex::new(Vec::new()))
+            cache: Arc::new(RwLock::new(HashMap::new())),
+            hot_paths: Arc::new(RwLock::new(Vec::new())),
         }
     }
     /// Compile and optimize hot path
@@ -184,7 +183,8 @@ impl JITCompiler {
     /// Get cached optimized code
     pub async fn get_cached(&self, script: &str) -> Result<OptimizedCode> {
         let cache: _ = self.cache.read().await;
-        cache.get(script)
+        cache
+            .get(script)
             .cloned()
             .ok_or_else(|| anyhow!("Code not in cache"))
     }
@@ -198,7 +198,7 @@ impl InlineCache {
     /// Create a new inline cache
     pub fn new() -> Self {
         InlineCache {
-            cache: Arc::new(Mutex::new(HashMap::new()))
+            cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     /// Get value from cache
@@ -214,11 +214,14 @@ impl InlineCache {
     /// Set value in cache
     pub async fn set(&self, key: &str, value: String) {
         let mut cache = self.cache.write().await;
-        cache.insert(key.to_string(), CacheEntry {
-            value,
-            hit_count: 0,
-            last_access: std::time::SystemTime::now(),
-        });
+        cache.insert(
+            key.to_string(),
+            CacheEntry {
+                value,
+                hit_count: 0,
+                last_access: std::time::SystemTime::now(),
+            },
+        );
     }
     /// Clear cache
     pub async fn clear(&self) {
@@ -230,9 +233,9 @@ impl RustOptimizer {
     /// Create a new Rust optimizer
     pub fn new() -> Self {
         RustOptimizer {
-            jit_compiler: Arc::new(Mutex::new(JITCompiler::new()))
-            inline_cache: Arc::new(Mutex::new(InlineCache::new()))
-            zero_copy: Arc::new(Mutex::new(ZeroCopyBridge::new(Arc::new(MemoryPool::new(4096, 100)))
+            jit_compiler: Arc::new(JITCompiler::new()),
+            inline_cache: Arc::new(InlineCache::new()),
+            zero_copy: Arc::new(ZeroCopyBridge::new(Arc::new(MemoryPool::new(4096, 100)))),
         }
     }
     /// Optimize hot path
@@ -252,7 +255,7 @@ impl RustOptimizer {
         Ok(code)
     }
     /// Execute with zero-copy optimization
-    pub async fn execute_zero_copy(&self, target: &str, data: &[u8]) -> Result<Vec<u8> {
+    pub async fn execute_zero_copy(&self, target: &str, data: &[u8]) -> Result<Vec<u8>> {
         self.zero_copy.fast_path_call(target, data).await
     }
     /// Share memory for zero-copy operations
@@ -266,7 +269,7 @@ impl RustOptimizer {
             cache.len() as u64
         };
         let hot_paths: _ = {
-            let hot_paths: _ = self.hot_paths.lock().await;
+            let hot_paths: _ = self.jit_compiler.hot_paths.read().await;
             hot_paths.len() as u64
         };
         Ok(OptimizerMetrics {
@@ -293,7 +296,7 @@ fn optimize_script(script: &str) -> String {
     // - Loop unrolling
     let mut optimized = script.to_string();
     // Simple optimization: remove extra whitespace
-    optimized = optimized.split_whitespace().collect::<Vec<_>().join(" ");
+    optimized = optimized.split_whitespace().collect::<Vec<_>>().join(" ");
     optimized
 }
 fn calculate_performance_gain(original: &str, optimized: &str) -> f64 {
@@ -339,7 +342,7 @@ mod tests {
         let cache: _ = InlineCache::new();
         cache.set("key1", "value1".to_string()).await;
         let value: _ = cache.get("key1").await;
-        assert_eq!(value, Some("value1".to_string());
+        assert_eq!(value, Some("value1".to_string()));
     }
     #[tokio::test]
     async fn test_optimizer_metrics() {

@@ -1,51 +1,10 @@
-# Git
-.git
-.gitignore
+*
 
-# Documentation
-*.md
-docs/
-
-# Test files
-tests/
-target/debug/
-
-# Development files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Build artifacts
-target/release/build/
-target/release/deps/
-Cargo.lock
-
-# WASM cache (will be regenerated)
-wasm_cache_high_perf/*.wasm
-wasm_cache_high_perf/batch_*
-
-# Logs
-*.log
-
-# Temporary files
-tmp/
-temp/
-.tmp/
-
-# Node modules (if any)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
+!Cargo.toml
+!Cargo.lock
+!Dockerfile
+!README.md
+!src/
+!src/**
+!examples/
+!examples/**

@@ -1,8 +1,34 @@
 // Worker API tests for Beejs runtime
 // v0.3.320: Tests for Web Worker support
 
-use std::process::{Command, Stdio};
 use std::fs;
+use std::process::{Command, Stdio};
+
+/// Helper function to run a JavaScript script with beejs
+fn run_script(script: &str) -> std::process::Output {
+    // Create a temporary file with the script
+    let temp_dir = tempfile::Builder::new()
+        .prefix("beejs-worker-test-")
+        .tempdir()
+        .unwrap();
+    let temp_file = temp_dir.path().join("test.js");
+    fs::write(&temp_file, script).unwrap();
+
+    // Run beejs with the script
+    let output = Command::new("./target/debug/bee")
+        .arg("run")
+        .arg(&temp_file)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .expect("Failed to run bee");
+
+    // Clean up
+    drop(temp_dir);
+
+    output
+}
 
 #[cfg(test)]
 mod worker_api_tests {
@@ -20,8 +46,16 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(output.status.success(), "Worker constructor should exist: {}", stdout);
-        assert!(stdout.contains("SUCCESS: Worker constructor exists"), "Output: {}", stdout);
+        assert!(
+            output.status.success(),
+            "Worker constructor should exist: {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("SUCCESS: Worker constructor exists"),
+            "Output: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -37,7 +71,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: Worker created"), "Should create worker: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: Worker created"),
+            "Should create worker: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -53,7 +91,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: postMessage is a function"), "postMessage should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: postMessage is a function"),
+            "postMessage should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -69,7 +111,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: terminate is a function"), "terminate should be a function: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: terminate is a function"),
+            "terminate should be a function: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -85,7 +131,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: onmessage property exists"), "onmessage should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: onmessage property exists"),
+            "onmessage should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -101,7 +151,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: onerror property exists"), "onerror should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: onerror property exists"),
+            "onerror should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -118,7 +172,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: Worker terminated"), "terminate should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: Worker terminated"),
+            "terminate should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -142,8 +200,16 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: Created 3 workers"), "Multiple workers should work: {}", stdout);
-        assert!(stdout.contains("SUCCESS: All workers terminated"), "All workers should be terminated: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: Created 3 workers"),
+            "Multiple workers should work: {}",
+            stdout
+        );
+        assert!(
+            stdout.contains("SUCCESS: All workers terminated"),
+            "All workers should be terminated: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -160,7 +226,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: _terminated is false"), "Worker properties should be set: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: _terminated is false"),
+            "Worker properties should be set: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -176,7 +246,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: onmessageerror property exists"), "onmessageerror should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: onmessageerror property exists"),
+            "onmessageerror should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -190,7 +264,10 @@ mod worker_api_tests {
         let output = run_script(script);
         let stderr = String::from_utf8_lossy(&output.stderr);
         // Verify postMessage was called and logged
-        assert!(stderr.contains("postMessage called"), "postMessage should be logged");
+        assert!(
+            stderr.contains("postMessage called"),
+            "postMessage should be logged"
+        );
     }
 
     #[test]
@@ -225,7 +302,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Terminated state should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Terminated state should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -240,7 +321,11 @@ mod worker_api_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS: postMessage after terminate completed without error"), "postMessage after terminate should be safe: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS: postMessage after terminate completed without error"),
+            "postMessage after terminate should be safe: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -264,32 +349,9 @@ mod worker_api_tests {
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
         // These tests verify the handlers exist (exact null value depends on V8 implementation)
-        assert!(stdout.contains("SUCCESS"), "Event handlers should be properly initialized");
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Event handlers should be properly initialized"
+        );
     }
-}
-
-/// Helper function to run a JavaScript script with beejs
-fn run_script(script: &str) -> std::process::Output {
-    // Create a temporary file with the script
-    let temp_dir = tempfile::Builder::new()
-        .prefix("beejs-worker-test-")
-        .tempdir()
-        .unwrap();
-    let temp_file = temp_dir.path().join("test.js");
-    fs::write(&temp_file, script).unwrap();
-
-    // Run beejs with the script
-    let output = Command::new("./target/debug/beejs")
-        .arg("run")
-        .arg(&temp_file)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .expect("Failed to run beejs");
-
-    // Clean up
-    drop(temp_dir);
-
-    output
 }

@@ -8,10 +8,16 @@ use std::sync::atomic::AtomicU64;
 static SPAN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 static TRACE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 fn generate_span_id() -> String {
-    format!("span-{:016x}", SPAN_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
+    format!(
+        "span-{:016x}",
+        SPAN_ID_COUNTER.fetch_add(1, Ordering::SeqCst)
+    )
 }
 fn generate_trace_id() -> String {
-    format!("trace-{:016x}", TRACE_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
+    format!(
+        "trace-{:016x}",
+        TRACE_ID_COUNTER.fetch_add(1, Ordering::SeqCst)
+    )
 }
 /// Distributed tracer
 pub struct DistributedTracer {
@@ -60,11 +66,7 @@ impl DistributedTracer {
         }
     }
     /// Start a child span
-    pub fn start_child_span(
-        &mut self,
-        parent: &SpanHandle,
-        operation_name: &str,
-    ) -> SpanHandle {
+    pub fn start_child_span(&mut self, parent: &SpanHandle, operation_name: &str) -> SpanHandle {
         let context: _ = TraceContext {
             trace_id: parent.trace_id.clone(),
             span_id: parent.span_id.clone(),
@@ -73,14 +75,27 @@ impl DistributedTracer {
     }
     /// End a span
     pub fn end_span(&mut self, span: SpanHandle) {
-        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+        if let Some(record) = self
+            .span_history
+            .iter_mut()
+            .find(|r| r.span_id == span.span_id)
+        {
             record.end_time = Some(std::time::Instant::now());
             record.status = SpanStatus::Completed;
         }
     }
     /// Add event to span
-    pub fn add_event(&mut self, span: &SpanHandle, event_name: &str, attributes: HashMap<String, String>) {
-        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+    pub fn add_event(
+        &mut self,
+        span: &SpanHandle,
+        event_name: &str,
+        attributes: HashMap<String, String>,
+    ) {
+        if let Some(record) = self
+            .span_history
+            .iter_mut()
+            .find(|r| r.span_id == span.span_id)
+        {
             record.events.push(SpanEvent {
                 name: event_name.to_string(),
                 timestamp: std::time::Instant::now(),
@@ -90,13 +105,21 @@ impl DistributedTracer {
     }
     /// Add error to span
     pub fn add_error(&mut self, span: &SpanHandle, _error: &str) {
-        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+        if let Some(record) = self
+            .span_history
+            .iter_mut()
+            .find(|r| r.span_id == span.span_id)
+        {
             record.status = SpanStatus::Error;
         }
     }
     /// Set span attribute
     pub fn set_attribute(&mut self, span: &SpanHandle, key: &str, value: &str) {
-        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+        if let Some(record) = self
+            .span_history
+            .iter_mut()
+            .find(|r| r.span_id == span.span_id)
+        {
             record.attributes.insert(key.to_string(), value.to_string());
         }
     }
@@ -106,7 +129,8 @@ impl DistributedTracer {
     }
     /// Get trace by ID
     pub fn get_trace(&self, trace_id: &str) -> Option<Vec<&SpanRecord>> {
-        let spans: Vec<&SpanRecord> = self.span_history
+        let spans: Vec<&SpanRecord> = self
+            .span_history
             .iter()
             .filter(|s| s.trace_id == trace_id)
             .collect();
@@ -232,9 +256,9 @@ pub struct PerformanceAnalysis {
 impl PerformanceAnalysis {
     /// Get slowest span duration
     pub fn slowest_duration(&self) -> Option<std::time::Duration> {
-        self.slowest_span.as_ref().and_then(|s| {
-            s.end_time.map(|end| end.duration_since(s.start_time))
-        })
+        self.slowest_span
+            .as_ref()
+            .and_then(|s| s.end_time.map(|end| end.duration_since(s.start_time)))
     }
 }
 /// Metrics collector for service mesh
@@ -260,13 +284,7 @@ impl MetricsCollector {
         }
     }
     /// Record request
-    pub fn record_request(
-        &mut self,
-        method: &str,
-        path: &str,
-        status_code: u16,
-        latency_ms: u64,
-    ) {
+    pub fn record_request(&mut self, method: &str, path: &str, status_code: u16, latency_ms: u64) {
         self.request_metrics.record(method, path, status_code);
         self.latency_metrics.record(latency_ms);
         if status_code >= 400 {
@@ -322,7 +340,10 @@ impl RequestMetrics {
     }
     fn record(&mut self, method: &str, path: &str, status_code: u16) {
         self.total_requests += 1;
-        *self.requests_by_method.entry(method.to_string()).or_insert(0) += 1;
+        *self
+            .requests_by_method
+            .entry(method.to_string())
+            .or_insert(0) += 1;
         *self.requests_by_path.entry(path.to_string()).or_insert(0) += 1;
         *self.requests_by_status.entry(status_code).or_insert(0) += 1;
     }
@@ -330,7 +351,8 @@ impl RequestMetrics {
         if self.total_requests == 0 {
             return 0.0;
         }
-        let success_count: u64 = self.requests_by_status
+        let success_count: u64 = self
+            .requests_by_status
             .iter()
             .filter(|(status, _)| **status < 400)
             .map(|(_, count)| *count)
@@ -367,7 +389,10 @@ impl LatencyMetrics {
         let mut sorted = self.latencies.clone();
         sorted.sort();
         let index: _ = (sorted.len() as f64 * 0.95) as usize;
-        sorted.get(index.min(sorted.len() - 1)).copied().unwrap_or(0) as f64
+        sorted
+            .get(index.min(sorted.len() - 1))
+            .copied()
+            .unwrap_or(0) as f64
     }
     fn p99(&self) -> f64 {
         if self.latencies.is_empty() {
@@ -376,7 +401,10 @@ impl LatencyMetrics {
         let mut sorted = self.latencies.clone();
         sorted.sort();
         let index: _ = (sorted.len() as f64 * 0.99) as usize;
-        sorted.get(index.min(sorted.len() - 1)).copied().unwrap_or(0) as f64
+        sorted
+            .get(index.min(sorted.len() - 1))
+            .copied()
+            .unwrap_or(0) as f64
     }
 }
 /// Error metrics
@@ -407,7 +435,11 @@ impl ErrorMetrics {
     fn top_endpoints(&self, limit: usize) -> Vec<(String, u64)> {
         let mut errors: Vec<_> = self.errors_by_endpoint.iter().collect();
         errors.sort_by(|a, b| b.1.cmp(a.1));
-        errors.into_iter().take(limit).map(|(k, v)| (k.clone(), *v)).collect()
+        errors
+            .into_iter()
+            .take(limit)
+            .map(|(k, v)| (k.clone(), *v))
+            .collect()
     }
 }
 /// Metrics report
@@ -433,8 +465,8 @@ pub struct MetricsReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, Instant};
-use std::sync::atomic::Ordering;
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
     #[test]
     fn test_span_record() {
         let record: _ = SpanRecord {

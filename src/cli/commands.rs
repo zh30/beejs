@@ -11,7 +11,7 @@ use std::path::PathBuf;
 /// Main CLI application
 #[derive(Parser, Debug)]
 #[command(
-    name = "beejs",
+    name = "bee",
     about = "High-performance JavaScript/TypeScript runtime (faster than Bun)",
     version = "0.1.0",
     author = "Henry Zhang"

@@ -415,7 +415,8 @@ fn structured_clone_callback(
             let options_obj = v8::Local::<v8::Object>::try_from(options).ok();
             if let Some(obj) = options_obj {
                 let transfer_key = v8::String::new(scope, "transfer").unwrap();
-                obj.get(scope, transfer_key.into()).unwrap_or(v8::null(scope).into())
+                obj.get(scope, transfer_key.into())
+                    .unwrap_or(v8::null(scope).into())
             } else {
                 v8::null(scope).into()
             }
@@ -456,7 +457,9 @@ fn structured_clone_callback(
                                 v8::PromiseState::Fulfilled => {
                                     // Clone the fulfilled value
                                     let value = promise.result(scope);
-                                    let value_cloned = func.call(scope, undefined.into(), &[value, transfer_list]).unwrap_or(v8::null(scope).into());
+                                    let value_cloned = func
+                                        .call(scope, undefined.into(), &[value, transfer_list])
+                                        .unwrap_or(v8::null(scope).into());
                                     // Return a new resolved Promise with the cloned value
                                     let promise_resolver = v8::PromiseResolver::new(scope).unwrap();
                                     promise_resolver.resolve(scope, value_cloned);
@@ -468,22 +471,32 @@ fn structured_clone_callback(
 
                                     // Create Error with reason as message
                                     let error_ctor_key = v8::String::new(scope, "Error").unwrap();
-                                    let error_ctor: v8::Local<v8::Function> = global.get(scope, error_ctor_key.into()).unwrap().try_into().unwrap();
+                                    let error_ctor: v8::Local<v8::Function> = global
+                                        .get(scope, error_ctor_key.into())
+                                        .unwrap()
+                                        .try_into()
+                                        .unwrap();
 
                                     // Convert reason to string for message
-                                    let reason_str = reason.to_string(scope).unwrap_or(v8::String::new(scope, "Unknown error").unwrap());
+                                    let reason_str = reason.to_string(scope).unwrap_or(
+                                        v8::String::new(scope, "Unknown error").unwrap(),
+                                    );
 
                                     // Create error with undefined first, then set message
                                     let undefined = v8::undefined(scope);
-                                    let error = error_ctor.new_instance(scope, &[undefined.into()]).unwrap();
+                                    let error = error_ctor
+                                        .new_instance(scope, &[undefined.into()])
+                                        .unwrap();
                                     let message_key = v8::String::new(scope, "message").unwrap();
                                     error.set(scope, message_key.into(), reason_str.into());
 
                                     // If reason was an object, copy its properties to the Error
                                     if reason.is_object() {
-                                        let reason_obj = v8::Local::<v8::Object>::try_from(reason).ok();
+                                        let reason_obj =
+                                            v8::Local::<v8::Object>::try_from(reason).ok();
                                         if let Some(obj) = reason_obj {
-                                            let prop_names = obj.get_own_property_names(scope).unwrap();
+                                            let prop_names =
+                                                obj.get_own_property_names(scope).unwrap();
                                             for i in 0..prop_names.length() {
                                                 if let Some(key) = prop_names.get_index(scope, i) {
                                                     if let Some(val) = obj.get(scope, key) {
@@ -501,12 +514,19 @@ fn structured_clone_callback(
                                 }
                                 v8::PromiseState::Pending => {
                                     // Pending Promise cannot be cloned - throw DataCloneError
-                                    let err_msg = v8::String::new(scope, "Promise cannot be cloned").unwrap();
+                                    let err_msg =
+                                        v8::String::new(scope, "Promise cannot be cloned").unwrap();
                                     let err_ctor_key = v8::String::new(scope, "Error").unwrap();
-                                    let err_ctor: v8::Local<v8::Function> = global.get(scope, err_ctor_key.into()).unwrap().try_into().unwrap();
-                                    let err = err_ctor.new_instance(scope, &[err_msg.into()]).unwrap();
+                                    let err_ctor: v8::Local<v8::Function> = global
+                                        .get(scope, err_ctor_key.into())
+                                        .unwrap()
+                                        .try_into()
+                                        .unwrap();
+                                    let err =
+                                        err_ctor.new_instance(scope, &[err_msg.into()]).unwrap();
                                     let name_key = v8::String::new(scope, "name").unwrap();
-                                    let name_val = v8::String::new(scope, "DataCloneError").unwrap();
+                                    let name_val =
+                                        v8::String::new(scope, "DataCloneError").unwrap();
                                     err.set(scope, name_key.into(), name_val.into());
 
                                     // Throw the error using V8's throw_exception
@@ -547,7 +567,11 @@ pub fn setup_structured_clone_api(
     let structured_clone_template: _ = v8::FunctionTemplate::new(scope, structured_clone_callback);
     let structured_clone_func: _ = structured_clone_template.get_function(scope).unwrap();
     let structured_clone_key: _ = v8::String::new(scope, "structuredClone").unwrap();
-    global.set(scope, structured_clone_key.into(), structured_clone_func.into());
+    global.set(
+        scope,
+        structured_clone_key.into(),
+        structured_clone_func.into(),
+    );
 
     Ok(())
 }

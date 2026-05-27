@@ -1,5 +1,7 @@
 # Beejs 模块系统实现 - 最终状态报告
 
+> 发布校验说明（2026-05-26）：本文件是历史状态报告。当前 public CLI 使用 `bee run <file>` 和 `bee eval <code>`，本文历史性能/状态描述不代表当前发布事实。
+
 ## 📊 项目状态: 核心功能已完成 ✅
 
 ### 完成时间
@@ -47,8 +49,8 @@
 新增文件 (4):
   + MODULE_SYSTEM_IMPLEMENTATION.md  (详细技术文档)
   + test_module_system.js            (主测试脚本)
-  + test_modules/math.js             (数学模块)
-  + test_modules/utils.js            (工具模块)
+  + tests/fixtures/legacy/test_modules/math.js   (数学模块)
+  + tests/fixtures/legacy/test_modules/utils.js  (工具模块)
 
 修改文件 (2):
   ~ src/nodejs.rs                    (+300 行)
@@ -93,7 +95,7 @@ fn get_builtin_module()       // 获取内置模块
 
 #### 集成测试
 - ✅ test_module_system.js (手动测试准备就绪)
-- ✅ test_modules/*.js (示例模块)
+- ✅ tests/fixtures/legacy/test_modules/*.js (示例模块)
 
 ### 📚 文档
 
@@ -140,13 +142,13 @@ fn get_builtin_module()       // 获取内置模块
 #### 基本用法
 ```bash
 # 运行模块测试
-./target/release/beejs test_module_system.js
+./target/release/bee run test_module_system.js
 
 # 内置模块测试
-./target/release/beejs --eval 'const path = require("path"); console.log(path.join("/a", "b"));'
+./target/release/bee eval 'const path = require("path"); console.log(path.join("/a", "b"));'
 
 # 相对路径模块
-./target/release/beejs --eval 'const math = require("./test_modules/math.js"); console.log(math.add(5, 3));'
+./target/release/bee eval 'const math = require("./tests/fixtures/legacy/test_modules/math.js"); console.log(math.add(5, 3));'
 ```
 
 ### 🔮 下一步计划

@@ -126,8 +126,8 @@ cargo test
 5. **验证安装**
 
 ```bash
-./target/debug/beejs --version
-./target/debug/beejs run examples/basics/hello_world.js
+./target/debug/bee --version
+./target/debug/bee run examples/basics/hello_world.js
 ```
 
 ### IDE 配置

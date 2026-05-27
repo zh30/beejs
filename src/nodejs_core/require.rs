@@ -408,7 +408,8 @@ pub fn setup_require_api(
                                     Err(e) => {
                                         let error_msg = format!("Error deleting file: {}", e);
                                         let error_val = v8::String::new(scope, &error_msg).unwrap();
-                                        retval.set(error_val.into());
+                                        let exception = v8::Exception::type_error(scope, error_val);
+                                        scope.throw_exception(exception.into());
                                     }
                                 }
                             }
@@ -511,9 +512,16 @@ pub fn setup_require_api(
                                 let undefined = v8::undefined(scope);
                                 let dirname_val = v8::String::new(scope, &module_dirname).unwrap().into();
                                 let filename_val = v8::String::new(scope, &module_filename).unwrap().into();
-                                let _ = wrapper_func.call(scope, undefined.into(), &[module_obj.into(), exports_obj.clone().into(), dirname_val, filename_val]);
+                                if wrapper_func.call(scope, undefined.into(), &[module_obj.clone().into(), exports_obj.clone().into(), dirname_val, filename_val]).is_none() {
+                                    return;
+                                }
 
-                                retval.set(exports_obj.into());
+                                let module_exports_lookup_key = v8::String::new(scope, "exports").unwrap().into();
+                                if let Some(module_exports) = module_obj.get(scope, module_exports_lookup_key) {
+                                    retval.set(module_exports);
+                                } else {
+                                    retval.set(exports_obj.into());
+                                }
                                 return;
                             }
                             Err(e) => {
@@ -557,9 +565,16 @@ pub fn setup_require_api(
                                     let undefined = v8::undefined(scope);
                                     let dirname_val = v8::String::new(scope, &module_dirname).unwrap().into();
                                     let filename_val = v8::String::new(scope, &module_filename).unwrap().into();
-                                    let _ = wrapper_func.call(scope, undefined.into(), &[module_obj.into(), exports_obj.clone().into(), dirname_val, filename_val]);
+                                    if wrapper_func.call(scope, undefined.into(), &[module_obj.clone().into(), exports_obj.clone().into(), dirname_val, filename_val]).is_none() {
+                                        return;
+                                    }
 
-                                    retval.set(exports_obj.into());
+                                    let module_exports_lookup_key = v8::String::new(scope, "exports").unwrap().into();
+                                    if let Some(module_exports) = module_obj.get(scope, module_exports_lookup_key) {
+                                        retval.set(module_exports);
+                                    } else {
+                                        retval.set(exports_obj.into());
+                                    }
                                     return;
                                 }
                                 Err(e) => {

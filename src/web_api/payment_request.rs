@@ -8,9 +8,9 @@ use rusty_v8 as v8;
 /// Payment request state
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaymentRequestState {
-    Created,      // PaymentRequest has been created
-    Interactive,  // PaymentRequest is showing the payment UI
-    Closed,       // PaymentRequest has been closed (completed or cancelled)
+    Created,     // PaymentRequest has been created
+    Interactive, // PaymentRequest is showing the payment UI
+    Closed,      // PaymentRequest has been closed (completed or cancelled)
 }
 
 /// Setup Payment Request API in V8 context
@@ -25,21 +25,33 @@ pub fn setup_payment_request_api(
     let payment_request_fn = v8::FunctionTemplate::new(scope, payment_request_constructor_callback);
     let payment_request_constructor = payment_request_fn.get_function(scope).unwrap();
     let payment_request_key = v8::String::new(scope, "PaymentRequest").unwrap();
-    global.set(scope, payment_request_key.into(), payment_request_constructor.into());
+    global.set(
+        scope,
+        payment_request_key.into(),
+        payment_request_constructor.into(),
+    );
 
     // PaymentResponse constructor (for internal use)
-    let payment_response_fn = v8::FunctionTemplate::new(scope, payment_response_constructor_callback);
+    let payment_response_fn =
+        v8::FunctionTemplate::new(scope, payment_response_constructor_callback);
     let payment_response_constructor = payment_response_fn.get_function(scope).unwrap();
     let payment_response_key = v8::String::new(scope, "PaymentResponse").unwrap();
-    global.set(scope, payment_response_key.into(), payment_response_constructor.into());
+    global.set(
+        scope,
+        payment_response_key.into(),
+        payment_response_constructor.into(),
+    );
 
     // PaymentAddress constructor (for internal use)
     let payment_address_fn = v8::FunctionTemplate::new(scope, payment_address_constructor_callback);
     let payment_address_constructor = payment_address_fn.get_function(scope).unwrap();
     let payment_address_key = v8::String::new(scope, "PaymentAddress").unwrap();
-    global.set(scope, payment_address_key.into(), payment_address_constructor.into());
+    global.set(
+        scope,
+        payment_address_key.into(),
+        payment_address_constructor.into(),
+    );
 
-    eprintln!("✅ [v0.3.328] Payment Request API initialized");
     Ok(())
 }
 
@@ -289,7 +301,9 @@ fn payment_response_complete_callback(
 
     // Get the result (e.g., "success", "fail", "unknown")
     let result = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "unknown").unwrap())
+        args.get(0)
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "unknown").unwrap())
             .to_rust_string_lossy(scope)
     } else {
         "unknown".to_string()
@@ -301,7 +315,10 @@ fn payment_response_complete_callback(
     // Resolve immediately
     resolver.resolve(scope, undefined_val);
 
-    eprintln!("[PaymentResponse.complete] Payment completed with result: {}", result);
+    eprintln!(
+        "[PaymentResponse.complete] Payment completed with result: {}",
+        result
+    );
 }
 
 /// PaymentAddress constructor callback (for address objects)

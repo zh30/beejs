@@ -4,8 +4,8 @@
 // NOTE: import.meta requires true ES Module context (V8 Module API), not Script context.
 // These tests verify the runtime's module system capabilities.
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 /// Test basic addition (sanity check)
 #[test]
@@ -178,7 +178,10 @@ fn test_import_keyword_error() {
     "#;
     let result = runtime.execute_code(code);
     // Should fail with "Cannot use import statement outside a module"
-    assert!(result.is_err(), "Import statement should fail in script context");
+    assert!(
+        result.is_err(),
+        "Import statement should fail in script context"
+    );
 }
 
 /// Test ESM export syntax conversion (exports are converted to comments)

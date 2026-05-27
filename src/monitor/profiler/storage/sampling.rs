@@ -2,9 +2,9 @@
 // 动态调整采样率以平衡准确性和性能
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
-use std::time::SystemTime;
 use std::hash::Hash;
+use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 /// 性能事件类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -163,7 +163,13 @@ impl SamplingStrategy {
         // 基于重要性和当前采样率计算最终概率
         let adjusted_rate: _ = self.current_sample_rate * (0.5 + 0.5 * event.importance);
         // 简化的随机采样（实际应用中使用更复杂的算法）
-        let random_value: _ = ((std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() - event.timestamp).max(1) as f64) / 1_000_000_000.0;
+        let random_value: _ = ((std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            - event.timestamp)
+            .max(1) as f64)
+            / 1_000_000_000.0;
         random_value <= adjusted_rate
     }
     /// 动态调整采样率
@@ -180,7 +186,8 @@ impl SamplingStrategy {
             self.current_sample_rate *= 1.05;
         }
         // 限制在有效范围内
-        self.current_sample_rate = self.current_sample_rate
+        self.current_sample_rate = self
+            .current_sample_rate
             .max(0.01)
             .min(self.config.max_sample_rate);
         // 记录调整
@@ -247,7 +254,10 @@ mod tests {
         let event: _ = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
-            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             metadata: None,
         };
         let decision: _ = strategy.should_sample_event(&event);
@@ -263,7 +273,10 @@ mod tests {
         let low_importance_event: _ = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.5,
-            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             metadata: None,
         };
         let decision: _ = strategy.should_sample_event(&low_importance_event);
@@ -284,7 +297,10 @@ mod tests {
             let event: _ = PerformanceEvent {
                 event_type: PerformanceEventType::FunctionCall,
                 importance: 0.5,
-                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 metadata: None,
             };
             strategy.should_sample_event(&event);

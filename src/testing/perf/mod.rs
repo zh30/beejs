@@ -8,10 +8,7 @@
 // - Performance threshold checks
 pub mod benchmark;
 pub mod regression_detector;
-pub mod perf_analyzer;
-
-use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
+// pub mod perf_analyzer;
 
 /// Performance test result
 #[derive(Debug, Clone)]
@@ -32,7 +29,7 @@ pub struct PerfRun {
     pub timestamp: std::time::Instant,
 }
 /// Performance statistics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PerfStatistics {
     pub count: usize,
     pub min: std::time::Duration,
@@ -75,7 +72,7 @@ impl PerfStatistics {
         let median: _ = if count % 2 == 0 {
             let mid: _ = count / 2;
             std::time::Duration::from_nanos(
-                (durations[mid - 1].as_nanos() + durations[mid].as_nanos()) as u64 / 2
+                (durations[mid - 1].as_nanos() + durations[mid].as_nanos()) as u64 / 2,
             )
         } else {
             durations[count / 2]
@@ -87,7 +84,8 @@ impl PerfStatistics {
                 let diff: _ = d.as_nanos() as f64 - mean.as_nanos() as f64;
                 diff * diff
             })
-            .sum::<f64>() / count as f64;
+            .sum::<f64>()
+            / count as f64;
         let std_dev: _ = std::time::Duration::from_nanos(variance.sqrt() as u64);
         // Calculate percentiles
         let percentile_95_index: _ = (count as f64 * 0.95) as usize;
@@ -265,7 +263,7 @@ impl PerfTestRunner {
     /// Run a performance test
     pub fn run_test<F>(&self, name: &str, test_fn: F) -> PerfTestResult
     where
-        F: FnOnce() + Send,
+        F: Fn() + Send + Sync,
     {
         let mut runs = Vec::new();
         // Warmup runs
@@ -283,7 +281,7 @@ impl PerfTestRunner {
         // Check threshold
         let (passed, threshold) = if let Some(ref thr) = self.config.threshold {
             let passes_threshold: _ = self.check_threshold(&statistics, thr);
-            (passes_threshold, Some(thr.clone())
+            (passes_threshold, Some(thr.clone()))
         } else {
             (true, None)
         };
@@ -346,7 +344,7 @@ impl PerfTestRunner {
         // Check max duration
         if let Some(max_duration) = threshold.max_duration {
             let adjusted_max: _ = std::time::Duration::from_nanos(
-                (max_duration.as_nanos() as f64 * (1.0 + tolerance)) as u64
+                (max_duration.as_nanos() as f64 * (1.0 + tolerance)) as u64,
             );
             if stats.mean > adjusted_max {
                 return false;
@@ -364,6 +362,7 @@ impl PerfTestRunner {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn test_perf_statistics_from_runs() {
         let runs: _ = vec![

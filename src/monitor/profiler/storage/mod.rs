@@ -4,6 +4,6 @@ pub mod ring_buffer;
 pub mod sampling;
 pub use ring_buffer::RingBuffer;
 pub use sampling::{
-    SamplingConfig, SamplingDecision, SamplingStats, SamplingStrategy, PerformanceEvent,
-    PerformanceEventType,
+    PerformanceEvent, PerformanceEventType, SamplingConfig, SamplingDecision, SamplingStats,
+    SamplingStrategy,
 };

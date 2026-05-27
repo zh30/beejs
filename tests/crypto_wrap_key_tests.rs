@@ -88,10 +88,12 @@ fn test_unwrap_key_returns_promise() {
             true,
             ['wrapKey', 'unwrapKey']
         );
+        let wrappingKeyRef;
         Promise.all([keyPromise, wrappingKeyPromise]).then(([key, wrappingKey]) => {
+            wrappingKeyRef = wrappingKey;
             return crypto.subtle.wrapKey('raw', key, wrappingKey, { name: 'AES-GCM', iv: new Uint8Array(12) });
         }).then(wrapped => {
-            const result = crypto.subtle.unwrapKey('raw', wrapped, wrappingKey, { name: 'AES-GCM' }, ['encrypt', 'decrypt'], true);
+            const result = crypto.subtle.unwrapKey('raw', wrapped, wrappingKeyRef, { name: 'AES-GCM' }, ['encrypt', 'decrypt'], true);
             return result && result.constructor && result.constructor.name === 'Promise';
         });
     "#;
@@ -141,14 +143,15 @@ fn test_wrap_unwrap_aes_key_round_trip() {
 
             // Verify the unwrapped key works
             const testData = new TextEncoder().encode('Test message');
+            const dataIv = crypto.getRandomValues(new Uint8Array(12));
             const encrypted = await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: crypto.getRandomValues(new Uint8Array(12)) },
+                { name: 'AES-GCM', iv: dataIv },
                 unwrappedKey,
                 testData
             );
 
             const decrypted = await crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: iv },
+                { name: 'AES-GCM', iv: dataIv },
                 unwrappedKey,
                 encrypted
             );

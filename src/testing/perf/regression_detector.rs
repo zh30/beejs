@@ -1,10 +1,9 @@
 // Performance Regression Detector
 // Detects performance regressions by comparing with historical data
 
-use std::collections::{BTreeMap, HashMap};
-use serde::{Serialize, Deserialize};
-use std::time::{Duration, Instant};
-use std::time::SystemTime;
+use super::PerfStatistics;
+use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
 
 /// Historical performance data
@@ -17,7 +16,7 @@ pub struct HistoricalData {
 /// Regression detection configuration
 #[derive(Debug, Clone)]
 pub struct RegressionConfig {
-    pub regression_threshold: f64, // Percentage
+    pub regression_threshold: f64,  // Percentage
     pub improvement_threshold: f64, // Percentage
     pub history_file: Option<String>,
     pub max_history_entries: usize,
@@ -25,7 +24,7 @@ pub struct RegressionConfig {
 impl Default for RegressionConfig {
     fn default() -> Self {
         RegressionConfig {
-            regression_threshold: 0.2, // 20% regression
+            regression_threshold: 0.2,  // 20% regression
             improvement_threshold: 0.1, // 10% improvement
             history_file: None,
             max_history_entries: 100,
@@ -54,8 +53,8 @@ impl RegressionDetector {
             history_cache: HashMap::new(),
         };
         // Load history from file if configured
-        if let Some(ref history_file) = detector.config.history_file {
-            let _: _ = detector.load_history(history_file);
+        if let Some(history_file) = detector.config.history_file.clone() {
+            let _: _ = detector.load_history(&history_file);
         }
         detector
     }
@@ -68,11 +67,18 @@ impl RegressionDetector {
         let key: _ = benchmark_name.to_string();
         // Get historical data
         let historical: _ = self.history_cache.get(&key).and_then(|v| v.last().cloned());
-        let (has_regression, has_improvement, regression_percentage, improvement_percentage, message);
-        if let Some(historical) = historical {
+        let (
+            has_regression,
+            has_improvement,
+            regression_percentage,
+            improvement_percentage,
+            message,
+        );
+        if let Some(ref historical) = historical {
             let current_mean_ms: _ = current_stats.mean.as_millis() as f64;
             let historical_mean_ms: _ = historical.statistics.mean.as_millis() as f64;
-            let percentage_change: _ = ((current_mean_ms - historical_mean_ms) / historical_mean_ms) * 100.0;
+            let percentage_change: _ =
+                ((current_mean_ms - historical_mean_ms) / historical_mean_ms) * 100.0;
             if percentage_change > self.config.regression_threshold * 100.0 {
                 has_regression = true;
                 has_improvement = false;
@@ -143,13 +149,13 @@ impl RegressionDetector {
         Ok(())
     }
     /// Load historical data from file
-    fn self, file load_history(&mut_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn load_history(&mut self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let path: _ = Path::new(file_path);
         if !path.exists() {
             return Ok(()); // No history file yet
         }
         let content: _ = fs::read_to_string(file_path)?;
-        let history_data: HashMap<String, Vec<HistoricalData> = serde_json::from_str(&content)?;
+        let history_data: HashMap<String, Vec<HistoricalData>> = serde_json::from_str(&content)?;
         self.history_cache = history_data;
         Ok(())
     }
@@ -160,7 +166,7 @@ impl RegressionDetector {
         Ok(())
     }
     /// Get historical statistics for a benchmark
-    pub fn get_historical_stats(&self, benchmark_name: &str) -> Option<&Vec<HistoricalData> {
+    pub fn get_historical_stats(&self, benchmark_name: &str) -> Option<&Vec<HistoricalData>> {
         self.history_cache.get(benchmark_name)
     }
     /// Clear history for a benchmark
@@ -178,11 +184,14 @@ impl RegressionDetector {
         summary.push_str("==========================\n\n");
         for (benchmark_name, history) in &self.history_cache {
             summary.push_str(&format!("{}:\n", benchmark_name));
-            summary.push_str(&format!("  Entries: {}\n", history.len());
+            summary.push_str(&format!("  Entries: {}\n", history.len()));
             if !history.is_empty() {
                 let latest: _ = &history[history.len() - 1];
                 summary.push_str(&format!("  Latest: {:?}\n", latest.statistics.mean));
-                summary.push_str(&format!("  Ops/sec: {:.2}\n", latest.statistics.ops_per_second));
+                summary.push_str(&format!(
+                    "  Ops/sec: {:.2}\n",
+                    latest.statistics.ops_per_second
+                ));
             }
             summary.push('\n');
         }
@@ -191,6 +200,9 @@ impl RegressionDetector {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::testing::perf::PerfRun;
+
     #[test]
     fn test_regression_detection_new_benchmark() {
         let config: _ = RegressionConfig::default();
@@ -276,16 +288,14 @@ mod tests {
     }
     #[test]
     fn test_clear_history() {
-        let mut config = RegressionConfig::default();
+        let config = RegressionConfig::default();
         let mut detector = RegressionDetector::new(config);
-        let stats: _ = PerfStatistics::from_runs(&[
-            PerfRun {
-                duration: std::time::Duration::from_millis(10),
-                memory_usage: None,
-                cpu_usage: None,
-                timestamp: std::time::Instant::now(),
-            },
-        ]);
+        let stats: _ = PerfStatistics::from_runs(&[PerfRun {
+            duration: std::time::Duration::from_millis(10),
+            memory_usage: None,
+            cpu_usage: None,
+            timestamp: std::time::Instant::now(),
+        }]);
         let _: _ = detector.record_performance("test", &stats);
         assert!(detector.get_historical_stats("test").is_some());
         detector.clear_history("test");

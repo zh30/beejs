@@ -2,23 +2,31 @@
 //
 // 整合 DMA、内存映射、智能预取和 GC 优化，实现极致内存性能
 
-use anyhow::{Result, anyhow};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
+use anyhow::Result;
+use std::alloc::GlobalAlloc;
 use std::ptr::NonNull;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
-use std::sync::atomic::{AtomicUsize, Ordering};
 
-    EnhancedZeroCopy,
-    SmartPrefetcher,
-    EnhancedGcOptimizer,
-    DmaConfig,
-    MmapConfig,
-    PrefetchConfig,
-    GcConfig,
-    PrefetchStrategy,
-    AccessPattern,
+use crate::memory::{
+    AccessPattern, DmaConfig, EnhancedGcOptimizer, EnhancedZeroCopy, GcConfig, MmapConfig,
+    PrefetchConfig, PrefetchStrategy, SmartPrefetcher,
 };
+
+/// 线程安全的 NonNull 指针包装器
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct SendPtr(pub NonNull<u8>);
+
+unsafe impl Send for SendPtr {}
+unsafe impl Sync for SendPtr {}
+
+impl std::ops::Deref for SendPtr {
+    type Target = NonNull<u8>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// Phase 2 内存引擎配置
 #[derive(Debug, Clone)]
 pub struct Phase2MemoryConfig {
@@ -85,18 +93,16 @@ pub struct Phase2MemoryStats {
 impl Phase2MemoryEngine {
     /// 创建 Phase 2 内存引擎
     pub fn new(config: Phase2MemoryConfig) -> Self {
-        let zero_copy: _ = Arc::new(Mutex::new(EnhancedZeroCopy::new()),
-            config.dma_config.clone())
+        let zero_copy = Arc::new(EnhancedZeroCopy::new(
+            config.dma_config.clone(),
             config.mmap_config.clone(),
             config.prefetch_config.clone(),
         ));
-        let prefetcher: _ = Arc::new(Mutex::new(SmartPrefetcher::new()),
-            zero_copy.clone())
+        let prefetcher = Arc::new(SmartPrefetcher::new(
+            zero_copy.clone(),
             config.prefetch_strategy.clone(),
         ));
-        let gc_optimizer: _ = Arc::new(Mutex::new(EnhancedGcOptimizer::new()),
-            config.gc_config.clone()))
-        ));
+        let gc_optimizer = Arc::new(EnhancedGcOptimizer::new(config.gc_config.clone()));
         // 启用预测性 GC
         gc_optimizer.enable_predictive_gc();
         Self {
@@ -104,7 +110,7 @@ impl Phase2MemoryEngine {
             zero_copy,
             prefetcher,
             gc_optimizer,
-            stats: Arc::new(Mutex::new(Phase2MemoryStats::default()))
+            stats: Arc::new(Phase2MemoryStats::default()),
             started_at: Instant::now(),
         }
     }
@@ -113,26 +119,37 @@ impl Phase2MemoryEngine {
         Self::new(Phase2MemoryConfig::default())
     }
     /// 分配内存
-    pub async fn allocate(&self, size: usize) -> Result<NonNull<u8>, &'static str> {
+    pub async fn allocate(&self, size: usize) -> Result<SendPtr, &'static str> {
         // 记录分配
-        self.stats.total_allocations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        self.stats.total_bytes_allocated.fetch_add(size, std::sync::atomic::Ordering::Relaxed);
+        self.stats
+            .total_allocations
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.stats
+            .total_bytes_allocated
+            .fetch_add(size, std::sync::atomic::Ordering::Relaxed);
         // 检查是否应该使用 DMA
         let result: _ = if size >= self.config.dma_config.dma_threshold {
             // 使用 DMA 分配
-            let buffer: _ = self.zero_copy.allocate_dma(size).await.map_err(|_| "DMA allocation failed")?;
-            self.stats.dma_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            Ok(buffer.ptr)
+            let buffer: _ = self
+                .zero_copy
+                .allocate_dma(size)
+                .await
+                .map_err(|_| "DMA allocation failed")?;
+            self.stats
+                .dma_operations
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            Ok(SendPtr(buffer.ptr))
         } else {
             // 使用标准分配
-            let layout: _ = std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>())
-                .map_err(|_| "Invalid layout")?;
+            let layout: _ =
+                std::alloc::Layout::from_size_align(size, std::mem::align_of::<usize>())
+                    .map_err(|_| "Invalid layout")?;
             unsafe {
                 let ptr: _ = std::alloc::System.alloc(layout);
                 if ptr.is_null() {
                     Err("Allocation failed")
                 } else {
-                    Ok(NonNull::new_unchecked(ptr))
+                    Ok(SendPtr(NonNull::new_unchecked(ptr)))
                 }
             }
         };
@@ -140,7 +157,7 @@ impl Phase2MemoryEngine {
         self.gc_optimizer.record_allocation(size).await;
         // 如果启用 AI 优化，记录访问
         if self.config.enable_ai_optimization {
-            let addr: _ = match result {
+            let addr: _ = match &result {
                 Ok(ptr) => ptr.as_ptr() as usize,
                 Err(_) => 0,
             };
@@ -151,10 +168,14 @@ impl Phase2MemoryEngine {
         result
     }
     /// 释放内存
-    pub async fn deallocate(&self, ptr: NonNull<u8>, size: usize) -> Result<(), &'static str> {
+    pub async fn deallocate(&self, ptr: SendPtr, size: usize) -> Result<(), &'static str> {
         // 记录释放
-        self.stats.total_deallocations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        self.stats.total_bytes_freed.fetch_add(size, std::sync::atomic::Ordering::Relaxed);
+        self.stats
+            .total_deallocations
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.stats
+            .total_bytes_freed
+            .fetch_add(size, std::sync::atomic::Ordering::Relaxed);
         // 记录到 GC 优化器
         self.gc_optimizer.record_deallocation(size).await;
         // 对于 DMA 缓冲区，返回到池中
@@ -164,67 +185,130 @@ impl Phase2MemoryEngine {
         } else {
             // 标准释放
             unsafe {
-                let layout: _ = std::alloc::Layout::from_size_align_unchecked(size, std::mem::align_of::<usize>());
+                let layout: _ = std::alloc::Layout::from_size_align_unchecked(
+                    size,
+                    std::mem::align_of::<usize>(),
+                );
                 std::alloc::System.dealloc(ptr.as_ptr(), layout);
             }
         }
         Ok(())
     }
     /// 内存映射文件
-    pub async fn mmap_file(&self, path: &str, size: usize) -> Result<Arc<memmap2::Mmap>, anyhow::Error> {
-        self.stats.mmap_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    pub async fn mmap_file(
+        &self,
+        path: &str,
+        size: usize,
+    ) -> Result<Arc<memmap2::Mmap>, anyhow::Error> {
+        self.stats
+            .mmap_operations
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         // 使用零拷贝系统进行内存映射
         let mmap: _ = self.zero_copy.mmap_file(path, size).await?;
         Ok(mmap)
     }
     /// 智能预取
-    pub async fn smart_prefetch(&self, addr: NonNull<u8>, size: usize, pattern: AccessPattern) -> Result<()> {
-        self.stats.prefetch_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    pub async fn smart_prefetch(
+        &self,
+        addr: SendPtr,
+        size: usize,
+        pattern: AccessPattern,
+    ) -> Result<()> {
+        self.stats
+            .prefetch_operations
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         // 使用零拷贝系统进行预取
-        self.zero_copy.predictive_prefetch(addr, size, pattern).await?;
+        self.zero_copy
+            .predictive_prefetch(addr, size, pattern)
+            .await?;
         Ok(())
     }
     /// 执行零拷贝数据传输
-    pub async fn zero_copy_transfer(&self, src: NonNull<u8>, dst: NonNull<u8>, size: usize) -> Result<()> {
-        self.stats.zero_copy_operations.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        self.stats.bytes_saved.fetch_add(size, std::sync::atomic::Ordering::Relaxed);
+    pub async fn zero_copy_transfer(&self, src: SendPtr, dst: SendPtr, size: usize) -> Result<()> {
+        self.stats
+            .zero_copy_operations
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.stats
+            .bytes_saved
+            .fetch_add(size, std::sync::atomic::Ordering::Relaxed);
         self.zero_copy.zero_copy_transfer(src, dst, size).await?;
         Ok(())
     }
     /// 强制执行 GC
     pub async fn force_gc(&self) -> Result<()> {
-        self.stats.gc_collections.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.stats
+            .gc_collections
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         // 模拟 GC 执行
-        self.gc_optimizer.trigger_gc(
-            crate::memory::GcTriggerDecision {
+        self.gc_optimizer
+            .trigger_gc(crate::memory::GcTriggerDecision {
                 should_trigger: true,
                 strategy: crate::memory::GcStrategy::Emergency,
                 reason: "Manual GC trigger".to_string(),
                 confidence: 1.0,
-            }
-        ).await;
+            })
+            .await;
         Ok(())
     }
     /// 获取内存使用统计
     pub async fn get_memory_stats(&self) -> Phase2MemoryStatsSnapshot {
-        let perf_stats: _ = self.zero_copy.get_performance_stats().await;
         let prefetch_stats: _ = self.zero_copy.get_prefetch_stats().await;
         let gc_metrics: _ = self.gc_optimizer.get_metrics().await;
         Phase2MemoryStatsSnapshot {
             uptime: self.started_at.elapsed(),
-            total_allocations: self.stats.total_allocations.load(std::sync::atomic::Ordering::Relaxed),
-            total_deallocations: self.stats.total_deallocations.load(std::sync::atomic::Ordering::Relaxed),
-            total_bytes_allocated: self.stats.total_bytes_allocated.load(std::sync::atomic::Ordering::Relaxed),
-            total_bytes_freed: self.stats.total_bytes_freed.load(std::sync::atomic::Ordering::Relaxed),
-            current_memory_usage: self.stats.total_bytes_allocated.load(std::sync::atomic::Ordering::Relaxed)
-                .saturating_sub(self.stats.total_bytes_freed.load(std::sync::atomic::Ordering::Relaxed)),
-            zero_copy_operations: self.stats.zero_copy_operations.load(std::sync::atomic::Ordering::Relaxed),
-            dma_operations: self.stats.dma_operations.load(std::sync::atomic::Ordering::Relaxed),
-            mmap_operations: self.stats.mmap_operations.load(std::sync::atomic::Ordering::Relaxed),
-            prefetch_operations: self.stats.prefetch_operations.load(std::sync::atomic::Ordering::Relaxed),
-            gc_collections: self.stats.gc_collections.load(std::sync::atomic::Ordering::Relaxed),
-            bytes_saved: self.stats.bytes_saved.load(std::sync::atomic::Ordering::Relaxed),
-            time_saved_ms: self.stats.time_saved_ms.load(std::sync::atomic::Ordering::Relaxed),
+            total_allocations: self
+                .stats
+                .total_allocations
+                .load(std::sync::atomic::Ordering::Relaxed),
+            total_deallocations: self
+                .stats
+                .total_deallocations
+                .load(std::sync::atomic::Ordering::Relaxed),
+            total_bytes_allocated: self
+                .stats
+                .total_bytes_allocated
+                .load(std::sync::atomic::Ordering::Relaxed),
+            total_bytes_freed: self
+                .stats
+                .total_bytes_freed
+                .load(std::sync::atomic::Ordering::Relaxed),
+            current_memory_usage: self
+                .stats
+                .total_bytes_allocated
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .saturating_sub(
+                    self.stats
+                        .total_bytes_freed
+                        .load(std::sync::atomic::Ordering::Relaxed),
+                ),
+            zero_copy_operations: self
+                .stats
+                .zero_copy_operations
+                .load(std::sync::atomic::Ordering::Relaxed),
+            dma_operations: self
+                .stats
+                .dma_operations
+                .load(std::sync::atomic::Ordering::Relaxed),
+            mmap_operations: self
+                .stats
+                .mmap_operations
+                .load(std::sync::atomic::Ordering::Relaxed),
+            prefetch_operations: self
+                .stats
+                .prefetch_operations
+                .load(std::sync::atomic::Ordering::Relaxed),
+            gc_collections: self
+                .stats
+                .gc_collections
+                .load(std::sync::atomic::Ordering::Relaxed),
+            bytes_saved: self
+                .stats
+                .bytes_saved
+                .load(std::sync::atomic::Ordering::Relaxed),
+            time_saved_ms: self
+                .stats
+                .time_saved_ms
+                .load(std::sync::atomic::Ordering::Relaxed),
             gc_metrics,
             prefetch_stats,
         }
@@ -318,6 +402,8 @@ impl Phase2EfficiencyMetrics {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_phase2_memory_engine_creation() {
         let engine: _ = Phase2MemoryEngine::default();
@@ -328,7 +414,6 @@ mod tests {
         let engine: _ = Phase2MemoryEngine::default();
         // 分配小内存
         let ptr: _ = engine.allocate(1024).await.unwrap();
-        assert!(!ptr.as_ptr().is_null());
         // 释放内存
         engine.deallocate(ptr, 1024).await.unwrap();
     }

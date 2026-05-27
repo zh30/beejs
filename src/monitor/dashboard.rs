@@ -6,8 +6,8 @@ use crate::monitor::data_store::{DataStore, ExportFormat, QueryCondition};
 use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 
 /// Web 仪表板配置
 #[derive(Debug, Clone)]
@@ -178,10 +178,7 @@ impl WebDashboard {
         }
     }
     /// 创建默认配置
-    pub fn with_default_config(
-        data_store: Arc<DataStore>,
-        alert_system: Arc<AlertSystem>,
-    ) -> Self {
+    pub fn with_default_config(data_store: Arc<DataStore>, alert_system: Arc<AlertSystem>) -> Self {
         let config: _ = DashboardConfig {
             port: 8080,
             host: "0.0.0.0".to_string(),
@@ -380,10 +377,7 @@ impl WebDashboard {
         Ok(layout.clone())
     }
     /// 导出仪表板数据
-    pub fn export_dashboard(
-        &self,
-        export_config: ExportConfig,
-    ) -> Result<String, String> {
+    pub fn export_dashboard(&self, export_config: ExportConfig) -> Result<String, String> {
         let condition: _ = QueryCondition {
             metric_type: None,
             start_time: None,
@@ -402,7 +396,9 @@ impl WebDashboard {
         html.push_str("<!DOCTYPE html>\n");
         html.push_str("<html lang=\"en\">\n<head>\n");
         html.push_str("<meta charset=\"UTF-8\">\n");
-        html.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str(
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
         html.push_str("<title>Beejs Monitoring Dashboard</title>\n");
         html.push_str("<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>\n");
         html.push_str("<style>\n");
@@ -425,7 +421,8 @@ impl WebDashboard {
         ));
         html.push_str(&format!(
             "<div class=\"stat-card\">\n<h3>Metrics</h3>\n<p class=\"stat-value\">{}</p>\n</div>\n",
-            dashboard_data.real_time_metrics.len()));
+            dashboard_data.real_time_metrics.len()
+        ));
         html.push_str("</div>\n");
         // 图表区域
         html.push_str("<div class=\"charts-grid\">\n");
@@ -446,7 +443,8 @@ impl WebDashboard {
                 html.push_str(&format!(
                     "<li class=\"alert alert-{}\">{}</li>\n",
                     alert.severity.as_str().to_lowercase(),
-                    self.escape_html(&alert.message)));
+                    self.escape_html(&alert.message)
+                ));
             }
             html.push_str("</ul>\n</div>\n");
         }
@@ -605,7 +603,8 @@ charts['{}'] = new Chart(ctx_{}, {{
             ));
         }
         // 数据更新函数 - 使用安全的 DOM 操作
-        js.push_str(r#"
+        js.push_str(
+            r#"
 async function updateDashboard() {
     try {
         const response = await fetch('/api/dashboard');
@@ -638,7 +637,8 @@ async function updateDashboard() {
 // 每5秒更新一次数据
 setInterval(updateDashboard, 5000);
 updateDashboard(); // 立即更新一次
-"#);
+"#,
+        );
         js
     }
     /// 获取连接统计

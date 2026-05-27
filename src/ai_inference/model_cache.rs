@@ -3,8 +3,8 @@
 
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 /// 缓存策略
@@ -79,7 +79,7 @@ impl ModelCache {
             hit = true;
             let model: _ = entry.model.clone();
             drop(models); // 释放锁
-            // 更新缓存统计
+                          // 更新缓存统计
             {
                 let mut stats = self.stats.write().await;
                 stats.hits += 1;
@@ -90,7 +90,7 @@ impl ModelCache {
             return Ok(Some(model));
         }
         drop(models); // 释放锁
-        // 缓存未命中
+                      // 缓存未命中
         {
             let mut stats = self.stats.write().await;
             stats.misses += 1;
@@ -275,7 +275,9 @@ impl ModelCache {
             .min_by(|a, b| {
                 let score_a: _ = self.calculate_eviction_score(a.1);
                 let score_b: _ = self.calculate_eviction_score(b.1);
-                score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
+                score_a
+                    .partial_cmp(&score_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|(key, _)| key.clone());
         if let Some(key) = smart_key {

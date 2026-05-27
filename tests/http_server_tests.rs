@@ -1,8 +1,8 @@
 // HTTP Server Tests - v0.3.83
 // 测试 http.createServer() 和 server.listen() 功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -12,7 +12,11 @@ fn test_http_create_server_exists() {
         typeof http.createServer;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "http.createServer should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "http.createServer should be a function"
+    );
 }
 
 #[test]
@@ -24,7 +28,11 @@ fn test_http_create_server_returns_object() {
         typeof server === 'object' && server !== null;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "createServer should return an object");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "createServer should return an object"
+    );
 }
 
 #[test]
@@ -86,7 +94,11 @@ fn test_http_server_listen_sets_listening() {
         server.listening === true;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "server.listening should be true after listen()");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "server.listening should be true after listen()"
+    );
 }
 
 #[test]
@@ -99,7 +111,11 @@ fn test_http_server_listen_sets_port() {
         server.port === 8080;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "server.port should be set to the listened port");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "server.port should be set to the listened port"
+    );
 }
 
 #[test]
@@ -112,7 +128,10 @@ fn test_http_server_listen_sets_address() {
         server.address;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert!(result.trim().contains("localhost:3000"), "server.address should contain the address");
+    assert!(
+        result.trim().contains("localhost:3000"),
+        "server.address should contain the address"
+    );
 }
 
 #[test]
@@ -125,7 +144,11 @@ fn test_http_server_listen_with_host() {
         server.listening === true && server.port === 8080;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "server should listen on specified host and port");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "server should listen on specified host and port"
+    );
 }
 
 #[test]
@@ -139,7 +162,11 @@ fn test_http_server_close() {
         server.listening === false;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "server.listening should be false after close()");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "server.listening should be false after close()"
+    );
 }
 
 #[test]
@@ -156,7 +183,11 @@ fn test_http_server_on_request() {
         requestHandlerCalled === false;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "request handler should not be called immediately");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "request handler should not be called immediately"
+    );
 }
 
 #[test]
@@ -169,7 +200,11 @@ fn test_http_server_listen_returns_self() {
         typeof result === 'object' && result === server;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "listen() should return the server object");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "listen() should return the server object"
+    );
 }
 
 #[test]
@@ -183,7 +218,11 @@ fn test_http_server_default_port_value() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     // Should return undefined before listen
-    assert_eq!(result.trim(), "undefined", "port should be undefined before listen()");
+    assert_eq!(
+        result.trim(),
+        "undefined",
+        "port should be undefined before listen()"
+    );
 }
 
 #[test]

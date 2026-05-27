@@ -5,12 +5,12 @@
 // Uses AsyncTimerManager for delay > 0 scheduling
 // Architecture: static timer ID storage to avoid V8 closure size limits
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use std::time::Duration;
 use once_cell::sync::Lazy;
 use rusty_v8 as v8;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
+use std::time::Duration;
 
 use crate::event_loop::get_async_timer_manager;
 
@@ -65,12 +65,20 @@ impl TimerCallbackStorage {
         }
     }
 
-    fn insert(&mut self, timer_id: u64, callback: v8::Global<v8::Function>, args: Vec<v8::Global<v8::Value>>) {
+    fn insert(
+        &mut self,
+        timer_id: u64,
+        callback: v8::Global<v8::Function>,
+        args: Vec<v8::Global<v8::Value>>,
+    ) {
         self.callbacks.insert(timer_id, callback);
         self.args.insert(timer_id, args);
     }
 
-    fn remove(&mut self, timer_id: u64) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+    fn remove(
+        &mut self,
+        timer_id: u64,
+    ) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
         if let Some(callback) = self.callbacks.remove(&timer_id) {
             let args = self.args.remove(&timer_id).unwrap_or_default();
             Some((callback, args))
@@ -97,7 +105,12 @@ pub struct ImmediateCallbackStorage {
     /// Callbacks stored with deferred flag
     /// Tuple: (timer_id, callback, args, is_deferred)
     /// is_deferred = true means this callback should run in the NEXT iteration
-    callbacks: Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>, bool)>,
+    callbacks: Vec<(
+        u64,
+        v8::Global<v8::Function>,
+        Vec<v8::Global<v8::Value>>,
+        bool,
+    )>,
 }
 
 impl ImmediateCallbackStorage {
@@ -107,7 +120,13 @@ impl ImmediateCallbackStorage {
         }
     }
 
-    fn push(&mut self, timer_id: u64, callback: v8::Global<v8::Function>, args: Vec<v8::Global<v8::Value>>, is_deferred: bool) {
+    fn push(
+        &mut self,
+        timer_id: u64,
+        callback: v8::Global<v8::Function>,
+        args: Vec<v8::Global<v8::Value>>,
+        is_deferred: bool,
+    ) {
         self.callbacks.push((timer_id, callback, args, is_deferred));
     }
 
@@ -120,8 +139,11 @@ impl ImmediateCallbackStorage {
     }
 
     /// v0.3.261: Drain non-deferred callbacks (those that should run now)
-    fn drain_non_deferred(&mut self) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
-        let (non_deferred, remaining): (Vec<_>, Vec<_>) = self.callbacks
+    fn drain_non_deferred(
+        &mut self,
+    ) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+        let (non_deferred, remaining): (Vec<_>, Vec<_>) = self
+            .callbacks
             .drain(..)
             .partition(|(_, _, _, deferred)| !*deferred);
 
@@ -129,17 +151,27 @@ impl ImmediateCallbackStorage {
         self.callbacks.extend(remaining);
 
         // Return only non-deferred callbacks for execution
-        non_deferred.into_iter().map(|(id, cb, args, _)| (id, cb, args)).collect()
+        non_deferred
+            .into_iter()
+            .map(|(id, cb, args, _)| (id, cb, args))
+            .collect()
     }
 
     /// v0.3.265: Drain all callbacks (reserved for future use)
     #[allow(dead_code)]
     fn drain(&mut self) -> Vec<(u64, v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
-        self.callbacks.drain(..).map(|(id, cb, args, _)| (id, cb, args)).collect()
+        self.callbacks
+            .drain(..)
+            .map(|(id, cb, args, _)| (id, cb, args))
+            .collect()
     }
 
     fn remove(&mut self, timer_id: u64) -> bool {
-        if let Some(pos) = self.callbacks.iter().position(|(id, _, _, _)| *id == timer_id) {
+        if let Some(pos) = self
+            .callbacks
+            .iter()
+            .position(|(id, _, _, _)| *id == timer_id)
+        {
             self.callbacks.remove(pos);
             true
         } else {
@@ -192,7 +224,10 @@ pub fn get_timer_metadata(timer_id: u64) -> Option<TimerMetadata> {
 #[cfg(test)]
 pub fn get_all_timer_metadata() -> Vec<(u64, TimerMetadata)> {
     let metadata = TIMER_METADATA.lock().unwrap();
-    metadata.iter().map(|(id, meta)| (*id, meta.clone())).collect()
+    metadata
+        .iter()
+        .map(|(id, meta)| (*id, meta.clone()))
+        .collect()
 }
 
 /// Remove timer metadata
@@ -202,7 +237,9 @@ pub fn remove_timer_metadata(timer_id: u64) {
 }
 
 /// Remove timer callback from registry
-pub fn remove_timer_callback(timer_id: u64) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+pub fn remove_timer_callback(
+    timer_id: u64,
+) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
     let mut storage = TIMER_CALLBACKS.lock().unwrap();
     storage.remove(timer_id)
 }
@@ -223,136 +260,81 @@ fn create_timer_object<'a>(
 
     // Store timer type
     let type_key = v8::String::new(scope, "_timerType").unwrap();
-    let type_value = v8::String::new(scope, match timer_type {
-        TimerType::Timeout => "Timeout",
-        TimerType::Interval => "Interval",
-        TimerType::Immediate => "Immediate",
-    }).unwrap();
+    let type_value = v8::String::new(
+        scope,
+        match timer_type {
+            TimerType::Timeout => "Timeout",
+            TimerType::Interval => "Interval",
+            TimerType::Immediate => "Immediate",
+        },
+    )
+    .unwrap();
     timer_obj.set(scope, type_key.into(), type_value.into());
 
     // Create unref method
-    let unref_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let id_key = v8::String::new(scope, "_timerId").unwrap();
-        let id_val = this.get(scope, id_key.into()).unwrap();
-        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+    let unref_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let id_key = v8::String::new(scope, "_timerId").unwrap();
+            let id_val = this.get(scope, id_key.into()).unwrap();
+            let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
 
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        if let Some(info) = metadata.get_mut(&timer_id_val) {
-            info.is_unrefed = true;
-        }
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            if let Some(info) = metadata.get_mut(&timer_id_val) {
+                info.is_unrefed = true;
+            }
 
-        // Return timer object for chaining
-        retval.set(this.into());
-    }).unwrap();
+            // Return timer object for chaining
+            retval.set(this.into());
+        },
+    )
+    .unwrap();
     let unref_key = v8::String::new(scope, "unref").unwrap();
     timer_obj.set(scope, unref_key.into(), unref_fn.into());
 
     // Create ref method
-    let ref_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let id_key = v8::String::new(scope, "_timerId").unwrap();
-        let id_val = this.get(scope, id_key.into()).unwrap();
-        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+    let ref_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let id_key = v8::String::new(scope, "_timerId").unwrap();
+            let id_val = this.get(scope, id_key.into()).unwrap();
+            let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
 
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        if let Some(info) = metadata.get_mut(&timer_id_val) {
-            info.is_unrefed = false;
-        }
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            if let Some(info) = metadata.get_mut(&timer_id_val) {
+                info.is_unrefed = false;
+            }
 
-        // Return timer object for chaining
-        retval.set(this.into());
-    }).unwrap();
+            // Return timer object for chaining
+            retval.set(this.into());
+        },
+    )
+    .unwrap();
     let ref_key = v8::String::new(scope, "ref").unwrap();
     timer_obj.set(scope, ref_key.into(), ref_fn.into());
 
     // Create refresh method (Node.js compatibility)
-    let refresh_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let id_key = v8::String::new(scope, "_timerId").unwrap();
-        let id_val = this.get(scope, id_key.into()).unwrap();
-        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+    let refresh_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let id_key = v8::String::new(scope, "_timerId").unwrap();
+            let id_val = this.get(scope, id_key.into()).unwrap();
+            let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
 
-        // Refresh timer by rescheduling it
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        if let Some(info) = metadata.get_mut(&timer_id_val) {
-            let effective_delay = if info.delay == 0 { 1 } else { info.delay };
-            drop(metadata);
-            let _ = get_async_timer_manager().schedule_timeout(
-                Duration::from_millis(effective_delay),
-                timer_id_val,
-                || {},
-            );
-        }
-
-        retval.set(this.into());
-    }).unwrap();
-    let refresh_key = v8::String::new(scope, "refresh").unwrap();
-    timer_obj.set(scope, refresh_key.into(), refresh_fn.into());
-
-    // Create hasRef method (Node.js compatibility)
-    let has_ref_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let id_key = v8::String::new(scope, "_timerId").unwrap();
-        let id_val = this.get(scope, id_key.into()).unwrap();
-        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
-
-        let metadata = TIMER_METADATA.lock().unwrap();
-        let is_unrefed = metadata.get(&timer_id_val).map(|m| m.is_unrefed).unwrap_or(true);
-        retval.set(v8::Boolean::new(scope, !is_unrefed).into());
-    }).unwrap();
-    let has_ref_key = v8::String::new(scope, "hasRef").unwrap();
-    timer_obj.set(scope, has_ref_key.into(), has_ref_fn.into());
-
-    // Add valueOf for numeric conversion (allows Number(timer))
-    let value_of_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-        let id_key = v8::String::new(scope, "_timerId").unwrap();
-        let id_val = this.get(scope, id_key.into()).unwrap();
-        let timer_id_val = id_val.to_number(scope).unwrap().value();
-        retval.set(v8::Number::new(scope, timer_id_val).into());
-    }).unwrap();
-    let value_of_key = v8::String::new(scope, "valueOf").unwrap();
-    timer_obj.set(scope, value_of_key.into(), value_of_fn.into());
-
-    // v0.3.273: Add delay() method - get delay when no args, set delay when args provided
-    let delay_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this = args.this();
-
-        // Get timer ID
-        let id_key = v8::String::new(scope, "_timerId").unwrap();
-        let id_val = this.get(scope, id_key.into()).unwrap();
-        let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
-
-        if args.length() == 0 {
-            // Get current delay
-            let metadata = TIMER_METADATA.lock().unwrap();
-            let delay = metadata.get(&timer_id_val).map(|m| m.delay).unwrap_or(0);
-            retval.set(v8::Number::new(scope, delay as f64).into());
-        } else {
-            // Set new delay
-            let new_delay = args.get(0)
-                .to_integer(scope)
-                .map(|i| i.value().max(0) as u64)
-                .unwrap_or(0);
-
-            // Update metadata delay
-            {
-                let mut metadata = TIMER_METADATA.lock().unwrap();
-                if let Some(info) = metadata.get_mut(&timer_id_val) {
-                    info.delay = new_delay;
-                }
-            }
-
-            // For setTimeout/setInterval with delay > 0, reschedule the timer
-            // Get the timer type first
-            let type_key = v8::String::new(scope, "_timerType").unwrap();
-            let type_val = this.get(scope, type_key.into()).unwrap();
-            let type_str = type_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
-
-            if type_str != "Immediate" && new_delay > 0 {
-                // Reschedule with new delay
-                let effective_delay = if new_delay == 0 { 1 } else { new_delay };
+            // Refresh timer by rescheduling it
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            if let Some(info) = metadata.get_mut(&timer_id_val) {
+                let effective_delay = if info.delay == 0 { 1 } else { info.delay };
+                drop(metadata);
                 let _ = get_async_timer_manager().schedule_timeout(
                     Duration::from_millis(effective_delay),
                     timer_id_val,
@@ -360,10 +342,112 @@ fn create_timer_object<'a>(
                 );
             }
 
-            // Return timer object for chaining
             retval.set(this.into());
-        }
-    }).unwrap();
+        },
+    )
+    .unwrap();
+    let refresh_key = v8::String::new(scope, "refresh").unwrap();
+    timer_obj.set(scope, refresh_key.into(), refresh_fn.into());
+
+    // Create hasRef method (Node.js compatibility)
+    let has_ref_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let id_key = v8::String::new(scope, "_timerId").unwrap();
+            let id_val = this.get(scope, id_key.into()).unwrap();
+            let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+
+            let metadata = TIMER_METADATA.lock().unwrap();
+            let is_unrefed = metadata
+                .get(&timer_id_val)
+                .map(|m| m.is_unrefed)
+                .unwrap_or(true);
+            retval.set(v8::Boolean::new(scope, !is_unrefed).into());
+        },
+    )
+    .unwrap();
+    let has_ref_key = v8::String::new(scope, "hasRef").unwrap();
+    timer_obj.set(scope, has_ref_key.into(), has_ref_fn.into());
+
+    // Add valueOf for numeric conversion (allows Number(timer))
+    let value_of_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let id_key = v8::String::new(scope, "_timerId").unwrap();
+            let id_val = this.get(scope, id_key.into()).unwrap();
+            let timer_id_val = id_val.to_number(scope).unwrap().value();
+            retval.set(v8::Number::new(scope, timer_id_val).into());
+        },
+    )
+    .unwrap();
+    let value_of_key = v8::String::new(scope, "valueOf").unwrap();
+    timer_obj.set(scope, value_of_key.into(), value_of_fn.into());
+
+    // v0.3.273: Add delay() method - get delay when no args, set delay when args provided
+    let delay_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+
+            // Get timer ID
+            let id_key = v8::String::new(scope, "_timerId").unwrap();
+            let id_val = this.get(scope, id_key.into()).unwrap();
+            let timer_id_val = id_val.to_integer(scope).unwrap().value() as u64;
+
+            if args.length() == 0 {
+                // Get current delay
+                let metadata = TIMER_METADATA.lock().unwrap();
+                let delay = metadata.get(&timer_id_val).map(|m| m.delay).unwrap_or(0);
+                retval.set(v8::Number::new(scope, delay as f64).into());
+            } else {
+                // Set new delay
+                let new_delay = args
+                    .get(0)
+                    .to_integer(scope)
+                    .map(|i| i.value().max(0) as u64)
+                    .unwrap_or(0);
+
+                // Update metadata delay
+                {
+                    let mut metadata = TIMER_METADATA.lock().unwrap();
+                    if let Some(info) = metadata.get_mut(&timer_id_val) {
+                        info.delay = new_delay;
+                    }
+                }
+
+                // For setTimeout/setInterval with delay > 0, reschedule the timer
+                // Get the timer type first
+                let type_key = v8::String::new(scope, "_timerType").unwrap();
+                let type_val = this.get(scope, type_key.into()).unwrap();
+                let type_str = type_val
+                    .to_string(scope)
+                    .unwrap()
+                    .to_rust_string_lossy(scope);
+
+                if type_str != "Immediate" && new_delay > 0 {
+                    // Reschedule with new delay
+                    let effective_delay = if new_delay == 0 { 1 } else { new_delay };
+                    let _ = get_async_timer_manager().schedule_timeout(
+                        Duration::from_millis(effective_delay),
+                        timer_id_val,
+                        || {},
+                    );
+                }
+
+                // Return timer object for chaining
+                retval.set(this.into());
+            }
+        },
+    )
+    .unwrap();
     let delay_key = v8::String::new(scope, "delay").unwrap();
     timer_obj.set(scope, delay_key.into(), delay_fn.into());
 
@@ -378,104 +462,47 @@ pub fn setup_timers_api(
     let global = context.global(scope);
 
     // setTimeout - for delay = 0 executes immediately, delay > 0 uses async scheduling
-    let set_timeout_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let error = v8::String::new(scope, "setTimeout requires at least 1 argument").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+    let set_timeout_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let error =
+                    v8::String::new(scope, "setTimeout requires at least 1 argument").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let callback = args.get(0);
-        if !callback.is_function() {
-            let error = v8::String::new(scope, "setTimeout: callback must be a function").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+            let callback = args.get(0);
+            if !callback.is_function() {
+                let error =
+                    v8::String::new(scope, "setTimeout: callback must be a function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let delay = args.get(1)
-            .to_integer(scope)
-            .map(|i| i.value().max(0) as u64)
-            .unwrap_or(0);
+            let delay = args
+                .get(1)
+                .to_integer(scope)
+                .map(|i| i.value().max(0) as u64)
+                .unwrap_or(0);
 
-        // Collect additional arguments for the callback
-        let callback_args: Vec<v8::Local<v8::Value>> = (2..args.length())
-            .map(|i| args.get(i))
-            .collect();
+            // Collect additional arguments for the callback
+            let callback_args: Vec<v8::Local<v8::Value>> =
+                (2..args.length()).map(|i| args.get(i)).collect();
 
-        // Get timer ID
-        let timer_id = get_next_timer_id();
+            // Get timer ID
+            let timer_id = get_next_timer_id();
 
-        // v0.3.261: Always schedule timer, even for delay = 0
-        // In Node.js, setTimeout(fn, 0) still executes in the next event loop iteration,
-        // after current synchronous code, nextTick, and microtasks complete.
-        // This ensures proper execution order: nextTick -> microtasks -> timers -> setImmediate
+            // v0.3.261: Always schedule timer, even for delay = 0
+            // In Node.js, setTimeout(fn, 0) still executes in the next event loop iteration,
+            // after current synchronous code, nextTick, and microtasks complete.
+            // This ensures proper execution order: nextTick -> microtasks -> timers -> setImmediate
 
-        // Store callback in global registry before scheduling
-        // Convert callback to Global<Function> and store with arguments
-        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-        let callback_global = v8::Global::new(scope, callback_fn);
-        let args_global: Vec<v8::Global<v8::Value>> = callback_args
-            .iter()
-            .map(|v| v8::Global::new(scope, v.clone()))
-            .collect();
-
-        // Store metadata
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        metadata.insert(timer_id, TimerMetadata {
-            timer_type: TimerType::Timeout,
-            delay,
-            is_unrefed: false,
-            epoch: get_timer_epoch(),
-        });
-        drop(metadata);
-
-        // Store callback and args in global registry
-        store_timer_callback(timer_id, callback_global, args_global);
-
-        // Schedule with AsyncTimerManager
-        // For delay = 0, still schedule (minimum 1ms to ensure proper ordering)
-        let effective_delay = if delay == 0 { 1 } else { delay };
-        get_async_timer_manager().schedule_timeout(Duration::from_millis(effective_delay), timer_id, || {});
-
-        // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
-        let timer_obj = create_timer_object(scope, timer_id, TimerType::Timeout);
-        retval.set(timer_obj.into());
-    }).unwrap();
-
-    // setInterval
-    let set_interval_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let error = v8::String::new(scope, "setInterval requires at least 1 argument").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
-
-        let callback = args.get(0);
-        if !callback.is_function() {
-            let error = v8::String::new(scope, "setInterval: callback must be a function").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
-
-        let delay = args.get(1)
-            .to_integer(scope)
-            .map(|i| i.value().max(0) as u64)
-            .unwrap_or(0);
-
-        // Get timer ID
-        let timer_id = get_next_timer_id();
-
-        // v0.3.249: For delay > 0, store callback in global registry
-        if delay > 0 {
-            // Collect arguments for the callback
-            let callback_args: Vec<v8::Local<v8::Value>> = (2..args.length())
-                .map(|i| args.get(i))
-                .collect();
-
+            // Store callback in global registry before scheduling
             // Convert callback to Global<Function> and store with arguments
             let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
             let callback_global = v8::Global::new(scope, callback_fn);
@@ -486,192 +513,324 @@ pub fn setup_timers_api(
 
             // Store metadata
             let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Interval,
-                delay,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Timeout,
+                    delay,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
             drop(metadata);
 
             // Store callback and args in global registry
             store_timer_callback(timer_id, callback_global, args_global);
 
-            // Schedule with AsyncTimerManager
-            get_async_timer_manager().schedule_interval(Duration::from_millis(delay), 0, timer_id, || {});
-        } else {
-            // Store metadata for delay = 0 (edge case - should execute immediately)
-            let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.insert(timer_id, TimerMetadata {
-                timer_type: TimerType::Interval,
-                delay,
-                is_unrefed: false,
-                epoch: get_timer_epoch(),
-            });
-        }
+            if delay == 0 {
+                get_async_timer_manager().mark_timer_fired(timer_id);
+            } else {
+                get_async_timer_manager().schedule_timeout(
+                    Duration::from_millis(delay),
+                    timer_id,
+                    || {},
+                );
+            }
 
-        // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
-        let timer_obj = create_timer_object(scope, timer_id, TimerType::Interval);
-        retval.set(timer_obj.into());
-    }).unwrap();
+            // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
+            let timer_obj = create_timer_object(scope, timer_id, TimerType::Timeout);
+            retval.set(timer_obj.into());
+        },
+    )
+    .unwrap();
+
+    // setInterval
+    let set_interval_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let error =
+                    v8::String::new(scope, "setInterval requires at least 1 argument").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            let callback = args.get(0);
+            if !callback.is_function() {
+                let error =
+                    v8::String::new(scope, "setInterval: callback must be a function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+
+            let delay = args
+                .get(1)
+                .to_integer(scope)
+                .map(|i| i.value().max(0) as u64)
+                .unwrap_or(0);
+
+            // Get timer ID
+            let timer_id = get_next_timer_id();
+
+            // v0.3.249: For delay > 0, store callback in global registry
+            if delay > 0 {
+                // Collect arguments for the callback
+                let callback_args: Vec<v8::Local<v8::Value>> =
+                    (2..args.length()).map(|i| args.get(i)).collect();
+
+                // Convert callback to Global<Function> and store with arguments
+                let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+                let callback_global = v8::Global::new(scope, callback_fn);
+                let args_global: Vec<v8::Global<v8::Value>> = callback_args
+                    .iter()
+                    .map(|v| v8::Global::new(scope, v.clone()))
+                    .collect();
+
+                // Store metadata
+                let mut metadata = TIMER_METADATA.lock().unwrap();
+                metadata.insert(
+                    timer_id,
+                    TimerMetadata {
+                        timer_type: TimerType::Interval,
+                        delay,
+                        is_unrefed: false,
+                        epoch: get_timer_epoch(),
+                    },
+                );
+                drop(metadata);
+
+                // Store callback and args in global registry
+                store_timer_callback(timer_id, callback_global, args_global);
+
+                // Schedule with AsyncTimerManager
+                get_async_timer_manager().schedule_interval(
+                    Duration::from_millis(delay),
+                    0,
+                    timer_id,
+                    || {},
+                );
+            } else {
+                // Store metadata for delay = 0 (edge case - should execute immediately)
+                let mut metadata = TIMER_METADATA.lock().unwrap();
+                metadata.insert(
+                    timer_id,
+                    TimerMetadata {
+                        timer_type: TimerType::Interval,
+                        delay,
+                        is_unrefed: false,
+                        epoch: get_timer_epoch(),
+                    },
+                );
+            }
+
+            // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
+            let timer_obj = create_timer_object(scope, timer_id, TimerType::Interval);
+            retval.set(timer_obj.into());
+        },
+    )
+    .unwrap();
 
     // setImmediate - v0.3.250: executes callback in next event loop iteration
-    let set_immediate_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let error = v8::String::new(scope, "setImmediate requires at least 1 argument").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+    let set_immediate_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let error =
+                    v8::String::new(scope, "setImmediate requires at least 1 argument").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let callback = args.get(0);
-        if !callback.is_function() {
-            let error = v8::String::new(scope, "setImmediate: callback must be a function").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+            let callback = args.get(0);
+            if !callback.is_function() {
+                let error =
+                    v8::String::new(scope, "setImmediate: callback must be a function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        // Collect additional arguments for the callback
-        let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
-            .map(|i| args.get(i))
-            .collect();
+            // Collect additional arguments for the callback
+            let callback_args: Vec<v8::Local<v8::Value>> =
+                (1..args.length()).map(|i| args.get(i)).collect();
 
-        // Get timer ID
-        let timer_id = get_next_timer_id();
+            // Get timer ID
+            let timer_id = get_next_timer_id();
 
-        // Store metadata in global registry
-        let mut metadata = TIMER_METADATA.lock().unwrap();
-        metadata.insert(timer_id, TimerMetadata {
-            timer_type: TimerType::Immediate,
-            delay: 0,
-            is_unrefed: false,
-            epoch: get_timer_epoch(),
-        });
-        drop(metadata);
+            // Store metadata in global registry
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Immediate,
+                    delay: 0,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
+            drop(metadata);
 
-        // v0.3.250: Store callback for next event loop iteration (not immediate execution)
-        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-        let callback_global = v8::Global::new(scope, callback_fn);
-        let args_global: Vec<v8::Global<v8::Value>> = callback_args
-            .iter()
-            .map(|v| v8::Global::new(scope, v.clone()))
-            .collect();
+            // v0.3.250: Store callback for next event loop iteration (not immediate execution)
+            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let callback_global = v8::Global::new(scope, callback_fn);
+            let args_global: Vec<v8::Global<v8::Value>> = callback_args
+                .iter()
+                .map(|v| v8::Global::new(scope, v.clone()))
+                .collect();
 
-        store_immediate_callback(timer_id, callback_global, args_global);
+            store_immediate_callback(timer_id, callback_global, args_global);
 
-        // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
-        let timer_obj = create_timer_object(scope, timer_id, TimerType::Immediate);
-        retval.set(timer_obj.into());
-    }).unwrap();
+            // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
+            let timer_obj = create_timer_object(scope, timer_id, TimerType::Immediate);
+            retval.set(timer_obj.into());
+        },
+    )
+    .unwrap();
 
     // clearTimeout / clearInterval / clearImmediate
-    let clear_timer_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            return;
-        }
+    let clear_timer_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                return;
+            }
 
-        let timer_arg = args.get(0);
-        let mut timer_id: u64 = 0;
+            let timer_arg = args.get(0);
+            let mut timer_id: u64 = 0;
 
-        // v0.3.271: Support both timer ID (number) and Timer object
-        if timer_arg.is_number() {
-            timer_id = timer_arg.to_integer(_scope)
-                .map(|i| i.value() as u64)
-                .unwrap_or(0);
-        } else if timer_arg.is_object() {
-            // Try to get _timerId from Timer object
-            let timer_obj = v8::Local::<v8::Object>::try_from(timer_arg).ok();
-            if let Some(obj) = timer_obj {
-                let id_key = v8::String::new(_scope, "_timerId").unwrap();
-                if let Some(id_val) = obj.get(_scope, id_key.into()) {
-                    timer_id = id_val.to_integer(_scope)
-                        .map(|i| i.value() as u64)
-                        .unwrap_or(0);
+            // v0.3.271: Support both timer ID (number) and Timer object
+            if timer_arg.is_number() {
+                timer_id = timer_arg
+                    .to_integer(_scope)
+                    .map(|i| i.value() as u64)
+                    .unwrap_or(0);
+            } else if timer_arg.is_object() {
+                // Try to get _timerId from Timer object
+                let timer_obj = v8::Local::<v8::Object>::try_from(timer_arg).ok();
+                if let Some(obj) = timer_obj {
+                    let id_key = v8::String::new(_scope, "_timerId").unwrap();
+                    if let Some(id_val) = obj.get(_scope, id_key.into()) {
+                        timer_id = id_val
+                            .to_integer(_scope)
+                            .map(|i| i.value() as u64)
+                            .unwrap_or(0);
+                    }
                 }
             }
-        }
 
-        if timer_id > 0 {
-            // Remove from metadata
-            let mut metadata = TIMER_METADATA.lock().unwrap();
-            metadata.remove(&timer_id);
+            if timer_id > 0 {
+                // Remove from metadata
+                let mut metadata = TIMER_METADATA.lock().unwrap();
+                metadata.remove(&timer_id);
 
-            // Cancel in AsyncTimerManager
-            let _ = get_async_timer_manager().cancel(timer_id);
+                // Cancel in AsyncTimerManager
+                let _ = get_async_timer_manager().cancel(timer_id);
 
-            // v0.3.250: Also remove from immediate callbacks if it's a setImmediate
-            let _ = remove_immediate_callback(timer_id);
-        }
-    }).unwrap();
+                // v0.3.250: Also remove from immediate callbacks if it's a setImmediate
+                let _ = remove_immediate_callback(timer_id);
+            }
+        },
+    )
+    .unwrap();
 
     // Create string keys first to avoid mutable borrow conflicts
     // v0.3.250: timer.unref() - allow event loop to exit if this is the only timer
-    let unref_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            retval.set(v8::Boolean::new(_scope, false).into());
-            return;
-        }
+    let unref_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                retval.set(v8::Boolean::new(_scope, false).into());
+                return;
+            }
 
-        let timer_id_val = args.get(0);
-        let timer_id = timer_id_val.to_integer(_scope)
-            .map(|i| i.value() as u64)
-            .unwrap_or(0);
+            let timer_id_val = args.get(0);
+            let timer_id = timer_id_val
+                .to_integer(_scope)
+                .map(|i| i.value() as u64)
+                .unwrap_or(0);
 
-        if timer_id > 0 {
-            let result = set_timer_unrefed(timer_id, true);
-            retval.set(v8::Boolean::new(_scope, result).into());
-        } else {
-            retval.set(v8::Boolean::new(_scope, false).into());
-        }
-    }).unwrap();
+            if timer_id > 0 {
+                let result = set_timer_unrefed(timer_id, true);
+                retval.set(v8::Boolean::new(_scope, result).into());
+            } else {
+                retval.set(v8::Boolean::new(_scope, false).into());
+            }
+        },
+    )
+    .unwrap();
 
     // v0.3.250: timer.ref() - ensure event loop stays alive for this timer
-    let ref_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            retval.set(v8::Boolean::new(_scope, false).into());
-            return;
-        }
+    let ref_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                retval.set(v8::Boolean::new(_scope, false).into());
+                return;
+            }
 
-        let timer_id_val = args.get(0);
-        let timer_id = timer_id_val.to_integer(_scope)
-            .map(|i| i.value() as u64)
-            .unwrap_or(0);
+            let timer_id_val = args.get(0);
+            let timer_id = timer_id_val
+                .to_integer(_scope)
+                .map(|i| i.value() as u64)
+                .unwrap_or(0);
 
-        if timer_id > 0 {
-            let result = set_timer_unrefed(timer_id, false);
-            retval.set(v8::Boolean::new(_scope, result).into());
-        } else {
-            retval.set(v8::Boolean::new(_scope, false).into());
-        }
-    }).unwrap();
+            if timer_id > 0 {
+                let result = set_timer_unrefed(timer_id, false);
+                retval.set(v8::Boolean::new(_scope, result).into());
+            } else {
+                retval.set(v8::Boolean::new(_scope, false).into());
+            }
+        },
+    )
+    .unwrap();
 
     // v0.3.271: queueMicrotask - queue a callback as a microtask
     // This is similar to Promise.resolve().then() but without creating a Promise
-    let queue_microtask_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        if args.length() < 1 {
-            let error = v8::String::new(scope, "queueMicrotask requires at least 1 argument").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+    let queue_microtask_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            if args.length() < 1 {
+                let error =
+                    v8::String::new(scope, "queueMicrotask requires at least 1 argument").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        let callback = args.get(0);
-        if !callback.is_function() {
-            let error = v8::String::new(scope, "queueMicrotask: callback must be a function").unwrap();
-            let error_obj = v8::Exception::type_error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        }
+            let callback = args.get(0);
+            if !callback.is_function() {
+                let error =
+                    v8::String::new(scope, "queueMicrotask: callback must be a function").unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
 
-        // Use V8's built-in microtask queue via enqueue_microtask
-        // The microtask will be executed when perform_microtask_checkpoint is called
-        // This happens in our event loop after nextTick callbacks
-        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-        // enqueue_microtask takes Local<Function>, not Global
-        // The callback will be executed at the next microtask checkpoint
-        scope.enqueue_microtask(callback_fn);
-    }).unwrap();
+            // Use V8's built-in microtask queue via enqueue_microtask
+            // The microtask will be executed when perform_microtask_checkpoint is called
+            // This happens in our event loop after nextTick callbacks
+            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            // enqueue_microtask takes Local<Function>, not Global
+            // The callback will be executed at the next microtask checkpoint
+            scope.enqueue_microtask(callback_fn);
+        },
+    )
+    .unwrap();
 
     let set_timeout_key = v8::String::new(scope, "setTimeout").unwrap();
     let set_interval_key = v8::String::new(scope, "setInterval").unwrap();
@@ -711,7 +870,8 @@ pub fn set_timer_unrefed(timer_id: u64, unrefed: bool) -> bool {
 /// v0.3.250: Get timer unref state
 pub fn is_timer_unrefed(timer_id: u64) -> bool {
     let metadata = TIMER_METADATA.lock().unwrap();
-    metadata.get(&timer_id)
+    metadata
+        .get(&timer_id)
         .map(|meta| meta.is_unrefed)
         .unwrap_or(false)
 }
@@ -777,10 +937,7 @@ pub fn take_timer_callback(
 
 /// v0.3.249: Execute a fired timer callback
 /// Must be called from V8 main thread with valid isolate scope
-pub fn execute_timer_callback(
-    scope: &mut v8::HandleScope,
-    timer_id: u64,
-) -> bool {
+pub fn execute_timer_callback(scope: &mut v8::HandleScope, timer_id: u64) -> bool {
     if let Some((callback, args)) = take_timer_callback(timer_id) {
         let callback = v8::Local::<v8::Function>::new(scope, callback);
 
@@ -863,6 +1020,32 @@ pub fn has_pending_immediates() -> bool {
     !storage.is_empty()
 }
 
+/// Check if any zero-delay timers are pending in the current epoch.
+///
+/// `execute_code` should wait for these to preserve same-tick `setTimeout(..., 0)`
+/// semantics, but should not block on longer timers that are meant to fire later.
+pub fn has_pending_zero_delay_timers() -> bool {
+    let current_epoch = get_timer_epoch();
+    let metadata = TIMER_METADATA.lock().unwrap();
+    metadata.values().any(|meta| {
+        meta.epoch == current_epoch
+            && meta.delay == 0
+            && matches!(meta.timer_type, TimerType::Timeout | TimerType::Interval)
+    })
+}
+
+/// Check if any short, ref'ed one-shot timeout should keep the current eval alive.
+pub fn has_pending_drainable_timeout_timers(max_delay_ms: u64) -> bool {
+    let current_epoch = get_timer_epoch();
+    let metadata = TIMER_METADATA.lock().unwrap();
+    metadata.values().any(|meta| {
+        meta.epoch == current_epoch
+            && !meta.is_unrefed
+            && meta.delay <= max_delay_ms
+            && matches!(meta.timer_type, TimerType::Timeout)
+    })
+}
+
 /// v0.3.250: Store setImmediate callback for next event loop iteration
 /// v0.3.261: Store with deferred=false so they run in the same iteration
 /// (after timers). Callbacks registered from within other callbacks will be
@@ -904,12 +1087,15 @@ mod tests {
     #[test]
     fn test_timer_metadata() {
         let mut metadata = TIMER_METADATA.lock().unwrap();
-        metadata.insert(1, TimerMetadata {
-            timer_type: TimerType::Timeout,
-            delay: 1000,
-            is_unrefed: false,
-            epoch: get_timer_epoch(),
-        });
+        metadata.insert(
+            1,
+            TimerMetadata {
+                timer_type: TimerType::Timeout,
+                delay: 1000,
+                is_unrefed: false,
+                epoch: get_timer_epoch(),
+            },
+        );
         assert!(metadata.contains_key(&1));
     }
 

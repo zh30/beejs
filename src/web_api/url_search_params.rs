@@ -1,10 +1,10 @@
 // URLSearchParams API implementation for Web standard
 // Provides URLSearchParams constructor and methods for query string manipulation
 
-use std::sync::{Arc, Mutex};
-use std::os::raw::c_void;
-use rusty_v8 as v8;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use rusty_v8 as v8;
+use std::os::raw::c_void;
+use std::sync::{Arc, Mutex};
 
 /// URL-encode a string for use in query strings
 fn url_encode(value: &str) -> String {
@@ -53,7 +53,10 @@ fn to_query_string(pairs: &[(String, String)]) -> String {
 }
 
 /// Get the params data from a V8 object using External
-fn get_params_data(scope: &mut v8::HandleScope, this_obj: &v8::Object) -> Option<Arc<Mutex<Vec<(String, String)>>>> {
+fn get_params_data(
+    scope: &mut v8::HandleScope,
+    this_obj: &v8::Object,
+) -> Option<Arc<Mutex<Vec<(String, String)>>>> {
     let data_key = v8::String::new(scope, "_paramsData").unwrap();
     if let Some(external_val) = this_obj.get(scope, data_key.into()) {
         if external_val.is_external() {
@@ -61,7 +64,10 @@ fn get_params_data(scope: &mut v8::HandleScope, this_obj: &v8::Object) -> Option
                 // Clone the Arc to keep it alive, but don't call from_raw
                 // since we didn't transfer ownership
                 let raw = ptr.value() as *mut Mutex<Vec<(String, String)>>;
-                return Some(unsafe { Arc::increment_strong_count(raw); Arc::from_raw(raw) });
+                return Some(unsafe {
+                    Arc::increment_strong_count(raw);
+                    Arc::from_raw(raw)
+                });
             }
         }
     }
@@ -69,7 +75,11 @@ fn get_params_data(scope: &mut v8::HandleScope, this_obj: &v8::Object) -> Option
 }
 
 /// Set the params data on a V8 object using External
-fn set_params_data(scope: &mut v8::HandleScope, this_obj: &v8::Object, data: &Arc<Mutex<Vec<(String, String)>>>) {
+fn set_params_data(
+    scope: &mut v8::HandleScope,
+    this_obj: &v8::Object,
+    data: &Arc<Mutex<Vec<(String, String)>>>,
+) {
     // Clone the Arc and leak it - we'll manage it manually
     let cloned = Arc::clone(data);
     let data_ptr = Arc::into_raw(cloned) as *mut c_void;
@@ -158,448 +168,576 @@ fn url_search_params_constructor(
     set_params_data(scope, &params_obj, &data);
 
     // Add toString method
-    let to_string_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let pairs = data.lock().unwrap();
-            let result = to_query_string(&pairs);
-            _retval.set(v8::String::new(scope, &result).unwrap().into());
-        }
-    }).unwrap();
+    let to_string_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut _retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let pairs = data.lock().unwrap();
+                let result = to_query_string(&pairs);
+                _retval.set(v8::String::new(scope, &result).unwrap().into());
+            }
+        },
+    )
+    .unwrap();
     let to_string_key = v8::String::new(scope, "toString").unwrap().into();
     params_obj.set(scope, to_string_key, to_string_fn.into());
 
     // Add append method
-    let append_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let name = if let Some(s) = args.get(0).to_string(scope) {
-                s.to_rust_string_lossy(scope)
-            } else {
-                return;
-            };
-            let value = if let Some(s) = args.get(1).to_string(scope) {
-                s.to_rust_string_lossy(scope)
-            } else {
-                return;
-            };
-            let mut pairs = data.lock().unwrap();
-            pairs.push((name, value));
-        }
-    }).unwrap();
+    let append_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let name = if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    return;
+                };
+                let value = if let Some(s) = args.get(1).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    return;
+                };
+                let mut pairs = data.lock().unwrap();
+                pairs.push((name, value));
+            }
+        },
+    )
+    .unwrap();
     let append_key = v8::String::new(scope, "append").unwrap().into();
     params_obj.set(scope, append_key, append_fn.into());
 
     // Add delete method
-    let delete_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let name = if let Some(s) = args.get(0).to_string(scope) {
-                s.to_rust_string_lossy(scope)
-            } else {
-                return;
-            };
-            let mut pairs = data.lock().unwrap();
-            pairs.retain(|(n, _)| *n != name);
-        }
-    }).unwrap();
+    let delete_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let name = if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    return;
+                };
+                let mut pairs = data.lock().unwrap();
+                pairs.retain(|(n, _)| *n != name);
+            }
+        },
+    )
+    .unwrap();
     let delete_key = v8::String::new(scope, "delete").unwrap().into();
     params_obj.set(scope, delete_key, delete_fn.into());
 
     // Add get method
-    let get_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let name = if let Some(s) = args.get(0).to_string(scope) {
-                s.to_rust_string_lossy(scope)
+    let get_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let name = if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    retval.set(v8::null(scope).into());
+                    return;
+                };
+                let pairs = data.lock().unwrap();
+                for (n, v) in pairs.iter() {
+                    if n == &name {
+                        retval.set(v8::String::new(scope, v).unwrap().into());
+                        return;
+                    }
+                }
+                retval.set(v8::null(scope).into());
             } else {
                 retval.set(v8::null(scope).into());
-                return;
-            };
-            let pairs = data.lock().unwrap();
-            for (n, v) in pairs.iter() {
-                if n == &name {
-                    retval.set(v8::String::new(scope, v).unwrap().into());
-                    return;
-                }
             }
-            retval.set(v8::null(scope).into());
-        } else {
-            retval.set(v8::null(scope).into());
-        }
-    }).unwrap();
+        },
+    )
+    .unwrap();
     let get_key = v8::String::new(scope, "get").unwrap().into();
     params_obj.set(scope, get_key, get_fn.into());
 
     // Add getAll method
-    let get_all_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let name = if let Some(s) = args.get(0).to_string(scope) {
-                s.to_rust_string_lossy(scope)
+    let get_all_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let name = if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    retval.set(v8::null(scope).into());
+                    return;
+                };
+                let pairs = data.lock().unwrap();
+                let values: Vec<v8::Local<v8::Value>> = pairs
+                    .iter()
+                    .filter(|(n, _)| *n == name)
+                    .map(|(_, v)| v8::String::new(scope, v).unwrap().into())
+                    .collect();
+                let arr = v8::Array::new_with_elements(scope, &values);
+                retval.set(arr.into());
             } else {
                 retval.set(v8::null(scope).into());
-                return;
-            };
-            let pairs = data.lock().unwrap();
-            let values: Vec<v8::Local<v8::Value>> = pairs.iter()
-                .filter(|(n, _)| *n == name)
-                .map(|(_, v)| v8::String::new(scope, v).unwrap().into())
-                .collect();
-            let arr = v8::Array::new_with_elements(scope, &values);
-            retval.set(arr.into());
-        } else {
-            retval.set(v8::null(scope).into());
-        }
-    }).unwrap();
+            }
+        },
+    )
+    .unwrap();
     let get_all_key = v8::String::new(scope, "getAll").unwrap().into();
     params_obj.set(scope, get_all_key, get_all_fn.into());
 
     // Add has method
-    let has_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let name = if let Some(s) = args.get(0).to_string(scope) {
-                s.to_rust_string_lossy(scope)
+    let has_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let name = if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    retval.set(v8::Boolean::new(scope, false).into());
+                    return;
+                };
+                let pairs = data.lock().unwrap();
+                let found = pairs.iter().any(|(n, _)| *n == name);
+                retval.set(v8::Boolean::new(scope, found).into());
             } else {
                 retval.set(v8::Boolean::new(scope, false).into());
-                return;
-            };
-            let pairs = data.lock().unwrap();
-            let found = pairs.iter().any(|(n, _)| *n == name);
-            retval.set(v8::Boolean::new(scope, found).into());
-        } else {
-            retval.set(v8::Boolean::new(scope, false).into());
-        }
-    }).unwrap();
+            }
+        },
+    )
+    .unwrap();
     let has_key = v8::String::new(scope, "has").unwrap().into();
     params_obj.set(scope, has_key, has_fn.into());
 
     // Add set method
-    let set_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let name = if let Some(s) = args.get(0).to_string(scope) {
-                s.to_rust_string_lossy(scope)
-            } else {
-                return;
-            };
-            let value = if let Some(s) = args.get(1).to_string(scope) {
-                s.to_rust_string_lossy(scope)
-            } else {
-                return;
-            };
-            let mut pairs = data.lock().unwrap();
-            // Remove existing entries with this name
-            pairs.retain(|(n, _)| *n != name);
-            // Add the new entry
-            pairs.push((name, value));
-        }
-    }).unwrap();
+    let set_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let name = if let Some(s) = args.get(0).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    return;
+                };
+                let value = if let Some(s) = args.get(1).to_string(scope) {
+                    s.to_rust_string_lossy(scope)
+                } else {
+                    return;
+                };
+                let mut pairs = data.lock().unwrap();
+                // Remove existing entries with this name
+                pairs.retain(|(n, _)| *n != name);
+                // Add the new entry
+                pairs.push((name, value));
+            }
+        },
+    )
+    .unwrap();
     let set_key = v8::String::new(scope, "set").unwrap().into();
     params_obj.set(scope, set_key, set_fn.into());
 
     // Add sort method
-    let sort_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let mut pairs = data.lock().unwrap();
-            pairs.sort_by(|(a, _), (b, _)| a.cmp(b));
-        }
-    }).unwrap();
+    let sort_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let mut pairs = data.lock().unwrap();
+                pairs.sort_by(|(a, _), (b, _)| a.cmp(b));
+            }
+        },
+    )
+    .unwrap();
     let sort_key = v8::String::new(scope, "sort").unwrap().into();
     params_obj.set(scope, sort_key, sort_fn.into());
 
     // Add forEach method
-    let for_each_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let callback = args.get(0);
-            if !callback.is_function() {
-                return;
-            }
-            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-            let pairs = data.lock().unwrap();
-            let len = pairs.len();
-            for i in 0..len {
-                if let Some((ref key, ref value)) = pairs.get(i) {
-                    let key_val = v8::String::new(scope, key).unwrap().into();
-                    let value_val = v8::String::new(scope, value).unwrap().into();
-                    let _ = callback_fn.call(scope, this_obj.into(), &[value_val, key_val, this_obj.into()]);
+    let for_each_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let callback = args.get(0);
+                if !callback.is_function() {
+                    return;
+                }
+                let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+                let pairs = data.lock().unwrap();
+                let len = pairs.len();
+                for i in 0..len {
+                    if let Some((ref key, ref value)) = pairs.get(i) {
+                        let key_val = v8::String::new(scope, key).unwrap().into();
+                        let value_val = v8::String::new(scope, value).unwrap().into();
+                        let _ = callback_fn.call(
+                            scope,
+                            this_obj.into(),
+                            &[value_val, key_val, this_obj.into()],
+                        );
+                    }
                 }
             }
-        }
-    }).unwrap();
+        },
+    )
+    .unwrap();
     let for_each_key = v8::String::new(scope, "forEach").unwrap().into();
     params_obj.set(scope, for_each_key, for_each_fn.into());
 
     // Add keys method
-    let keys_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let iterator_template = v8::ObjectTemplate::new(scope);
-            iterator_template.set_internal_field_count(1);
-            let iterator: v8::Local<v8::Object> = match iterator_template.new_instance(scope) {
-                Some(obj) => obj,
-                None => { retval.set(v8::null(scope).into()); return; }
-            };
+    let keys_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let iterator_template = v8::ObjectTemplate::new(scope);
+                iterator_template.set_internal_field_count(1);
+                let iterator: v8::Local<v8::Object> = match iterator_template.new_instance(scope) {
+                    Some(obj) => obj,
+                    None => {
+                        retval.set(v8::null(scope).into());
+                        return;
+                    }
+                };
 
-            // Store iterator state: index in internal field 0
-            let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
-            iterator.set_internal_field(0, index_val);
+                // Store iterator state: index in internal field 0
+                let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+                iterator.set_internal_field(0, index_val);
 
-            // Store data reference using External - clone Arc and leak it
-            let data_ptr = Arc::into_raw(data) as *mut c_void;
-            let external = v8::External::new(scope, data_ptr);
-            let data_key = v8::String::new(scope, "_iteratorData").unwrap();
-            iterator.set(scope, data_key.into(), external.into());
+                // Store data reference using External - clone Arc and leak it
+                let data_ptr = Arc::into_raw(data) as *mut c_void;
+                let external = v8::External::new(scope, data_ptr);
+                let data_key = v8::String::new(scope, "_iteratorData").unwrap();
+                iterator.set(scope, data_key.into(), external.into());
 
-            // Create next function
-            let next_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args_inner: v8::FunctionCallbackArguments, mut retval_inner: v8::ReturnValue| {
-                let iterator_obj = args_inner.this();
+                // Create next function
+                let next_fn = v8::Function::new(
+                    scope,
+                    |scope: &mut v8::HandleScope,
+                     args_inner: v8::FunctionCallbackArguments,
+                     mut retval_inner: v8::ReturnValue| {
+                        let iterator_obj = args_inner.this();
 
-                // Get index - get_internal_field returns Option<Local<Value>>
-                if let Some(index_val) = iterator_obj.get_internal_field(scope, 0) {
-                    let index = index_val
-                        .to_integer(scope)
-                        .map(|i| i.value() as usize)
-                        .unwrap_or(0);
+                        // Get index - get_internal_field returns Option<Local<Value>>
+                        if let Some(index_val) = iterator_obj.get_internal_field(scope, 0) {
+                            let index = index_val
+                                .to_integer(scope)
+                                .map(|i| i.value() as usize)
+                                .unwrap_or(0);
 
-                    // Get data
-                    let data_key = v8::String::new(scope, "_iteratorData").unwrap();
-                    if let Some(external_val) = iterator_obj.get(scope, data_key.into()) {
-                        if external_val.is_external() {
-                            if let Ok(ext_ptr) = v8::Local::<v8::External>::try_from(external_val) {
-                                // Increment strong count and create Arc (don't call from_raw)
-                                let raw = ext_ptr.value() as *mut Mutex<Vec<(String, String)>>;
-                                let data = unsafe { Arc::increment_strong_count(raw); Arc::from_raw(raw) };
-                                let pairs = data.lock().unwrap();
+                            // Get data
+                            let data_key = v8::String::new(scope, "_iteratorData").unwrap();
+                            if let Some(external_val) = iterator_obj.get(scope, data_key.into()) {
+                                if external_val.is_external() {
+                                    if let Ok(ext_ptr) =
+                                        v8::Local::<v8::External>::try_from(external_val)
+                                    {
+                                        // Increment strong count and create Arc (don't call from_raw)
+                                        let raw =
+                                            ext_ptr.value() as *mut Mutex<Vec<(String, String)>>;
+                                        let data = unsafe {
+                                            Arc::increment_strong_count(raw);
+                                            Arc::from_raw(raw)
+                                        };
+                                        let pairs = data.lock().unwrap();
 
-                                if index >= pairs.len() {
-                                    // Done - return {done: true}
-                                    let done_obj = v8::Object::new(scope);
-                                    let done_key = v8::String::new(scope, "done").unwrap();
-                                    let done_val = v8::Boolean::new(scope, true);
-                                    done_obj.set(scope, done_key.into(), done_val.into());
-                                    retval_inner.set(done_obj.into());
-                                    return;
+                                        if index >= pairs.len() {
+                                            // Done - return {done: true}
+                                            let done_obj = v8::Object::new(scope);
+                                            let done_key = v8::String::new(scope, "done").unwrap();
+                                            let done_val = v8::Boolean::new(scope, true);
+                                            done_obj.set(scope, done_key.into(), done_val.into());
+                                            retval_inner.set(done_obj.into());
+                                            return;
+                                        }
+
+                                        // Return {done: false, value: key}
+                                        let (ref key, _) = pairs[index];
+                                        let result_obj = v8::Object::new(scope);
+
+                                        let done_key = v8::String::new(scope, "done").unwrap();
+                                        let done_val = v8::Boolean::new(scope, false);
+                                        result_obj.set(scope, done_key.into(), done_val.into());
+
+                                        let value_key = v8::String::new(scope, "value").unwrap();
+                                        let key_str = v8::String::new(scope, key).unwrap();
+                                        result_obj.set(scope, value_key.into(), key_str.into());
+
+                                        // Increment index - set_internal_field does NOT take scope
+                                        let next_index = (index + 1) as i32;
+                                        let next_index_val: v8::Local<v8::Value> =
+                                            v8::Integer::new(scope, next_index).into();
+                                        iterator_obj.set_internal_field(0, next_index_val);
+
+                                        retval_inner.set(result_obj.into());
+                                        return;
+                                    }
                                 }
-
-                                // Return {done: false, value: key}
-                                let (ref key, _) = pairs[index];
-                                let result_obj = v8::Object::new(scope);
-
-                                let done_key = v8::String::new(scope, "done").unwrap();
-                                let done_val = v8::Boolean::new(scope, false);
-                                result_obj.set(scope, done_key.into(), done_val.into());
-
-                                let value_key = v8::String::new(scope, "value").unwrap();
-                                let key_str = v8::String::new(scope, key).unwrap();
-                                result_obj.set(scope, value_key.into(), key_str.into());
-
-                                // Increment index - set_internal_field does NOT take scope
-                                let next_index = (index + 1) as i32;
-                                let next_index_val: v8::Local<v8::Value> = v8::Integer::new(scope, next_index).into();
-                                iterator_obj.set_internal_field(0, next_index_val);
-
-                                retval_inner.set(result_obj.into());
-                                return;
                             }
                         }
-                    }
-                }
-                retval_inner.set(v8::null(scope).into());
-            }).unwrap();
+                        retval_inner.set(v8::null(scope).into());
+                    },
+                )
+                .unwrap();
 
-            let next_key = v8::String::new(scope, "next").unwrap();
-            iterator.set(scope, next_key.into(), next_fn.into());
+                let next_key = v8::String::new(scope, "next").unwrap();
+                iterator.set(scope, next_key.into(), next_fn.into());
 
-            retval.set(iterator.into());
-        } else {
-            retval.set(v8::null(scope).into());
-        }
-    }).unwrap();
+                retval.set(iterator.into());
+            } else {
+                retval.set(v8::null(scope).into());
+            }
+        },
+    )
+    .unwrap();
     let keys_key = v8::String::new(scope, "keys").unwrap().into();
     params_obj.set(scope, keys_key, keys_fn.into());
 
     // Add values method
-    let values_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let iterator_template = v8::ObjectTemplate::new(scope);
-            iterator_template.set_internal_field_count(1);
-            let iterator: v8::Local<v8::Object> = match iterator_template.new_instance(scope) {
-                Some(obj) => obj,
-                None => { retval.set(v8::null(scope).into()); return; }
-            };
+    let values_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let iterator_template = v8::ObjectTemplate::new(scope);
+                iterator_template.set_internal_field_count(1);
+                let iterator: v8::Local<v8::Object> = match iterator_template.new_instance(scope) {
+                    Some(obj) => obj,
+                    None => {
+                        retval.set(v8::null(scope).into());
+                        return;
+                    }
+                };
 
-            // Store iterator state: index in internal field 0
-            let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
-            iterator.set_internal_field(0, index_val);
+                // Store iterator state: index in internal field 0
+                let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+                iterator.set_internal_field(0, index_val);
 
-            // Store data reference using External - clone Arc and leak it
-            let data_ptr = Arc::into_raw(data) as *mut c_void;
-            let external = v8::External::new(scope, data_ptr);
-            let data_key = v8::String::new(scope, "_iteratorData").unwrap();
-            iterator.set(scope, data_key.into(), external.into());
+                // Store data reference using External - clone Arc and leak it
+                let data_ptr = Arc::into_raw(data) as *mut c_void;
+                let external = v8::External::new(scope, data_ptr);
+                let data_key = v8::String::new(scope, "_iteratorData").unwrap();
+                iterator.set(scope, data_key.into(), external.into());
 
-            // Create next function
-            let next_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args_inner: v8::FunctionCallbackArguments, mut retval_inner: v8::ReturnValue| {
-                let iterator_obj = args_inner.this();
+                // Create next function
+                let next_fn = v8::Function::new(
+                    scope,
+                    |scope: &mut v8::HandleScope,
+                     args_inner: v8::FunctionCallbackArguments,
+                     mut retval_inner: v8::ReturnValue| {
+                        let iterator_obj = args_inner.this();
 
-                // Get index - get_internal_field returns Option<Local<Value>>
-                if let Some(index_val) = iterator_obj.get_internal_field(scope, 0) {
-                    let index = index_val
-                        .to_integer(scope)
-                        .map(|i| i.value() as usize)
-                        .unwrap_or(0);
+                        // Get index - get_internal_field returns Option<Local<Value>>
+                        if let Some(index_val) = iterator_obj.get_internal_field(scope, 0) {
+                            let index = index_val
+                                .to_integer(scope)
+                                .map(|i| i.value() as usize)
+                                .unwrap_or(0);
 
-                    // Get data
-                    let data_key = v8::String::new(scope, "_iteratorData").unwrap();
-                    if let Some(external_val) = iterator_obj.get(scope, data_key.into()) {
-                        if external_val.is_external() {
-                            if let Ok(ext_ptr) = v8::Local::<v8::External>::try_from(external_val) {
-                                // Increment strong count and create Arc (don't call from_raw)
-                                let raw = ext_ptr.value() as *mut Mutex<Vec<(String, String)>>;
-                                let data = unsafe { Arc::increment_strong_count(raw); Arc::from_raw(raw) };
-                                let pairs = data.lock().unwrap();
+                            // Get data
+                            let data_key = v8::String::new(scope, "_iteratorData").unwrap();
+                            if let Some(external_val) = iterator_obj.get(scope, data_key.into()) {
+                                if external_val.is_external() {
+                                    if let Ok(ext_ptr) =
+                                        v8::Local::<v8::External>::try_from(external_val)
+                                    {
+                                        // Increment strong count and create Arc (don't call from_raw)
+                                        let raw =
+                                            ext_ptr.value() as *mut Mutex<Vec<(String, String)>>;
+                                        let data = unsafe {
+                                            Arc::increment_strong_count(raw);
+                                            Arc::from_raw(raw)
+                                        };
+                                        let pairs = data.lock().unwrap();
 
-                                if index >= pairs.len() {
-                                    // Done - return {done: true}
-                                    let done_obj = v8::Object::new(scope);
-                                    let done_key = v8::String::new(scope, "done").unwrap();
-                                    let done_val = v8::Boolean::new(scope, true);
-                                    done_obj.set(scope, done_key.into(), done_val.into());
-                                    retval_inner.set(done_obj.into());
-                                    return;
+                                        if index >= pairs.len() {
+                                            // Done - return {done: true}
+                                            let done_obj = v8::Object::new(scope);
+                                            let done_key = v8::String::new(scope, "done").unwrap();
+                                            let done_val = v8::Boolean::new(scope, true);
+                                            done_obj.set(scope, done_key.into(), done_val.into());
+                                            retval_inner.set(done_obj.into());
+                                            return;
+                                        }
+
+                                        // Return {done: false, value: value}
+                                        let (_, ref value) = pairs[index];
+                                        let result_obj = v8::Object::new(scope);
+
+                                        let done_key = v8::String::new(scope, "done").unwrap();
+                                        let done_val = v8::Boolean::new(scope, false);
+                                        result_obj.set(scope, done_key.into(), done_val.into());
+
+                                        let value_key = v8::String::new(scope, "value").unwrap();
+                                        let value_str = v8::String::new(scope, value).unwrap();
+                                        result_obj.set(scope, value_key.into(), value_str.into());
+
+                                        // Increment index
+                                        let next_index = (index + 1) as i32;
+                                        let next_index_val: v8::Local<v8::Value> =
+                                            v8::Integer::new(scope, next_index).into();
+                                        iterator_obj.set_internal_field(0, next_index_val);
+
+                                        retval_inner.set(result_obj.into());
+                                        return;
+                                    }
                                 }
-
-                                // Return {done: false, value: value}
-                                let (_, ref value) = pairs[index];
-                                let result_obj = v8::Object::new(scope);
-
-                                let done_key = v8::String::new(scope, "done").unwrap();
-                                let done_val = v8::Boolean::new(scope, false);
-                                result_obj.set(scope, done_key.into(), done_val.into());
-
-                                let value_key = v8::String::new(scope, "value").unwrap();
-                                let value_str = v8::String::new(scope, value).unwrap();
-                                result_obj.set(scope, value_key.into(), value_str.into());
-
-                                // Increment index
-                                let next_index = (index + 1) as i32;
-                                let next_index_val: v8::Local<v8::Value> = v8::Integer::new(scope, next_index).into();
-                                iterator_obj.set_internal_field(0, next_index_val);
-
-                                retval_inner.set(result_obj.into());
-                                return;
                             }
                         }
-                    }
-                }
-                retval_inner.set(v8::null(scope).into());
-            }).unwrap();
+                        retval_inner.set(v8::null(scope).into());
+                    },
+                )
+                .unwrap();
 
-            let next_key = v8::String::new(scope, "next").unwrap();
-            iterator.set(scope, next_key.into(), next_fn.into());
+                let next_key = v8::String::new(scope, "next").unwrap();
+                iterator.set(scope, next_key.into(), next_fn.into());
 
-            retval.set(iterator.into());
-        } else {
-            retval.set(v8::null(scope).into());
-        }
-    }).unwrap();
+                retval.set(iterator.into());
+            } else {
+                retval.set(v8::null(scope).into());
+            }
+        },
+    )
+    .unwrap();
     let values_key = v8::String::new(scope, "values").unwrap().into();
     params_obj.set(scope, values_key, values_fn.into());
 
     // Add entries method
-    let entries_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let this_obj = args.this();
-        if let Some(data) = get_params_data(scope, &this_obj) {
-            let iterator_template = v8::ObjectTemplate::new(scope);
-            iterator_template.set_internal_field_count(1);
-            let iterator: v8::Local<v8::Object> = match iterator_template.new_instance(scope) {
-                Some(obj) => obj,
-                None => { retval.set(v8::null(scope).into()); return; }
-            };
+    let entries_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this_obj = args.this();
+            if let Some(data) = get_params_data(scope, &this_obj) {
+                let iterator_template = v8::ObjectTemplate::new(scope);
+                iterator_template.set_internal_field_count(1);
+                let iterator: v8::Local<v8::Object> = match iterator_template.new_instance(scope) {
+                    Some(obj) => obj,
+                    None => {
+                        retval.set(v8::null(scope).into());
+                        return;
+                    }
+                };
 
-            // Store iterator state: index in internal field 0
-            let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
-            iterator.set_internal_field(0, index_val);
+                // Store iterator state: index in internal field 0
+                let index_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
+                iterator.set_internal_field(0, index_val);
 
-            // Store data reference using External - clone Arc and leak it
-            let data_ptr = Arc::into_raw(data) as *mut c_void;
-            let external = v8::External::new(scope, data_ptr);
-            let data_key = v8::String::new(scope, "_iteratorData").unwrap();
-            iterator.set(scope, data_key.into(), external.into());
+                // Store data reference using External - clone Arc and leak it
+                let data_ptr = Arc::into_raw(data) as *mut c_void;
+                let external = v8::External::new(scope, data_ptr);
+                let data_key = v8::String::new(scope, "_iteratorData").unwrap();
+                iterator.set(scope, data_key.into(), external.into());
 
-            // Create next function
-            let next_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args_inner: v8::FunctionCallbackArguments, mut retval_inner: v8::ReturnValue| {
-                let iterator_obj = args_inner.this();
+                // Create next function
+                let next_fn = v8::Function::new(
+                    scope,
+                    |scope: &mut v8::HandleScope,
+                     args_inner: v8::FunctionCallbackArguments,
+                     mut retval_inner: v8::ReturnValue| {
+                        let iterator_obj = args_inner.this();
 
-                // Get index - get_internal_field returns Option<Local<Value>>
-                if let Some(index_val) = iterator_obj.get_internal_field(scope, 0) {
-                    let index = index_val
-                        .to_integer(scope)
-                        .map(|i| i.value() as usize)
-                        .unwrap_or(0);
+                        // Get index - get_internal_field returns Option<Local<Value>>
+                        if let Some(index_val) = iterator_obj.get_internal_field(scope, 0) {
+                            let index = index_val
+                                .to_integer(scope)
+                                .map(|i| i.value() as usize)
+                                .unwrap_or(0);
 
-                    // Get data
-                    let data_key = v8::String::new(scope, "_iteratorData").unwrap();
-                    if let Some(external_val) = iterator_obj.get(scope, data_key.into()) {
-                        if external_val.is_external() {
-                            if let Ok(ext_ptr) = v8::Local::<v8::External>::try_from(external_val) {
-                                // Increment strong count and create Arc (don't call from_raw)
-                                let raw = ext_ptr.value() as *mut Mutex<Vec<(String, String)>>;
-                                let data = unsafe { Arc::increment_strong_count(raw); Arc::from_raw(raw) };
-                                let pairs = data.lock().unwrap();
+                            // Get data
+                            let data_key = v8::String::new(scope, "_iteratorData").unwrap();
+                            if let Some(external_val) = iterator_obj.get(scope, data_key.into()) {
+                                if external_val.is_external() {
+                                    if let Ok(ext_ptr) =
+                                        v8::Local::<v8::External>::try_from(external_val)
+                                    {
+                                        // Increment strong count and create Arc (don't call from_raw)
+                                        let raw =
+                                            ext_ptr.value() as *mut Mutex<Vec<(String, String)>>;
+                                        let data = unsafe {
+                                            Arc::increment_strong_count(raw);
+                                            Arc::from_raw(raw)
+                                        };
+                                        let pairs = data.lock().unwrap();
 
-                                if index >= pairs.len() {
-                                    // Done - return {done: true}
-                                    let done_obj = v8::Object::new(scope);
-                                    let done_key = v8::String::new(scope, "done").unwrap();
-                                    let done_val = v8::Boolean::new(scope, true);
-                                    done_obj.set(scope, done_key.into(), done_val.into());
-                                    retval_inner.set(done_obj.into());
-                                    return;
+                                        if index >= pairs.len() {
+                                            // Done - return {done: true}
+                                            let done_obj = v8::Object::new(scope);
+                                            let done_key = v8::String::new(scope, "done").unwrap();
+                                            let done_val = v8::Boolean::new(scope, true);
+                                            done_obj.set(scope, done_key.into(), done_val.into());
+                                            retval_inner.set(done_obj.into());
+                                            return;
+                                        }
+
+                                        // Return {done: false, value: [key, value]}
+                                        let (ref key, ref value) = pairs[index];
+                                        let result_obj = v8::Object::new(scope);
+
+                                        let done_key = v8::String::new(scope, "done").unwrap();
+                                        let done_val = v8::Boolean::new(scope, false);
+                                        result_obj.set(scope, done_key.into(), done_val.into());
+
+                                        let value_key = v8::String::new(scope, "value").unwrap();
+                                        // Pre-create strings to avoid multiple mutable borrows of scope
+                                        let key_str = v8::String::new(scope, key).unwrap();
+                                        let value_str = v8::String::new(scope, value).unwrap();
+                                        let arr = v8::Array::new_with_elements(
+                                            scope,
+                                            &[key_str.into(), value_str.into()],
+                                        );
+                                        result_obj.set(scope, value_key.into(), arr.into());
+
+                                        // Increment index
+                                        let next_index = (index + 1) as i32;
+                                        let next_index_val: v8::Local<v8::Value> =
+                                            v8::Integer::new(scope, next_index).into();
+                                        iterator_obj.set_internal_field(0, next_index_val);
+
+                                        retval_inner.set(result_obj.into());
+                                        return;
+                                    }
                                 }
-
-                                // Return {done: false, value: [key, value]}
-                                let (ref key, ref value) = pairs[index];
-                                let result_obj = v8::Object::new(scope);
-
-                                let done_key = v8::String::new(scope, "done").unwrap();
-                                let done_val = v8::Boolean::new(scope, false);
-                                result_obj.set(scope, done_key.into(), done_val.into());
-
-                                let value_key = v8::String::new(scope, "value").unwrap();
-                                // Pre-create strings to avoid multiple mutable borrows of scope
-                                let key_str = v8::String::new(scope, key).unwrap();
-                                let value_str = v8::String::new(scope, value).unwrap();
-                                let arr = v8::Array::new_with_elements(scope, &[key_str.into(), value_str.into()]);
-                                result_obj.set(scope, value_key.into(), arr.into());
-
-                                // Increment index
-                                let next_index = (index + 1) as i32;
-                                let next_index_val: v8::Local<v8::Value> = v8::Integer::new(scope, next_index).into();
-                                iterator_obj.set_internal_field(0, next_index_val);
-
-                                retval_inner.set(result_obj.into());
-                                return;
                             }
                         }
-                    }
-                }
-                retval_inner.set(v8::null(scope).into());
-            }).unwrap();
+                        retval_inner.set(v8::null(scope).into());
+                    },
+                )
+                .unwrap();
 
-            let next_key = v8::String::new(scope, "next").unwrap();
-            iterator.set(scope, next_key.into(), next_fn.into());
+                let next_key = v8::String::new(scope, "next").unwrap();
+                iterator.set(scope, next_key.into(), next_fn.into());
 
-            retval.set(iterator.into());
-        } else {
-            retval.set(v8::null(scope).into());
-        }
-    }).unwrap();
+                retval.set(iterator.into());
+            } else {
+                retval.set(v8::null(scope).into());
+            }
+        },
+    )
+    .unwrap();
     let entries_key = v8::String::new(scope, "entries").unwrap().into();
     params_obj.set(scope, entries_key, entries_fn.into());
 
@@ -608,7 +746,10 @@ fn url_search_params_constructor(
 }
 
 /// Set up URLSearchParams API
-pub fn setup_url_search_params_api(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) {
+pub fn setup_url_search_params_api(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Context,
+) {
     let global = context.global(scope);
 
     // Create constructor template
@@ -633,18 +774,33 @@ mod tests {
     #[test]
     fn test_parse_query_string() {
         let result = parse_query_string("foo=bar&baz=qux");
-        assert_eq!(result, vec![("foo".to_string(), "bar".to_string()), ("baz".to_string(), "qux".to_string())]);
+        assert_eq!(
+            result,
+            vec![
+                ("foo".to_string(), "bar".to_string()),
+                ("baz".to_string(), "qux".to_string())
+            ]
+        );
     }
 
     #[test]
     fn test_parse_query_string_with_empty_value() {
         let result = parse_query_string("foo=&bar=baz");
-        assert_eq!(result, vec![("foo".to_string(), "".to_string()), ("bar".to_string(), "baz".to_string())]);
+        assert_eq!(
+            result,
+            vec![
+                ("foo".to_string(), "".to_string()),
+                ("bar".to_string(), "baz".to_string())
+            ]
+        );
     }
 
     #[test]
     fn test_to_query_string() {
-        let pairs = vec![("foo".to_string(), "bar".to_string()), ("baz".to_string(), "qux".to_string())];
+        let pairs = vec![
+            ("foo".to_string(), "bar".to_string()),
+            ("baz".to_string(), "qux".to_string()),
+        ];
         let result = to_query_string(&pairs);
         assert!(result.contains("foo=bar"));
         assert!(result.contains("baz=qux"));

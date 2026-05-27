@@ -3,12 +3,10 @@
 // 提供多因素认证 (MFA) 和 JWT 令牌管理功能
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
-use thiserror::Error;
-use std::time::Duration;
 use std::collections::HashMap;
-use std::time::SystemTime;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use thiserror::Error;
 
 /// 身份验证错误
 #[derive(Error, Debug)]
@@ -85,11 +83,18 @@ pub struct TokenManager {
 impl TokenManager {
     pub fn new() -> Self {
         Self {
-            tokens: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))
+            tokens: Arc::new(Mutex::new(HashMap::new())),
         }
     }
     pub async fn generate_token(&self, user: &User) -> Result<Token, AuthError> {
-        let token_string: _ = format!("beejs-token-{}-{}", user.id, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+        let token_string: _ = format!(
+            "beejs-token-{}-{}",
+            user.id,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
         let expires_at: _ = SystemTime::now() + Duration::from_secs(3600); // 1小时过期
         let token: _ = Token {
             token: token_string,
@@ -135,16 +140,19 @@ pub struct AuthenticationService {
 impl AuthenticationService {
     pub fn new() -> Self {
         let mut users = HashMap::new();
-        users.insert("admin".to_string(), User {
-            id: "1".to_string(),
-            username: "admin".to_string(),
-            roles: vec!["admin".to_string(), "user".to_string()],
-            mfa_enabled: true,
-        });
+        users.insert(
+            "admin".to_string(),
+            User {
+                id: "1".to_string(),
+                username: "admin".to_string(),
+                roles: vec!["admin".to_string(), "user".to_string()],
+                mfa_enabled: true,
+            },
+        );
         Self {
-            mfa_service: Arc::new(Mutex::new(MultiFactorAuth::new()))
-            token_manager: Arc::new(Mutex::new(TokenManager::new()))
-            users: Arc::new(Mutex::new(std::sync::Mutex::new(users)))
+            mfa_service: Arc::new(MultiFactorAuth::new()),
+            token_manager: Arc::new(TokenManager::new()),
+            users: Arc::new(Mutex::new(users)),
         }
     }
     pub async fn authenticate(&self, credentials: &Credentials) -> Result<AuthResult, AuthError> {
@@ -156,9 +164,10 @@ impl AuthenticationService {
                 // 如果启用了 MFA，验证 MFA 代码
                 if user.mfa_enabled {
                     if let Some(mfa_code) = &credentials.mfa_code {
-                        let mfa_valid: _ = self.mfa_service.verify_code(mfa_code).await.map_err(|_| {
-                            AuthError::AuthenticationFailed("Invalid MFA code".to_string())
-                        })?;
+                        let mfa_valid: _ =
+                            self.mfa_service.verify_code(mfa_code).await.map_err(|_| {
+                                AuthError::AuthenticationFailed("Invalid MFA code".to_string())
+                            })?;
                         if !mfa_valid {
                             return Ok(AuthResult {
                                 success: false,
@@ -200,9 +209,11 @@ impl AuthenticationService {
     pub async fn verify_mfa(&self, username: &str, code: &str) -> Result<AuthResult, AuthError> {
         let users: _ = self.users.lock().unwrap();
         if let Some(user) = users.get(username) {
-            let mfa_valid: _ = self.mfa_service.verify_code(code).await.map_err(|_| {
-                AuthError::AuthenticationFailed("Invalid MFA code".to_string())
-            })?;
+            let mfa_valid: _ = self
+                .mfa_service
+                .verify_code(code)
+                .await
+                .map_err(|_| AuthError::AuthenticationFailed("Invalid MFA code".to_string()))?;
             if mfa_valid {
                 let token: _ = self.token_manager.generate_token(user).await?;
                 return Ok(AuthResult {

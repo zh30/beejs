@@ -1,9 +1,5 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 // 性能对比验证测试
 // 验证 Beejs 与 Bun 的性能对比数据准确性
-
 
 #[cfg(test)]
 mod tests {
@@ -14,7 +10,7 @@ mod tests {
         // 注意：这里我们测试指标计算的逻辑，而不是实际执行
 
         // 测试1: 验证启动时间指标
-        let simulated_startup_time: _ = std::time::Duration::from_millis(11);
+        let simulated_startup_time = std::time::Duration::from_millis(11);
         println!("🔍 当前启动时间: {:?}", simulated_startup_time);
         assert!(
             simulated_startup_time < std::time::Duration::from_millis(50),
@@ -23,7 +19,7 @@ mod tests {
         );
 
         // 测试2: 验证简单代码执行性能
-        let simulated_ops_per_sec: _ = 725.0;
+        let simulated_ops_per_sec = 725.0;
         println!("🔍 简单执行性能: {:.2} ops/sec", simulated_ops_per_sec);
         assert!(
             simulated_ops_per_sec > 500.0,
@@ -32,7 +28,7 @@ mod tests {
         );
 
         // 测试3: 验证内存使用（模拟）
-        let simulated_memory_time: _ = std::time::Duration::from_millis(100);
+        let simulated_memory_time = std::time::Duration::from_millis(100);
         println!("🔍 内存密集操作执行时间: {:?}", simulated_memory_time);
         assert!(
             simulated_memory_time < std::time::Duration::from_secs(10),
@@ -41,8 +37,11 @@ mod tests {
         );
 
         // 测试4: 验证并发执行能力
-        let simulated_scripts_per_sec: _ = 11200.0;
-        println!("🔍 并发执行性能: {:.2} scripts/sec", simulated_scripts_per_sec);
+        let simulated_scripts_per_sec = 11200.0;
+        println!(
+            "🔍 并发执行性能: {:.2} scripts/sec",
+            simulated_scripts_per_sec
+        );
         assert!(
             simulated_scripts_per_sec > 100.0,
             "并发执行性能 {:.2} scripts/sec 低于 100 scripts/sec 目标",
@@ -53,8 +52,8 @@ mod tests {
     #[test]
     fn test_jit_optimization_effectiveness() {
         // 模拟JIT优化效果测试
-        let before_optimization: _ = std::time::Duration::from_millis(100);
-        let after_optimization: _ = std::time::Duration::from_millis(65);
+        let before_optimization = std::time::Duration::from_millis(100);
+        let after_optimization = std::time::Duration::from_millis(65);
 
         println!("🔍 JIT优化前执行时间: {:?}", before_optimization);
         println!("🔍 JIT优化后执行时间: {:?}", after_optimization);
@@ -68,14 +67,12 @@ mod tests {
         );
 
         // 验证性能提升百分比
-        let improvement: _ = (before_optimization.as_millis() - after_optimization.as_millis()) as f64
-            / before_optimization.as_millis() as f64 * 100.0;
+        let improvement = (before_optimization.as_millis() - after_optimization.as_millis()) as f64
+            / before_optimization.as_millis() as f64
+            * 100.0;
         println!("🔍 JIT优化性能提升: {:.1}%", improvement);
 
-        assert!(
-            improvement > 0.0,
-            "JIT优化应该带来性能提升"
-        );
+        assert!(improvement > 0.0, "JIT优化应该带来性能提升");
     }
 
     #[test]
@@ -85,21 +82,25 @@ mod tests {
 
         // 模拟50次执行的执行时间
         for i in 0..50 {
-            let simulated_time: _ = std::time::Duration::from_millis(10 + (i % 5) as u64); // 10-14ms 波动
+            let simulated_time = std::time::Duration::from_millis(10 + (i % 5) as u64); // 10-14ms 波动
             execution_times.push(simulated_time);
         }
 
         // 计算平均执行时间
-        let avg_time: std::time::Duration = execution_times.iter().sum::<std::time::Duration>() / execution_times.len() as u32;
-        let max_time: _ = execution_times.iter().max().unwrap();
-        let min_time: _ = execution_times.iter().min().unwrap();
+        let avg_time: std::time::Duration =
+            execution_times.iter().sum::<std::time::Duration>() / execution_times.len() as u32;
+        let max_time = execution_times.iter().max().unwrap();
+        let min_time = execution_times.iter().min().unwrap();
 
         println!("🔍 性能稳定性统计:");
         println!("   平均: {:?}", avg_time);
         println!("   最大: {:?}", max_time);
         println!("   最小: {:?}", min_time);
-        println!("   变异系数: {:.2}%",
-            (max_time.as_millis() - min_time.as_millis()) as f64 / avg_time.as_millis() as f64 * 100.0);
+        println!(
+            "   变异系数: {:.2}%",
+            (max_time.as_millis() - min_time.as_millis()) as f64 / avg_time.as_millis() as f64
+                * 100.0
+        );
 
         // 验证性能稳定性（变异系数 < 50%）
         let coefficient_of_variation =
@@ -117,9 +118,9 @@ mod tests {
         println!("🔍 验证性能对比报告数据准确性...");
 
         // 模拟报告中提到的关键指标
-        let startup_target_ms: _ = 11.0; // 报告中声称的性能
-        let memory_target_mb: _ = 82.0;  // 报告中声称的内存使用
-        let concurrency_target: _ = 11200.0; // 报告中声称的并发数
+        let startup_target_ms = 11.0; // 报告中声称的性能
+        let memory_target_mb = 82.0; // 报告中声称的内存使用
+        let concurrency_target = 11200.0; // 报告中声称的并发数
 
         println!("📊 性能报告声称指标:");
         println!("   启动时间: {}ms", startup_target_ms);

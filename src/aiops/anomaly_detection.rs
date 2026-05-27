@@ -10,11 +10,11 @@ use std::time::SystemTime;
 /// 异常类型
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AnomalyType {
-    Spike,        // 峰值异常
-    Drop,         // 下降异常
-    Sustained,    // 持续异常
-    Trend,        // 趋势异常
-    Pattern,      // 模式异常
+    Spike,     // 峰值异常
+    Drop,      // 下降异常
+    Sustained, // 持续异常
+    Trend,     // 趋势异常
+    Pattern,   // 模式异常
 }
 /// 异常严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -46,7 +46,7 @@ pub struct ThresholdConfig {
 impl Default for ThresholdConfig {
     fn default() -> Self {
         Self {
-            spike_threshold: 2.0,  // 超过基线 2 个标准差
+            spike_threshold: 2.0, // 超过基线 2 个标准差
             drop_threshold: 2.0,
             sustained_threshold: 1.5,
             window_size: 10,
@@ -61,11 +61,14 @@ pub struct BaselineCalculator {
 impl BaselineCalculator {
     pub fn new() -> Self {
         Self {
-            historical_data: Arc::new(Mutex::new(Vec::new()))
+            historical_data: Arc::new(Mutex::new(Vec::new())),
         }
     }
     /// 计算基线统计信息
-    pub async fn calculate_baseline(&self, data: &[f64]) -> Result<Baseline, Box<dyn std::error::Error>> {
+    pub async fn calculate_baseline(
+        &self,
+        data: &[f64],
+    ) -> Result<Baseline, Box<dyn std::error::Error>> {
         if data.is_empty() {
             return Err("数据为空".into());
         }
@@ -83,7 +86,10 @@ impl BaselineCalculator {
         })
     }
     /// 更新历史数据
-    pub async fn update_historical_data(&self, data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn update_historical_data(
+        &self,
+        data: &[f64],
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut historical = self.historical_data.write().await;
         historical.extend_from_slice(data);
         Ok(())
@@ -92,9 +98,7 @@ impl BaselineCalculator {
         data.iter().sum::<f64>() / data.len() as f64
     }
     fn calculate_std_dev(&self, data: &[f64], mean: f64) -> f64 {
-        let variance: _ = data.iter()
-            .map(|&x| (x - mean).powi(2))
-            .sum::<f64>() / data.len() as f64;
+        let variance: _ = data.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64;
         variance.sqrt()
     }
     fn calculate_median(&self, data: &[f64]) -> f64 {
@@ -132,7 +136,10 @@ impl FeatureExtractor {
         Self { window_size }
     }
     /// 提取时间序列特征
-    pub async fn extract_features(&self, time_series: &[f64]) -> Result<Vec<Feature>, Box<dyn std::error::Error>> {
+    pub async fn extract_features(
+        &self,
+        time_series: &[f64],
+    ) -> Result<Vec<Feature>, Box<dyn std::error::Error>> {
         if time_series.len() < self.window_size {
             return Err("数据点不足".into());
         }
@@ -154,9 +161,7 @@ impl FeatureExtractor {
     }
     fn calculate_std_dev(&self, data: &[f64]) -> f64 {
         let mean: _ = self.calculate_mean(data);
-        let variance: _ = data.iter()
-            .map(|&x| (x - mean).powi(2))
-            .sum::<f64>() / data.len() as f64;
+        let variance: _ = data.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64;
         variance.sqrt()
     }
     fn calculate_trend(&self, data: &[f64]) -> f64 {
@@ -218,9 +223,8 @@ impl MLModel {
             return Err("训练数据为空".into());
         }
         // 基于特征计算阈值
-        let avg_std_dev: f64 = features.iter()
-            .map(|f| f.std_dev)
-            .sum::<f64>() / features.len() as f64;
+        let avg_std_dev: f64 =
+            features.iter().map(|f| f.std_dev).sum::<f64>() / features.len() as f64;
         self.threshold = avg_std_dev * 2.0;
         Ok(())
     }
@@ -241,11 +245,14 @@ impl StatisticalAnomalyDetector {
     pub fn new() -> Self {
         Self {
             threshold_config: ThresholdConfig::default(),
-            baseline_calculator: Arc::new(Mutex::new(BaselineCalculator::new()))
+            baseline_calculator: Arc::new(Mutex::new(BaselineCalculator::new())),
         }
     }
     /// 检测统计异常
-    pub async fn detect_statistical_anomalies(&self, data: &[f64]) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
+    pub async fn detect_statistical_anomalies(
+        &self,
+        data: &[f64],
+    ) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
         if data.len() < self.threshold_config.window_size {
             return Err("数据点不足".into());
         }
@@ -273,9 +280,11 @@ impl StatisticalAnomalyDetector {
             // 检测持续异常
             if i >= self.threshold_config.window_size {
                 let recent_window: _ = &data[i - self.threshold_config.window_size..i];
-                let recent_deviation: _ = recent_window.iter()
+                let recent_deviation: _ = recent_window
+                    .iter()
                     .map(|&x| (x - baseline.mean).abs())
-                    .sum::<f64>() / recent_window.len() as f64;
+                    .sum::<f64>()
+                    / recent_window.len() as f64;
                 if recent_deviation > baseline.std_dev * self.threshold_config.sustained_threshold {
                     anomalies.push(Anomaly {
                         anomaly_type: AnomalyType::Sustained,
@@ -317,19 +326,28 @@ pub struct MLAnomalyDetector {
 impl MLAnomalyDetector {
     pub fn new() -> Self {
         Self {
-            model: Arc::new(Mutex::new(MLModel::new(2.0)))
-            feature_extractor: Arc::new(Mutex::new(FeatureExtractor::new(10)))
+            model: Arc::new(RwLock::new(MLModel::new(2.0))),
+            feature_extractor: Arc::new(FeatureExtractor::new(10)),
         }
     }
     /// 训练 ML 模型
-    pub async fn train_model(&self, training_data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
-        let features: _ = self.feature_extractor.extract_features(training_data).await?;
+    pub async fn train_model(
+        &self,
+        training_data: &[f64],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let features: _ = self
+            .feature_extractor
+            .extract_features(training_data)
+            .await?;
         let mut model = self.model.write().await;
         model.train(&features).await?;
         Ok(())
     }
     /// 使用 ML 方法检测异常
-    pub async fn detect_ml_anomalies(&self, features: &[Feature]) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
+    pub async fn detect_ml_anomalies(
+        &self,
+        features: &[Feature],
+    ) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
         let model: _ = self.model.read().await;
         let mut anomalies = Vec::new();
         for feature in features {
@@ -374,21 +392,31 @@ pub struct AnomalyDetector {
 impl AnomalyDetector {
     pub fn new() -> Self {
         Self {
-            statistical_detector: Arc::new(Mutex::new(StatisticalAnomalyDetector::new()))
-            ml_detector: Arc::new(Mutex::new(MLAnomalyDetector::new()))
+            statistical_detector: Arc::new(StatisticalAnomalyDetector::new()),
+            ml_detector: Arc::new(MLAnomalyDetector::new()),
         }
     }
     /// 检测异常（组合方法）
-    pub async fn detect_anomalies(&self, data: &[f64]) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
+    pub async fn detect_anomalies(
+        &self,
+        data: &[f64],
+    ) -> Result<Vec<Anomaly>, Box<dyn std::error::Error>> {
         if data.is_empty() {
             return Err("数据为空".into());
         }
         let mut all_anomalies = Vec::new();
         // 使用统计方法检测
-        let statistical_anomalies: _ = self.statistical_detector.detect_statistical_anomalies(data).await?;
+        let statistical_anomalies: _ = self
+            .statistical_detector
+            .detect_statistical_anomalies(data)
+            .await?;
         all_anomalies.extend(statistical_anomalies);
         // 使用 ML 方法检测
-        let features: _ = self.ml_detector.feature_extractor.extract_features(data).await?;
+        let features: _ = self
+            .ml_detector
+            .feature_extractor
+            .extract_features(data)
+            .await?;
         let ml_anomalies: _ = self.ml_detector.detect_ml_anomalies(&features).await?;
         all_anomalies.extend(ml_anomalies);
         // 合并重复的异常
@@ -400,14 +428,22 @@ impl AnomalyDetector {
         // 按时间戳和类型去重
         anomalies.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
         anomalies.dedup_by(|a, b| {
-            a.anomaly_type == b.anomaly_type &&
-            (a.timestamp.duration_since(b.timestamp).unwrap_or_default().as_secs() < 60)
+            a.anomaly_type == b.anomaly_type
+                && (a
+                    .timestamp
+                    .duration_since(b.timestamp)
+                    .unwrap_or_default()
+                    .as_secs()
+                    < 60)
         });
     }
     /// 训练检测器
     pub async fn train(&self, training_data: &[f64]) -> Result<(), Box<dyn std::error::Error>> {
         // 训练统计检测器的基线
-        self.statistical_detector.baseline_calculator.update_historical_data(training_data).await?;
+        self.statistical_detector
+            .baseline_calculator
+            .update_historical_data(training_data)
+            .await?;
         // 训练 ML 检测器
         self.ml_detector.train_model(training_data).await?;
         Ok(())

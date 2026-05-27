@@ -29,14 +29,14 @@ pipeline {
 
                     // Download and install Beejs
                     sh '''
-                        curl -L "https://github.com/beejs-team/beejs/releases/download/v0.1.0/beejs-linux-x64.tar.gz" -o beejs.tar.gz
-                        tar -xzf beejs.tar.gz
-                        chmod +x beejs
-                        sudo mv beejs /usr/local/bin/
+                        curl -L "https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz" -o bee.tar.gz
+                        tar -xzf bee.tar.gz
+                        chmod +x bee
+                        sudo mv bee /usr/local/bin/
                     '''
 
                     // Verify installation
-                    sh 'beejs --version'
+                    sh 'bee --version'
                 }
             }
         }
@@ -66,7 +66,7 @@ pipeline {
                     // Run linter with Beejs
                     sh '''
                         if [ -f .eslintrc.js ] || [ -f .eslintrc.json ]; then
-                            beejs run node_modules/.bin/eslint src/ --format=json --output-file=eslint-results.json
+                            bee run node_modules/.bin/eslint src/ --format=json --output-file=eslint-results.json
                         fi
                     '''
                 }
@@ -93,7 +93,7 @@ pipeline {
 
                             // Run tests with Beejs
                             sh '''
-                                beejs test --reporter=json --output=test-results.json
+                                bee test --reporter=json --output=test-results.json
                             '''
                         }
 
@@ -109,7 +109,7 @@ pipeline {
 
                             // Run integration tests
                             sh '''
-                                beejs test tests/integration --reporter=json --output=integration-results.json
+                                bee test tests/integration --reporter=json --output=integration-results.json
                             '''
                         }
 
@@ -124,7 +124,7 @@ pipeline {
 
                             // Run performance benchmarks
                             sh '''
-                                beejs run benchmarks/comprehensive_benchmark.js > performance-results.txt 2>&1
+                                bee run benchmarks/comprehensive_benchmark.js > performance-results.txt 2>&1
                             '''
                         }
 
@@ -143,12 +143,12 @@ pipeline {
                     sh '''
                         # TypeScript compilation
                         if [ -f tsconfig.json ]; then
-                            beejs run build.ts
+                            bee run build.ts
                         fi
 
                         # Bundle JavaScript
                         if [ -f src/index.js ]; then
-                            beejs bundle src/index.js --outfile=dist/bundle.js --minify
+                            bee bundle src/index.js --outfile=dist/bundle.js --minify
                         fi
                     '''
 
@@ -165,7 +165,7 @@ pipeline {
 
                     // Run security scan
                     sh '''
-                        beejs run scripts/security-scan.js > security-report.txt 2>&1 || true
+                        bee run scripts/security-scan.js > security-report.txt 2>&1 || true
                     '''
 
                     archiveArtifacts artifacts: 'security-report.txt', allowEmptyArchive: true
@@ -263,7 +263,7 @@ pipeline {
 
                             // Generate comprehensive report
                             sh '''
-                                beejs run scripts/generate-build-report.js \
+                                bee run scripts/generate-build-report.js \
                                     --build-number=${BUILD_NUMBER} \
                                     --commit=${GIT_COMMIT} \
                                     --branch=${GIT_BRANCH} \
@@ -290,7 +290,7 @@ pipeline {
 
                             // Clean up temporary files
                             sh '''
-                                rm -f beejs.tar.gz
+                                rm -f bee.tar.gz
                                 docker system prune -f
                             '''
                         }

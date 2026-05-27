@@ -8,9 +8,9 @@ use rusty_v8 as v8;
 /// Notification permission state
 #[derive(Debug, Clone, PartialEq)]
 pub enum NotificationPermission {
-    Granted,   // User has granted permission
-    Denied,    // User has denied permission
-    Default,   // User has not been asked yet
+    Granted, // User has granted permission
+    Denied,  // User has denied permission
+    Default, // User has not been asked yet
 }
 
 impl NotificationPermission {
@@ -43,7 +43,11 @@ pub fn setup_notification_api(
     let notification_fn = v8::FunctionTemplate::new(scope, notification_constructor_callback);
     let notification_constructor = notification_fn.get_function(scope).unwrap();
     let notification_key = v8::String::new(scope, "Notification").unwrap();
-    global.set(scope, notification_key.into(), notification_constructor.into());
+    global.set(
+        scope,
+        notification_key.into(),
+        notification_constructor.into(),
+    );
 
     // Notification.permission (static property)
     let permission_key = v8::String::new(scope, "permission").unwrap();
@@ -51,7 +55,8 @@ pub fn setup_notification_api(
     global.set(scope, permission_key.into(), permission_val.into());
 
     // Notification.requestPermission (static method)
-    let request_perm_fn = v8::FunctionTemplate::new(scope, notification_request_permission_callback);
+    let request_perm_fn =
+        v8::FunctionTemplate::new(scope, notification_request_permission_callback);
     let request_perm_key = v8::String::new(scope, "requestPermission").unwrap();
     let request_perm_func = request_perm_fn.get_function(scope).unwrap();
     global.set(scope, request_perm_key.into(), request_perm_func.into());
@@ -59,9 +64,12 @@ pub fn setup_notification_api(
     // Notification.permission property on constructor
     let constructor_permission_key = v8::String::new(scope, "permission").unwrap();
     let constructor_permission = v8::String::new(scope, "default").unwrap();
-    global.set(scope, constructor_permission_key.into(), constructor_permission.into());
+    global.set(
+        scope,
+        constructor_permission_key.into(),
+        constructor_permission.into(),
+    );
 
-    eprintln!("✅ [v0.3.328] Notification API initialized");
     Ok(())
 }
 
@@ -73,7 +81,9 @@ fn notification_constructor_callback(
 ) {
     // Get title from first argument
     let title = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "").unwrap())
+        args.get(0)
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "").unwrap())
             .to_rust_string_lossy(scope)
     } else {
         "Notification".to_string()
@@ -90,25 +100,37 @@ fn notification_constructor_callback(
         if let Some(options_obj) = options.to_object(scope) {
             // body
             let body_key = v8::String::new(scope, "body").unwrap();
-            if let Some(body_val) = options_obj.get(scope, body_key.into()).and_then(|v| v.to_string(scope)) {
+            if let Some(body_val) = options_obj
+                .get(scope, body_key.into())
+                .and_then(|v| v.to_string(scope))
+            {
                 body = body_val.to_rust_string_lossy(scope);
             }
 
             // icon - store the string directly
             let icon_key = v8::String::new(scope, "icon").unwrap();
-            if let Some(icon_val) = options_obj.get(scope, icon_key.into()).and_then(|v| v.to_string(scope)) {
+            if let Some(icon_val) = options_obj
+                .get(scope, icon_key.into())
+                .and_then(|v| v.to_string(scope))
+            {
                 icon = Some(icon_val.to_rust_string_lossy(scope));
             }
 
             // tag - store the string directly
             let tag_key = v8::String::new(scope, "tag").unwrap();
-            if let Some(tag_val) = options_obj.get(scope, tag_key.into()).and_then(|v| v.to_string(scope)) {
+            if let Some(tag_val) = options_obj
+                .get(scope, tag_key.into())
+                .and_then(|v| v.to_string(scope))
+            {
                 tag = Some(tag_val.to_rust_string_lossy(scope));
             }
 
             // data - store the string directly
             let data_key = v8::String::new(scope, "data").unwrap();
-            if let Some(data_val) = options_obj.get(scope, data_key.into()).and_then(|v| v.to_string(scope)) {
+            if let Some(data_val) = options_obj
+                .get(scope, data_key.into())
+                .and_then(|v| v.to_string(scope))
+            {
                 data = Some(data_val.to_rust_string_lossy(scope));
             }
         }
@@ -250,16 +272,34 @@ mod tests {
 
     #[test]
     fn test_notification_permission_from_string() {
-        assert_eq!(NotificationPermission::from_string("granted"), NotificationPermission::Granted);
-        assert_eq!(NotificationPermission::from_string("denied"), NotificationPermission::Denied);
-        assert_eq!(NotificationPermission::from_string("unknown"), NotificationPermission::Default);
-        assert_eq!(NotificationPermission::from_string("GRANTED"), NotificationPermission::Granted);
+        assert_eq!(
+            NotificationPermission::from_string("granted"),
+            NotificationPermission::Granted
+        );
+        assert_eq!(
+            NotificationPermission::from_string("denied"),
+            NotificationPermission::Denied
+        );
+        assert_eq!(
+            NotificationPermission::from_string("unknown"),
+            NotificationPermission::Default
+        );
+        assert_eq!(
+            NotificationPermission::from_string("GRANTED"),
+            NotificationPermission::Granted
+        );
     }
 
     #[test]
     fn test_notification_permission_default_case() {
         // Test that case-insensitive matching works
-        assert_eq!(NotificationPermission::from_string("Default"), NotificationPermission::Default);
-        assert_eq!(NotificationPermission::from_string("DEFAULT"), NotificationPermission::Default);
+        assert_eq!(
+            NotificationPermission::from_string("Default"),
+            NotificationPermission::Default
+        );
+        assert_eq!(
+            NotificationPermission::from_string("DEFAULT"),
+            NotificationPermission::Default
+        );
     }
 }

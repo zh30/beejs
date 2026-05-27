@@ -1,26 +1,30 @@
 // Beejs 核心功能测试套件 (TDD)
 // Stage 1: 红色阶段 - 编写失败的测试
 
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// 测试类型定义
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     /// 测试 1: MinimalRuntime 初始化 (预期失败 - 红色)
     #[tokio::test]
+    #[serial]
     async fn test_minimal_runtime_initialization() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建临时目录
         let temp_dir = TempDir::new()?;
-        let temp_path = temp_dir.path().to_path_buf();
+        let _temp_path = temp_dir.path().to_path_buf();
 
         // Act: 尝试创建 MinimalRuntime
         let runtime = beejs::runtime_minimal::MinimalRuntime::new();
 
         // Assert: 验证初始化成功
-        assert!(runtime.is_ok(), "MinimalRuntime should initialize successfully");
+        assert!(
+            runtime.is_ok(),
+            "MinimalRuntime should initialize successfully"
+        );
 
         println!("✅ MinimalRuntime 初始化测试通过");
         Ok(())
@@ -28,10 +32,11 @@ mod tests {
 
     /// 测试 2: JavaScript 代码执行 (预期失败 - 红色)
     #[tokio::test]
+    #[serial]
     async fn test_javascript_execution() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建 MinimalRuntime
-        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-            .expect("Failed to create MinimalRuntime");
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
         let js_code = r#"
             const result = 1 + 1;
             result.toString();
@@ -51,14 +56,81 @@ mod tests {
 
     /// 测试 3: TypeScript 编译 (跳过 - 模块未实现)
     #[test]
+    #[serial]
     fn test_typescript_compilation() -> Result<(), Box<dyn std::error::Error>> {
         // Temporarily skipped - typescript module disabled
         println!("⏭️  TypeScript 编译测试跳过 (模块未实现)");
         Ok(())
     }
 
+    #[test]
+    #[serial]
+    fn test_execute_code_does_not_replay_side_effect_statement(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
+        let result = runtime.execute_code(
+            r#"
+            globalThis.count = 0;
+            globalThis.bump = () => ++globalThis.count;
+            globalThis.bump();
+        "#,
+        )?;
+
+        assert_eq!(
+            result.trim(),
+            "1",
+            "execute_code must not replay the final side-effecting statement"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_execute_code_preserves_multiline_final_expression(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
+        let result = runtime.execute_code(
+            r#"
+            'alpha' + '|' +
+            'beta' + '|' +
+            'gamma';
+        "#,
+        )?;
+
+        assert_eq!(
+            result.trim(),
+            "alpha|beta|gamma",
+            "execute_code must re-evaluate the full continued final expression"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_execute_code_does_not_transpile_interface_inside_string(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
+        let result = runtime.execute_code(
+            r#"
+            const options = { completer: null };
+            "interface created successfully";
+        "#,
+        )?;
+
+        assert_eq!(
+            result.trim(),
+            "interface created successfully",
+            "plain JavaScript strings must not trigger TypeScript transpilation"
+        );
+        Ok(())
+    }
+
     /// 测试 4: CLI run 命令 (预期失败 - 红色)
     #[tokio::test]
+    #[serial]
     async fn test_cli_run_command() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建临时JS文件
         let temp_dir = TempDir::new()?;
@@ -66,8 +138,8 @@ mod tests {
         std::fs::write(&temp_path, "console.log('Hello from file'); 2 + 2;")?;
 
         // Act: 模拟CLI run命令执行
-        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-            .expect("Failed to create MinimalRuntime");
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
         let code = std::fs::read_to_string(&temp_path)?;
 
         let output = runtime.execute_code(&code);
@@ -80,17 +152,14 @@ mod tests {
 
     /// 测试 5: CLI REPL 模式 (预期失败 - 红色)
     #[tokio::test]
+    #[serial]
     async fn test_cli_repl_mode() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 准备REPL输入
-        let repl_inputs = vec![
-            "1 + 1",
-            "2 * 3",
-            "let x = 5; x * 2",
-        ];
+        let repl_inputs = vec!["1 + 1", "2 * 3", "let x = 5; x * 2"];
 
         // Act: 模拟REPL模式执行多行输入
-        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-            .expect("Failed to create MinimalRuntime");
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
 
         let mut results = Vec::new();
         for input in &repl_inputs {
@@ -109,10 +178,11 @@ mod tests {
 
     /// 测试 6: 错误处理 (预期失败 - 红色)
     #[tokio::test]
+    #[serial]
     async fn test_error_handling() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建 MinimalRuntime
-        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-            .expect("Failed to create MinimalRuntime");
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
         let invalid_js = "invalid javascript code @#$%";
 
         // Act: 执行无效代码
@@ -127,10 +197,11 @@ mod tests {
 
     /// 测试 7: 性能基准 - 简单执行 (预期失败 - 红色)
     #[tokio::test]
+    #[serial]
     async fn test_performance_simple_execution() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建 MinimalRuntime
-        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-            .expect("Failed to create MinimalRuntime");
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
         let js_code = "let x = 0; x + 1;";
 
         // Act: 执行多次并测量时间
@@ -145,7 +216,11 @@ mod tests {
         let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
 
         // Assert: 验证性能 (目标: > 100 ops/sec for initial implementation)
-        assert!(ops_per_sec > 100.0, "Performance should be > 100 ops/sec, got {:.2}", ops_per_sec);
+        assert!(
+            ops_per_sec > 100.0,
+            "Performance should be > 100 ops/sec, got {:.2}",
+            ops_per_sec
+        );
 
         println!("✅ 性能基准测试通过: {:.2} ops/sec", ops_per_sec);
         Ok(())

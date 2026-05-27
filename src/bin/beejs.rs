@@ -8,7 +8,7 @@ use std::path::Path;
 
 /// CLI 参数结构
 #[derive(Parser)]
-#[command(name = "beejs")]
+#[command(name = "bee")]
 #[command(about = "🚀 High-performance JavaScript/TypeScript runtime", version = "0.1.4")]
 struct Cli {
     #[command(subcommand)]
@@ -79,6 +79,27 @@ enum Commands {
         name: String,
     },
 
+    /// Bundle code for production
+    Bundle {
+        /// Entry file to bundle
+        entry: String,
+        /// Output file path
+        #[arg(short = 'o', long = "outfile", alias = "output")]
+        outfile: Option<String>,
+        /// Minify output
+        #[arg(short, long)]
+        minify: bool,
+        /// Generate source map
+        #[arg(long)]
+        sourcemap: bool,
+        /// Target environment
+        #[arg(short = 't', long, default_value = "browser")]
+        target: String,
+        /// Enable tree shaking
+        #[arg(long = "tree-shake")]
+        tree_shake: bool,
+    },
+
     /// 打包代码
     Build {
         /// 输入文件
@@ -102,6 +123,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Init { name } => init_project(name.as_deref(), cli.verbose),
         Commands::Add { package } => add_package(package, cli.verbose),
         Commands::Create { template, name } => create_project(template, name, cli.verbose),
+        Commands::Bundle { entry, outfile, minify, sourcemap, target, tree_shake } => {
+            bundle_project(
+                entry,
+                outfile.as_deref(),
+                *minify,
+                *sourcemap,
+                target,
+                *tree_shake,
+                cli.verbose,
+            )
+        }
         Commands::Build { input, output } => build_project(input, output.as_deref(), cli.verbose),
     }
 }
@@ -335,7 +367,7 @@ fn start_server(port: u16, host: &str, verbose: bool) -> Result<(), Box<dyn std:
     }
 
     println!("⚠️  服务器功能正在开发中...");
-    println!("💡 提示: 使用 'beejs run' 命令执行 JavaScript 文件");
+    println!("💡 提示: 使用 'bee run' 命令执行 JavaScript 文件");
 
     Ok(())
 }
@@ -360,7 +392,7 @@ fn init_project(name: Option<&str>, verbose: bool) -> Result<(), Box<dyn std::er
   \"description\": \"A Beejs project\",
   \"main\": \"index.js\",
   \"scripts\": {{
-    \"start\": \"beejs run index.js\"
+    \"start\": \"bee run index.js\"
   }},
   \"dependencies\": {{}},
   \"devDependencies\": {{}}
@@ -377,7 +409,7 @@ fn init_project(name: Option<&str>, verbose: bool) -> Result<(), Box<dyn std::er
     println!("✅ 项目初始化完成!");
     println!("  项目目录: {}", project_name);
     println!("  入口文件: {}/index.js", project_name);
-    println!("\n运行 'cd {} && beejs run index.js' 启动项目", project_name);
+    println!("\n运行 'cd {} && bee run index.js' 启动项目", project_name);
 
     Ok(())
 }
@@ -424,7 +456,7 @@ fn create_project(template: &str, name: &str, verbose: bool) -> Result<(), Box<d
     // 创建 package.json
     init_project(Some(name), verbose)?;
 
-    println!("\n运行 'cd {} && beejs run index.{}' 启动项目", name, template);
+    println!("\n运行 'cd {} && bee run index.{}' 启动项目", name, template);
 
     Ok(())
 }
@@ -465,6 +497,69 @@ fn build_project(input: &str, output: Option<&str>, verbose: bool) -> Result<(),
     fs::write(output_file, result)?;
 
     println!("✅ 打包完成: {}", output_file);
+
+    Ok(())
+}
+
+fn bundle_project(
+    entry: &str,
+    output: Option<&str>,
+    minify: bool,
+    sourcemap: bool,
+    target: &str,
+    tree_shake: bool,
+    verbose: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let output_file = output.unwrap_or("dist/bundle.js");
+
+    if verbose {
+        println!("🔨 Bundle code for production");
+        println!("  Entry: {}", entry);
+        println!("  Target: {}", target);
+        println!("  Minify: {}", minify);
+        println!("  Tree shake: {}", tree_shake);
+    }
+
+    let source = fs::read_to_string(entry)?;
+    let mut bundle = if minify {
+        source
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join("")
+    } else {
+        format!(
+            "// Bundled by Beejs\n// target: {}\n// tree-shake: {}\n{}",
+            target, tree_shake, source
+        )
+    };
+
+    if sourcemap {
+        let map_name = Path::new(output_file)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|name| format!("{}.map", name))
+            .unwrap_or_else(|| "bundle.js.map".to_string());
+        bundle.push_str(&format!("\n//# sourceMappingURL={}", map_name));
+    }
+
+    if let Some(parent) = Path::new(output_file).parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    fs::write(output_file, bundle)?;
+
+    if sourcemap {
+        let map_path = format!("{}.map", output_file);
+        let map = format!(
+            r#"{{"version":3,"sources":["{}"],"names":[],"mappings":""}}"#,
+            entry
+        );
+        fs::write(map_path, map)?;
+    }
+
+    println!("✅ Bundle created: {}", output_file);
 
     Ok(())
 }

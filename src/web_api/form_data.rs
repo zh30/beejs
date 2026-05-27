@@ -29,7 +29,6 @@ pub fn setup_form_data_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
-    eprintln!("🔧 [STAGE74] Setting up FormData API...");
     // FormData constructor
     let form_data_template: _ = v8::FunctionTemplate::new(scope, form_data_constructor);
     let form_data_constructor: _ = form_data_template.get_function(scope).unwrap();
@@ -37,7 +36,6 @@ pub fn setup_form_data_api(
     let global: _ = context.global(scope);
     let form_data_key: _ = v8::String::new(scope, "FormData").unwrap();
     global.set(scope, form_data_key.into(), form_data_constructor.into());
-    eprintln!("✅ [STAGE74] FormData API complete");
     Ok(())
 }
 /// FormData constructor callback
@@ -148,7 +146,8 @@ fn form_data_append(
     let this_obj: v8::Local<v8::Object> = args.this();
 
     // Get index from internal field
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -162,7 +161,11 @@ fn form_data_append(
 
     // Get value (can be string or Blob/File)
     let (value, _filename, content_type) = if let Some(value_val) = args.get(1).to_string(scope) {
-        (value_val.to_rust_string_lossy(scope), None::<String>, "text/plain".to_string())
+        (
+            value_val.to_rust_string_lossy(scope),
+            None::<String>,
+            "text/plain".to_string(),
+        )
     } else if args.get(1).is_object() {
         // Handle Blob-like objects
         if let Some(obj) = args.get(1).to_object(scope) {
@@ -178,7 +181,8 @@ fn form_data_append(
 
             // Check if it has a size property for arrayBuffer extraction
             let size_key = v8::String::new(scope, "size").unwrap().into();
-            let _size = obj.get(scope, size_key)
+            let _size = obj
+                .get(scope, size_key)
                 .and_then(|v| v.to_integer(scope))
                 .map(|i| i.value() as usize)
                 .unwrap_or(0);
@@ -226,7 +230,8 @@ fn form_data_delete(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -251,7 +256,8 @@ fn form_data_get(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -283,7 +289,8 @@ fn form_data_get_all(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -297,11 +304,10 @@ fn form_data_get_all(
 
     let cache = get_formdata_cache().lock().unwrap();
     if let Some(entries) = cache.get(&index) {
-        let values: Vec<_> = entries.iter()
+        let values: Vec<_> = entries
+            .iter()
             .filter(|entry| entry.name == name)
-            .map(|entry| {
-                v8::String::new(scope, &entry.value).unwrap().into()
-            })
+            .map(|entry| v8::String::new(scope, &entry.value).unwrap().into())
             .collect();
         let array = v8::Array::new_with_elements(scope, &values);
         retval.set(array.into());
@@ -318,7 +324,8 @@ fn form_data_has(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -331,7 +338,8 @@ fn form_data_has(
     };
 
     let cache = get_formdata_cache().lock().unwrap();
-    let has_key = cache.get(&index)
+    let has_key = cache
+        .get(&index)
         .map(|entries| entries.iter().any(|e| e.name == name))
         .unwrap_or(false);
 
@@ -346,7 +354,8 @@ fn form_data_set(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -393,7 +402,8 @@ fn form_data_entries(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
@@ -401,7 +411,8 @@ fn form_data_entries(
     let cache = get_formdata_cache().lock().unwrap();
     if let Some(entries) = cache.get(&index) {
         // Create an array of [name, value] pairs
-        let pairs: Vec<v8::Local<v8::Value>> = entries.iter()
+        let pairs: Vec<v8::Local<v8::Value>> = entries
+            .iter()
             .map(|entry| {
                 let pair = v8::Array::new(scope, 2);
                 let name_str = v8::String::new(scope, &entry.name).unwrap();
@@ -426,17 +437,18 @@ fn form_data_keys(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
 
     let cache = get_formdata_cache().lock().unwrap();
     if let Some(entries) = cache.get(&index) {
-        let unique_keys: std::collections::HashSet<_> = entries.iter()
-            .map(|e| e.name.clone())
-            .collect();
-        let keys: Vec<_> = unique_keys.iter()
+        let unique_keys: std::collections::HashSet<_> =
+            entries.iter().map(|e| e.name.clone()).collect();
+        let keys: Vec<_> = unique_keys
+            .iter()
             .map(|k| v8::String::new(scope, k).unwrap().into())
             .collect();
         let array = v8::Array::new_with_elements(scope, &keys);
@@ -454,14 +466,16 @@ fn form_data_values(
 ) {
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    let index = this_obj.get_internal_field(scope, 0)
+    let index = this_obj
+        .get_internal_field(scope, 0)
         .and_then(|v| v.to_integer(scope))
         .map(|i| i.value() as usize)
         .unwrap_or(usize::MAX);
 
     let cache = get_formdata_cache().lock().unwrap();
     if let Some(entries) = cache.get(&index) {
-        let values: Vec<_> = entries.iter()
+        let values: Vec<_> = entries
+            .iter()
             .map(|e| v8::String::new(scope, &e.value).unwrap().into())
             .collect();
         let array = v8::Array::new_with_elements(scope, &values);
@@ -491,7 +505,10 @@ pub fn get_formdata_entries(index: usize) -> Option<Vec<FormDataEntry>> {
 }
 
 /// Check if a V8 value is a FormData object and return its internal index
-pub fn get_formdata_index(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> Option<usize> {
+pub fn get_formdata_index(
+    scope: &mut v8::HandleScope,
+    value: v8::Local<v8::Value>,
+) -> Option<usize> {
     if !value.is_object() {
         return None;
     }

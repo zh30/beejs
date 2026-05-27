@@ -2,8 +2,8 @@
 // Tests for ReadableStream, WritableStream, TransformStream, TextDecoderStream
 // Stage 75: Web Streams API for AI workloads
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -27,7 +27,7 @@ fn test_readable_stream_constructor() {
             }
         });
         typeof rs
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -47,7 +47,7 @@ fn test_readable_stream_get_reader() {
         });
         const reader = rs.getReader();
         typeof reader.read
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
@@ -65,7 +65,7 @@ fn test_readable_stream_locked() {
             }
         });
         rs.locked
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
@@ -84,7 +84,7 @@ fn test_readable_stream_reader_has_release_lock() {
         });
         const reader = rs.getReader();
         typeof reader.releaseLock
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
@@ -103,7 +103,7 @@ fn test_readable_stream_reader_has_closed() {
         });
         const reader = rs.getReader();
         typeof reader.closed
-        "#
+        "#,
     );
     assert!(result.is_ok());
     // Should be a Promise (object)
@@ -131,7 +131,7 @@ fn test_writable_stream_constructor() {
             }
         });
         typeof ws
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -148,7 +148,7 @@ fn test_writable_stream_get_writer() {
         });
         const writer = ws.getWriter();
         typeof writer.write
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
@@ -164,7 +164,7 @@ fn test_writable_stream_locked() {
             write(chunk) {}
         });
         ws.locked
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
@@ -181,7 +181,7 @@ fn test_writable_stream_writer_has_close() {
         });
         const writer = ws.getWriter();
         typeof writer.close
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
@@ -198,7 +198,7 @@ fn test_writable_stream_writer_has_abort() {
         });
         const writer = ws.getWriter();
         typeof writer.abort
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
@@ -215,7 +215,7 @@ fn test_writable_stream_writer_has_ready() {
         });
         const writer = ws.getWriter();
         typeof writer.ready
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object"); // Promise
@@ -242,7 +242,7 @@ fn test_transform_stream_constructor() {
             }
         });
         typeof ts
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -260,7 +260,7 @@ fn test_transform_stream_has_readable() {
             }
         });
         typeof ts.readable
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -278,7 +278,7 @@ fn test_transform_stream_has_writable() {
             }
         });
         typeof ts.writable
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -301,7 +301,7 @@ fn test_text_decoder_stream_constructor() {
         r#"
         const tds = new TextDecoderStream();
         typeof tds
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -315,7 +315,7 @@ fn test_text_decoder_stream_has_readable() {
         r#"
         const tds = new TextDecoderStream();
         typeof tds.readable
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -329,7 +329,7 @@ fn test_text_decoder_stream_has_writable() {
         r#"
         const tds = new TextDecoderStream();
         typeof tds.writable
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -343,7 +343,7 @@ fn test_text_decoder_stream_encoding() {
         r#"
         const tds = new TextDecoderStream();
         tds.encoding
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "utf-8");
@@ -357,7 +357,7 @@ fn test_text_decoder_stream_fatal() {
         r#"
         const tds = new TextDecoderStream();
         tds.fatal
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
@@ -371,7 +371,7 @@ fn test_text_decoder_stream_ignore_bom() {
         r#"
         const tds = new TextDecoderStream();
         tds.ignoreBOM
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
@@ -393,7 +393,7 @@ fn test_readable_stream_controller_enqueue() {
             }
         });
         rs.locked
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
@@ -413,7 +413,7 @@ fn test_readable_stream_controller_close() {
         });
         // If close works, stream should be in closed state
         typeof rs
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object");
@@ -433,7 +433,7 @@ fn test_writable_stream_controller_write() {
         const writer = ws.getWriter();
         // Write should return a Promise
         typeof writer.write('test')
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object"); // Promise
@@ -451,7 +451,7 @@ fn test_writable_stream_controller_close() {
         const writer = ws.getWriter();
         // close() should return a Promise
         typeof writer.close()
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object"); // Promise
@@ -469,7 +469,7 @@ fn test_writable_stream_controller_abort() {
         const writer = ws.getWriter();
         // abort() should return a Promise
         typeof writer.abort('error')
-        "#
+        "#,
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "object"); // Promise

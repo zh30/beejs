@@ -54,7 +54,7 @@ pub struct EnhancedArgs {
     #[arg(long, default_value = "html")]
     format: String,
     /// Output directory for benchmark reports
-    #[arg(long, default_value = "./benchmark_reports")]
+    #[arg(long, default_value = "benchmarks/reports/generated")]
     output_dir: PathBuf,
     /// Enable zero-copy I/O optimization
     #[arg(long)]

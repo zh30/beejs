@@ -74,7 +74,13 @@ mod install_tests {
         let content = fs::read_to_string(&package_json_path).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
 
-        assert!(parsed["dependencies"].is_null() || parsed["dependencies"].as_object().map(|o| o.is_empty()).unwrap_or(true));
+        assert!(
+            parsed["dependencies"].is_null()
+                || parsed["dependencies"]
+                    .as_object()
+                    .map(|o| o.is_empty())
+                    .unwrap_or(true)
+        );
         println!("✅ Test 3: Install handles empty dependencies - PASSED");
     }
 
@@ -99,7 +105,11 @@ mod install_tests {
 
         // Check that version constraint is preserved (exact implementation in real install)
         let version = parsed["dependencies"]["ms"].as_str().unwrap();
-        assert!(version.starts_with("^") || version.starts_with("~") || version.chars().next().unwrap().is_ascii_digit());
+        assert!(
+            version.starts_with("^")
+                || version.starts_with("~")
+                || version.chars().next().unwrap().is_ascii_digit()
+        );
         println!("✅ Test 4: Install saves version - PASSED");
     }
 
@@ -141,9 +151,8 @@ mod install_tests {
         fs::write(&package_json_path, package_json).unwrap();
 
         let _lock_file_path = temp_dir.path().join("package-lock.json");
-        // After real install, package-lock.json should exist
-        // For now, just verify the structure is correct
-        assert!(true);
+        // For now, verify the fixture structure is correct.
+        assert!(package_json_path.exists());
         println!("✅ Test 6: Install creates lock file - PASSED");
     }
 }

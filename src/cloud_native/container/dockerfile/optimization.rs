@@ -50,7 +50,9 @@ impl Optimizer {
                 name: "optimize-layer-caching".to_string(),
                 description: "Optimize COPY commands for better layer caching".to_string(),
                 impact: "high".to_string(),
-                example: Some("COPY Cargo.toml Cargo.lock ./\nRUN cargo fetch\nCOPY src ./src".to_string()),
+                example: Some(
+                    "COPY Cargo.toml Cargo.lock ./\nRUN cargo fetch\nCOPY src ./src".to_string(),
+                ),
             });
         }
         if self.has_unnecessary_packages(dockerfile) {
@@ -66,7 +68,10 @@ impl Optimizer {
                 name: "add-security-hardening".to_string(),
                 description: "Add security hardening measures".to_string(),
                 impact: "high".to_string(),
-                example: Some("RUN addgroup -g 1000 beejs && adduser -D -s /bin/sh -G beejs beejs".to_string()),
+                example: Some(
+                    "RUN addgroup -g 1000 beejs && adduser -D -s /bin/sh -G beejs beejs"
+                        .to_string(),
+                ),
             });
         }
         suggestions
@@ -117,7 +122,11 @@ impl OptimizationStrategy for LayerMinimizationStrategy {
                 if in_run {
                     // Combine with previous RUN
                     current_run.push_str(" && ");
-                    current_run.push_str(line.trim_start().trim_start_matches("RUN ").trim_start_matches("apt-get update && apt-get install -y "));
+                    current_run.push_str(
+                        line.trim_start()
+                            .trim_start_matches("RUN ")
+                            .trim_start_matches("apt-get update && apt-get install -y "),
+                    );
                 } else {
                     // Start new RUN
                     in_run = true;
@@ -155,7 +164,10 @@ impl OptimizationStrategy for BaseImageOptimizationStrategy {
         // Replace base image
         let result: _ = if self.use_distroless {
             dockerfile
-                .replace("FROM debian:bookworm-slim", "FROM gcr.io/distroless/base-debian12")
+                .replace(
+                    "FROM debian:bookworm-slim",
+                    "FROM gcr.io/distroless/base-debian12",
+                )
                 .replace("FROM ubuntu:", "FROM gcr.io/distroless/base")
         } else {
             dockerfile.replace("FROM ubuntu:", &format!("FROM {}:", self.target_image))
@@ -177,7 +189,9 @@ impl OptimizationStrategy for CacheOptimizationStrategy {
             let mut optimized_lines = Vec::new();
             for line in &lines {
                 optimized_lines.push(*line);
-                if line.contains("WORKDIR /app") && !lines.iter().any(|l| l.contains("COPY Cargo.toml")) {
+                if line.contains("WORKDIR /app")
+                    && !lines.iter().any(|l| l.contains("COPY Cargo.toml"))
+                {
                     optimized_lines.push("COPY Cargo.toml Cargo.lock ./\nRUN cargo fetch");
                 }
             }
@@ -204,14 +218,18 @@ impl OptimizationStrategy for SecurityHardeningStrategy {
     fn apply(&self, dockerfile: &str) -> Result<String, Error> {
         let mut additions = Vec::new();
         if self.add_non_root_user {
-            additions.push("RUN addgroup -g 1000 beejs && adduser -D -s /bin/sh -G beejs beejs".to_string());
+            additions.push(
+                "RUN addgroup -g 1000 beejs && adduser -D -s /bin/sh -G beejs beejs".to_string(),
+            );
             additions.push("USER beejs".to_string());
         }
         if self.read_only_root {
-            additions.push("RUN chmod -R u-w,go-w /usr/local/bin/beejs".to_string());
+            additions.push("RUN chmod -R u-w,go-w /usr/local/bin/bee".to_string());
         }
         if self.drop_capabilities {
-            additions.push("RUN setcap cap_setpcap,cap_setuid,cap_setgid+ep /usr/local/bin/beejs".to_string());
+            additions.push(
+                "RUN setcap cap_setpcap,cap_setuid,cap_setgid+ep /usr/local/bin/bee".to_string(),
+            );
         }
         let mut result = dockerfile.to_string();
         if !additions.is_empty() {
@@ -241,7 +259,7 @@ impl OptimizationStrategy for SizeOptimizationStrategy {
             // Add strip command to build
             result = result.replace(
                 "cargo build --release",
-                "cargo build --release && strip target/release/beejs"
+                "cargo build --release && strip target/release/bee",
             );
         }
         if self.remove_unnecessary_files {
@@ -306,7 +324,8 @@ RUN apt-get install -y wget
 COPY . ."#;
         let optimized: _ = strategy.apply(dockerfile).unwrap();
         // Should combine RUN commands
-        assert!(optimized.contains("apt-get update && apt-get install -y curl && apt-get install -y wget"));
+        assert!(optimized
+            .contains("apt-get update && apt-get install -y curl && apt-get install -y wget"));
     }
     #[test]
     fn test_base_image_optimization_strategy() {
@@ -363,7 +382,9 @@ RUN cargo build --release"#;
         // Should suggest multiple optimizations
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.name == "use-slim-image"));
-        assert!(suggestions.iter().any(|s| s.name == "combine-copy-commands"));
+        assert!(suggestions
+            .iter()
+            .any(|s| s.name == "combine-copy-commands"));
     }
     #[test]
     fn test_impact_level() {

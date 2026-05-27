@@ -29,11 +29,10 @@ pub mod renderer;
 pub use manager::*;
 pub use renderer::*;
 pub use renderer::{
-    ChartRenderer, GraphRenderer, TemplateEngine, WebSocketClient,
-    ChartInstance, ChartConfig, ChartData, SeriesData, RenderStats,
-    GraphInstance, GraphNode, GraphEdge, Position, Size, EdgeStyle,
-    LayoutConfig, LayoutType, InteractionConfig, LayoutEngine,
-    ForceParams, HierarchicalParams, Template, TemplateFunction
+    ChartConfig, ChartData, ChartInstance, ChartRenderer, EdgeStyle, ForceParams, GraphEdge,
+    GraphInstance, GraphNode, GraphRenderer, HierarchicalParams, InteractionConfig, LayoutConfig,
+    LayoutEngine, LayoutType, Position, RenderStats, SeriesData, Size, Template, TemplateEngine,
+    TemplateFunction, WebSocketClient,
 };
 use serde::{Deserialize, Serialize};
 /// Dashboard panel configuration
@@ -184,7 +183,12 @@ mod tests {
             id: "panel-1".to_string(),
             title: "CPU Usage".to_string(),
             panel_type: "graph".to_string(),
-            grid_pos: GridPos { x: 0, y: 0, w: 12, h: 8 },
+            grid_pos: GridPos {
+                x: 0,
+                y: 0,
+                w: 12,
+                h: 8,
+            },
             datasource: "Prometheus".to_string(),
             targets: vec![],
             field_config: FieldConfig {
@@ -195,9 +199,18 @@ mod tests {
                 thresholds: None,
             },
             options: PanelOptions {
-                legend: LegendConfig { show: true, position: "bottom".to_string() },
-                tooltip: TooltipConfig { mode: "multi".to_string(), sort: "none".to_string() },
-                time: TimeRangeConfig { from: "now-1h".to_string(), to: "now".to_string() },
+                legend: LegendConfig {
+                    show: true,
+                    position: "bottom".to_string(),
+                },
+                tooltip: TooltipConfig {
+                    mode: "multi".to_string(),
+                    sort: "none".to_string(),
+                },
+                time: TimeRangeConfig {
+                    from: "now-1h".to_string(),
+                    to: "now".to_string(),
+                },
             },
         };
         assert_eq!(config.id, "panel-1");
@@ -206,7 +219,12 @@ mod tests {
     }
     #[test]
     fn test_grid_pos_validation() {
-        let pos: _ = GridPos { x: 0, y: 0, w: 24, h: 12 };
+        let pos: _ = GridPos {
+            x: 0,
+            y: 0,
+            w: 24,
+            h: 12,
+        };
         assert!(pos.w > 0);
         assert!(pos.h > 0);
     }
@@ -214,9 +232,18 @@ mod tests {
     fn test_threshold_config() {
         let thresholds: _ = ThresholdsConfig {
             steps: vec![
-                ThresholdStep { color: "green".to_string(), value: None },
-                ThresholdStep { color: "yellow".to_string(), value: Some(50.0) },
-                ThresholdStep { color: "red".to_string(), value: Some(80.0) },
+                ThresholdStep {
+                    color: "green".to_string(),
+                    value: None,
+                },
+                ThresholdStep {
+                    color: "yellow".to_string(),
+                    value: Some(50.0),
+                },
+                ThresholdStep {
+                    color: "red".to_string(),
+                    value: Some(80.0),
+                },
             ],
         };
         assert_eq!(thresholds.steps.len(), 3);

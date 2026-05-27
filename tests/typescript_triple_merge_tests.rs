@@ -19,11 +19,18 @@ namespace Foo {
 const result = Foo;
 "#;
         let result = compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "Triple merge should compile successfully, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Triple merge should compile successfully, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // 验证代码能够编译，且 Foo 命名空间被保留
-        assert!(output.js_code.contains("Foo") || output.js_code.contains("var Foo"),
-            "Should preserve Foo declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("Foo") || output.js_code.contains("var Foo"),
+            "Should preserve Foo declaration: {}",
+            output.js_code
+        );
         println!("✅ Test 1: Triple merge interface + namespace");
     }
 
@@ -51,11 +58,18 @@ const p = Point.create(1);
 const d = Point.distance(p, p);
 "#;
         let result = compile_typescript(ts_code, "test.ts");
-        assert!(result.is_ok(), "Multiple triple merge should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Multiple triple merge should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // 验证 Point 命名空间被正确保留
-        assert!(output.js_code.contains("Point"),
-            "Should preserve Point declaration: {}", output.js_code);
+        assert!(
+            output.js_code.contains("Point"),
+            "Should preserve Point declaration: {}",
+            output.js_code
+        );
         println!("✅ Test 2: Multiple triple merge with same name");
         println!("Output: {}", output.js_code);
     }
@@ -77,8 +91,11 @@ const v = Utils.version;
         let result = compile_typescript(ts_code, "test.ts");
         assert!(result.is_ok(), "Namespace merge should compile");
         let output = result.unwrap();
-        assert!(output.js_code.contains("Utils"),
-            "Should preserve Utils namespace: {}", output.js_code);
+        assert!(
+            output.js_code.contains("Utils"),
+            "Should preserve Utils namespace: {}",
+            output.js_code
+        );
         println!("✅ Test 3: Namespace multiple merge");
     }
 
@@ -111,7 +128,11 @@ declare namespace Window {
 }
 "#;
         let result = compile_typescript(ts_code, "declare.ts");
-        assert!(result.is_ok(), "Declare triple merge should compile, error: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Declare triple merge should compile, error: {:?}",
+            result.err()
+        );
         let output = result.unwrap();
         // Declare 声明应该被转译
         println!("✅ Test 5: Triple merge with declare");

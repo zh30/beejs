@@ -3,11 +3,11 @@
 // v0.3.239: 完善 nextTick 和 stdout/stderr.write()
 // v0.3.240: 完善 hrtime、stdin、memory、uptime、cpuUsage
 
+use anyhow::Result;
+use rusty_v8 as v8;
 use std::io::Write;
 use std::sync::Mutex;
 use std::time::Instant;
-use anyhow::Result;
-use rusty_v8 as v8;
 
 thread_local! {
     /// 进程启动时间（用于计算 uptime）
@@ -28,8 +28,8 @@ thread_local! {
 // v0.3.239: nextTick 队列（线程本地）
 // Note: thread_local doesn't have pub(crate) on individual items, so we export the whole thing
 mod next_tick_queue_mod {
-    use std::sync::Mutex;
     use rusty_v8 as v8;
+    use std::sync::Mutex;
 
     pub(crate) struct NextTickCallback {
         pub(crate) callback: v8::Global<v8::Value>,
@@ -75,7 +75,8 @@ pub fn execute_next_tick_callbacks(scope: &mut v8::HandleScope) {
                 if let Ok(func) = v8::Local::<v8::Function>::try_from(callback_local) {
                     let undefined = v8::undefined(scope);
                     // Convert Global args to Local args for the function call
-                    let args_local: Vec<v8::Local<v8::Value>> = args.iter().map(|g| v8::Local::new(scope, g)).collect();
+                    let args_local: Vec<v8::Local<v8::Value>> =
+                        args.iter().map(|g| v8::Local::new(scope, g)).collect();
                     let _ = func.call(scope, undefined.into(), &args_local);
                 }
             }
@@ -150,7 +151,7 @@ pub fn setup_process_api(
     let argv_key = v8::String::new(scope, "argv").unwrap();
     let argv_array = v8::Array::new(scope, 0);
     // 默认参数
-    let arg0 = v8::String::new(scope, "beejs").unwrap();
+    let arg0 = v8::String::new(scope, "bee").unwrap();
     argv_array.set_index(scope, 0, arg0.into());
     let arg1 = v8::String::new(scope, "script.js").unwrap();
     argv_array.set_index(scope, 1, arg1.into());
@@ -158,7 +159,7 @@ pub fn setup_process_api(
 
     // process.execPath - 可执行文件路径
     let exec_path_key = v8::String::new(scope, "execPath").unwrap();
-    let exec_path_val = v8::String::new(scope, "/usr/local/bin/beejs").unwrap();
+    let exec_path_val = v8::String::new(scope, "/usr/local/bin/bee").unwrap();
     process_obj.set(scope, exec_path_key.into(), exec_path_val.into());
 
     // process.cwd() - 获取当前工作目录
@@ -195,19 +196,33 @@ pub fn setup_process_api(
     let remove_listener_func = v8::FunctionTemplate::new(scope, process_remove_listener_callback);
     let remove_listener_instance = remove_listener_func.get_function(scope).unwrap();
     let remove_listener_key = v8::String::new(scope, "removeListener").unwrap();
-    process_obj.set(scope, remove_listener_key.into(), remove_listener_instance.into());
+    process_obj.set(
+        scope,
+        remove_listener_key.into(),
+        remove_listener_instance.into(),
+    );
 
     // v0.3.242: process.setMaxListeners() - 设置最大监听器数量
-    let set_max_listeners_func = v8::FunctionTemplate::new(scope, process_set_max_listeners_callback);
+    let set_max_listeners_func =
+        v8::FunctionTemplate::new(scope, process_set_max_listeners_callback);
     let set_max_listeners_instance = set_max_listeners_func.get_function(scope).unwrap();
     let set_max_listeners_key = v8::String::new(scope, "setMaxListeners").unwrap();
-    process_obj.set(scope, set_max_listeners_key.into(), set_max_listeners_instance.into());
+    process_obj.set(
+        scope,
+        set_max_listeners_key.into(),
+        set_max_listeners_instance.into(),
+    );
 
     // v0.3.242: process.getMaxListeners() - 获取最大监听器数量
-    let get_max_listeners_func = v8::FunctionTemplate::new(scope, process_get_max_listeners_callback);
+    let get_max_listeners_func =
+        v8::FunctionTemplate::new(scope, process_get_max_listeners_callback);
     let get_max_listeners_instance = get_max_listeners_func.get_function(scope).unwrap();
     let get_max_listeners_key = v8::String::new(scope, "getMaxListeners").unwrap();
-    process_obj.set(scope, get_max_listeners_key.into(), get_max_listeners_instance.into());
+    process_obj.set(
+        scope,
+        get_max_listeners_key.into(),
+        get_max_listeners_instance.into(),
+    );
 
     // process.pid - 进程 ID
     let pid_key = v8::String::new(scope, "pid").unwrap();
@@ -224,10 +239,12 @@ pub fn setup_process_api(
     let env_obj = v8::Object::new(scope);
     // 添加常见环境变量
     let home_key = v8::String::new(scope, "HOME").unwrap();
-    let home_val = v8::String::new(scope, std::env::var("HOME").unwrap_or_default().as_str()).unwrap();
+    let home_val =
+        v8::String::new(scope, std::env::var("HOME").unwrap_or_default().as_str()).unwrap();
     env_obj.set(scope, home_key.into(), home_val.into());
     let path_key = v8::String::new(scope, "PATH").unwrap();
-    let path_val = v8::String::new(scope, std::env::var("PATH").unwrap_or_default().as_str()).unwrap();
+    let path_val =
+        v8::String::new(scope, std::env::var("PATH").unwrap_or_default().as_str()).unwrap();
     env_obj.set(scope, path_key.into(), path_val.into());
     process_obj.set(scope, env_key.into(), env_obj.into());
 
@@ -235,7 +252,7 @@ pub fn setup_process_api(
     let release_key = v8::String::new(scope, "release").unwrap();
     let release_obj = v8::Object::new(scope);
     let name_key = v8::String::new(scope, "name").unwrap();
-    let name_val = v8::String::new(scope, "beejs").unwrap();
+    let name_val = v8::String::new(scope, "bee").unwrap();
     release_obj.set(scope, name_key.into(), name_val.into());
     process_obj.set(scope, release_key.into(), release_obj.into());
 
@@ -332,7 +349,8 @@ fn process_next_tick_callback(
     let callback = args.get(0);
 
     if !callback.is_function() {
-        let error = v8::String::new(scope, "process.nextTick: callback must be a function").unwrap();
+        let error =
+            v8::String::new(scope, "process.nextTick: callback must be a function").unwrap();
         let error_obj = v8::Exception::type_error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
@@ -446,8 +464,18 @@ fn process_hrtime_callback(
         if prev.is_array() {
             let prev_array = v8::Local::<v8::Array>::try_from(prev).unwrap();
             if prev_array.length() >= 2 {
-                let prev_sec = prev_array.get_index(scope, 0).unwrap().to_number(scope).unwrap().value();
-                let prev_nano = prev_array.get_index(scope, 1).unwrap().to_number(scope).unwrap().value();
+                let prev_sec = prev_array
+                    .get_index(scope, 0)
+                    .unwrap()
+                    .to_number(scope)
+                    .unwrap()
+                    .value();
+                let prev_nano = prev_array
+                    .get_index(scope, 1)
+                    .unwrap()
+                    .to_number(scope)
+                    .unwrap()
+                    .value();
 
                 let diff_sec = seconds - prev_sec;
                 let diff_nano = nanos - prev_nano;
@@ -501,6 +529,17 @@ fn process_memory_callback(
         let external_key = v8::String::new(scope, "external").unwrap();
         let external_val = v8::Number::new(scope, heap_stats.external_memory() as f64);
         result.set(scope, external_key.into(), external_val.into());
+
+        let rss_key = v8::String::new(scope, "rss").unwrap();
+        let rss_val = v8::Number::new(scope, heap_stats.total_physical_size() as f64);
+        result.set(scope, rss_key.into(), rss_val.into());
+
+        let array_buffers_key = v8::String::new(scope, "arrayBuffers").unwrap();
+        let array_buffers_obj = v8::Object::new(scope);
+        let used_key = v8::String::new(scope, "used").unwrap();
+        let used_val = v8::Number::new(scope, 0.0);
+        array_buffers_obj.set(scope, used_key.into(), used_val.into());
+        result.set(scope, array_buffers_key.into(), array_buffers_obj.into());
 
         retval.set(result.into());
     }
@@ -594,10 +633,7 @@ fn get_cpu_times() -> (u64, u64) {
         if parts.len() >= 16 {
             // utime (index 14) - 用户态时间（时钟滴答数）
             // stime (index 15) - 内核态时间（时钟滴答数）
-            if let (Ok(utime), Ok(stime)) = (
-                parts[14].parse::<u64>(),
-                parts[15].parse::<u64>()
-            ) {
+            if let (Ok(utime), Ok(stime)) = (parts[14].parse::<u64>(), parts[15].parse::<u64>()) {
                 // 将时钟滴答数转换为微秒
                 let clk_tck = unsafe { libc::sysconf(libc::_SC_CLK_TCK) };
                 let usec_per_tick = 1_000_000 / clk_tck as u64;
@@ -612,8 +648,8 @@ fn get_cpu_times() -> (u64, u64) {
 
 #[cfg(target_os = "macos")]
 fn get_cpu_times() -> (u64, u64) {
-    use libc::rusage;
     use libc::getrusage;
+    use libc::rusage;
     use std::mem::zeroed;
 
     const RUSAGE_SELF: i32 = 0;
@@ -622,10 +658,10 @@ fn get_cpu_times() -> (u64, u64) {
     unsafe {
         if getrusage(RUSAGE_SELF, &mut usage) == 0 {
             // tv_sec 和 tv_usec 转换为微秒
-            let user_usec = (usage.ru_utime.tv_sec as u64) * 1_000_000
-                + usage.ru_utime.tv_usec as u64;
-            let system_usec = (usage.ru_stime.tv_sec as u64) * 1_000_000
-                + usage.ru_stime.tv_usec as u64;
+            let user_usec =
+                (usage.ru_utime.tv_sec as u64) * 1_000_000 + usage.ru_utime.tv_usec as u64;
+            let system_usec =
+                (usage.ru_stime.tv_sec as u64) * 1_000_000 + usage.ru_stime.tv_usec as u64;
             return (user_usec, system_usec);
         }
     }
@@ -645,7 +681,7 @@ fn get_cpu_times() -> (u64, u64) {
                 if parts.len() >= 2 {
                     if let (Ok(user), Ok(sys)) = (
                         parts[1].parse::<u64>(),
-                        parts.get(2).and_then(|s| s.parse::<u64>().ok())
+                        parts.get(2).and_then(|s| s.parse::<u64>().ok()),
                     ) {
                         return (user * 1000, sys * 1000); // 转换为微秒
                     }
@@ -700,7 +736,12 @@ fn get_cpu_times() -> (u64, u64) {
     (0, 0)
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "freebsd", target_family = "windows")))]
+#[cfg(not(any(
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "freebsd",
+    target_family = "windows"
+)))]
 fn get_cpu_times() -> (u64, u64) {
     // 其他平台回退到零
     (0, 0)
@@ -726,7 +767,7 @@ fn process_exit_callback(
 
     // 注意: 实际退出需要在 Rust 层面处理
     // 这里只是标记退出状态
-    eprintln!("[beejs] Process exiting with code: {}", code);
+    eprintln!("[bee] Process exiting with code: {}", code);
 }
 
 /// process.on() 回调
@@ -744,7 +785,10 @@ fn process_on_callback(
         return;
     }
 
-    let event_name_str = event_name.to_string(scope).unwrap().to_rust_string_lossy(scope);
+    let event_name_str = event_name
+        .to_string(scope)
+        .unwrap()
+        .to_rust_string_lossy(scope);
 
     match event_name_str.as_str() {
         "uncaughtException" => {
@@ -785,7 +829,10 @@ fn process_off_callback(
         return;
     }
 
-    let event_name_str = event_name.to_string(scope).unwrap().to_rust_string_lossy(scope);
+    let event_name_str = event_name
+        .to_string(scope)
+        .unwrap()
+        .to_rust_string_lossy(scope);
 
     match event_name_str.as_str() {
         "uncaughtException" => {
@@ -851,7 +898,7 @@ fn process_set_max_listeners_callback(
 
     // Validate n (must be >= 0)
     let max_listeners = if n < 0 {
-        0  // 负数视为 0（无限制）
+        0 // 负数视为 0（无限制）
     } else {
         n
     };
@@ -859,16 +906,11 @@ fn process_set_max_listeners_callback(
     // 存储到线程本地
     MAX_LISTENERS.with(|map| {
         let mut map = map.lock().unwrap();
-        if max_listeners == 0 {
-            // 0 表示无限制，移除限制
-            map.remove(&event_name);
-        } else {
-            map.insert(event_name, max_listeners);
-        }
+        map.insert(event_name, max_listeners);
     });
 
     // 返回 process 对象（支持链式调用）
-    retval.set(scope.get_current_context().global(scope).into());
+    retval.set(args.this().into());
 }
 
 /// v0.3.242: process.getMaxListeners() 回调
@@ -893,7 +935,7 @@ fn process_get_max_listeners_callback(
     // 从线程本地获取
     let max_listeners = MAX_LISTENERS.with(|map| {
         let map = map.lock().unwrap();
-        map.get(&event_name).copied().unwrap_or(10)  // 默认值是 10
+        map.get(&event_name).copied().unwrap_or(10) // 默认值是 10
     });
 
     retval.set(v8::Integer::new(scope, max_listeners).into());
@@ -957,8 +999,8 @@ fn signal_name_to_number(signal_name: &str) -> u32 {
         "SIGTSTP" | "TSTP" => 20,
         "SIGTTIN" | "TTIN" => 21,
         "SIGTTOU" | "TTOU" => 22,
-        "SIGBUS" | "BUS" => 10,  // FreeBSD uses 10, Linux uses 7
-        _ => 15, // 默认 SIGTERM
+        "SIGBUS" | "BUS" => 10, // FreeBSD uses 10, Linux uses 7
+        _ => 15,                // 默认 SIGTERM
     }
 }
 
@@ -968,16 +1010,15 @@ fn send_signal_to_process(pid: u32, signal: u32) -> bool {
     {
         use libc::kill;
 
-        unsafe {
-            kill(pid as libc::pid_t, signal as libc::c_int) == 0
-        }
+        unsafe { kill(pid as libc::pid_t, signal as libc::c_int) == 0 }
     }
     #[cfg(target_family = "windows")]
     {
         // Windows 不支持 Unix 信号，这里简化处理
         // 对于当前进程，标记退出
         if pid == std::process::id() as i32 {
-            if signal == 15 || signal == 2 || signal == 1 { // SIGTERM, SIGINT, SIGHUP
+            if signal == 15 || signal == 2 || signal == 1 {
+                // SIGTERM, SIGINT, SIGHUP
                 // 标记退出（实际退出由运行时处理）
                 SHOULD_EXIT.with(|exit| {
                     *exit.lock().unwrap() = true;
@@ -997,10 +1038,7 @@ fn send_signal_to_process(pid: u32, signal: u32) -> bool {
 }
 
 /// 触发未捕获异常事件
-pub fn emit_uncaught_exception(
-    scope: &mut v8::HandleScope,
-    error: &v8::Local<v8::Value>,
-) {
+pub fn emit_uncaught_exception(scope: &mut v8::HandleScope, error: &v8::Local<v8::Value>) {
     UNCAUGHT_EXCEPTION_HANDLERS.with(|handlers| {
         let handlers = handlers.lock().unwrap();
         for handler in handlers.iter() {

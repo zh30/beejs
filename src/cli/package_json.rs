@@ -237,12 +237,12 @@ impl ScriptExecutor {
         // Resolve the command
         let cmd: _ = &args[0];
         let cmd_args: _ = &args[1..];
-        // If it's a beejs command, use current executable
-        let exec_path: _ = if cmd == "beejs" {
+        // If it's a bee command, use current executable
+        let exec_path: _ = if cmd == "bee" {
             std::env::current_exe()?
         } else {
-            // For now, only support beejs commands
-            return Err(anyhow::anyhow!("Only 'beejs' commands are supported in scripts").into());
+            // For now, only support bee commands
+            return Err(anyhow::anyhow!("Only 'bee' commands are supported in scripts").into());
         };
         // Spawn the process
         let mut child = std::process::Command::new(&exec_path)
@@ -277,8 +277,8 @@ use anyhow::{Result, Error};
             "name": "test-app",
             "version": "1.0.0",
             "scripts": {
-                "start": "beejs src/index.js",
-                "dev": "beejs watch src/index.js"
+                "start": "bee src/index.js",
+                "dev": "bee watch src/index.js"
             }
         }"#;
         std::fs::write(&package_json, content).expect("Failed to write package.json");
@@ -286,8 +286,8 @@ use anyhow::{Result, Error};
         assert_eq!(pkg.name, Some("test-app".to_string()));
         assert_eq!(pkg.version, Some("1.0.0".to_string()));
         let scripts: _ = pkg.get_scripts();
-        assert_eq!(scripts.get("start"), Some(&"beejs src/index.js".to_string()));
-        assert_eq!(scripts.get("dev"), Some(&"beejs watch src/index.js".to_string()));
+        assert_eq!(scripts.get("start"), Some(&"bee src/index.js".to_string()));
+        assert_eq!(scripts.get("dev"), Some(&"bee watch src/index.js".to_string()));
         temp_dir.close().expect("Failed to close temp dir");
     }
     #[test]
@@ -317,13 +317,13 @@ use anyhow::{Result, Error};
             name: Some("test".to_string()),
             version: Some("1.0.0".to_string()),
             description: None,
-            scripts: Some([("start".to_string(), "beejs src/index.js --watch".to_string())].into()),
+            scripts: Some([("start".to_string(), "bee src/index.js --watch".to_string())].into()),
             dependencies: None,
             dev_dependencies: None,
             beejs: None,
         };
         let args: _ = pkg.parse_script_command("start").expect("Failed to parse script");
-        assert_eq!(args, vec!["beejs", "src/index.js", "--watch"]);
+        assert_eq!(args, vec!["bee", "src/index.js", "--watch"]);
     }
     #[test]
     fn test_package_json_validation() {

@@ -6,8 +6,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
-use tokio::time::{Duration, Instant};
 use std::hash::Hash;
+use tokio::time::{Duration, Instant};
 /// 资源类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ResourceType {
@@ -189,17 +189,11 @@ impl ResourceOptimizer {
         let mut allocations = HashMap::new();
         // 基于工作负载需求和当前资源使用情况进行智能分配
         for req in &workload.resource_requirements {
-            let optimal_amount: _ = self.calculate_optimal_allocation(
-                req,
-                workload,
-            );
+            let optimal_amount: _ = self.calculate_optimal_allocation(req, workload);
             allocations.insert(req.resource_type.clone(), optimal_amount);
         }
         // 计算预期改进
-        let expected_improvement: _ = self.calculate_expected_improvement(
-            workload,
-            &allocations,
-        );
+        let expected_improvement: _ = self.calculate_expected_improvement(workload, &allocations);
         // 计算置信度
         let confidence: _ = self.calculate_confidence(&allocations);
         AllocationPlan {
@@ -260,7 +254,7 @@ impl ResourceOptimizer {
     pub async fn predict_resource_needs(&self, history: &[ResourceUsage]) -> ResourceForecast {
         let mut predicted_demand = HashMap::new();
         // 按资源类型分组
-        let mut usage_by_type: HashMap<ResourceType, Vec<&ResourceUsage> = HashMap::new();
+        let mut usage_by_type: HashMap<ResourceType, Vec<&ResourceUsage>> = HashMap::new();
         for usage in history {
             usage_by_type
                 .entry(usage.resource_type.clone())
@@ -280,11 +274,7 @@ impl ResourceOptimizer {
         }
     }
     /// 计算最优资源分配
-    fn calculate_optimal_allocation(
-        &self,
-        req: &ResourceRequest,
-        workload: &Workload,
-    ) -> f64 {
+    fn calculate_optimal_allocation(&self, req: &ResourceRequest, workload: &Workload) -> f64 {
         // 基于请求量和当前利用率计算最优分配
         let current_utilization: _ = self.get_current_utilization(&req.resource_type);
         // 如果当前利用率较低，使用较小的分配
@@ -434,11 +424,7 @@ impl ResourceOptimizer {
         if self.usage_history.is_empty() {
             return 0.0;
         }
-        let sum: f64 = self
-            .usage_history
-            .iter()
-            .map(|u| u.utilization_rate)
-            .sum();
+        let sum: f64 = self.usage_history.iter().map(|u| u.utilization_rate).sum();
         sum / self.usage_history.len() as f64
     }
 }
@@ -455,7 +441,7 @@ pub struct OptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_allocate_resources_basic() {
         let optimizer: _ = ResourceOptimizer::new_with_defaults();

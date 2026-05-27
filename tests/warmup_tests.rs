@@ -25,10 +25,12 @@ fn test_warmup_string_operations() {
     runtime.warmup().unwrap();
 
     // 测试字符串操作（应该使用预热后的优化）
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const str = "hello world";
         str.length + "," + str.toUpperCase() + "," + str.split(' ')[0]
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     let output = result.unwrap().trim().to_string();
     assert!(output.contains("HELLO"));
@@ -41,10 +43,12 @@ fn test_warmup_array_operations() {
     runtime.warmup().unwrap();
 
     // 测试数组操作
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const arr = [1, 2, 3, 4, 5];
         arr.map(x => x * 2).filter(x => x > 4).reduce((a, b) => a + b, 0)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "24"); // filter > 4 gives [6, 8, 10], sum is 24
 }
@@ -56,9 +60,11 @@ fn test_warmup_promise() {
     runtime.warmup().unwrap();
 
     // 测试 Promise
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         Promise.resolve(42).then(v => v * 2)
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
 }
 
@@ -69,11 +75,13 @@ fn test_warmup_map_set() {
     runtime.warmup().unwrap();
 
     // 测试 Map 和 Set
-    let result = runtime.execute_code(r#"
+    let result = runtime.execute_code(
+        r#"
         const map = new Map([['a', 1]]);
         map.set('b', 2);
         map.get('a') + map.get('b')
-    "#);
+    "#,
+    );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "3");
 }

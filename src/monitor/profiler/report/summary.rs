@@ -1,8 +1,9 @@
+use crate::monitor::profiler::{
+    analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},
+    Hotspot,
+};
 /// 性能摘要报告生成模块
 use chrono::{DateTime, Utc};
-use crate::monitor::profiler::{
-    Hotspot, analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},
-};
 /// 性能摘要报告
 #[derive(Debug, Clone)]
 pub struct PerformanceSummary {
@@ -178,18 +179,12 @@ impl PerformanceSummary {
                     hotspot.function_name,
                     hotspot.heat_score
                 ));
-                report.push_str(&format!(
-                    "   类型: {:?}\n",
-                    hotspot.hotspot_type
-                ));
+                report.push_str(&format!("   类型: {:?}\n", hotspot.hotspot_type));
                 report.push_str(&format!(
                     "   平均执行时间: {:?}\n",
                     hotspot.time_stats.avg_time
                 ));
-                report.push_str(&format!(
-                    "   调用次数: {}\n\n",
-                    hotspot.call_count
-                ));
+                report.push_str(&format!("   调用次数: {}\n\n", hotspot.call_count));
             }
         }
         // 性能瓶颈
@@ -202,27 +197,32 @@ impl PerformanceSummary {
                     bottleneck.function,
                     bottleneck.description
                 ));
-                report.push_str(&format!(
-                    "   影响程度: {:.2}\n\n",
-                    bottleneck.impact
-                ));
+                report.push_str(&format!("   影响程度: {:.2}\n\n", bottleneck.impact));
             }
         }
         // 内存使用摘要
         report.push_str("=== 内存使用摘要 ===\n");
         report.push_str(&format!(
             "总内存使用: {:.2} MB\n",
-            self.memory_summary.total_memory as f64 / (1024.0 * 1024.0)));
+            self.memory_summary.total_memory as f64 / (1024.0 * 1024.0)
+        ));
         report.push_str(&format!(
             "峰值内存使用: {:.2} MB\n",
-            self.memory_summary.peak_memory as f64 / (1024.0 * 1024.0)));
+            self.memory_summary.peak_memory as f64 / (1024.0 * 1024.0)
+        ));
         report.push_str(&format!(
             "平均内存使用: {:.2} MB\n\n",
-            self.memory_summary.avg_memory / (1024.0 * 1024.0)));
+            self.memory_summary.avg_memory / (1024.0 * 1024.0)
+        ));
         // 优化建议
         if !self.optimization_recommendations.is_empty() {
             report.push_str("=== 优化建议 ===\n");
-            for (i, rec) in self.optimization_recommendations.iter().take(10).enumerate() {
+            for (i, rec) in self
+                .optimization_recommendations
+                .iter()
+                .take(10)
+                .enumerate()
+            {
                 report.push_str(&format!(
                     "{}. [{}] {}\n",
                     i + 1,
@@ -230,14 +230,8 @@ impl PerformanceSummary {
                     rec.title
                 ));
                 report.push_str(&format!("   {}\n", rec.description));
-                report.push_str(&format!(
-                    "   预期影响: {}\n",
-                    rec.expected_impact
-                ));
-                report.push_str(&format!(
-                    "   实施难度: {:?}\n\n",
-                    rec.difficulty
-                ));
+                report.push_str(&format!("   预期影响: {}\n", rec.expected_impact));
+                report.push_str(&format!("   实施难度: {:?}\n\n", rec.difficulty));
             }
         }
         report
@@ -252,9 +246,15 @@ impl PerformanceSummary {
         html.push_str("body { font-family: Arial, sans-serif; margin: 20px; }\n");
         html.push_str("h1, h2 { color: #333; }\n");
         html.push_str(".metric { background: #f5f5f5; padding: 10px; margin: 10px 0; }\n");
-        html.push_str(".hotspot { border-left: 4px solid #ff6b6b; padding: 10px; margin: 10px 0; }\n");
-        html.push_str(".bottleneck { border-left: 4px solid #ffa500; padding: 10px; margin: 10px 0; }\n");
-        html.push_str(".recommendation { border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0; }\n");
+        html.push_str(
+            ".hotspot { border-left: 4px solid #ff6b6b; padding: 10px; margin: 10px 0; }\n",
+        );
+        html.push_str(
+            ".bottleneck { border-left: 4px solid #ffa500; padding: 10px; margin: 10px 0; }\n",
+        );
+        html.push_str(
+            ".recommendation { border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0; }\n",
+        );
         html.push_str("</style>\n</head>\n<body>\n");
         html.push_str(&format!("<h1>性能分析报告</h1>\n"));
         html.push_str(&format!(
@@ -279,21 +279,14 @@ impl PerformanceSummary {
             for hotspot in self.hotspots.iter().take(10) {
                 html.push_str(&format!(
                     "<div class='hotspot'><strong>{}</strong> (热度: {:.2})<br>\n",
-                    hotspot.function_name,
-                    hotspot.heat_score
+                    hotspot.function_name, hotspot.heat_score
                 ));
-                html.push_str(&format!(
-                    "类型: {:?}<br>\n",
-                    hotspot.hotspot_type
-                ));
+                html.push_str(&format!("类型: {:?}<br>\n", hotspot.hotspot_type));
                 html.push_str(&format!(
                     "平均执行时间: {:?}<br>\n",
                     hotspot.time_stats.avg_time
                 ));
-                html.push_str(&format!(
-                    "调用次数: {}</div>\n\n",
-                    hotspot.call_count
-                ));
+                html.push_str(&format!("调用次数: {}</div>\n\n", hotspot.call_count));
             }
         }
         // 性能瓶颈
@@ -302,13 +295,9 @@ impl PerformanceSummary {
             for bottleneck in self.bottlenecks.iter().take(10) {
                 html.push_str(&format!(
                     "<div class='bottleneck'><strong>{}</strong><br>\n{}\n",
-                    bottleneck.function,
-                    bottleneck.description
+                    bottleneck.function, bottleneck.description
                 ));
-                html.push_str(&format!(
-                    "影响程度: {:.2}</div>\n\n",
-                    bottleneck.impact
-                ));
+                html.push_str(&format!("影响程度: {:.2}</div>\n\n", bottleneck.impact));
             }
         }
         // 优化建议
@@ -321,14 +310,8 @@ impl PerformanceSummary {
                     rec.title,
                     rec.description
                 ));
-                html.push_str(&format!(
-                    "预期影响: {}<br>\n",
-                    rec.expected_impact
-                ));
-                html.push_str(&format!(
-                    "实施难度: {:?}</div>\n\n",
-                    rec.difficulty
-                ));
+                html.push_str(&format!("预期影响: {}<br>\n", rec.expected_impact));
+                html.push_str(&format!("实施难度: {:?}</div>\n\n", rec.difficulty));
             }
         }
         html.push_str("</body>\n</html>\n");
@@ -343,8 +326,8 @@ impl Default for PerformanceSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::time::Duration;
+    use std::collections::{BTreeMap, HashMap};
+    use std::time::Duration;
     #[test]
     fn test_performance_summary_creation() {
         let summary: _ = PerformanceSummary::new();

@@ -3,11 +3,14 @@
 // v0.3.72: 添加数据缓冲区和读取支持
 
 use anyhow::Result;
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream as TokioTcpStream;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use std::thread;
 use std::time::Duration;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream as TokioTcpStream;
 
 /// TCP 连接状态
 #[derive(Debug, Clone, PartialEq)]
@@ -81,7 +84,11 @@ impl TcpConnectionHandle {
                     info.remote_port = peer_addr.port();
                     info.local_addr = local_addr.ip().to_string();
                     info.local_port = local_addr.port();
-                    info.family = if peer_addr.is_ipv4() { "IPv4".to_string() } else { "IPv6".to_string() };
+                    info.family = if peer_addr.is_ipv4() {
+                        "IPv4".to_string()
+                    } else {
+                        "IPv6".to_string()
+                    };
                     info.state = TcpConnectionState::Connected;
                 }
 
@@ -166,13 +173,11 @@ impl TcpConnectionHandle {
                     let mut stream_guard = handle.stream.lock().unwrap();
                     if let Some(ref mut stream) = *stream_guard {
                         // 使用闭包捕获结果
-                        let result = tokio::runtime::Runtime::new()
-                            .ok()
-                            .and_then(|rt| {
-                                let rt = rt;
-                                let fut = async { stream.read(&mut buffer).await };
-                                Some(rt.block_on(fut))
-                            });
+                        let result = tokio::runtime::Runtime::new().ok().and_then(|rt| {
+                            let rt = rt;
+                            let fut = async { stream.read(&mut buffer).await };
+                            Some(rt.block_on(fut))
+                        });
                         result
                     } else {
                         None
@@ -283,7 +288,10 @@ pub struct AsyncConnectResult {
 }
 
 /// 发起异步连接（返回结果接收者）
-pub fn spawn_async_connect(host: String, port: u16) -> (u64, tokio::sync::oneshot::Receiver<AsyncConnectResult>) {
+pub fn spawn_async_connect(
+    host: String,
+    port: u16,
+) -> (u64, tokio::sync::oneshot::Receiver<AsyncConnectResult>) {
     let handle = TCP_MANAGER.create_connection();
     let handle_id = handle.id;
 
@@ -312,11 +320,8 @@ pub fn sync_connect(host: &str, port: u16, timeout_secs: u64) -> Result<TcpConne
     rt.block_on(async {
         let connect_future = handle.connect(host, port);
         if timeout_secs > 0 {
-            tokio::time::timeout(
-                std::time::Duration::from_secs(timeout_secs),
-                connect_future,
-            )
-            .await??
+            tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), connect_future)
+                .await??
         } else {
             connect_future.await?
         }
@@ -422,7 +427,10 @@ fn parse_http_response(data: &[u8]) -> Result<HttpResponse> {
             return Ok(HttpResponse {
                 status_code: 200,
                 status_message: String::from("OK"),
-                headers: vec![(String::from("content-type"), String::from("application/octet-stream"))],
+                headers: vec![(
+                    String::from("content-type"),
+                    String::from("application/octet-stream"),
+                )],
                 body: data.to_vec(),
             });
         }
@@ -439,7 +447,10 @@ fn parse_http_response(data: &[u8]) -> Result<HttpResponse> {
 
     // 解析状态码
     let status_parts: Vec<&str> = status_line.splitn(3, ' ').collect();
-    let status_code = status_parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(200);
+    let status_code = status_parts
+        .get(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(200);
     let status_message = status_parts.get(2).unwrap_or(&"").to_string();
 
     // 解析 headers

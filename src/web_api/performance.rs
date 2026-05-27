@@ -1,7 +1,6 @@
 // Performance API implementation for Web standard
 // Provides performance.now(), performance.mark(), performance.measure()
 
-
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::time::Instant;

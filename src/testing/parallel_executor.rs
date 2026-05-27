@@ -44,10 +44,12 @@ impl ParallelExecutor {
         let results = Arc::new(Mutex::new(Vec::with_capacity(tests.len())));
         let results_clone: Arc<Mutex<Vec<TestResult>>> = Arc::clone(&results);
         // Execute tests in parallel using Rayon
-        tests.par_iter()
+        tests
+            .par_iter()
             .chunks(self.config.chunk_size)
             .for_each(|chunk| {
-                let chunk_results: Vec<TestResult> = chunk.into_par_iter()
+                let chunk_results: Vec<TestResult> = chunk
+                    .into_par_iter()
                     .map(|test| self.run_single_test(suite_name, test, timeout))
                     .collect();
                 // Insert results maintaining order if requested
@@ -76,9 +78,7 @@ impl ParallelExecutor {
         // Execute suites in parallel
         let all_results: Vec<Vec<TestResult>> = suites
             .par_iter()
-            .map(|suite| {
-                self.run_tests_parallel(&suite.name, &suite.tests, global_timeout)
-            })
+            .map(|suite| self.run_tests_parallel(&suite.name, &suite.tests, global_timeout))
             .collect();
         // Flatten results
         all_results.into_iter().flatten().collect()
@@ -109,10 +109,7 @@ impl ParallelExecutor {
         // Check if test exceeded timeout
         if duration > test_timeout {
             result.passed = false;
-            result.error = Some(format!(
-                "Test timeout: exceeded {:?}",
-                test_timeout
-            ));
+            result.error = Some(format!("Test timeout: exceeded {:?}", test_timeout));
         }
         result.duration = duration;
         result

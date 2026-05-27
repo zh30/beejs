@@ -4,13 +4,13 @@
 // It allows browsers and other clients to receive file change notifications
 // in real-time, enabling hot module replacement (HMR) and live reload.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::sync::broadcast;
-use tokio::net::{TcpListener, TcpStream};
-use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 use futures_util::{SinkExt, StreamExt};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::SystemTime;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::broadcast;
+use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
 
 /// WebSocket hot reload server configuration
 #[derive(Debug, Clone)]
@@ -147,7 +147,10 @@ impl WebSocketHotReloader {
 
         self.running.store(true, Ordering::SeqCst);
 
-        println!("\n\x1b[36m[beejs]\x1b[0m 🔌 WebSocket server listening on ws://{}", addr);
+        println!(
+            "\n\x1b[36m[beejs]\x1b[0m 🔌 WebSocket server listening on ws://{}",
+            addr
+        );
 
         // Accept connections loop
         while self.running.load(Ordering::SeqCst) {

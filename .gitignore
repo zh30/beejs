@@ -2,6 +2,9 @@
 target/
 Cargo.lock
 
+# Node / local package-manager output
+node_modules/
+
 # IDE
 .vscode/
 .idea/
@@ -19,8 +22,13 @@ Thumbs.db
 
 # Logs
 *.log
+test_results.txt
 
 # Temporary files
 tmp/
 temp/
 wasm_cache/
+.beejs_cache/
+.antigravitycli/
+benchmark_reports/
+docs/archive/local-artifacts/

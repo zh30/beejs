@@ -11,7 +11,7 @@ use std::time::Instant;
 use std::path::PathBuf;
 /// Enhanced CLI arguments
 #[derive(Parser, Debug)]
-#[command(name = "beejs")]
+#[command(name = "bee")]
 #[command(about = "High-performance JavaScript/TypeScript runtime - Stage 36.0")]
 pub struct EnhancedArgs {
     /// Script file to execute
@@ -56,7 +56,7 @@ pub struct EnhancedArgs {
     #[arg(long, default_value = "html")]
     format: String,
     /// Output directory for benchmark reports
-    #[arg(long, default_value = "./benchmark_reports")]
+    #[arg(long, default_value = "benchmarks/reports/generated")]
     output_dir: PathBuf,
     /// Enable zero-copy I/O optimization
     #[arg(long)]
@@ -610,7 +610,7 @@ pub async fn run_enhanced_cli() -> Result<()> {
     let args: _ = EnhancedArgs::parse();
     // Handle version flag
     if args.version {
-        println!("beejs {}", env!("CARGO_PKG_VERSION"));
+        println!("bee {}", env!("CARGO_PKG_VERSION"));
         println!("Stage 36.0 - CLI Enhancements");
         return Ok(());
     }

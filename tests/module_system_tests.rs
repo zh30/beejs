@@ -2,13 +2,12 @@
 // v0.3.0: require(), module, exports implementation
 
 use serial_test::serial;
-use std::fs;
-use tempfile::TempDir;
 
 #[test]
 #[serial]
 fn test_require_function_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof require;
     "#;
@@ -19,7 +18,8 @@ fn test_require_function_exists() {
 #[test]
 #[serial]
 fn test_module_object_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof module;
     "#;
@@ -30,7 +30,8 @@ fn test_module_object_exists() {
 #[test]
 #[serial]
 fn test_exports_object_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof exports;
     "#;
@@ -41,7 +42,8 @@ fn test_exports_object_exists() {
 #[test]
 #[serial]
 fn test_module_exports_is_exports() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         module.exports === exports;
     "#;
@@ -52,7 +54,8 @@ fn test_module_exports_is_exports() {
 #[test]
 #[serial]
 fn test_module_id() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof module.id;
     "#;
@@ -63,18 +66,24 @@ fn test_module_id() {
 #[test]
 #[serial]
 fn test_module_filename() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof module.filename;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "module.filename should be a string");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "module.filename should be a string"
+    );
 }
 
 #[test]
 #[serial]
 fn test_module_parent() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         // In simplified runtime, module.parent is set to null
         // The expression returns true if null, or the type if not null
@@ -89,43 +98,59 @@ fn test_module_parent() {
 #[test]
 #[serial]
 fn test_require_builtin_module_buffer() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const buf = require('buffer');
         typeof buf;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "require('buffer') should return an object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "require('buffer') should return an object"
+    );
 }
 
 #[test]
 #[serial]
 fn test_require_builtin_module_process() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const proc = require('process');
         typeof proc;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "require('process') should return an object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "require('process') should return an object"
+    );
 }
 
 #[test]
 #[serial]
 fn test_require_with_path_module_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const path = require('path');
         typeof path.join;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "require('path') should return path object with join function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "require('path') should return path object with join function"
+    );
 }
 
 #[test]
 #[serial]
 fn test_exports_assignment() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         exports.foo = 42;
         exports.bar = 'hello';
@@ -139,7 +164,8 @@ fn test_exports_assignment() {
 #[test]
 #[serial]
 fn test_module_exports_reassignment() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         // In simplified runtime, module.exports reassignment works
         module.exports = { value: 100 };
@@ -147,13 +173,18 @@ fn test_module_exports_reassignment() {
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     // Should return the value
-    assert_eq!(result.trim(), "100", "module.exports reassignment should work");
+    assert_eq!(
+        result.trim(),
+        "100",
+        "module.exports reassignment should work"
+    );
 }
 
 #[test]
 #[serial]
 fn test_require_not_found_error() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         try {
             require('nonexistent-module-xyz');
@@ -164,13 +195,18 @@ fn test_require_not_found_error() {
         }
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "require of non-existent module should throw error");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "require of non-existent module should throw error"
+    );
 }
 
 #[test]
 #[serial]
 fn test_require_caches_module() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         // In simplified runtime, each require creates a new module object
         // But both should work and have Buffer function
@@ -180,46 +216,66 @@ fn test_require_caches_module() {
         typeof m1.Buffer === 'function' && typeof m2.Buffer === 'function';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "require should return modules with Buffer function");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "require should return modules with Buffer function"
+    );
 }
 
 #[test]
 #[serial]
 fn test_global_this_has_require() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof globalThis.require;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "globalThis.require should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "globalThis.require should be a function"
+    );
 }
 
 #[test]
 #[serial]
 fn test_global_this_has_module() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof globalThis.module;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "globalThis.module should be an object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "globalThis.module should be an object"
+    );
 }
 
 #[test]
 #[serial]
 fn test_global_this_has_exports() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof globalThis.exports;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "globalThis.exports should be an object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "globalThis.exports should be an object"
+    );
 }
 
 #[test]
 #[serial]
 fn test_buffer_construction() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const buf = Buffer.from('test');
         buf.length;
@@ -231,7 +287,8 @@ fn test_buffer_construction() {
 #[test]
 #[serial]
 fn test_process_env_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const proc = require('process');
         typeof proc.env;
@@ -244,7 +301,8 @@ fn test_process_env_exists() {
 #[test]
 #[serial]
 fn test_dirname_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof __dirname;
     "#;
@@ -255,32 +313,43 @@ fn test_dirname_exists() {
 #[test]
 #[serial]
 fn test_dirname_value() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof __dirname === 'string' && __dirname.length > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "__dirname should be a non-empty string");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "__dirname should be a non-empty string"
+    );
 }
 
 #[test]
 #[serial]
 fn test_dirname_in_path_module() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const path = require('path');
         const dirname = path.dirname(__filename || '/test/file.js');
         typeof dirname;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "path.dirname should return a string");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "path.dirname should return a string"
+    );
 }
 
 // v0.3.2: Test __filename global variable
 #[test]
 #[serial]
 fn test_filename_exists() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof __filename;
     "#;
@@ -291,29 +360,40 @@ fn test_filename_exists() {
 #[test]
 #[serial]
 fn test_filename_value() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof __filename === 'string' && __filename.length > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "__filename should be a non-empty string");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "__filename should be a non-empty string"
+    );
 }
 
 #[test]
 #[serial]
 fn test_filename_contains_extension() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         __filename.includes('.js') || __filename.includes('.ts') || __filename.includes('.mjs');
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "__filename should contain a file extension");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "__filename should contain a file extension"
+    );
 }
 
 #[test]
 #[serial]
 fn test_dirname_and_filename_relationship() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const path = require('path');
         const computed = path.dirname(__filename || '/test/file.js');
@@ -322,27 +402,41 @@ fn test_dirname_and_filename_relationship() {
         (__filename || '/test/file.js').endsWith(basename);
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "__filename should contain the basename");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "__filename should contain the basename"
+    );
 }
 
 #[test]
 #[serial]
 fn test_global_this_has_dirname() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof globalThis.__dirname;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "globalThis.__dirname should be a string");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "globalThis.__dirname should be a string"
+    );
 }
 
 #[test]
 #[serial]
 fn test_global_this_has_filename() {
-    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         typeof globalThis.__filename;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "string", "globalThis.__filename should be a string");
+    assert_eq!(
+        result.trim(),
+        "string",
+        "globalThis.__filename should be a string"
+    );
 }

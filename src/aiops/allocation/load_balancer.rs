@@ -6,8 +6,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
-use tokio::time::{Duration, Instant};
 use std::time::SystemTime;
+use tokio::time::{Duration, Instant};
 /// 请求结构
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
@@ -296,7 +296,8 @@ impl LoadBalancer {
             };
         }
         // 根据策略选择后端
-        let selected_backend: _ = self.select_backend_by_strategy(&healthy_backends, request, &strategy);
+        let selected_backend: _ =
+            self.select_backend_by_strategy(&healthy_backends, request, &strategy);
         // 计算负载分布
         let distribution: _ = self.calculate_load_distribution(&healthy_backends);
         // 计算整体负载分数
@@ -327,21 +328,14 @@ impl LoadBalancer {
     }
     /// 获取负载分布信息
     pub async fn get_load_distribution(&self) -> Vec<LoadDistribution> {
-        let healthy_backends: Vec<&Backend> = self
-            .backends
-            .values()
-            .filter(|b| b.healthy)
-            .collect();
+        let healthy_backends: Vec<&Backend> =
+            self.backends.values().filter(|b| b.healthy).collect();
         self.calculate_load_distribution(&healthy_backends)
     }
     /// 获取负载均衡统计信息
     pub async fn get_statistics(&self) -> LoadBalancerStatistics {
         let healthy_count: _ = self.backends.values().filter(|b| b.healthy).count();
-        let total_load: f64 = self
-            .backends
-            .values()
-            .map(|b| b.current_load)
-            .sum();
+        let total_load: f64 = self.backends.values().map(|b| b.current_load).sum();
         LoadBalancerStatistics {
             total_backends: self.backends.len(),
             healthy_backends: healthy_count,
@@ -398,25 +392,15 @@ impl LoadBalancer {
     ) -> Option<&Backend> {
         match strategy {
             BalanceStrategy::RoundRobin => self.round_robin_select(backends),
-            BalanceStrategy::WeightedRoundRobin => {
-                self.weighted_round_robin_select(backends)
-            }
-            BalanceStrategy::LeastConnections => {
-                self.least_connections_select(backends)
-            }
-            BalanceStrategy::FastestResponse => {
-                self.fastest_response_select(backends)
-            }
+            BalanceStrategy::WeightedRoundRobin => self.weighted_round_robin_select(backends),
+            BalanceStrategy::LeastConnections => self.least_connections_select(backends),
+            BalanceStrategy::FastestResponse => self.fastest_response_select(backends),
             BalanceStrategy::IpHash => {
                 // IP 哈希选择逻辑 (简化实现)
                 Some(backends[0])
             }
-            BalanceStrategy::IntelligentAI => {
-                self.ai_intelligent_select(backends, request)
-            }
-            BalanceStrategy::Adaptive => {
-                self.adaptive_select(backends, request)
-            }
+            BalanceStrategy::IntelligentAI => self.ai_intelligent_select(backends, request),
+            BalanceStrategy::Adaptive => self.adaptive_select(backends, request),
         }
     }
     /// 轮询选择
@@ -433,7 +417,8 @@ impl LoadBalancer {
         let index: _ = (std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
-            .as_secs() as usize) % backends.len();
+            .as_secs() as usize)
+            % backends.len();
         Some(backends[index])
     }
     /// 最少连接选择
@@ -476,10 +461,7 @@ impl LoadBalancer {
             .unwrap_or(0.0);
         let least_conn: _ = self
             .least_connections_select(backends)
-            .map(|b| {
-                100.0
-                    - (b.active_connections as f64 / b.max_connections as f64) * 100.0
-            })
+            .map(|b| 100.0 - (b.active_connections as f64 / b.max_connections as f64) * 100.0)
             .unwrap_or(0.0);
         let fastest_resp: _ = self
             .fastest_response_select(backends)
@@ -493,7 +475,9 @@ impl LoadBalancer {
             .max_by(|a, b| {
                 let score_a: _ = self.calculate_backend_score(a, request);
                 let score_b: _ = self.calculate_backend_score(b, request);
-                score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
+                score_a
+                    .partial_cmp(&score_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .copied()
     }
@@ -502,15 +486,16 @@ impl LoadBalancer {
         // 负载分数 (越低越好)
         let load_score: _ = 100.0 - backend.current_load;
         // 响应时间分数 (越低越好)
-        let response_score: _ = 100.0 - (backend.response_time_ms / self.config.max_response_time_ms) * 100.0;
+        let response_score: _ =
+            100.0 - (backend.response_time_ms / self.config.max_response_time_ms) * 100.0;
         // 错误率分数 (越低越好)
         let error_score: _ = 100.0 - (backend.error_rate / self.config.max_error_rate) * 100.0;
         // 资源利用率分数
-        let resource_score: _ = 100.0
-            - ((backend.cpu_utilization + backend.memory_utilization) / 2.0);
+        let resource_score: _ =
+            100.0 - ((backend.cpu_utilization + backend.memory_utilization) / 2.0);
         // 连接数分数 (连接越少越好)
-        let connection_score: _ = 100.0
-            - (backend.active_connections as f64 / backend.max_connections as f64) * 100.0;
+        let connection_score: _ =
+            100.0 - (backend.active_connections as f64 / backend.max_connections as f64) * 100.0;
         // 综合分数 (加权平均)
         let weighted_score: _ = load_score * 0.25
             + response_score * 0.25
@@ -545,7 +530,8 @@ impl LoadBalancer {
             .map(|backend| {
                 let allocation_percentage: _ = 100.0 / total_backends;
                 let load_score: _ = 100.0 - backend.current_load;
-                let predicted_response_time: _ = backend.response_time_ms * (1.0 + backend.current_load / 100.0);
+                let predicted_response_time: _ =
+                    backend.response_time_ms * (1.0 + backend.current_load / 100.0);
                 LoadDistribution {
                     backend_id: backend.id.clone(),
                     allocated_requests: backend.active_connections,
@@ -561,10 +547,7 @@ impl LoadBalancer {
         if backends.is_empty() {
             return 0.0;
         }
-        let total_score: f64 = backends
-            .iter()
-            .map(|b| 100.0 - b.current_load)
-            .sum();
+        let total_score: f64 = backends.iter().map(|b| 100.0 - b.current_load).sum();
         total_score / backends.len() as f64
     }
     /// 计算资源利用率
@@ -577,15 +560,9 @@ impl LoadBalancer {
         (total_cpu + total_memory) / (2.0 * backends.len() as f64)
     }
     /// 预测响应时间改进
-    fn predict_response_time_improvement(
-        &self,
-        backends: &[&Backend],
-    ) -> f64 {
-        let avg_response_time: f64 = backends
-            .iter()
-            .map(|b| b.response_time_ms)
-            .sum::<f64>()
-            / backends.len() as f64;
+    fn predict_response_time_improvement(&self, backends: &[&Backend]) -> f64 {
+        let avg_response_time: f64 =
+            backends.iter().map(|b| b.response_time_ms).sum::<f64>() / backends.len() as f64;
         // 基于负载分布优化后的预期改进
         avg_response_time * 0.15 // 预期改进 15%
     }
@@ -632,11 +609,7 @@ impl LoadBalancer {
             pattern_type,
             peak_hours: vec![9, 14, 20], // 模拟峰值时间
             average_load: avg_load,
-            peak_load: recent_loads
-                .iter()
-                .max()
-                .copied()
-                .unwrap_or(avg_load),
+            peak_load: recent_loads.iter().max().copied().unwrap_or(avg_load),
             variability_coefficient,
         })
     }
@@ -662,8 +635,8 @@ pub struct LoadBalancerStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, Instant};
-use std::sync::atomic::Ordering;
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_add_backend() {
         let mut lb = LoadBalancer::new_with_defaults();
@@ -715,7 +688,9 @@ use std::sync::atomic::Ordering;
             created_at: Instant::now(),
             estimated_processing_time_ms: 100,
         };
-        let result: _ = lb.select_backend(&request, BalanceStrategy::RoundRobin).await;
+        let result: _ = lb
+            .select_backend(&request, BalanceStrategy::RoundRobin)
+            .await;
         assert!(result.success);
         assert!(result.selected_backend.is_some());
     }

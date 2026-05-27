@@ -3,7 +3,6 @@
 // 提供多维张量操作、自动微分优化和分布式张量计算能力
 // 专为 AI 工作负载设计，支持各种张量运算和梯度计算
 
-
 /// 张量形状
 #[derive(Debug, Clone, PartialEq)]
 pub struct TensorShape {
@@ -253,7 +252,10 @@ impl TensorOptimizer {
             }
         }
         self.operation_count += 1;
-        Tensor::new(TensorShape::new(vec![rows, cols]), TensorData::F32(result_data))
+        Tensor::new(
+            TensorShape::new(vec![rows, cols]),
+            TensorData::F32(result_data),
+        )
     }
     /// 计算梯度
     pub fn compute_gradients(&mut self, loss: &Tensor) -> Gradients {
@@ -262,7 +264,10 @@ impl TensorOptimizer {
         match loss.data() {
             TensorData::F32(data) => {
                 let grad_data: Vec<f32> = data.iter().map(|&x| 1.0).collect();
-                gradients.add("loss".to_string(), Tensor::new(loss.shape().clone(), TensorData::F32(grad_data)));
+                gradients.add(
+                    "loss".to_string(),
+                    Tensor::new(loss.shape().clone(), TensorData::F32(grad_data)),
+                );
             }
             _ => {
                 // 其他数据类型的梯度计算
@@ -289,24 +294,43 @@ impl TensorOptimizer {
             }
         }
         self.distributed_count += shards.len() as u64;
-        Tensor::new(TensorShape::new(vec![rows, cols]), TensorData::F32(combined_data))
+        Tensor::new(
+            TensorShape::new(vec![rows, cols]),
+            TensorData::F32(combined_data),
+        )
     }
     /// 张量加法
     pub fn tensor_add(&mut self, a: &Tensor, b: &Tensor) -> Tensor {
         assert_eq!(a.shape(), b.shape());
         let result_data: _ = match (&a.data, &b.data) {
-            (TensorData::F32(a_data), TensorData::F32(b_data)) => {
-                TensorData::F32(a_data.iter().zip(b_data.iter()).map(|(x, y)| x + y).collect())
-            }
-            (TensorData::F64(a_data), TensorData::F64(b_data)) => {
-                TensorData::F64(a_data.iter().zip(b_data.iter()).map(|(x, y)| x + y).collect())
-            }
-            (TensorData::I32(a_data), TensorData::I32(b_data)) => {
-                TensorData::I32(a_data.iter().zip(b_data.iter()).map(|(x, y)| x + y).collect())
-            }
-            (TensorData::I64(a_data), TensorData::I64(b_data)) => {
-                TensorData::I64(a_data.iter().zip(b_data.iter()).map(|(x, y)| x + y).collect())
-            }
+            (TensorData::F32(a_data), TensorData::F32(b_data)) => TensorData::F32(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x + y)
+                    .collect(),
+            ),
+            (TensorData::F64(a_data), TensorData::F64(b_data)) => TensorData::F64(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x + y)
+                    .collect(),
+            ),
+            (TensorData::I32(a_data), TensorData::I32(b_data)) => TensorData::I32(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x + y)
+                    .collect(),
+            ),
+            (TensorData::I64(a_data), TensorData::I64(b_data)) => TensorData::I64(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x + y)
+                    .collect(),
+            ),
             _ => panic!("不支持的数据类型组合"),
         };
         self.operation_count += 1;
@@ -316,18 +340,34 @@ impl TensorOptimizer {
     pub fn tensor_sub(&mut self, a: &Tensor, b: &Tensor) -> Tensor {
         assert_eq!(a.shape(), b.shape());
         let result_data: _ = match (&a.data, &b.data) {
-            (TensorData::F32(a_data), TensorData::F32(b_data)) => {
-                TensorData::F32(a_data.iter().zip(b_data.iter()).map(|(x, y)| x - y).collect())
-            }
-            (TensorData::F64(a_data), TensorData::F64(b_data)) => {
-                TensorData::F64(a_data.iter().zip(b_data.iter()).map(|(x, y)| x - y).collect())
-            }
-            (TensorData::I32(a_data), TensorData::I32(b_data)) => {
-                TensorData::I32(a_data.iter().zip(b_data.iter()).map(|(x, y)| x - y).collect())
-            }
-            (TensorData::I64(a_data), TensorData::I64(b_data)) => {
-                TensorData::I64(a_data.iter().zip(b_data.iter()).map(|(x, y)| x - y).collect())
-            }
+            (TensorData::F32(a_data), TensorData::F32(b_data)) => TensorData::F32(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x - y)
+                    .collect(),
+            ),
+            (TensorData::F64(a_data), TensorData::F64(b_data)) => TensorData::F64(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x - y)
+                    .collect(),
+            ),
+            (TensorData::I32(a_data), TensorData::I32(b_data)) => TensorData::I32(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x - y)
+                    .collect(),
+            ),
+            (TensorData::I64(a_data), TensorData::I64(b_data)) => TensorData::I64(
+                a_data
+                    .iter()
+                    .zip(b_data.iter())
+                    .map(|(x, y)| x - y)
+                    .collect(),
+            ),
             _ => panic!("不支持的数据类型组合"),
         };
         self.operation_count += 1;
@@ -337,9 +377,15 @@ impl TensorOptimizer {
     pub fn tensor_scalar_mul(&mut self, tensor: &Tensor, scalar: f32) -> Tensor {
         let result_data: _ = match &tensor.data {
             TensorData::F32(data) => TensorData::F32(data.iter().map(|&x| x * scalar).collect()),
-            TensorData::F64(data) => TensorData::F64(data.iter().map(|&x| (x as f32 * scalar) as f64).collect()),
-            TensorData::I32(data) => TensorData::I32(data.iter().map(|&x| (x as f32 * scalar) as i32).collect()),
-            TensorData::I64(data) => TensorData::I64(data.iter().map(|&x| (x as f32 * scalar) as i64).collect()),
+            TensorData::F64(data) => {
+                TensorData::F64(data.iter().map(|&x| (x as f32 * scalar) as f64).collect())
+            }
+            TensorData::I32(data) => {
+                TensorData::I32(data.iter().map(|&x| (x as f32 * scalar) as i32).collect())
+            }
+            TensorData::I64(data) => {
+                TensorData::I64(data.iter().map(|&x| (x as f32 * scalar) as i64).collect())
+            }
         };
         self.operation_count += 1;
         Tensor::new(tensor.shape().clone(), result_data)

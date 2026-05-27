@@ -81,7 +81,10 @@ impl AiLlmEngine {
                 num_layers: 32,
                 hidden_size: 4096,
             };
-            self.memory_pool.lock().unwrap().push(kv_cache.key_cache[0].clone());
+            self.memory_pool
+                .lock()
+                .unwrap()
+                .push(kv_cache.key_cache[0].clone());
         }
         Ok(())
     }
@@ -169,11 +172,7 @@ impl AiLlmEngine {
         })
     }
     /// 前向传播
-    fn forward_pass(
-        &self,
-        tokens: &[u32],
-        kv_cache: &mut KvCache,
-    ) -> Result<u32, String> {
+    fn forward_pass(&self, tokens: &[u32], kv_cache: &mut KvCache) -> Result<u32, String> {
         // 更新序列长度
         kv_cache.sequence_length = tokens.len();
         // 模拟 Transformer 层处理
@@ -193,11 +192,7 @@ impl AiLlmEngine {
         Ok(next_token as u32)
     }
     /// 更新缓存
-    fn update_cache(
-        &self,
-        cache_key: &str,
-        tokens: &[u32],
-    ) -> Result<(), String> {
+    fn update_cache(&self, cache_key: &str, tokens: &[u32]) -> Result<(), String> {
         let kv_cache: _ = self.allocate_kv_cache()?;
         let entry: _ = TokenCacheEntry {
             tokens: tokens.to_vec(),
@@ -273,9 +268,7 @@ fn tokens_to_string(tokens: &[u32]) -> String {
 /// 字符串到 token 的转换
 fn string_to_tokens(s: &str) -> Vec<u32> {
     s.split_whitespace()
-        .map(|word| {
-            (word.bytes().map(|b| b as u32).sum::<u32>() % 50000) as u32
-        })
+        .map(|word| (word.bytes().map(|b| b as u32).sum::<u32>() % 50000) as u32)
         .collect()
 }
 #[cfg(test)]

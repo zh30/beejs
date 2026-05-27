@@ -173,8 +173,8 @@ describe('Beejs CI/CD Integrations', () => {
 
             // Check for Beejs installation commands
             expect(content).to.contain('curl');
-            expect(content).to.contain('beejs-linux-x64.tar.gz');
-            expect(content).to.contain('beejs --version');
+            expect(content).to.contain('bee-linux-x64.tar.gz');
+            expect(content).to.contain('bee --version');
         });
     });
 
@@ -218,9 +218,9 @@ describe('Beejs CI/CD Integrations', () => {
 
             // Check for Beejs installation commands
             expect(content).to.contain('beejs');
-            expect(content).to.contain('beejs --version');
-            expect(content).to.contain('beejs test');
-            expect(content).to.contain('beejs bundle');
+            expect(content).to.contain('bee --version');
+            expect(content).to.contain('bee test');
+            expect(content).to.contain('bee bundle');
         });
 
         test('should validate environment variables', async () => {

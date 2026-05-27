@@ -36,11 +36,7 @@ impl TestTimeout {
         Self::new(TimeoutConfig::default())
     }
     /// Execute a function with timeout
-    pub fn run_with_timeout<F, T>(
-        &self,
-        timeout: Duration,
-        func: F,
-    ) -> Result<T, TimeoutError>
+    pub fn run_with_timeout<F, T>(&self, timeout: Duration, func: F) -> Result<T, TimeoutError>
     where
         F: FnOnce() -> T,
         F: Send + 'static,
@@ -53,9 +49,7 @@ impl TestTimeout {
             let result: _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(func));
             match result {
                 Ok(value) => sender.send(Ok(value)).unwrap(),
-                Err(_) => sender
-                    .send(Err(TimeoutError::Panicked))
-                    .unwrap(),
+                Err(_) => sender.send(Err(TimeoutError::Panicked)).unwrap(),
             }
         });
         // Wait for completion or timeout
@@ -112,7 +106,7 @@ impl TestTimeout {
 #[derive(Debug, Clone)]
 pub enum TimeoutError {
     /// Test execution exceeded timeout
-   Exceeded(Duration),
+    Exceeded(Duration),
     /// Test panicked
     Panicked,
     /// Invalid timeout value
@@ -146,7 +140,7 @@ impl TimeoutContext {
         TimeoutContext {
             start_time: Instant::now(),
             timeout,
-            active_tests: Arc::new(Mutex::new(Vec::new()))
+            active_tests: Arc::new(Mutex::new(Vec::new())),
         }
     }
     /// Register a test start

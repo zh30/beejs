@@ -1,13 +1,13 @@
 // 智能调度器
 // AI 驱动的任务调度系统，实现动态负载均衡和预测性资源分配
 
-
-
+use crate::ai::ai_performance_engine::{
+    AiPerformanceEngine, AiPerformanceEngineConfig, PerformanceMetrics,
+};
 use serde::{Deserialize, Serialize};
-use crate::ai::ai_performance_engine::{PerformanceMetrics, AiPerformanceEngine, AiPerformanceEngineConfig};
-use std::collections::{VecDeque};
-use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
 use std::sync::RwLock;
+use std::sync::{Arc, Mutex};
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -180,10 +180,7 @@ impl Default for SchedulerStats {
 }
 impl IntelligentScheduler {
     /// 创建新的智能调度器
-    pub fn new(
-        config: IntelligentSchedulerConfig,
-        ai_config: AiPerformanceEngineConfig,
-    ) -> Self {
+    pub fn new(config: IntelligentSchedulerConfig, ai_config: AiPerformanceEngineConfig) -> Self {
         let (task_completion_tx, task_completion_rx) = mpsc::unbounded_channel();
         // 初始化工作线程
         let mut workers = Vec::with_capacity(config.worker_count);
@@ -201,9 +198,13 @@ impl IntelligentScheduler {
         Self {
             config: config.clone(),
             ai_engine: Arc::new(AiPerformanceEngine::new(ai_config)),
-            task_queue: Arc::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length))),
+            task_queue: Arc::new(RwLock::new(VecDeque::with_capacity(
+                config.max_queue_length,
+            ))),
             workers: Arc::new(RwLock::new(workers)),
-            decision_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
+            decision_history: Arc::new(RwLock::new(VecDeque::with_capacity(
+                config.prediction_window,
+            ))),
             task_completion_tx,
             task_completion_rx: Arc::new(Mutex::new(task_completion_rx)),
             stats: Arc::new(Mutex::new(SchedulerStats::default())),
@@ -229,24 +230,32 @@ impl IntelligentScheduler {
             return;
         }
         // 使用 AI 预测最佳调度策略
-        let ai_prediction: _ = self.ai_engine.predict_performance().await.unwrap_or_else(|_| {
-            // 如果预测失败，使用默认预测
-            crate::ai::ai_performance_engine::PerformancePrediction {
-                predicted_execution_time: 100.0,
-                predicted_memory: 100.0,
-                predicted_throughput: 1000.0,
-                confidence: 0.5,
-                optimization_suggestions: Vec::new(),
-            }
-        });
+        let ai_prediction: _ = self
+            .ai_engine
+            .predict_performance()
+            .await
+            .unwrap_or_else(|_| {
+                // 如果预测失败，使用默认预测
+                crate::ai::ai_performance_engine::PerformancePrediction {
+                    predicted_execution_time: 100.0,
+                    predicted_memory: 100.0,
+                    predicted_throughput: 1000.0,
+                    confidence: 0.5,
+                    optimization_suggestions: Vec::new(),
+                }
+            });
         // 按优先级排序队列
         let mut tasks: Vec<Task> = queue.drain(..).collect();
         tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
         // 贪心调度算法
         for task in tasks {
-            if let Some(worker_idx) = self.select_best_worker(&workers, &task, &ai_prediction).await {
+            if let Some(worker_idx) = self
+                .select_best_worker(&workers, &task, &ai_prediction)
+                .await
+            {
                 // 分配任务
-                let decision: _ = self.create_scheduling_decision(&task, worker_idx, &workers[worker_idx]);
+                let decision: _ =
+                    self.create_scheduling_decision(&task, worker_idx, &workers[worker_idx]);
                 // 更新工作线程状态
                 workers[worker_idx].current_load += self.calculate_task_load(&task);
                 workers[worker_idx].active_tasks += 1;
@@ -379,7 +388,8 @@ impl IntelligentScheduler {
     pub async fn auto_scaling(&self) {
         let workers: _ = self.workers.read().await;
         let queue: _ = self.task_queue.read().await;
-        let avg_load: f64 = workers.iter().map(|w| w.current_load).sum::<f64>() / workers.len() as f64;
+        let avg_load: f64 =
+            workers.iter().map(|w| w.current_load).sum::<f64>() / workers.len() as f64;
         let queue_ratio: _ = queue.len() as f64 / self.config.max_queue_length as f64;
         drop(workers);
         drop(queue);
@@ -481,7 +491,7 @@ impl IntelligentScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, Instant};
+    use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
         let config = IntelligentSchedulerConfig::default();

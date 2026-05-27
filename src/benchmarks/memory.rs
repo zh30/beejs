@@ -7,13 +7,12 @@
 // - 内存泄漏检测
 // - 垃圾回收性能测试
 
-
 use std::sync::{Arc, Mutex};
 
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use tokio::task;
-use std::collections::{HashMap, BTreeMap};
+use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
+use tokio::task;
 /// 内存使用基准测试套件
 pub struct MemoryBenchmark;
 impl MemoryBenchmark {
@@ -77,21 +76,17 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark_with_memory(
-            "memory_fragmentation",
-            MetricType::MemoryUsage,
-            || {
-                // 模拟内存碎片化
-                let mut allocations = Vec::new();
-                for i in 0..1000 {
-                    let size: _ = (i % 10 + 1) * 1024;
-                    allocations.push(vec![0u8; size]);
-                }
-                // 释放部分内存
-                allocations.drain(0..500);
-                allocations
-            },
-        )
+        framework.run_benchmark_with_memory("memory_fragmentation", MetricType::MemoryUsage, || {
+            // 模拟内存碎片化
+            let mut allocations = Vec::new();
+            for i in 0..1000 {
+                let size: _ = (i % 10 + 1) * 1024;
+                allocations.push(vec![0u8; size]);
+            }
+            // 释放部分内存
+            allocations.drain(0..500);
+            allocations
+        })
     }
     /// 内存池性能测试
     pub fn memory_pool_benchmark(&self) -> BenchmarkResult {
@@ -103,19 +98,15 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark_with_memory(
-            "memory_pool",
-            MetricType::MemoryUsage,
-            || {
-                // 模拟内存池使用
-                let pool: _ = Arc::new(Mutex::new(Vec::<u8>::new()));
-                for _ in 0..100 {
-                    let _chunk: _ = pool.lock().unwrap();
-                    // 保持锁一小段时间来模拟实际使用
-                    std::hint::black_box(_chunk);
-                }
-            },
-        )
+        framework.run_benchmark_with_memory("memory_pool", MetricType::MemoryUsage, || {
+            // 模拟内存池使用
+            let pool: _ = Arc::new(Mutex::new(Vec::<u8>::new()));
+            for _ in 0..100 {
+                let _chunk: _ = pool.lock().unwrap();
+                // 保持锁一小段时间来模拟实际使用
+                std::hint::black_box(_chunk);
+            }
+        })
     }
     /// 字符串内存使用测试
     pub fn string_memory_benchmark(&self) -> BenchmarkResult {
@@ -127,18 +118,14 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark_with_memory(
-            "string_memory",
-            MetricType::MemoryUsage,
-            || {
-                // 模拟字符串内存使用
-                let mut strings = Vec::new();
-                for i in 0..1000 {
-                    strings.push(format!("This is a long string with number {}", i));
-                }
-                strings
-            },
-        )
+        framework.run_benchmark_with_memory("string_memory", MetricType::MemoryUsage, || {
+            // 模拟字符串内存使用
+            let mut strings = Vec::new();
+            for i in 0..1000 {
+                strings.push(format!("This is a long string with number {}", i));
+            }
+            strings
+        })
     }
     /// 递归数据结构内存测试
     pub fn recursive_data_structure_benchmark(&self) -> BenchmarkResult {
@@ -160,8 +147,14 @@ impl MemoryBenchmark {
                     tree.push(Node {
                         value: i,
                         children: vec![
-                            Node { value: i * 2, children: vec![] },
-                            Node { value: i * 2 + 1, children: vec![] },
+                            Node {
+                                value: i * 2,
+                                children: vec![],
+                            },
+                            Node {
+                                value: i * 2 + 1,
+                                children: vec![],
+                            },
                         ],
                     });
                 }
@@ -179,20 +172,16 @@ impl MemoryBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark_with_memory(
-            "async_memory",
-            MetricType::MemoryUsage,
-            || {
-                // 模拟异步内存使用
-                task::block_in_place(|| {
-                    let mut data = Vec::new();
-                    for i in 0..1000 {
-                        data.push(i * 2);
-                    }
-                    data
-                })
-            },
-        )
+        framework.run_benchmark_with_memory("async_memory", MetricType::MemoryUsage, || {
+            // 模拟异步内存使用
+            task::block_in_place(|| {
+                let mut data = Vec::new();
+                for i in 0..1000 {
+                    data.push(i * 2);
+                }
+                data
+            })
+        })
     }
     /// 内存泄漏检测测试
     pub fn memory_leak_detection_benchmark(&self) -> BenchmarkResult {
@@ -251,14 +240,8 @@ impl MemoryBenchmark {
         } else {
             0
         };
-        report.push_str(&format!(
-            "Total Memory Usage: {} bytes\n",
-            total_memory
-        ));
-        report.push_str(&format!(
-            "Average Memory Usage: {} bytes\n",
-            avg_memory
-        ));
+        report.push_str(&format!("Total Memory Usage: {} bytes\n", total_memory));
+        report.push_str(&format!("Average Memory Usage: {} bytes\n", avg_memory));
         report
     }
 }
@@ -292,7 +275,8 @@ impl MemoryOptimizationSuggestions {
                     "allocation_performance" => {
                         if stats.heap_allocated > 1000000 {
                             suggestions.push(
-                                "High heap allocation detected. Consider using object pooling.".to_string()
+                                "High heap allocation detected. Consider using object pooling."
+                                    .to_string(),
                             );
                         }
                     }

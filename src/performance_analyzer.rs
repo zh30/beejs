@@ -69,17 +69,19 @@ impl PerformanceAnalyzer {
         let total_executions: _ = self.metrics.len();
         let total_time: f64 = self.metrics.iter().map(|m| m.execution_time_ms).sum();
         let average_time_ms: _ = total_time / total_executions as f64;
-        let min_time_ms: _ = self.metrics.iter()
+        let min_time_ms: _ = self
+            .metrics
+            .iter()
             .map(|m| m.execution_time_ms)
             .fold(f64::INFINITY, f64::min);
-        let max_time_ms: _ = self.metrics.iter()
+        let max_time_ms: _ = self
+            .metrics
+            .iter()
             .map(|m| m.execution_time_ms)
             .fold(f64::NEG_INFINITY, f64::max);
         let cache_hits: _ = self.metrics.iter().filter(|m| m.cache_hit).count();
         let cache_hit_rate: _ = cache_hits as f64 / total_executions as f64 * 100.0;
-        let total_code_executed: usize = self.metrics.iter()
-            .map(|m| m.code_length)
-            .sum();
+        let total_code_executed: usize = self.metrics.iter().map(|m| m.code_length).sum();
         PerformanceReport {
             total_executions,
             average_time_ms,

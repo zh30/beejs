@@ -128,7 +128,10 @@ impl<T> ExtendedMatcher<T> {
         ExtendedMatcher::Throw(expected_message)
     }
     /// toHaveProperty - checks object property existence (optional expected value)
-    pub fn to_have_property(property_name: String, expected_value: Option<serde_json::Value>) -> Self {
+    pub fn to_have_property(
+        property_name: String,
+        expected_value: Option<serde_json::Value>,
+    ) -> Self {
         ExtendedMatcher::HaveProperty(property_name, expected_value)
     }
     /// toBeInstanceOf - checks object type
@@ -162,8 +165,8 @@ where
             ExtendedMatcher::Equal(expected) => value == expected,
             ExtendedMatcher::DeepEqual(expected) => {
                 // Simple deep equality for now
-                serde_json::to_string(value).unwrap_or_default() ==
-                    serde_json::to_string(expected).unwrap_or_default()
+                serde_json::to_string(value).unwrap_or_default()
+                    == serde_json::to_string(expected).unwrap_or_default()
             }
             ExtendedMatcher::Contains(substring) => {
                 if let Ok(s) = serde_json::to_string(value) {
@@ -194,7 +197,7 @@ where
                 // Compare as f64 for numbers
                 if let (Some(a), Some(b)) = (
                     serde_json::to_value(value).ok().and_then(|v| v.as_f64()),
-                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64())
+                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64()),
                 ) {
                     a > b
                 } else {
@@ -206,7 +209,7 @@ where
                 // Compare as f64 for numbers
                 if let (Some(a), Some(b)) = (
                     serde_json::to_value(value).ok().and_then(|v| v.as_f64()),
-                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64())
+                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64()),
                 ) {
                     a < b
                 } else {
@@ -338,7 +341,9 @@ where
                 if let Ok(json) = serde_json::to_value(value) {
                     match json {
                         serde_json::Value::String(_) => type_name == "String",
-                        serde_json::Value::Number(_) => type_name == "Number" || type_name == "Number",
+                        serde_json::Value::Number(_) => {
+                            type_name == "Number" || type_name == "Number"
+                        }
                         serde_json::Value::Bool(_) => type_name == "Boolean",
                         serde_json::Value::Array(_) => type_name == "Array",
                         serde_json::Value::Object(_) => type_name == "Object",
@@ -352,7 +357,10 @@ where
                 // toMatchObject - partial object matching with nested support
                 fn matches_partial(value: &serde_json::Value, pattern: &serde_json::Value) -> bool {
                     match (value, pattern) {
-                        (serde_json::Value::Object(value_obj), serde_json::Value::Object(pattern_obj)) => {
+                        (
+                            serde_json::Value::Object(value_obj),
+                            serde_json::Value::Object(pattern_obj),
+                        ) => {
                             // Check if all pattern properties exist in value with matching values
                             for (key, expected) in pattern_obj {
                                 if let Some(actual) = value_obj.get(key) {
@@ -422,7 +430,7 @@ where
                 // Compare as f64 for numbers
                 if let (Some(a), Some(b)) = (
                     serde_json::to_value(value).ok().and_then(|v| v.as_f64()),
-                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64())
+                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64()),
                 ) {
                     a >= b
                 } else {
@@ -434,7 +442,7 @@ where
                 // Compare as f64 for numbers
                 if let (Some(a), Some(b)) = (
                     serde_json::to_value(value).ok().and_then(|v| v.as_f64()),
-                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64())
+                    serde_json::to_value(expected).ok().and_then(|v| v.as_f64()),
                 ) {
                     a <= b
                 } else {
@@ -482,14 +490,20 @@ where
             }
             ExtendedMatcher::Throw(expected_message) => {
                 if let Some(msg) = expected_message {
-                    format!("Expected {:?} to throw an error containing '{}'", value, msg)
+                    format!(
+                        "Expected {:?} to throw an error containing '{}'",
+                        value, msg
+                    )
                 } else {
                     format!("Expected {:?} to throw an error", value)
                 }
             }
             ExtendedMatcher::HaveProperty(property_name, expected_value) => {
                 if let Some(expected) = expected_value {
-                    format!("Expected {:?} to have property '{}' with value {:?}", value, property_name, expected)
+                    format!(
+                        "Expected {:?} to have property '{}' with value {:?}",
+                        value, property_name, expected
+                    )
                 } else {
                     format!("Expected {:?} to have property '{}'", value, property_name)
                 }
@@ -504,10 +518,16 @@ where
                 format!("Expected {:?} to strictly equal {:?}", value, expected)
             }
             ExtendedMatcher::GreaterThanOrEqual(expected) => {
-                format!("Expected {:?} to be greater than or equal to {:?}", value, expected)
+                format!(
+                    "Expected {:?} to be greater than or equal to {:?}",
+                    value, expected
+                )
             }
             ExtendedMatcher::LessThanOrEqual(expected) => {
-                format!("Expected {:?} to be less than or equal to {:?}", value, expected)
+                format!(
+                    "Expected {:?} to be less than or equal to {:?}",
+                    value, expected
+                )
             }
         }
     }

@@ -2,8 +2,15 @@
 // v0.3.327: Tests for SyncManager and SyncEvent APIs
 // Background Sync allows background tasks to be registered and executed when network is available
 
-use std::process::{Command, Stdio};
 use std::fs;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+
+fn bee_path() -> PathBuf {
+    PathBuf::from(
+        std::env::var("CARGO_BIN_EXE_bee").unwrap_or_else(|_| "./target/debug/bee".to_string()),
+    )
+}
 
 #[cfg(test)]
 mod sync_manager_tests {
@@ -22,7 +29,11 @@ mod sync_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(output.status.success(), "SyncManager test should succeed: {}", stdout);
+        assert!(
+            output.status.success(),
+            "SyncManager test should succeed: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -37,7 +48,11 @@ mod sync_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent should exist: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent should exist: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -61,7 +76,11 @@ mod sync_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent tag should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent tag should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -85,7 +104,11 @@ mod sync_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent lastChance test: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent lastChance test: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -107,7 +130,11 @@ mod sync_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent should inherit from ExtendableEvent: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent should inherit from ExtendableEvent: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -129,7 +156,11 @@ mod sync_manager_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent type should be 'sync': {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent type should be 'sync': {}",
+            stdout
+        );
     }
 }
 
@@ -156,7 +187,11 @@ mod sync_event_registration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent tags should be unique: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent tags should be unique: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -178,7 +213,11 @@ mod sync_event_registration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent should have default tag: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent should have default tag: {}",
+            stdout
+        );
     }
 }
 
@@ -215,7 +254,11 @@ mod sync_event_integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "waitUntil should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "waitUntil should work: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -243,7 +286,11 @@ mod sync_event_integration_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent properties test: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent properties test: {}",
+            stdout
+        );
     }
 }
 
@@ -272,7 +319,11 @@ mod sync_event_error_handling_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "SyncEvent should handle missing tag: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "SyncEvent should handle missing tag: {}",
+            stdout
+        );
     }
 
     #[test]
@@ -303,7 +354,11 @@ mod sync_event_error_handling_tests {
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("SUCCESS"), "Multiple waitUntil should work: {}", stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "Multiple waitUntil should work: {}",
+            stdout
+        );
     }
 }
 
@@ -318,14 +373,14 @@ fn run_script(script: &str) -> std::process::Output {
     fs::write(&temp_file, script).unwrap();
 
     // Run beejs with the script
-    let output = Command::new("./target/release/beejs")
+    let output = Command::new(bee_path())
         .arg("run")
         .arg(&temp_file)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
-        .expect("Failed to run beejs");
+        .expect("Failed to run bee");
 
     // Clean up
     drop(temp_dir);

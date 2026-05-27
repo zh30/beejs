@@ -2,12 +2,9 @@
 //
 // 提供风险评分和评估功能
 
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
-use std::collections::{BTreeMap};
-use std::time::SystemTime;
 /// 风险评估错误
 #[derive(Error, Debug)]
 pub enum RiskAssessmentError {
@@ -103,7 +100,7 @@ impl RiskAssessor {
             factor.value = value;
             Ok(())
         } else {
-            Err(RiskAssessmentError::InvalidRiskFactor(name.to_string())
+            Err(RiskAssessmentError::InvalidRiskFactor(name.to_string()))
         }
     }
     pub fn assess(&self) -> RiskScore {

@@ -3,15 +3,15 @@
 // v0.3.247: 添加异步定时器调度支持 (setTimeout/setInterval/setImmediate)
 // v0.3.248: 使用 fired timer 队列简化架构
 
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant};
-use std::thread;
-use std::sync::atomic::{AtomicU64, Ordering};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use tokio::sync::mpsc;
-use tokio::time::{timeout, sleep};
 use rusty_v8 as v8;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
+use std::thread;
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
+use tokio::time::{sleep, timeout};
 
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -228,9 +228,18 @@ impl V8EventLoop {
 
 /// 定时器命令（用于与工作线程通信）
 enum TimerCommand {
-    ScheduleTimeout { timer_id: u64, delay: Duration },
-    ScheduleInterval { timer_id: u64, delay: Duration, repeat_count: u32 },
-    Cancel { timer_id: u64 },
+    ScheduleTimeout {
+        timer_id: u64,
+        delay: Duration,
+    },
+    ScheduleInterval {
+        timer_id: u64,
+        delay: Duration,
+        repeat_count: u32,
+    },
+    Cancel {
+        timer_id: u64,
+    },
     Clear,
     Shutdown,
     /// v0.3.261: Clear with acknowledgement
@@ -297,11 +306,7 @@ impl AsyncTimerManager {
                                 }
                             }
 
-                            // v0.3.339: Debug - log fired timers
                             let fired_count = fired_ids.len();
-                            if fired_count > 0 {
-                                eprintln!("[WORKER] Firing timers: {:?}", fired_ids);
-                            }
 
                             // 更新 fired 定时器队列
                             if fired_count > 0 {
@@ -394,16 +399,36 @@ impl AsyncTimerManager {
 
     /// 安排一个一次性定时器
     /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
-    pub fn schedule_timeout(&self, delay: Duration, timer_id: u64, _callback: impl Fn() + Send + 'static) {
-        let _ = self.cmd_tx.try_send(TimerCommand::ScheduleTimeout {
-            timer_id,
-            delay,
-        });
+    pub fn schedule_timeout(
+        &self,
+        delay: Duration,
+        timer_id: u64,
+        _callback: impl Fn() + Send + 'static,
+    ) {
+        let _ = self
+            .cmd_tx
+            .try_send(TimerCommand::ScheduleTimeout { timer_id, delay });
+    }
+
+    /// Mark a timer as ready for main-thread execution without worker-thread scheduling.
+    ///
+    /// This is used for zero-delay timeouts after the callback has been stored. It
+    /// preserves event-loop ordering while avoiding a race where the main thread
+    /// exits before the worker processes a freshly sent schedule command.
+    pub fn mark_timer_fired(&self, timer_id: u64) {
+        let mut fired = self.fired_timers.write().unwrap();
+        fired.push(timer_id);
     }
 
     /// 安排一个重复定时器
     /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
-    pub fn schedule_interval(&self, delay: Duration, repeat_count: u32, timer_id: u64, _callback: impl Fn() + Send + 'static) {
+    pub fn schedule_interval(
+        &self,
+        delay: Duration,
+        repeat_count: u32,
+        timer_id: u64,
+        _callback: impl Fn() + Send + 'static,
+    ) {
         let _ = self.cmd_tx.try_send(TimerCommand::ScheduleInterval {
             timer_id,
             delay,
@@ -505,8 +530,8 @@ pub async fn async_sleep(delay: Duration) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
     use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::Duration;
 
     // Simple ID generator for tests
     fn next_test_id(id: &AtomicU64) -> u64 {
@@ -546,7 +571,10 @@ mod tests {
 
         // 验证定时器可以取消
         let cancelled = manager.cancel(id);
-        assert!(cancelled, "Cancel should return true for scheduled interval");
+        assert!(
+            cancelled,
+            "Cancel should return true for scheduled interval"
+        );
     }
 
     #[tokio::test]
@@ -559,7 +587,10 @@ mod tests {
 
         // 立即取消
         let cancelled = manager.cancel(id);
-        assert!(cancelled, "Cancel should return true for first cancellation");
+        assert!(
+            cancelled,
+            "Cancel should return true for first cancellation"
+        );
 
         // 等待取消命令被处理
         tokio::time::sleep(Duration::from_millis(10)).await;

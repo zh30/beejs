@@ -25,8 +25,14 @@ global.__PRELOAD_VAR__ = "loaded from preload";
 __PRELOAD_VAR__;
 "#;
 
-    File::create(&preload_file).unwrap().write_all(preload_code.as_bytes()).unwrap();
-    File::create(&main_file).unwrap().write_all(main_code.as_bytes()).unwrap();
+    File::create(&preload_file)
+        .unwrap()
+        .write_all(preload_code.as_bytes())
+        .unwrap();
+    File::create(&main_file)
+        .unwrap()
+        .write_all(main_code.as_bytes())
+        .unwrap();
 
     // The test verifies that the preload mechanism is available
     // The actual execution is tested via CLI integration tests
@@ -47,9 +53,18 @@ fn test_preload_multiple_modules() {
     let preload2_code = r#"global.__PRELOAD_2__ = "second";"#;
     let main_code = r#"__PRELOAD_1__ + __PRELOAD_2__;"#;
 
-    File::create(&preload1).unwrap().write_all(preload1_code.as_bytes()).unwrap();
-    File::create(&preload2).unwrap().write_all(preload2_code.as_bytes()).unwrap();
-    File::create(&main_file).unwrap().write_all(main_code.as_bytes()).unwrap();
+    File::create(&preload1)
+        .unwrap()
+        .write_all(preload1_code.as_bytes())
+        .unwrap();
+    File::create(&preload2)
+        .unwrap()
+        .write_all(preload2_code.as_bytes())
+        .unwrap();
+    File::create(&main_file)
+        .unwrap()
+        .write_all(main_code.as_bytes())
+        .unwrap();
 
     assert!(preload1.exists());
     assert!(preload2.exists());
@@ -67,7 +82,10 @@ console.log("[PRELOAD] Module loaded successfully");
 global.__READY__ = true;
 "#;
 
-    File::create(&preload_file).unwrap().write_all(preload_code.as_bytes()).unwrap();
+    File::create(&preload_file)
+        .unwrap()
+        .write_all(preload_code.as_bytes())
+        .unwrap();
     assert!(preload_file.exists());
 }
 

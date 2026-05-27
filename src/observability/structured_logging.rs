@@ -3,17 +3,17 @@
 // This module provides structured logging capabilities with JSON formatting,
 // correlation IDs, and context-aware logging for better observability.
 
-use serde_json::{Value, json};
+use anyhow::{Error, Result};
+use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
 use std::fs::File;
-use tracing::{Event, Level, Subscriber};
-use tracing_subscriber::{EnvFilter, Registry};
-use tracing_subscriber::fmt::{FormatEvent, FormatFields};
-use anyhow::{Result, Error};
-use std::path::Path;
 use std::io::Write;
+use std::path::Path;
+use std::sync::{Arc, Mutex, RwLock};
 use std::task::Context;
+use tracing::{Event, Level, Subscriber};
+use tracing_subscriber::fmt::{FormatEvent, FormatFields};
+use tracing_subscriber::{EnvFilter, Registry};
 
 /// Structured logger with JSON formatting and context support
 pub struct StructuredLogger {
@@ -31,8 +31,8 @@ pub struct StructuredLogger {
 impl StructuredLogger {
     /// Create a new structured logger
     pub fn new(level: Level, service_name: String) -> Self {
-        let environment: _ = std::env::var("BEEJS_ENV")
-            .unwrap_or_else(|_| "development".to_string());
+        let environment: _ =
+            std::env::var("BEEJS_ENV").unwrap_or_else(|_| "development".to_string());
         Self {
             level,
             service_name,
@@ -44,8 +44,8 @@ impl StructuredLogger {
     /// Create a new structured logger with file output
     pub fn new_with_file(level: Level, service_name: String, log_file_path: &str) -> Result<Self> {
         let path: _ = Path::new(log_file_path);
-        let file: _ = File::create(path)
-            .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
+        let file: _ =
+            File::create(path).map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
         let mut logger = Self::new(level, service_name);
         logger.log_file = Some(Arc::new(Mutex::new(file)));
         Ok(logger)
@@ -85,7 +85,12 @@ impl StructuredLogger {
         self.log_with_level(Level::TRACE, message, context).await;
     }
     /// Internal logging function
-    async fn log_with_level(&self, level: Level, message: &str, mut context: HashMap<String, Value>) {
+    async fn log_with_level(
+        &self,
+        level: Level,
+        message: &str,
+        mut context: HashMap<String, Value>,
+    ) {
         // Merge with global context
         let global_context: _ = self.context.read().await;
         for (key, value) in global_context.iter() {
@@ -115,7 +120,12 @@ impl StructuredLogger {
         }
     }
     /// Create a JSON log entry
-    fn create_log_entry(&self, level: Level, message: &str, context: HashMap<String, Value>) -> Value {
+    fn create_log_entry(
+        &self,
+        level: Level,
+        message: &str,
+        context: HashMap<String, Value>,
+    ) -> Value {
         let timestamp: _ = chrono::Utc::now();
         let mut log_entry = json!({
             "timestamp": timestamp.to_rfc3339(),
@@ -182,7 +192,11 @@ where
             log_entry.insert(key, value);
         }
         // Write to writer
-        write!(writer, "{}", serde_json::to_string(&log_entry).unwrap_or_default())?;
+        write!(
+            writer,
+            "{}",
+            serde_json::to_string(&log_entry).unwrap_or_default()
+        )?;
         writeln!(writer)?;
         Ok(())
     }
@@ -192,13 +206,12 @@ pub fn init_structured_logging(
     level: Level,
     service_name: &str,
 ) -> Result<Box<dyn Subscriber + Send + Sync>> {
-    let env_filter: _ = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(level.as_str()));
+    let env_filter: _ =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level.as_str()));
     let json_formatter: _ = JsonFormatter::new(service_name.to_string());
     let subscriber: _ = Registry::default()
         .with(env_filter)
-        .with(tracing_subscriber::fmt::layer()
-            .event_format(json_formatter));
+        .with(tracing_subscriber::fmt::layer().event_format(json_formatter));
     Ok(Box::new(subscriber) as Box<dyn Subscriber + Send + Sync>)
 }
 /// Script execution logger
@@ -236,7 +249,9 @@ impl<'a> ScriptLogger<'a> {
             ("correlation_id".to_string(), json!(self.correlation_id)),
         ]);
         if success {
-            self.logger.info("Script completed successfully", context).await;
+            self.logger
+                .info("Script completed successfully", context)
+                .await;
         } else {
             self.logger.error("Script execution failed", context).await;
         }
@@ -313,7 +328,9 @@ mod tests {
     #[tokio::test]
     async fn test_correlation_id() {
         let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());
-        logger.set_correlation_id("test-correlation-id".to_string()).await;
+        logger
+            .set_correlation_id("test-correlation-id".to_string())
+            .await;
         let context: _ = HashMap::new();
         logger.info("Test message with correlation", context).await;
     }

@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 
 export class BeejsConfiguration {
-    private runtimePath: string = 'beejs';
+    private runtimePath: string = 'bee';
     private debugPort: number = 9229;
     private enableTypeChecking: boolean = true;
     private maxMemory: string = '512m';
@@ -20,7 +20,7 @@ export class BeejsConfiguration {
     public reload(): void {
         const config = vscode.workspace.getConfiguration('beejs');
 
-        this.runtimePath = config.get('runtimePath', 'beejs');
+        this.runtimePath = config.get('runtimePath', 'bee');
         this.debugPort = config.get('debugPort', 9229);
         this.enableTypeChecking = config.get('enableTypeChecking', true);
         this.maxMemory = config.get('maxMemory', '512m');
@@ -53,7 +53,7 @@ export class BeejsConfiguration {
             const fs = require('fs');
             const path = require('path');
 
-            if (this.runtimePath !== 'beejs') {
+            if (this.runtimePath !== 'bee') {
                 // Check absolute path
                 if (!fs.existsSync(this.runtimePath)) {
                     vscode.window.showErrorMessage(

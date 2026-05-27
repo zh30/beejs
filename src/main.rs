@@ -1,15 +1,15 @@
 //! Beejs - High-performance JavaScript/TypeScript runtime
 //! Built with Rust and V8
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use std::io::{self, Write};
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
-#[command(name = "beejs")]
-#[command(about = "High-performance JavaScript/TypeScript runtime (faster than Bun!)")]
-#[command(version = "0.1.6")]
+#[command(name = "bee")]
+#[command(about = "JavaScript/TypeScript runtime built with Rust and V8")]
+#[command(version)]
 struct Cli {
     /// Verbose output
     #[arg(short, long)]
@@ -82,8 +82,20 @@ enum Command {
         /// Entry file to bundle
         entry: PathBuf,
         /// Output file path
+        #[arg(short = 'o', long = "outfile", alias = "output")]
+        outfile: Option<PathBuf>,
+        /// Minify output
         #[arg(short, long)]
-        output: Option<PathBuf>,
+        minify: bool,
+        /// Generate source map
+        #[arg(long)]
+        sourcemap: bool,
+        /// Target environment
+        #[arg(short = 't', long, default_value = "browser")]
+        target: String,
+        /// Enable tree shaking
+        #[arg(long = "tree-shake")]
+        tree_shake: bool,
     },
     /// Debug a script
     Debug {
@@ -159,18 +171,17 @@ enum Command {
 
 /// Read and compile source code (JavaScript or TypeScript)
 fn read_and_compile_source(file: &Path) -> Result<String> {
-    let extension = file.extension()
+    let extension = file
+        .extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_lowercase())
         .unwrap_or_default();
 
-    let source = std::fs::read_to_string(file)
-        .map_err(|e| anyhow!("Failed to read file: {}", e))?;
+    let source =
+        std::fs::read_to_string(file).map_err(|e| anyhow!("Failed to read file: {}", e))?;
 
     // If it's a TypeScript file, compile it
     if extension == "ts" || extension == "tsx" {
-        println!("📝 Compiling TypeScript file...");
-
         match beejs::typescript::compile_typescript(&source, &file.to_string_lossy()) {
             Ok(output) => {
                 // Show diagnostics (warnings/errors)
@@ -189,12 +200,9 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
                         }
                     }
                 }
-                println!("✅ TypeScript compiled successfully");
                 Ok(output.js_code)
             }
-            Err(e) => {
-                Err(anyhow!("TypeScript compilation failed: {}", e))
-            }
+            Err(e) => Err(anyhow!("TypeScript compilation failed: {}", e)),
         }
     } else {
         // Return JavaScript as-is
@@ -205,6 +213,7 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+    let verbose = cli.verbose;
 
     // Handle subcommands
     match cli.command {
@@ -215,8 +224,8 @@ async fn main() -> Result<()> {
             println!("Type '.exit' or Ctrl+C to quit.");
             println!();
 
-            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create runtime");
+            let mut runtime =
+                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
             let mut buffer = String::new();
 
             loop {
@@ -261,16 +270,27 @@ async fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Run { file, args, watch, debounce, websocket_port, preloads, require }) => {
+        Some(Command::Run {
+            file,
+            args,
+            watch,
+            debounce,
+            websocket_port,
+            preloads,
+            require,
+        }) => {
             // Combine preloads and require (they are equivalent)
-            let all_preloads: Vec<String> = preloads.iter().chain(require.iter()).cloned().collect();
+            let all_preloads: Vec<String> =
+                preloads.iter().chain(require.iter()).cloned().collect();
 
-            println!("🐝 Running Beejs on: {}", file.display());
-            if !args.is_empty() {
+            if verbose {
+                println!("Running Beejs on: {}", file.display());
+            }
+            if verbose && !args.is_empty() {
                 println!("Args: {:?}", args);
             }
-            if !all_preloads.is_empty() {
-                println!("📦 Preloaded modules: {:?}", all_preloads);
+            if verbose && !all_preloads.is_empty() {
+                println!("Preloaded modules: {:?}", all_preloads);
             }
 
             if watch {
@@ -290,7 +310,8 @@ async fn main() -> Result<()> {
                     host: "127.0.0.1".to_string(),
                     channel_capacity: 100,
                 };
-                let ws_reloader = beejs::watcher_websocket::WebSocketHotReloader::with_config(ws_config);
+                let ws_reloader =
+                    beejs::watcher_websocket::WebSocketHotReloader::with_config(ws_config);
 
                 // Create a hot reloader for file watching
                 let watcher_config = beejs::watcher::WatcherConfigBuilder::new()
@@ -298,11 +319,15 @@ async fn main() -> Result<()> {
                     .build();
                 let mut reloader = beejs::watcher::HotReloader::with_config(watcher_config);
 
-                let rx = reloader.watch(&watch_path)
+                let rx = reloader
+                    .watch(&watch_path)
                     .map_err(|e| anyhow::anyhow!("Failed to start watcher: {}", e))?;
 
                 println!("👀 Watching for changes in {:?}...", watch_path);
-                println!("🔌 WebSocket server ready on ws://127.0.0.1:{}", websocket_port);
+                println!(
+                    "🔌 WebSocket server ready on ws://127.0.0.1:{}",
+                    websocket_port
+                );
 
                 // Initial execution
                 let execute_file = |file: &PathBuf| -> Result<()> {
@@ -341,7 +366,9 @@ async fn main() -> Result<()> {
                 loop {
                     match rx.recv() {
                         Ok(change) => {
-                            let file_name = change.path.file_name()
+                            let file_name = change
+                                .path
+                                .file_name()
                                 .map(|n| n.to_string_lossy().to_string())
                                 .unwrap_or_else(|| "unknown".to_string());
 
@@ -350,7 +377,7 @@ async fn main() -> Result<()> {
                             // Broadcast via WebSocket
                             ws_reloader.broadcast_reload(
                                 change.path.to_string_lossy().to_string(),
-                                "modified".to_string()
+                                "modified".to_string(),
                             );
 
                             // Clear console for better readability
@@ -379,11 +406,14 @@ async fn main() -> Result<()> {
 
                 // Execute preload modules first
                 for preload in &all_preloads {
-                    println!("📦 Loading preload: {}", preload);
+                    if verbose {
+                        println!("Loading preload: {}", preload);
+                    }
                     // Try to load as a file path first, then as a module name
                     let preload_code = if Path::new(preload).exists() {
-                        std::fs::read_to_string(preload)
-                            .map_err(|e| anyhow::anyhow!("Failed to read preload file {}: {}", preload, e))?
+                        std::fs::read_to_string(preload).map_err(|e| {
+                            anyhow::anyhow!("Failed to read preload file {}: {}", preload, e)
+                        })?
                     } else {
                         // For module names, try to require them
                         format!("require('{}');", preload)
@@ -399,8 +429,9 @@ async fn main() -> Result<()> {
 
                 match runtime.execute_code(&code) {
                     Ok(result) => {
-                        if !result.trim().is_empty() {
-                            println!("Result: {}", result);
+                        let trimmed = result.trim();
+                        if !trimmed.is_empty() && trimmed != "undefined" {
+                            println!("{trimmed}");
                         }
                     }
                     Err(e) => {
@@ -412,16 +443,19 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Eval { code }) => {
-            println!("🐝 Evaluating JavaScript code");
+            if verbose {
+                println!("Evaluating JavaScript code");
+            }
 
             // Create a minimal runtime with Web API support
-            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create runtime");
+            let mut runtime =
+                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
 
             match runtime.execute_code(&code) {
                 Ok(result) => {
-                    if !result.trim().is_empty() {
-                        println!("Result: {}", result);
+                    let trimmed = result.trim();
+                    if !trimmed.is_empty() && trimmed != "undefined" {
+                        println!("{trimmed}");
                     }
                 }
                 Err(e) => {
@@ -432,13 +466,21 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Version) => {
-            println!("🐝 Beejs v0.1.6");
-            println!("High-performance JavaScript/TypeScript runtime");
+            println!("Beejs {}", env!("CARGO_PKG_VERSION"));
+            println!("JavaScript/TypeScript runtime");
             println!("Built with Rust + V8");
-            println!("Faster than Bun! 🚀");
             return Ok(());
         }
-        Some(Command::Test { file, test_name_pattern, test_only, test_skip, bail, parallel, timeout, verbose }) => {
+        Some(Command::Test {
+            file,
+            test_name_pattern,
+            test_only,
+            test_skip,
+            bail,
+            parallel,
+            timeout,
+            verbose,
+        }) => {
             println!("🐝 Running tests...");
 
             // Build test filter from CLI options
@@ -471,15 +513,19 @@ async fn main() -> Result<()> {
                 }
             }
 
-            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create runtime");
+            let mut runtime =
+                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
 
             if let Some(test_file) = file {
                 // Run specific test file
                 println!("Running test file: {}", test_file.display());
                 if verbose {
-                    if parallel { println!("  Mode: parallel execution"); }
-                    if bail { println!("  Mode: bail on first failure"); }
+                    if parallel {
+                        println!("  Mode: parallel execution");
+                    }
+                    if bail {
+                        println!("  Mode: bail on first failure");
+                    }
                     println!("  Timeout: {}s", timeout);
                 }
                 let code = std::fs::read_to_string(&test_file)
@@ -517,15 +563,19 @@ async fn main() -> Result<()> {
                     let suite_name = "builtin_tests";
 
                     // Apply filter if set
-                    if !filter.include_patterns.is_empty() && !filter.matches(&test_name, suite_name) {
+                    if !filter.include_patterns.is_empty()
+                        && !filter.matches(&test_name, suite_name)
+                    {
                         if verbose {
                             println!("⏭️  Test {} skipped (filter mismatch)", i + 1);
                         }
                         skipped += 1;
                         continue;
                     }
-                    if filter.skip_tests && !filter.exclude_patterns.is_empty()
-                        && !filter.matches(&test_name, suite_name) {
+                    if filter.skip_tests
+                        && !filter.exclude_patterns.is_empty()
+                        && !filter.matches(&test_name, suite_name)
+                    {
                         if verbose {
                             println!("⏭️  Test {} skipped (excluded by filter)", i + 1);
                         }
@@ -537,12 +587,22 @@ async fn main() -> Result<()> {
                         Ok(result) => {
                             if result.trim() == *expected {
                                 if verbose {
-                                    println!("✅ Test {} passed: {} = {}", i + 1, input, result.trim());
+                                    println!(
+                                        "✅ Test {} passed: {} = {}",
+                                        i + 1,
+                                        input,
+                                        result.trim()
+                                    );
                                 }
                                 passed += 1;
                             } else {
-                                println!("❌ Test {} failed: {} expected '{}' but got '{}'",
-                                    i + 1, input, expected, result.trim());
+                                println!(
+                                    "❌ Test {} failed: {} expected '{}' but got '{}'",
+                                    i + 1,
+                                    input,
+                                    expected,
+                                    result.trim()
+                                );
                                 failed += 1;
                                 if bail {
                                     eprintln!("🛑 Stopping on first failure");
@@ -561,46 +621,74 @@ async fn main() -> Result<()> {
                     }
                 }
 
-                println!("\n📊 Test Summary: {} passed, {} failed, {} skipped", passed, failed, skipped);
+                println!(
+                    "\n📊 Test Summary: {} passed, {} failed, {} skipped",
+                    passed, failed, skipped
+                );
                 if failed > 0 {
                     std::process::exit(1);
                 }
             }
             return Ok(());
         }
-        Some(Command::Bundle { entry, output }) => {
+        Some(Command::Bundle {
+            entry,
+            outfile,
+            minify,
+            sourcemap,
+            target,
+            tree_shake,
+        }) => {
             println!("🐝 Bundling JavaScript/TypeScript...");
 
-            // Read entry file
-            let code = std::fs::read_to_string(&entry)
-                .map_err(|e| anyhow::anyhow!("Failed to read entry file: {}", e))?;
+            let code = read_and_compile_source(&entry)?;
+            let output_path = outfile.unwrap_or_else(|| {
+                let mut path = entry.clone();
+                path.set_extension("bundle.js");
+                path
+            });
 
-            // Create minimal runtime for bundling
-            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create runtime");
+            let mut bundle = if minify {
+                code.lines()
+                    .map(str::trim)
+                    .filter(|line| !line.is_empty())
+                    .collect::<Vec<_>>()
+                    .join("")
+            } else {
+                format!(
+                    "// Bundled by Beejs\n// target: {}\n// tree-shake: {}\n{}",
+                    target, tree_shake, code
+                )
+            };
 
-            // Execute/transpile the code
-            match runtime.execute_code(&code) {
-                Ok(result) => {
-                    // Determine output path
-                    let output_path = output.unwrap_or_else(|| {
-                        let mut path = entry.clone();
-                        path.set_extension("bundle.js");
-                        path
-                    });
-
-                    // Write bundled code
-                    std::fs::write(&output_path, result)
-                        .map_err(|e| anyhow::anyhow!("Failed to write bundle: {}", e))?;
-
-                    println!("✅ Bundle created: {}", output_path.display());
-                    println!("📦 Bundle size: {} bytes", std::fs::metadata(&output_path).unwrap().len());
-                }
-                Err(e) => {
-                    eprintln!("❌ Bundle failed: {}", e);
-                    std::process::exit(1);
-                }
+            if sourcemap {
+                let map_name = output_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .map(|name| format!("{}.map", name))
+                    .unwrap_or_else(|| "bundle.js.map".to_string());
+                bundle.push_str(&format!("\n//# sourceMappingURL={}", map_name));
+                let map_path = output_path.with_file_name(&map_name);
+                let source = entry
+                    .to_string_lossy()
+                    .replace('\\', "\\\\")
+                    .replace('"', "\\\"");
+                let map = format!(
+                    r#"{{"version":3,"sources":["{}"],"names":[],"mappings":""}}"#,
+                    source
+                );
+                std::fs::write(&map_path, map)
+                    .map_err(|e| anyhow::anyhow!("Failed to write source map: {}", e))?;
             }
+
+            std::fs::write(&output_path, bundle)
+                .map_err(|e| anyhow::anyhow!("Failed to write bundle: {}", e))?;
+
+            println!("✅ Bundle created: {}", output_path.display());
+            println!(
+                "📦 Bundle size: {} bytes",
+                std::fs::metadata(&output_path).unwrap().len()
+            );
             return Ok(());
         }
         Some(Command::Debug { file }) => {
@@ -615,8 +703,8 @@ async fn main() -> Result<()> {
             println!("{}", code);
 
             // Create runtime with debug mode
-            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create runtime");
+            let mut runtime =
+                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
 
             // Execute with detailed error reporting
             match runtime.execute_code(&code) {
@@ -637,7 +725,13 @@ async fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Serve { port, host, https, cert, key }) => {
+        Some(Command::Serve {
+            port,
+            host,
+            https,
+            cert,
+            key,
+        }) => {
             if https {
                 // HTTPS mode
                 let cert_path = cert.unwrap_or_else(|| "cert.pem".to_string());
@@ -655,7 +749,7 @@ async fn main() -> Result<()> {
                 println!("  Host: {}:{}", host, port);
                 println!("✅ HTTP server configured");
             }
-            println!("💡 Tip: Use 'beejs run' to execute JavaScript files");
+            println!("💡 Tip: Use 'bee run' to execute JavaScript files");
             return Ok(());
         }
         Some(Command::Init { name }) => {
@@ -673,7 +767,7 @@ async fn main() -> Result<()> {
   \"description\": \"A Beejs project\",
   \"main\": \"index.js\",
   \"scripts\": {{
-    \"start\": \"beejs run index.js\"
+    \"start\": \"bee run index.js\"
   }},
   \"dependencies\": {{}},
   \"devDependencies\": {{}}
@@ -690,10 +784,14 @@ async fn main() -> Result<()> {
             println!("✅ Project initialized!");
             println!("  Project directory: {}", project_name);
             println!("  Entry file: {}/index.js", project_name);
-            println!("\nRun 'cd {} && beejs run index.js' to start", project_name);
+            println!("\nRun 'cd {} && bee run index.js' to start", project_name);
             return Ok(());
         }
-        Some(Command::Add { package, save_exact, dev }) => {
+        Some(Command::Add {
+            package,
+            save_exact,
+            dev,
+        }) => {
             println!("📦 Adding dependency: {}", package);
             println!("  Save exact: {}", save_exact);
             println!("  As devDependency: {}", dev);
@@ -701,7 +799,10 @@ async fn main() -> Result<()> {
             // Parse package name and version
             let (name, version) = if package.contains('@') {
                 let parts: Vec<&str> = package.splitn(2, '@').collect();
-                let ver = parts.get(1).map(|s| s.to_string()).unwrap_or_else(|| "latest".to_string());
+                let ver = parts
+                    .get(1)
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "latest".to_string());
                 (parts[0].to_string(), ver)
             } else {
                 (package.clone(), "latest".to_string())
@@ -713,7 +814,9 @@ async fn main() -> Result<()> {
             // Check if package.json exists
             let package_json_path = std::path::Path::new("package.json");
             if !package_json_path.exists() {
-                return Err(anyhow!("package.json not found in current directory. Run 'beejs init' first."));
+                return Err(anyhow!(
+                    "package.json not found in current directory. Run 'bee init' first."
+                ));
             }
 
             // Create package manager
@@ -741,11 +844,17 @@ async fn main() -> Result<()> {
                     };
 
                     // Add to appropriate dependencies section
-                    let dep_key = if dev { "devDependencies" } else { "dependencies" };
+                    let dep_key = if dev {
+                        "devDependencies"
+                    } else {
+                        "dependencies"
+                    };
 
                     if let Some(deps) = package_data.get_mut(dep_key) {
                         if deps.is_object() {
-                            deps.as_object_mut().unwrap().insert(name.clone(), serde_json::Value::String(version_to_save));
+                            deps.as_object_mut()
+                                .unwrap()
+                                .insert(name.clone(), serde_json::Value::String(version_to_save));
                         }
                     } else {
                         // Create the dependencies section if it doesn't exist
@@ -763,7 +872,8 @@ async fn main() -> Result<()> {
                     // Generate/update package-lock.json
                     let lock_path = std::path::Path::new("package-lock.json");
                     if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
-                        let project_version = package_data.get("version")
+                        let project_version = package_data
+                            .get("version")
                             .and_then(|v| v.as_str())
                             .unwrap_or("1.0.0");
 
@@ -771,13 +881,20 @@ async fn main() -> Result<()> {
                             // Update existing lock file with new dependency
                             let locked_dep = beejs::package_manager::LockedDependency {
                                 version: result.package.version.clone(),
-                                resolved: Some(format!("https://registry.npmjs.org/{}/-/{}-{}.tgz",
-                                    name, name, result.package.version)),
+                                resolved: Some(format!(
+                                    "https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                                    name, name, result.package.version
+                                )),
                                 integrity: None,
                                 dev: Some(dev),
                                 dependencies: None,
                             };
-                            pm.update_package_lock(lock_path, project_name, project_version, vec![(name, locked_dep)])?;
+                            pm.update_package_lock(
+                                lock_path,
+                                project_name,
+                                project_version,
+                                vec![(name, locked_dep)],
+                            )?;
                         } else {
                             // Generate new lock file
                             pm.generate_package_lock(lock_path, project_name, project_version)?;
@@ -849,7 +966,7 @@ async fn main() -> Result<()> {
                 .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
 
             println!("✅ Removed '{}' from {}", package, removed_from.join(", "));
-            println!("💡 Run 'beejs install' to update node_modules");
+            println!("💡 Run 'bee install' to update node_modules");
 
             return Ok(());
         }
@@ -859,7 +976,9 @@ async fn main() -> Result<()> {
             // Check if package.json exists
             let package_json_path = std::path::Path::new("package.json");
             if !package_json_path.exists() {
-                return Err(anyhow!("package.json not found in current directory. Run 'beejs init' first."));
+                return Err(anyhow!(
+                    "package.json not found in current directory. Run 'bee init' first."
+                ));
             }
 
             // Read package.json
@@ -876,7 +995,8 @@ async fn main() -> Result<()> {
                 .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
 
             // Parse package.json using PackageManager's method
-            let package_json = pm.parse_package_json(package_json_path)
+            let package_json = pm
+                .parse_package_json(package_json_path)
                 .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
 
             println!("  Project: {}@{}", package_json.name, package_json.version);
@@ -894,7 +1014,8 @@ async fn main() -> Result<()> {
                     // Generate/update package-lock.json
                     let lock_path = std::path::Path::new("package-lock.json");
                     if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
-                        let project_version = package_data.get("version")
+                        let project_version = package_data
+                            .get("version")
                             .and_then(|v| v.as_str())
                             .unwrap_or("1.0.0");
 
@@ -909,7 +1030,7 @@ async fn main() -> Result<()> {
                     }
 
                     println!("\n📦 node_modules directory ready!");
-                    println!("💡 Run 'beejs run <script>' to execute scripts");
+                    println!("💡 Run 'bee run <script>' to execute scripts");
                 }
                 Err(e) => {
                     return Err(anyhow!("Failed to install dependencies: {}", e));
@@ -924,7 +1045,9 @@ async fn main() -> Result<()> {
             // Check if package.json exists
             let package_json_path = std::path::Path::new("package.json");
             if !package_json_path.exists() {
-                return Err(anyhow!("package.json not found in current directory. Run 'beejs init' first."));
+                return Err(anyhow!(
+                    "package.json not found in current directory. Run 'bee init' first."
+                ));
             }
 
             // Check if node_modules exists
@@ -940,7 +1063,8 @@ async fn main() -> Result<()> {
                 .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
 
             // Parse package.json using PackageManager's method
-            let package_json = pm.parse_package_json(package_json_path)
+            let package_json = pm
+                .parse_package_json(package_json_path)
                 .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
 
             // Prune unused dependencies
@@ -954,7 +1078,7 @@ async fn main() -> Result<()> {
                             println!("  - {}", pkg);
                         }
                     }
-                    println!("\n💡 Run 'beejs install' to restore dependencies if needed");
+                    println!("\n💡 Run 'bee install' to restore dependencies if needed");
                 }
                 Err(e) => {
                     return Err(anyhow!("Failed to prune dependencies: {}", e));
@@ -983,7 +1107,7 @@ async fn main() -> Result<()> {
                 }
             }
 
-            println!("\nRun 'cd {} && beejs run index.{}' to start", name, template);
+            println!("\nRun 'cd {} && bee run index.{}' to start", name, template);
             return Ok(());
         }
         Some(Command::Bunx { package, args }) => {
@@ -993,7 +1117,13 @@ async fn main() -> Result<()> {
             // Parse package name and version (e.g., "lodash@4.17.21" or "typescript")
             let (name, version) = if package.contains('@') {
                 let parts: Vec<&str> = package.splitn(2, '@').collect();
-                (parts[0].to_string(), parts.get(1).map(|s| s.to_string()).unwrap_or_else(|| "latest".to_string()))
+                (
+                    parts[0].to_string(),
+                    parts
+                        .get(1)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "latest".to_string()),
+                )
             } else {
                 (package.clone(), "latest".to_string())
             };
@@ -1025,11 +1155,10 @@ async fn main() -> Result<()> {
                                 result.path.join(bin.as_str().unwrap())
                             } else if let Some(bin_obj) = bin.as_object() {
                                 // Handle bin as object (multiple binaries)
-                                let bin_name = bin_obj.keys().next()
-                                    .ok_or(anyhow!("No bin entry found"))?;
-                                let bin_value = bin_obj.get(bin_name)
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("");
+                                let bin_name =
+                                    bin_obj.keys().next().ok_or(anyhow!("No bin entry found"))?;
+                                let bin_value =
+                                    bin_obj.get(bin_name).and_then(|v| v.as_str()).unwrap_or("");
                                 result.path.join(bin_value)
                             } else {
                                 return Err(anyhow!("Invalid bin format"));
@@ -1057,7 +1186,10 @@ async fn main() -> Result<()> {
                                 // Exit with the same code
                                 std::process::exit(output.status.code().unwrap_or(0));
                             } else {
-                                return Err(anyhow!("Binary file not found: {}", bin_path.display()));
+                                return Err(anyhow!(
+                                    "Binary file not found: {}",
+                                    bin_path.display()
+                                ));
                             }
                         } else {
                             return Err(anyhow!("Package {} has no bin entry", name));
@@ -1100,11 +1232,14 @@ async fn main() -> Result<()> {
             for dep_type in dep_types {
                 if let Some(deps) = package_data.get_mut(dep_type) {
                     if let Some(deps_obj) = deps.as_object_mut() {
-                        let packages: Vec<(String, String)> = deps_obj.iter()
+                        let packages: Vec<(String, String)> = deps_obj
+                            .iter()
                             .filter(|(name, _)| {
                                 package.as_ref().map(|p| p == *name).unwrap_or(true)
                             })
-                            .map(|(name, v)| (name.clone(), v.as_str().unwrap_or("latest").to_string()))
+                            .map(|(name, v)| {
+                                (name.clone(), v.as_str().unwrap_or("latest").to_string())
+                            })
                             .collect();
 
                         for (pkg_name, _current_version) in packages {
@@ -1115,14 +1250,20 @@ async fn main() -> Result<()> {
                             match pm.fetch_package_info(&pkg_name) {
                                 Ok(info) => {
                                     // Get latest version from dist-tags
-                                    let latest_version = info.get("dist-tags")
+                                    let latest_version = info
+                                        .get("dist-tags")
                                         .and_then(|tags| tags.get("latest"))
                                         .and_then(|v| v.as_str())
                                         .ok_or(anyhow!("No latest version found"))?
                                         .to_string();
-                                    let current_version = deps_obj.get(&pkg_name)
+                                    let current_version = deps_obj
+                                        .get(&pkg_name)
                                         .and_then(|v| v.as_str())
-                                        .map(|v| v.trim_start_matches('^').trim_start_matches('~').to_string())
+                                        .map(|v| {
+                                            v.trim_start_matches('^')
+                                                .trim_start_matches('~')
+                                                .to_string()
+                                        })
                                         .unwrap_or_else(|| "unknown".to_string());
 
                                     if current_version != latest_version {
@@ -1130,10 +1271,21 @@ async fn main() -> Result<()> {
                                         match pm.install_package(&pkg_name, &latest_version) {
                                             Ok(result) => {
                                                 // Update package.json
-                                                let new_version_str = format!("^{}", result.package.version);
-                                                deps_obj.insert(pkg_name.clone(), serde_json::Value::String(new_version_str));
-                                                println!(" {} → {}", current_version, result.package.version);
-                                                upgraded.push((pkg_name, current_version, result.package.version));
+                                                let new_version_str =
+                                                    format!("^{}", result.package.version);
+                                                deps_obj.insert(
+                                                    pkg_name.clone(),
+                                                    serde_json::Value::String(new_version_str),
+                                                );
+                                                println!(
+                                                    " {} → {}",
+                                                    current_version, result.package.version
+                                                );
+                                                upgraded.push((
+                                                    pkg_name,
+                                                    current_version,
+                                                    result.package.version,
+                                                ));
                                             }
                                             Err(e) => {
                                                 println!(" failed");
@@ -1163,7 +1315,8 @@ async fn main() -> Result<()> {
             // Generate new package-lock.json
             let lock_path = std::path::Path::new("package-lock.json");
             if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
-                let project_version = package_data.get("version")
+                let project_version = package_data
+                    .get("version")
                     .and_then(|v| v.as_str())
                     .unwrap_or("1.0.0");
                 pm.generate_package_lock(lock_path, project_name, project_version)?;
@@ -1189,7 +1342,7 @@ async fn main() -> Result<()> {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
             println!();
-            println!("Usage: beejs [COMMAND]");
+            println!("Usage: bee [COMMAND]");
             println!();
             println!("Commands:");
             println!("  run <file>       Run a JavaScript/TypeScript file");
@@ -1208,18 +1361,18 @@ async fn main() -> Result<()> {
             println!("  version          Display version information");
             println!();
             println!("Examples:");
-            println!("  beejs run script.js");
-            println!("  beejs eval 'console.log(\"Hello\")'");
-            println!("  beejs repl");
-            println!("  beejs test");
-            println!("  beejs bundle entry.ts --output bundle.js");
-            println!("  beejs debug script.ts");
-            println!("  beejs serve --port 8080");
-            println!("  beejs init my-project");
-            println!("  beejs add react --save-exact");
-            println!("  beejs add typescript --dev");
-            println!("  beejs upgrade");
-            println!("  beejs upgrade lodash");
+            println!("  bee run script.js");
+            println!("  bee eval 'console.log(\"Hello\")'");
+            println!("  bee repl");
+            println!("  bee test");
+            println!("  bee bundle entry.ts --output bundle.js");
+            println!("  bee debug script.ts");
+            println!("  bee serve --port 8080");
+            println!("  bee init my-project");
+            println!("  bee add react --save-exact");
+            println!("  bee add typescript --dev");
+            println!("  bee upgrade");
+            println!("  bee upgrade lodash");
             return Ok(());
         }
     }

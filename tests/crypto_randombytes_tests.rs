@@ -109,8 +109,8 @@ fn test_randombytes_various_sizes() {
 
     // Test medium size
     let code = r#"
-        const buf = crypto.randomBytes(100);
-        buf.length;
+        const mediumBuf = crypto.randomBytes(100);
+        mediumBuf.length;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -118,8 +118,8 @@ fn test_randombytes_various_sizes() {
 
     // Test large size
     let code = r#"
-        const buf = crypto.randomBytes(1024);
-        buf.length;
+        const largeBuf = crypto.randomBytes(1024);
+        largeBuf.length;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());

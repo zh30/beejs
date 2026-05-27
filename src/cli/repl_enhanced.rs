@@ -39,7 +39,7 @@ pub struct EnhancedReplConfig {
 impl Default for EnhancedReplConfig {
     fn default() -> Self {
         Self {
-            prompt: "beejs> ".to_string(),
+            prompt: "bee> ".to_string(),
             history_size: 1000,
             tab_completion: true,
             syntax_highlighting: true,

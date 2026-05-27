@@ -1,13 +1,12 @@
 // PyTorch TorchScript 推理引擎实现
 // 为 Beejs 提供原生 PyTorch 支持，支持 TorchScript 模型推理
 
-
 use crate::ai_inference::engine_interface::{
-    InferenceEngine, EngineFactory, ModelFormat, EngineType, InferenceOptions,
-    ModelHandle, InferenceResult, EngineStats, ModelInfo, TensorInfo
+    EngineFactory, EngineStats, EngineType, InferenceEngine, InferenceOptions, InferenceResult,
+    ModelFormat, ModelHandle, ModelInfo, TensorInfo,
 };
 use crate::ai_inference::tensor_ops::Tensor;
-use anyhow::{Result};
+use anyhow::Result;
 
 use async_trait::async_trait;
 use std::sync::RwLock;
@@ -59,13 +58,13 @@ pub struct TorchEngineFactory {
 }
 impl TorchEngine {
     /// 创建新的 PyTorch 引擎
-    pub async fn new(
-        model_path: &str,
-        options: InferenceOptions,
-    ) -> Result<Self> {
+    pub async fn new(model_path: &str, options: InferenceOptions) -> Result<Self> {
         let start_time: _ = Instant::now();
         // 记录引擎初始化
-        tracing::info!("Initializing PyTorch TorchScript engine for model: {}", model_path);
+        tracing::info!(
+            "Initializing PyTorch TorchScript engine for model: {}",
+            model_path
+        );
         // 检测可用设备
         let device: _ = Self::detect_device(&options.engine_type)?;
         // 初始化统计信息
@@ -149,11 +148,7 @@ impl InferenceEngine for TorchEngine {
             ]),
         })
     }
-    async fn infer(
-        &self,
-        model: &ModelHandle,
-        input: &Tensor,
-    ) -> Result<InferenceResult> {
+    async fn infer(&self, model: &ModelHandle, input: &Tensor) -> Result<InferenceResult> {
         let start_time: _ = Instant::now();
         tracing::debug!(
             "Executing PyTorch inference (model: {}, input shape: {:?})",
@@ -175,7 +170,10 @@ impl InferenceEngine for TorchEngine {
             stats.total_time_ms += latency_ms;
             stats.average_time_ms = stats.total_time_ms / stats.total_inferences as f64;
         }
-        tracing::debug!("PyTorch inference completed in {:.2}ms", start_time.elapsed().as_secs_f64() * 1000.0);
+        tracing::debug!(
+            "PyTorch inference completed in {:.2}ms",
+            start_time.elapsed().as_secs_f64() * 1000.0
+        );
         Ok(InferenceResult {
             output: output_tensor,
             inference_time_ms: start_time.elapsed().as_secs_f64() * 1000.0,
@@ -257,11 +255,13 @@ impl InferenceEngine for TorchEngine {
     }
     /// 获取模型信息
     async fn get_model_info(&self, model: &ModelHandle) -> Result<ModelInfo> {
-        let parameters: usize = model.metadata
+        let parameters: usize = model
+            .metadata
             .get("parameters")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let size_mb: f64 = model.metadata
+        let size_mb: f64 = model
+            .metadata
             .get("size_mb")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0.0);
@@ -374,8 +374,9 @@ impl EngineFactory for TorchEngineFactory {
                 parallel_inferences: Some(1),
                 memory_optimization: None,
                 custom_options: std::collections::HashMap::new(),
-            }
-        ).await?;
+            },
+        )
+        .await?;
         Ok(Box::new(engine) as Box<dyn InferenceEngine>)
     }
     fn name(&self) -> &str {
@@ -409,8 +410,9 @@ mod tests {
                 parallel_inferences: Some(1),
                 memory_optimization: None,
                 custom_options: std::collections::HashMap::new(),
-            }
-        ).await;
+            },
+        )
+        .await;
         assert!(engine.is_ok());
         let engine: _ = engine.unwrap();
         assert!(engine.is_available());
@@ -447,17 +449,25 @@ mod tests {
                 parallel_inferences: Some(1),
                 memory_optimization: None,
                 custom_options: std::collections::HashMap::new(),
-            }
-        ).await.unwrap();
+            },
+        )
+        .await
+        .unwrap();
         let input: _ = Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).unwrap();
-        let model_handle: _ = engine.load_model("test_model.pt", InferenceOptions {
-            engine_type: EngineType::CPU,
-            batch_size: Some(1),
-            optimization: true,
-            parallel_inferences: Some(1),
-            memory_optimization: None,
-            custom_options: std::collections::HashMap::new(),
-        }).await.unwrap();
+        let model_handle: _ = engine
+            .load_model(
+                "test_model.pt",
+                InferenceOptions {
+                    engine_type: EngineType::CPU,
+                    batch_size: Some(1),
+                    optimization: true,
+                    parallel_inferences: Some(1),
+                    memory_optimization: None,
+                    custom_options: std::collections::HashMap::new(),
+                },
+            )
+            .await
+            .unwrap();
         let result: _ = engine.infer(&model_handle, &input).await;
         assert!(result.is_ok());
         let result: _ = result.unwrap();
@@ -474,21 +484,29 @@ mod tests {
                 parallel_inferences: Some(4),
                 memory_optimization: None,
                 custom_options: std::collections::HashMap::new(),
-            }
-        ).await.unwrap();
+            },
+        )
+        .await
+        .unwrap();
         let inputs: _ = vec![
             Tensor::new(vec![1.0, 2.0, 3.0], vec![3]).unwrap(),
             Tensor::new(vec![4.0, 5.0, 6.0], vec![3]).unwrap(),
             Tensor::new(vec![7.0, 8.0, 9.0], vec![3]).unwrap(),
         ];
-        let model_handle: _ = engine.load_model("test_model.pt", InferenceOptions {
-            engine_type: EngineType::CPU,
-            batch_size: Some(4),
-            optimization: true,
-            parallel_inferences: Some(4),
-            memory_optimization: None,
-            custom_options: std::collections::HashMap::new(),
-        }).await.unwrap();
+        let model_handle: _ = engine
+            .load_model(
+                "test_model.pt",
+                InferenceOptions {
+                    engine_type: EngineType::CPU,
+                    batch_size: Some(4),
+                    optimization: true,
+                    parallel_inferences: Some(4),
+                    memory_optimization: None,
+                    custom_options: std::collections::HashMap::new(),
+                },
+            )
+            .await
+            .unwrap();
         let results: _ = engine.batch_infer(&model_handle, &inputs).await;
         assert!(results.is_ok());
         let results: _ = results.unwrap();
@@ -508,8 +526,10 @@ mod tests {
                 parallel_inferences: Some(1),
                 memory_optimization: None,
                 custom_options: std::collections::HashMap::new(),
-            }
-        ).await.unwrap();
+            },
+        )
+        .await
+        .unwrap();
         let stats: _ = engine.get_stats().await;
         assert!(stats.is_ok());
         let stats: _ = stats.unwrap();
@@ -524,6 +544,7 @@ mod tests {
         assert_eq!(formats.len(), 1);
     }
 }
-use std::collections::{BTreeMap, HashMap};use tracing::{debug, info, warn, error};
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};

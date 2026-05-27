@@ -28,7 +28,6 @@ pub fn setup_shared_array_buffer_api(
     // Check if SharedArrayBuffer is already available as a built-in
     if let Some(shared_buffer_val) = global.get(scope, shared_buffer_key.into()) {
         if shared_buffer_val.is_function() {
-            eprintln!("✅ [v0.3.322] SharedArrayBuffer (built-in) is available");
             return Ok(());
         }
     }
@@ -39,8 +38,6 @@ pub fn setup_shared_array_buffer_api(
 
     let shared_buffer_func = shared_buffer_constructor.get_function(scope).unwrap();
     global.set(scope, shared_buffer_key.into(), shared_buffer_func.into());
-
-    eprintln!("✅ [v0.3.322] SharedArrayBuffer API initialized");
 
     Ok(())
 }
@@ -82,7 +79,10 @@ fn shared_array_buffer_callback(
     if size > MAX_SIZE {
         let error = v8::String::new(
             scope,
-            &format!("SharedArrayBuffer: size {} exceeds maximum allowed ({})", size, MAX_SIZE),
+            &format!(
+                "SharedArrayBuffer: size {} exceeds maximum allowed ({})",
+                size, MAX_SIZE
+            ),
         )
         .unwrap();
         let exception = v8::Exception::range_error(scope, error);

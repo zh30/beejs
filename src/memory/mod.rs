@@ -3,16 +3,23 @@
 // Stage 92 Phase 2: 实现极致内存优化，包括 DMA、内存映射、智能预取和 GC 优化
 // 目标：80% 内存使用减少，支持 1000-5000x 性能提升
 
-use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-
-pub mod zero_copy;
 pub mod gc_optimizer;
-pub mod zero_copy_enhanced;
-pub mod smart_prefetcher;
 pub mod gc_optimizer_enhanced;
+pub mod phase2_memory_engine;
+pub mod smart_prefetcher;
+pub mod zero_copy;
+pub mod zero_copy_enhanced;
+
+pub use gc_optimizer_enhanced::{
+    EnhancedGcOptimizer, GcConfig, GcMetricsSnapshot, GcStrategy, GcTriggerDecision,
+};
+pub use phase2_memory_engine::{Phase2MemoryConfig, Phase2MemoryEngine, SendPtr};
+pub use smart_prefetcher::{PrefetchStrategy, SmartPrefetcher};
+pub use zero_copy_enhanced::{
+    AccessPattern, DmaConfig, EnhancedZeroCopy, MmapConfig, PrefetchConfig, PrefetchStatsSnapshot,
+};
 /// 内存使用统计
 #[derive(Debug, Default)]
 pub struct MemoryStats {
@@ -48,7 +55,10 @@ impl MemoryStats {
         let mut peak = self.peak_usage.load(Ordering::Relaxed);
         while current > peak {
             match self.peak_usage.compare_exchange_weak(
-                peak, current, Ordering::Relaxed, Ordering::Relaxed
+                peak,
+                current,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
             ) {
                 Ok(_) => break,
                 Err(actual) => peak = actual,
@@ -111,7 +121,10 @@ impl AllocationHandle {
 impl Drop for AllocationHandle {
     fn drop(&mut self) {
         unsafe {
-            let layout: _ = std::alloc::Layout::from_size_align_unchecked(self.size, std::mem::align_of::<usize>());
+            let layout: _ = std::alloc::Layout::from_size_align_unchecked(
+                self.size,
+                std::mem::align_of::<usize>(),
+            );
             std::alloc::dealloc(self.ptr, layout);
         }
     }
@@ -127,6 +140,7 @@ pub static GLOBAL_MEMORY_STATS: MemoryStats = MemoryStats {
 };
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn test_memory_stats() {
         let stats: _ = MemoryStats::new();

@@ -1,8 +1,8 @@
 // HTTP Agent Connection Pool Tests - v0.3.84
 // 测试 HTTP Agent 连接池功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -23,7 +23,11 @@ fn test_http_global_agent_exists() {
         typeof http.globalAgent;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "http.globalAgent should be an object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "http.globalAgent should be an object"
+    );
 }
 
 #[test]
@@ -35,7 +39,11 @@ fn test_http_agent_has_max_free_sockets() {
         agent.maxFreeSockets === 10;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Agent should have maxFreeSockets = 10");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Agent should have maxFreeSockets = 10"
+    );
 }
 
 #[test]
@@ -47,7 +55,11 @@ fn test_http_agent_has_max_sockets() {
         agent.maxSockets === 50;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Agent should have maxSockets from options");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Agent should have maxSockets from options"
+    );
 }
 
 #[test]
@@ -59,7 +71,11 @@ fn test_http_agent_has_keep_alive() {
         agent.keepAlive === true;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Agent should have keepAlive = true from options");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Agent should have keepAlive = true from options"
+    );
 }
 
 #[test]
@@ -71,7 +87,11 @@ fn test_http_global_agent_defaults() {
         agent.maxFreeSockets === 10 && agent.maxSockets === 20 && agent.keepAlive === false;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "globalAgent should have correct defaults");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "globalAgent should have correct defaults"
+    );
 }
 
 #[test]
@@ -85,7 +105,11 @@ fn test_http_agent_get_pool_stats() {
         typeof stats === 'string';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Agent.getPoolStats should return a string");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Agent.getPoolStats should return a string"
+    );
 }
 
 #[test]
@@ -111,7 +135,11 @@ fn test_http_agent_create_connection() {
         typeof socket === 'object';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Agent.createConnection should return a socket object");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Agent.createConnection should return a socket object"
+    );
 }
 
 #[test]

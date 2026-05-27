@@ -1,18 +1,21 @@
 // WebSocket API implementation for Web standard
 // Provides real WebSocket client with network connectivity
 
-use futures_util::{SinkExt, StreamExt};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::{Message, CloseFrame}};
 use anyhow::Result;
-use rusty_v8 as v8;
-use std::sync::atomic::AtomicU64;
-use tokio::sync::mpsc;
-use tokio::runtime::Runtime;
-use std::borrow::Cow;
+use futures_util::{SinkExt, StreamExt};
 use once_cell::sync::Lazy;
+use rusty_v8 as v8;
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
+use tokio::sync::mpsc;
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::protocol::{CloseFrame, Message},
+};
 
 // v0.3.334: Import error_event for ErrorEvent integration
 use crate::web_api::error_event::create_error_event_object;
@@ -119,7 +122,8 @@ impl WebSocketManager {
                                     } else {
                                         (None, None)
                                     };
-                                    let _: _ = event_tx_clone.send(WebSocketEvent::Close(code, reason));
+                                    let _: _ =
+                                        event_tx_clone.send(WebSocketEvent::Close(code, reason));
                                     break;
                                 }
                                 Ok(Message::Ping(_)) | Ok(Message::Pong(_)) => {
@@ -129,7 +133,8 @@ impl WebSocketManager {
                                     // Ignore raw frames
                                 }
                                 Err(e) => {
-                                    let _: _ = event_tx_clone.send(WebSocketEvent::Error(e.to_string()));
+                                    let _: _ =
+                                        event_tx_clone.send(WebSocketEvent::Error(e.to_string()));
                                     break;
                                 }
                             }
@@ -176,7 +181,8 @@ impl WebSocketManager {
                     read_task.abort();
                 }
                 Err(e) => {
-                    let _: _ = event_tx.send(WebSocketEvent::Error(format!("Connection failed: {}", e)));
+                    let _: _ =
+                        event_tx.send(WebSocketEvent::Error(format!("Connection failed: {}", e)));
                     {
                         let mut state = ready_state_clone.lock().unwrap();
                         *state = ReadyState::Closed;
@@ -200,7 +206,10 @@ impl WebSocketManager {
         if let Some(conn) = connections.get(&id) {
             let state: _ = *conn.ready_state.lock().unwrap();
             if state != ReadyState::Open {
-                return Err(anyhow::anyhow!("WebSocket is not open (state: {:?})", state));
+                return Err(anyhow::anyhow!(
+                    "WebSocket is not open (state: {:?})",
+                    state
+                ));
             }
             conn.cmd_tx.send(WebSocketCommand::Send(message))?;
             Ok(())
@@ -221,7 +230,9 @@ impl WebSocketManager {
     /// Get ready state of a WebSocket connection
     pub fn get_ready_state(&self, id: u64) -> Option<ReadyState> {
         let connections: _ = self.connections.lock().unwrap();
-        connections.get(&id).map(|conn| *conn.ready_state.lock().unwrap())
+        connections
+            .get(&id)
+            .map(|conn| *conn.ready_state.lock().unwrap())
     }
     /// Poll for events (non-blocking)
     pub fn poll_events(&self, id: u64) -> Vec<WebSocketEvent> {
@@ -279,7 +290,10 @@ fn websocket_constructor_callback(
 ) {
     // Get URL argument
     let url: _ = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope)
+        args.get(0)
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope)
     } else {
         let error: _ = v8::String::new(scope, "WebSocket URL required").unwrap();
         let error_obj: _ = v8::Exception::error(scope, error);
@@ -297,7 +311,8 @@ fn websocket_constructor_callback(
     let ws_id: _ = match WS_MANAGER.connect(url.clone()) {
         Ok(id) => id,
         Err(e) => {
-            let error: _ = v8::String::new(scope, &format!("WebSocket connection failed: {}", e)).unwrap();
+            let error: _ =
+                v8::String::new(scope, &format!("WebSocket connection failed: {}", e)).unwrap();
             let error_obj: _ = v8::Exception::error(scope, error);
             scope.throw_exception(error_obj.into());
             return;
@@ -326,7 +341,8 @@ fn websocket_constructor_callback(
     let protocol_val: v8::Local<v8::Value> = v8::String::new(scope, "").unwrap().into();
     ws_obj.set(scope, protocol_key.into(), protocol_val);
     let binary_type_key: _ = v8::String::new(scope, "binaryType").unwrap();
-    let binary_type_val: v8::Local<v8::Value> = v8::String::new(scope, "arraybuffer").unwrap().into();
+    let binary_type_val: v8::Local<v8::Value> =
+        v8::String::new(scope, "arraybuffer").unwrap().into();
     ws_obj.set(scope, binary_type_key.into(), binary_type_val);
     // Set event handler properties (initial null)
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
@@ -349,16 +365,19 @@ fn websocket_constructor_callback(
     let close_func: _ = v8::Function::new(scope, websocket_close_callback).unwrap();
     ws_obj.set(scope, close_key.into(), close_func.into());
     let add_event_key: _ = v8::String::new(scope, "addEventListener").unwrap();
-    let add_event_func: _ = v8::Function::new(scope, websocket_add_event_listener_callback).unwrap();
+    let add_event_func: _ =
+        v8::Function::new(scope, websocket_add_event_listener_callback).unwrap();
     ws_obj.set(scope, add_event_key.into(), add_event_func.into());
     let remove_event_key: _ = v8::String::new(scope, "removeEventListener").unwrap();
-    let remove_event_func: _ = v8::Function::new(scope, websocket_remove_event_listener_callback).unwrap();
+    let remove_event_func: _ =
+        v8::Function::new(scope, websocket_remove_event_listener_callback).unwrap();
     ws_obj.set(scope, remove_event_key.into(), remove_event_func.into());
     let poll_events_key: _ = v8::String::new(scope, "_pollEvents").unwrap();
     let poll_events_func: _ = v8::Function::new(scope, websocket_poll_events_callback).unwrap();
     ws_obj.set(scope, poll_events_key.into(), poll_events_func.into());
     let update_ready_key: _ = v8::String::new(scope, "_updateReadyState").unwrap();
-    let update_ready_func: _ = v8::Function::new(scope, websocket_update_ready_state_callback).unwrap();
+    let update_ready_func: _ =
+        v8::Function::new(scope, websocket_update_ready_state_callback).unwrap();
     ws_obj.set(scope, update_ready_key.into(), update_ready_func.into());
     retval.set(ws_obj.into());
 }
@@ -380,7 +399,8 @@ fn websocket_send_callback(
 ) {
     if args.length() == 0 {
         let error: _ = v8::String::new(scope, "send requires data").unwrap();
-        let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+        let error_obj: _ = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
         return;
     }
     let this: _ = args.this();
@@ -388,7 +408,8 @@ fn websocket_send_callback(
         Some(id) => id,
         None => {
             let error: _ = v8::String::new(scope, "Invalid WebSocket object").unwrap();
-            let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+            let error_obj: _ = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
             return;
         }
     };
@@ -396,7 +417,8 @@ fn websocket_send_callback(
     let message: _ = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
     if let Err(e) = WS_MANAGER.send(ws_id, message) {
         let error: _ = v8::String::new(scope, &format!("WebSocket send failed: {}", e)).unwrap();
-        let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+        let error_obj: _ = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
     }
 }
 /// WebSocket close callback
@@ -410,7 +432,8 @@ fn websocket_close_callback(
         Some(id) => id,
         None => {
             let error: _ = v8::String::new(scope, "Invalid WebSocket object").unwrap();
-            let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+            let error_obj: _ = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
             return;
         }
     };
@@ -420,13 +443,19 @@ fn websocket_close_callback(
         None
     };
     let reason: _ = if args.length() > 1 && args.get(1).is_string() {
-        Some(args.get(1).to_string(scope).unwrap().to_rust_string_lossy(scope))
+        Some(
+            args.get(1)
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope),
+        )
     } else {
         None
     };
     if let Err(e) = WS_MANAGER.close(ws_id, code, reason) {
         let error: _ = v8::String::new(scope, &format!("WebSocket close failed: {}", e)).unwrap();
-        let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+        let error_obj: _ = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
     }
 }
 /// WebSocket addEventListener callback
@@ -436,15 +465,22 @@ fn websocket_add_event_listener_callback(
     _rv: v8::ReturnValue,
 ) {
     if args.length() < 2 {
-        let error: _ = v8::String::new(scope, "addEventListener requires type and listener").unwrap();
-        let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+        let error: _ =
+            v8::String::new(scope, "addEventListener requires type and listener").unwrap();
+        let error_obj: _ = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
         return;
     }
-    let event_type: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+    let event_type: _ = args
+        .get(0)
+        .to_string(scope)
+        .unwrap()
+        .to_rust_string_lossy(scope);
     let listener: _ = args.get(1);
     if !listener.is_function() {
         let error: _ = v8::String::new(scope, "Listener must be a function").unwrap();
-        let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
+        let error_obj: _ = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
         return;
     }
     // Store listener in appropriate on* property
@@ -460,12 +496,17 @@ fn websocket_remove_event_listener_callback(
     _rv: v8::ReturnValue,
 ) {
     if args.length() < 2 {
-        let error: _ = v8::String::new(scope, "removeEventListener requires type and listener").unwrap();
+        let error: _ =
+            v8::String::new(scope, "removeEventListener requires type and listener").unwrap();
         let error_obj: _ = v8::Exception::error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
     }
-    let event_type: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+    let event_type: _ = args
+        .get(0)
+        .to_string(scope)
+        .unwrap()
+        .to_rust_string_lossy(scope);
     let this: _ = args.this();
     let prop_name: _ = format!("on{}", event_type);
     let prop_key: _ = v8::String::new(scope, &prop_name).unwrap();
@@ -528,8 +569,7 @@ fn websocket_poll_events_callback(
                         let store = buffer.get_backing_store();
                         unsafe {
                             let ptr = store.data() as *mut u8;
-                            std::slice::from_raw_parts_mut(ptr, data.len())
-                                .copy_from_slice(&data);
+                            std::slice::from_raw_parts_mut(ptr, data.len()).copy_from_slice(&data);
                         }
                         event_obj.set(scope, data_key.into(), buffer.into());
                     } else if bt_str == "blob" {
@@ -538,17 +578,20 @@ fn websocket_poll_events_callback(
                         let blob_ctor_key: _ = v8::String::new(scope, "Blob").unwrap();
                         let blob_ctor: _ = global.get(scope, blob_ctor_key.into()).unwrap();
                         if blob_ctor.is_function() {
-                            let blob_ctor_func: v8::Local<v8::Function> = blob_ctor.try_into().unwrap();
+                            let blob_ctor_func: v8::Local<v8::Function> =
+                                blob_ctor.try_into().unwrap();
                             // Create buffer first to avoid borrow issues
                             let buffer: _ = v8::ArrayBuffer::new(scope, data.len());
                             let buffer_val: v8::Local<v8::Value> = buffer.into();
                             let data_array: _ = v8::Array::new_with_elements(scope, &[buffer_val]);
                             let options_key: _ = v8::String::new(scope, "type").unwrap();
                             let options_val: _ = v8::Object::new(scope);
-                            let mime_type: _ = v8::String::new(scope, "application/octet-stream").unwrap();
+                            let mime_type: _ =
+                                v8::String::new(scope, "application/octet-stream").unwrap();
                             options_val.set(scope, options_key.into(), mime_type.into());
 
-                            let blob_args: &[v8::Local<v8::Value>] = &[data_array.into(), options_val.into()];
+                            let blob_args: &[v8::Local<v8::Value>] =
+                                &[data_array.into(), options_val.into()];
                             if let Some(blob) = blob_ctor_func.new_instance(scope, blob_args) {
                                 event_obj.set(scope, data_key.into(), blob.into());
                             } else {
@@ -604,14 +647,7 @@ fn websocket_poll_events_callback(
             WebSocketEvent::Error(msg) => {
                 // v0.3.334: Use ErrorEvent for proper error event structure
                 // This provides type, message, filename, lineno, colno, and error properties
-                let error_event = create_error_event_object(
-                    scope,
-                    msg,
-                    "WebSocket",
-                    0,
-                    0,
-                    None,
-                );
+                let error_event = create_error_event_object(scope, msg, "WebSocket", 0, 0, None);
                 // Copy ErrorEvent properties to the event object
                 let type_key = v8::String::new(scope, "type").unwrap();
                 let error_type = v8::String::new(scope, "error").unwrap();
@@ -637,7 +673,9 @@ fn websocket_update_ready_state_callback(
             return;
         }
     };
-    let state: _ = WS_MANAGER.get_ready_state(ws_id).unwrap_or(ReadyState::Closed);
+    let state: _ = WS_MANAGER
+        .get_ready_state(ws_id)
+        .unwrap_or(ReadyState::Closed);
     let state_int: _ = state as i32;
     // Update the readyState property
     let ready_state_key: _ = v8::String::new(scope, "readyState").unwrap();

@@ -72,7 +72,18 @@ pub fn setup_path_api(
     let win32_obj: _ = v8::Object::new(scope);
     let posix_obj: _ = v8::Object::new(scope);
     // 复制所有方法到win32和posix
-    for &key_str in &["join", "resolve", "relative", "dirname", "basename", "extname", "parse", "format", "isAbsolute", "normalize"] {
+    for &key_str in &[
+        "join",
+        "resolve",
+        "relative",
+        "dirname",
+        "basename",
+        "extname",
+        "parse",
+        "format",
+        "isAbsolute",
+        "normalize",
+    ] {
         let key_val: _ = v8::String::new(scope, key_str).unwrap();
         if let Some(method) = path_obj.get(scope, key_val.into()) {
             let win32_key: _ = v8::String::new(scope, key_str).unwrap();
@@ -151,13 +162,18 @@ fn path_resolve_callback(
     }
     let is_windows: _ = cfg!(windows);
     let mut result = String::new(); // Accumulates normalized path parts
-    // 如果没有路径，返回当前目录
+                                    // 如果没有路径，返回当前目录
     if paths.is_empty() {
-        result = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).to_string_lossy().to_string();
+        result = std::env::current_dir()
+            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+            .to_string_lossy()
+            .to_string();
     } else {
         // 从右向左处理路径
         for path in paths.into_iter().rev() {
-            if is_windows && (path.starts_with("\\") || (path.len() > 1 && path.chars().nth(1) == Some(':'))) {
+            if is_windows
+                && (path.starts_with("\\") || (path.len() > 1 && path.chars().nth(1) == Some(':')))
+            {
                 // 绝对路径
                 result = path.to_string();
                 break;
@@ -168,9 +184,16 @@ fn path_resolve_callback(
             } else {
                 // 相对路径
                 if result.is_empty() {
-                    result = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).to_string_lossy().to_string();
+                    result = std::env::current_dir()
+                        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                        .to_string_lossy()
+                        .to_string();
                 }
-                result = format!("{}/{}", result.trim_end_matches(is_windows.then(|| '\\').unwrap_or('/')), path);
+                result = format!(
+                    "{}/{}",
+                    result.trim_end_matches(is_windows.then(|| '\\').unwrap_or('/')),
+                    path
+                );
             }
         }
     }
@@ -362,12 +385,20 @@ fn path_parse_callback(
             "".to_string()
         }
     } else {
-        if path.starts_with('/') { "/".to_string() } else { "".to_string() }
+        if path.starts_with('/') {
+            "/".to_string()
+        } else {
+            "".to_string()
+        }
     };
     // dir
     let dir: String = if let Some(last_sep) = path.rfind(separator) {
         if last_sep == 0 {
-            if is_windows { "\\".to_string() } else { "/".to_string() }
+            if is_windows {
+                "\\".to_string()
+            } else {
+                "/".to_string()
+            }
         } else {
             path[..last_sep].to_string()
         }
@@ -417,26 +448,35 @@ fn path_format_callback(
     let path_obj: _ = args.get(0);
     if let Some(obj) = path_obj.to_object(scope) {
         let root_key: _ = v8::String::new(scope, "root").unwrap();
-        let root: _ = obj.get(scope, root_key.into())
+        let root: _ = obj
+            .get(scope, root_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let dir_key: _ = v8::String::new(scope, "dir").unwrap();
-        let dir: _ = obj.get(scope, dir_key.into())
+        let dir: _ = obj
+            .get(scope, dir_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let base_key: _ = v8::String::new(scope, "base").unwrap();
-        let base: _ = obj.get(scope, base_key.into())
+        let base: _ = obj
+            .get(scope, base_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let name_key: _ = v8::String::new(scope, "name").unwrap();
-        let name: _ = obj.get(scope, name_key.into())
+        let name: _ = obj
+            .get(scope, name_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
         let ext_key: _ = v8::String::new(scope, "ext").unwrap();
-        let ext: _ = obj.get(scope, ext_key.into())
+        let ext: _ = obj
+            .get(scope, ext_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
-        let file_part: _ = if !base.is_empty() { base.clone() } else { format!("{}{}", name, ext) };
+        let file_part: _ = if !base.is_empty() {
+            base.clone()
+        } else {
+            format!("{}{}", name, ext)
+        };
         let result: _ = if !dir.is_empty() {
             format!("{}/{}", dir, file_part)
         } else if !root.is_empty() {

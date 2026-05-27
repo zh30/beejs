@@ -4,10 +4,10 @@
 // Optimized for AI workloads - reduces network transfer by 70-90%
 
 use anyhow::Result;
-use rusty_v8 as v8;
+use flate2::bufread::{GzDecoder, GzEncoder};
 use flate2::Compression;
-use flate2::bufread::{GzEncoder, GzDecoder};
-use std::io::{Read, Cursor};
+use rusty_v8 as v8;
+use std::io::{Cursor, Read};
 
 /// Close method for compression stream - closes the writable stream
 fn compression_close_method(
@@ -54,17 +54,39 @@ fn decompression_close_method(
 }
 
 /// Helper to create Uint8Array from bytes
-fn create_uint8_array<'a>(scope: &mut v8::HandleScope<'a>, data: &[u8]) -> Option<v8::Local<'a, v8::Uint8Array>> {
+fn create_uint8_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    data: &[u8],
+) -> Option<v8::Local<'a, v8::Uint8Array>> {
     let buffer = v8::ArrayBuffer::new(scope, data.len());
     if data.len() > 0 {
         let store = buffer.get_backing_store();
         let ptr = store.data() as *mut u8;
         unsafe {
-            std::slice::from_raw_parts_mut(ptr, data.len())
-                .copy_from_slice(data);
+            std::slice::from_raw_parts_mut(ptr, data.len()).copy_from_slice(data);
         }
     }
     v8::Uint8Array::new(scope, buffer, 0, data.len())
+}
+
+fn uint8_array_to_vec(
+    scope: &mut v8::HandleScope,
+    data: v8::Local<v8::Uint8Array>,
+) -> Option<Vec<u8>> {
+    let len = data.byte_length();
+    if len == 0 {
+        return Some(Vec::new());
+    }
+
+    let buffer = data.buffer(scope)?;
+    let store = buffer.get_backing_store();
+    let ptr = store.data() as *const u8;
+    if ptr.is_null() {
+        return None;
+    }
+
+    let byte_offset = data.byte_offset();
+    Some(unsafe { std::slice::from_raw_parts(ptr.add(byte_offset), len).to_vec() })
 }
 
 /// Attach close method to compression stream instance
@@ -99,105 +121,122 @@ pub fn setup_compression_api(
     // We'll add it directly to each instance in the constructor
     let compression_constructor: _ = compression_template.get_function(scope).unwrap();
     let compression_key: _ = v8::String::new(scope, "CompressionStream").unwrap();
-    global.set(scope, compression_key.into(), compression_constructor.into());
+    global.set(
+        scope,
+        compression_key.into(),
+        compression_constructor.into(),
+    );
 
     // Setup DecompressionStream constructor
-    let decompression_template: _ = v8::FunctionTemplate::new(scope, decompression_stream_constructor);
+    let decompression_template: _ =
+        v8::FunctionTemplate::new(scope, decompression_stream_constructor);
     let decompression_constructor: _ = decompression_template.get_function(scope).unwrap();
     let decompression_key: _ = v8::String::new(scope, "DecompressionStream").unwrap();
-    global.set(scope, decompression_key.into(), decompression_constructor.into());
+    global.set(
+        scope,
+        decompression_key.into(),
+        decompression_constructor.into(),
+    );
 
     // Setup helper function for compression (_compressData)
-    let compress_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() >= 2 {
-            let data_arg = args.get(0);
-            let format_arg = args.get(1);
+    let compress_template = v8::FunctionTemplate::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() >= 2 {
+                let data_arg = args.get(0);
+                let format_arg = args.get(1);
 
-            if let Ok(data) = v8::Local::<v8::Uint8Array>::try_from(data_arg) {
-                let buffer = data.buffer(_scope).unwrap();
-                let store = buffer.get_backing_store();
-                let bytes: &[u8] = unsafe {
-                    std::slice::from_raw_parts(store.data() as *const u8, data.byte_length())
-                };
+                if let Ok(data) = v8::Local::<v8::Uint8Array>::try_from(data_arg) {
+                    let Some(bytes) = uint8_array_to_vec(_scope, data) else {
+                        return;
+                    };
 
-                let format_str = if format_arg.is_string() {
-                    format_arg.to_string(_scope)
-                        .map(|s| s.to_rust_string_lossy(_scope))
-                        .unwrap_or_else(|| "gzip".to_string())
-                } else {
-                    "gzip".to_string()
-                };
+                    let format_str = if format_arg.is_string() {
+                        format_arg
+                            .to_string(_scope)
+                            .map(|s| s.to_rust_string_lossy(_scope))
+                            .unwrap_or_else(|| "gzip".to_string())
+                    } else {
+                        "gzip".to_string()
+                    };
 
-                // For deflate format, use streaming-compatible approach
-                // For gzip, we use GzEncoder which creates a complete gzip stream
-                let compressed = if format_str == "gzip" {
-                    // Use GzEncoder from bufread with Cursor for proper BufRead
-                    let cursor = Cursor::new(bytes.to_vec());
-                    let mut encoder = GzEncoder::new(cursor, Compression::default());
-                    let mut output = Vec::new();
-                    let _ = encoder.read_to_end(&mut output);
-                    output
-                } else {
-                    // For deflate, use the bufread encoder
-                    let mut encoder = GzEncoder::new(bytes, Compression::default());
-                    let mut output = Vec::new();
-                    let _ = encoder.read_to_end(&mut output);
-                    output
-                };
+                    // For deflate format, use streaming-compatible approach
+                    // For gzip, we use GzEncoder which creates a complete gzip stream
+                    let compressed = if format_str == "gzip" {
+                        // Use GzEncoder from bufread with Cursor for proper BufRead
+                        let cursor = Cursor::new(bytes);
+                        let mut encoder = GzEncoder::new(cursor, Compression::default());
+                        let mut output = Vec::new();
+                        let _ = encoder.read_to_end(&mut output);
+                        output
+                    } else {
+                        // For deflate, use the bufread encoder
+                        let mut encoder = GzEncoder::new(bytes.as_slice(), Compression::default());
+                        let mut output = Vec::new();
+                        let _ = encoder.read_to_end(&mut output);
+                        output
+                    };
 
-                if let Some(result_array) = create_uint8_array(_scope, &compressed) {
-                    retval.set(result_array.into());
+                    if let Some(result_array) = create_uint8_array(_scope, &compressed) {
+                        retval.set(result_array.into());
+                    }
                 }
             }
-        }
-    });
+        },
+    );
 
     let compress_fn = compress_template.get_function(scope).unwrap();
     let compress_key = v8::String::new(scope, "_compressData").unwrap();
     global.set(scope, compress_key.into(), compress_fn.into());
 
     // Setup helper function for decompression (_decompressData)
-    let decompress_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        if args.length() >= 2 {
-            let data_arg = args.get(0);
-            let format_arg = args.get(1);
+    let decompress_template = v8::FunctionTemplate::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            if args.length() >= 2 {
+                let data_arg = args.get(0);
+                let format_arg = args.get(1);
 
-            if let Ok(data) = v8::Local::<v8::Uint8Array>::try_from(data_arg) {
-                let buffer = data.buffer(_scope).unwrap();
-                let store = buffer.get_backing_store();
-                let bytes: &[u8] = unsafe {
-                    std::slice::from_raw_parts(store.data() as *const u8, data.byte_length())
-                };
+                if let Ok(data) = v8::Local::<v8::Uint8Array>::try_from(data_arg) {
+                    let Some(bytes) = uint8_array_to_vec(_scope, data) else {
+                        return;
+                    };
 
-                let format_str = if format_arg.is_string() {
-                    format_arg.to_string(_scope)
-                        .map(|s| s.to_rust_string_lossy(_scope))
-                        .unwrap_or_else(|| "gzip".to_string())
-                } else {
-                    "gzip".to_string()
-                };
+                    let format_str = if format_arg.is_string() {
+                        format_arg
+                            .to_string(_scope)
+                            .map(|s| s.to_rust_string_lossy(_scope))
+                            .unwrap_or_else(|| "gzip".to_string())
+                    } else {
+                        "gzip".to_string()
+                    };
 
-                // Use GzDecoder from bufread with Cursor for proper BufRead
-                let decompressed = if format_str == "gzip" {
-                    let cursor = Cursor::new(bytes.to_vec());
-                    let mut decoder = GzDecoder::new(cursor);
-                    let mut output = Vec::new();
-                    let _ = decoder.read_to_end(&mut output);
-                    output
-                } else {
-                    // For deflate, use bufread decoder
-                    let mut decoder = GzDecoder::new(bytes);
-                    let mut output = Vec::new();
-                    let _ = decoder.read_to_end(&mut output);
-                    output
-                };
+                    // Use GzDecoder from bufread with Cursor for proper BufRead
+                    let decompressed = if format_str == "gzip" {
+                        let cursor = Cursor::new(bytes);
+                        let mut decoder = GzDecoder::new(cursor);
+                        let mut output = Vec::new();
+                        let _ = decoder.read_to_end(&mut output);
+                        output
+                    } else {
+                        // For deflate, use bufread decoder
+                        let mut decoder = GzDecoder::new(bytes.as_slice());
+                        let mut output = Vec::new();
+                        let _ = decoder.read_to_end(&mut output);
+                        output
+                    };
 
-                if let Some(result_array) = create_uint8_array(_scope, &decompressed) {
-                    retval.set(result_array.into());
+                    if let Some(result_array) = create_uint8_array(_scope, &decompressed) {
+                        retval.set(result_array.into());
+                    }
                 }
             }
-        }
-    });
+        },
+    );
 
     let decompress_fn = decompress_template.get_function(scope).unwrap();
     let decompress_key = v8::String::new(scope, "_decompressData").unwrap();
@@ -215,7 +254,8 @@ fn compression_stream_constructor(
     // Get format argument
     let format_arg = args.get(0);
     let format_str: String = if format_arg.is_string() {
-        format_arg.to_string(scope)
+        format_arg
+            .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope).to_lowercase())
             .unwrap_or_else(|| "gzip".to_string())
     } else {
@@ -226,7 +266,11 @@ fn compression_stream_constructor(
     match format_str.as_str() {
         "gzip" | "deflate" => {}
         _ => {
-            let error = v8::String::new(scope, &format!("CompressionStream: unsupported format '{}'", format_str)).unwrap();
+            let error = v8::String::new(
+                scope,
+                &format!("CompressionStream: unsupported format '{}'", format_str),
+            )
+            .unwrap();
             let error_obj = v8::Exception::range_error(scope, error);
             scope.throw_exception(error_obj.into());
             return;
@@ -247,7 +291,8 @@ fn compression_stream_constructor(
     this_obj.set(scope, setup_key.into(), setup_val);
 
     // Create streams with proper compression logic
-    let factory_code = format!(r#"
+    let factory_code = format!(
+        r#"
 (function() {{
     const format = '{}';
     let readableController = null;
@@ -287,16 +332,26 @@ fn compression_stream_constructor(
         }},
         close() {{
             state = 1;
+            if (readableController) {{
+                readableController.close();
+            }}
             writableController = null;
+            readableController = null;
         }},
         abort(err) {{
             state = 2;
+            if (readableController) {{
+                readableController.error(err);
+            }}
             writableController = null;
+            readableController = null;
         }}
     }});
 
     return {{ readable, writable }};
-}})"#, format_str);
+}})"#,
+        format_str
+    );
 
     // Execute the factory code
     let factory_code_str = v8::String::new(scope, &factory_code).unwrap();
@@ -338,7 +393,8 @@ fn decompression_stream_constructor(
     // Get format argument
     let format_arg = args.get(0);
     let format_str: String = if format_arg.is_string() {
-        format_arg.to_string(scope)
+        format_arg
+            .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope).to_lowercase())
             .unwrap_or_else(|| "gzip".to_string())
     } else {
@@ -349,7 +405,11 @@ fn decompression_stream_constructor(
     match format_str.as_str() {
         "gzip" | "deflate" => {}
         _ => {
-            let error = v8::String::new(scope, &format!("DecompressionStream: unsupported format '{}'", format_str)).unwrap();
+            let error = v8::String::new(
+                scope,
+                &format!("DecompressionStream: unsupported format '{}'", format_str),
+            )
+            .unwrap();
             let error_obj = v8::Exception::range_error(scope, error);
             scope.throw_exception(error_obj.into());
             return;
@@ -370,7 +430,8 @@ fn decompression_stream_constructor(
     this_obj.set(scope, setup_key.into(), setup_val);
 
     // Create streams with proper decompression logic
-    let factory_code = format!(r#"
+    let factory_code = format!(
+        r#"
 (function() {{
     const format = '{}';
     let readableController = null;
@@ -410,16 +471,26 @@ fn decompression_stream_constructor(
         }},
         close() {{
             state = 1;
+            if (readableController) {{
+                readableController.close();
+            }}
             writableController = null;
+            readableController = null;
         }},
         abort(err) {{
             state = 2;
+            if (readableController) {{
+                readableController.error(err);
+            }}
             writableController = null;
+            readableController = null;
         }}
     }});
 
     return {{ readable, writable }};
-}})"#, format_str);
+}})"#,
+        format_str
+    );
 
     // Execute the factory code
     let factory_code_str = v8::String::new(scope, &factory_code).unwrap();
@@ -462,11 +533,19 @@ mod tests {
         let invalid_formats = vec!["invalid", "lzma", ""];
 
         for format in valid_formats {
-            assert!(format == "gzip" || format == "deflate", "Valid format: {}", format);
+            assert!(
+                format == "gzip" || format == "deflate",
+                "Valid format: {}",
+                format
+            );
         }
 
         for format in invalid_formats {
-            assert!(format != "gzip" && format != "deflate", "Invalid format: {}", format);
+            assert!(
+                format != "gzip" && format != "deflate",
+                "Invalid format: {}",
+                format
+            );
         }
     }
 

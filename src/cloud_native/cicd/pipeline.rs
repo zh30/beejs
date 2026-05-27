@@ -448,17 +448,11 @@ pub enum Error {
     #[error("Invalid platform: {0}")]
     InvalidPlatform(String),
     #[error("Workflow not found: {file_name}")]
-    WorkflowNotFound {
-        file_name: String,
-    },
+    WorkflowNotFound { file_name: String },
     #[error("Pipeline not found: {name}")]
-    PipelineNotFound {
-        name: String,
-    },
+    PipelineNotFound { name: String },
     #[error("Stage not found: {name}")]
-    StageNotFound {
-        name: String,
-    },
+    StageNotFound { name: String },
     #[error("Pipeline error: {0}")]
     PipelineError(String),
     #[error("Configuration error: {0}")]
@@ -467,14 +461,11 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
 
-
     use super::*;
     #[test]
     fn test_github_actions_workflow() {
-        let mut workflow = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let mut workflow =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
         workflow.add_event_listener("push".to_string());
         workflow.add_stage(PipelineStage::Build {
             name: "build".to_string(),
@@ -486,43 +477,37 @@ mod tests {
     }
     #[test]
     fn test_gitlab_ci_pipeline() {
-        let mut pipeline = GitLabCIPipeline::new(
-            "beejs-pipeline".to_string(),
-            "production".to_string(),
-        );
+        let mut pipeline =
+            GitLabCIPipeline::new("beejs-pipeline".to_string(), "production".to_string());
         pipeline.add_stage("build".to_string());
-        pipeline.add_job("build-job".to_string(), "build".to_string(), vec![
-            "docker build -t beejs .".to_string(),
-        ]);
+        pipeline.add_job(
+            "build-job".to_string(),
+            "build".to_string(),
+            vec!["docker build -t beejs .".to_string()],
+        );
         assert_eq!(pipeline.stages.len(), 1);
         assert!(pipeline.has_job("build-job"));
     }
     #[test]
     fn test_jenkins_pipeline() {
         let mut pipeline = JenkinsPipeline::new("beejs-pipeline".to_string());
-        pipeline.add_stage("Build".to_string(), vec![
-            "sh 'npm install'".to_string(),
-        ]);
+        pipeline.add_stage("Build".to_string(), vec!["sh 'npm install'".to_string()]);
         assert_eq!(pipeline.stages.len(), 1);
         assert_eq!(pipeline.agent, "kubernetes");
     }
     #[test]
     fn test_pipeline_manager() {
         let mut manager = PipelineManager::new("github".to_string());
-        let workflow: _ = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let workflow: _ =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
         manager.add_workflow(workflow);
         assert_eq!(manager.workflows.len(), 1);
         assert!(manager.get_workflow("ci.yml").is_some());
     }
     #[test]
     fn test_pipeline_status() {
-        let workflow: _ = GitHubActionsWorkflow::new(
-            "ci.yml".to_string(),
-            "Build and Test".to_string(),
-        );
+        let workflow: _ =
+            GitHubActionsWorkflow::new("ci.yml".to_string(), "Build and Test".to_string());
         assert_eq!(workflow.status, PipelineStatus::Pending);
     }
 }

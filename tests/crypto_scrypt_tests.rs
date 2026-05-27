@@ -10,7 +10,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -22,38 +22,15 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     // Parse output - skip the "🐝 Running Beejs on:" line and "Result:" line
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
-}
-
-fn run_js_test_with_stderr(code: &str) -> (String, String) {
-    let temp_dir = TempDir::new().unwrap();
-    let test_file = temp_dir.path().join("test.js");
-    fs::write(&test_file, code).unwrap();
-
-    let output = Command::new(beejs_path())
-        .arg("run")
-        .arg(&test_file)
-        .output()
-        .expect("Failed to execute beejs");
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-    let stdout_lines: Vec<&str> = stdout.lines()
-        .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
-        .collect();
-
-    (
-        stdout_lines.join("\n"),
-        stderr,
-    )
 }
 
 // ==================== scryptSync Tests ====================
@@ -65,7 +42,11 @@ fn test_scrypt_sync_function_exists() {
 console.log(typeof crypto.scryptSync === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected scryptSync to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected scryptSync to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -77,7 +58,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected basic scryptSync to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected basic scryptSync to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -90,7 +75,11 @@ console.log(result16.length === 16 ? 'PASS' : 'FAIL');
 console.log(result64.length === 64 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected custom keylen to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected custom keylen to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -106,7 +95,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected scryptSync with options to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected scryptSync with options to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -119,7 +112,11 @@ const areDifferent = result1.some((b, i) => b !== result2[i]);
 console.log(areDifferent ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different salts to produce different results: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different salts to produce different results: {}",
+        output
+    );
 }
 
 #[test]
@@ -132,7 +129,11 @@ const areDifferent = result1.some((b, i) => b !== result2[i]);
 console.log(areDifferent ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different passwords to produce different results: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different passwords to produce different results: {}",
+        output
+    );
 }
 
 #[test]
@@ -144,7 +145,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected empty password to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected empty password to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -156,7 +161,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected empty salt to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected empty salt to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -167,7 +176,11 @@ const result = crypto.scryptSync('password', 'salt', 64);
 console.log(result.constructor.name === 'Uint8Array' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected Uint8Array return: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected Uint8Array return: {}",
+        output
+    );
 }
 
 #[test]
@@ -179,7 +192,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 256 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected max keylen to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected max keylen to work: {}",
+        output
+    );
 }
 
 // ==================== scrypt (Async) Tests ====================
@@ -191,7 +208,11 @@ fn test_scrypt_function_exists() {
 console.log(typeof crypto.scrypt === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected scrypt to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected scrypt to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -202,7 +223,11 @@ const result = crypto.scrypt('password', 'salt', 32);
 console.log(result instanceof Promise ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected scrypt to return Promise: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected scrypt to return Promise: {}",
+        output
+    );
 }
 
 #[test]
@@ -217,7 +242,11 @@ crypto.scrypt('password', 'salt', 32).then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async scrypt to resolve: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async scrypt to resolve: {}",
+        output
+    );
 }
 
 #[test]
@@ -231,7 +260,11 @@ crypto.scrypt('password', 'salt', 32).then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async scrypt to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async scrypt to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -246,7 +279,11 @@ crypto.scrypt('password', 'salt', 32, { N: 1024, r: 8, p: 1 }).then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async scrypt with options to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async scrypt with options to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -260,7 +297,11 @@ fn test_scrypt_async_await() {
 })();
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async/await scrypt to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async/await scrypt to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -275,7 +316,11 @@ fn test_scrypt_async_consistent_with_sync() {
 })();
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async and sync to produce same result: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async and sync to produce same result: {}",
+        output
+    );
 }
 
 // ==================== Callback Pattern Tests ====================
@@ -293,7 +338,11 @@ crypto.scrypt('password', 'salt', 32, function(err, result) {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected callback pattern to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected callback pattern to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -309,7 +358,11 @@ crypto.scrypt('password', 'salt', 32, { N: 1024 }, function(err, result) {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected callback with options to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected callback with options to work: {}",
+        output
+    );
 }
 
 // ==================== Edge Cases ====================
@@ -322,7 +375,11 @@ const result = crypto.scryptSync('密码', 'salt', 32);
 console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected UTF-8 password to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected UTF-8 password to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -333,7 +390,11 @@ const result = crypto.scryptSync('password', '盐', 32);
 console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected UTF-8 salt to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected UTF-8 salt to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -345,7 +406,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 128 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected large keylen to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected large keylen to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -357,7 +422,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected default parameters to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected default parameters to work: {}",
+        output
+    );
 }
 
 // ==================== Performance Note Tests ====================
@@ -372,5 +441,9 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 16 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected low cost parameters for fast testing: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected low cost parameters for fast testing: {}",
+        output
+    );
 }

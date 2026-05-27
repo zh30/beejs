@@ -189,7 +189,7 @@ describe("性能测试 - 并发操作", () => {
  * 性能测试运行
  *
  * 命令:
- * beejs test examples/testing/perf_test.test.js --benchmark
+ * bee test examples/testing/perf_test.test.js
  *
  * 输出示例:
  * Performance Test Results:

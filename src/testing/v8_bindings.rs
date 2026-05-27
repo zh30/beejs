@@ -20,7 +20,8 @@ fn test_callback(
     let name: _ = args.get(0).to_rust_string_lossy(scope);
     let function: _ = args.get(1);
     if !function.is_function() {
-        let error: _ = v8::String::new(scope, "test() requires a function as second argument").unwrap();
+        let error: _ =
+            v8::String::new(scope, "test() requires a function as second argument").unwrap();
         let exception: _ = v8::Exception::error(scope, error);
         scope.throw_exception(exception);
         return;

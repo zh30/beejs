@@ -1,12 +1,9 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use anyhow::Result;
 
 /// 测试代码质量标准
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
     /// 测试 clippy 静态分析检查
     #[test]
@@ -15,10 +12,10 @@ use std::collections::{HashMap, BTreeMap};
         // 通过运行 cargo clippy -- -D warnings 来验证
 
         // 验证关键文件是否存在且可编译
-        let _: _ = std::fs::read_to_string("src/lib.rs")?;
-        let _: _ = std::fs::read_to_string("src/jit_optimizer.rs")?;
-        let _: _ = std::fs::read_to_string("src/typescript.rs")?;
-        let _: _ = std::fs::read_to_string("src/nodejs.rs")?;
+        let _ = std::fs::read_to_string("src/lib.rs")?;
+        let _ = std::fs::read_to_string("src/jit_optimizer.rs")?;
+        let _ = std::fs::read_to_string("src/typescript/mod.rs")?;
+        let _ = std::fs::read_to_string("src/nodejs.rs")?;
 
         Ok(())
     }
@@ -27,7 +24,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_code_quality_metrics() -> Result<()> {
         // 统计代码质量改进
-        let warnings_fixed: _ = 0;
+        let warnings_fixed = 0;
 
         // 这里可以添加对特定改进的验证
         // 例如：验证某个函数是否正确修复了 clippy 警告

@@ -234,7 +234,7 @@ fn is_test_environment() -> bool {
     #[allow(unreachable_code)]
     let env_check: _ = std::env::var("BEEJS_TEST_MODE").is_ok();
     env_check
-    // 注意：不再检查二进制路径，因为 target/release/beejs 会被误判为测试环境
+    // 注意：不再检查二进制路径，因为 target/release/bee 会被误判为测试环境
     // 这会导致生产构建的 beejs 无法使用 Isolate 池，严重影响性能
 }
 /// 初始化全局Isolate池（超级激进版）

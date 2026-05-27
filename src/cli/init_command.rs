@@ -1,7 +1,7 @@
 // Init Command Module
 // Stage 91 Phase 4.1 - 项目初始化命令
 //
-/// 实现 `beejs init` 命令，用于快速初始化项目
+/// 实现 `bee init` 命令，用于快速初始化项目
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
@@ -148,26 +148,26 @@ impl InitCommand {
         };
         let scripts: _ = match self.config.template {
             ProjectTemplate::Basic => serde_json::json!({
-                "start": "beejs run src/index.js",
-                "dev": "beejs run --watch src/index.js",
-                "test": "beejs test"
+                "start": "bee run src/index.js",
+                "dev": "bee run --watch src/index.js",
+                "test": "bee test"
             }),
             ProjectTemplate::TypeScript => serde_json::json!({
-                "start": "beejs run src/index.ts",
-                "dev": "beejs run --watch src/index.ts",
-                "build": "beejs bundle src/index.ts --outfile dist/index.js",
-                "test": "beejs test"
+                "start": "bee run src/index.ts",
+                "dev": "bee run --watch src/index.ts",
+                "build": "bee bundle src/index.ts --outfile dist/index.js",
+                "test": "bee test"
             }),
             ProjectTemplate::WebApi => serde_json::json!({
-                "start": "beejs run src/index.ts",
-                "dev": "beejs run --watch src/index.ts",
-                "build": "beejs bundle src/index.ts --outfile dist/server.js",
-                "test": "beejs test"
+                "start": "bee run src/index.ts",
+                "dev": "bee run --watch src/index.ts",
+                "build": "bee bundle src/index.ts --outfile dist/server.js",
+                "test": "bee test"
             }),
             ProjectTemplate::CliTool => serde_json::json!({
-                "start": "beejs run src/cli.js",
-                "build": "beejs bundle src/cli.js --outfile dist/cli.js --target node",
-                "test": "beejs test"
+                "start": "bee run src/cli.js",
+                "build": "bee bundle src/cli.js --outfile dist/cli.js --target node",
+                "test": "bee test"
             }),
         };
         serde_json::json!({
@@ -193,7 +193,7 @@ impl InitCommand {
     }
     fn generate_basic_template(&self, path: &Path) -> anyhow::Result<()> {
         let index_content: _ = r#"// Beejs - Basic JavaScript Project
-// Created with `beejs init`
+// Created with `bee init`
 console.log("🚀 Welcome to Beejs!");
 console.log("Edit src/index.js to get started.");
 // Example: Define a simple function
@@ -214,8 +214,8 @@ main();
         fs::write(path.join("src/index.js"), index_content)?;
         // 创建示例测试文件
         let test_content: _ = r#"// Example test file
-// Run with: beejs test
-import { describe, it, expect } from 'beejs:test';
+// Run with: bee test
+import { describe, it, expect } from 'bee:test';
 describe('Basic Tests', () => {
     it('should pass a simple test', () => {
         expect(1 + 1).toBe(2);
@@ -230,7 +230,7 @@ describe('Basic Tests', () => {
     }
     fn generate_typescript_template(&self, path: &Path) -> anyhow::Result<()> {
         let index_content: _ = r#"// Beejs - TypeScript Project
-// Created with `beejs init --template typescript`
+// Created with `bee init --template typescript`
 interface User {
     id: number;
     name: string;
@@ -254,7 +254,7 @@ main().catch(console.error);
         fs::write(path.join("src/index.ts"), index_content)?;
         // 创建 TypeScript 测试文件
         let test_content: _ = r#"// TypeScript test file
-import { describe, it, expect } from 'beejs:test';
+import { describe, it, expect } from 'bee:test';
 interface Calculator {
     add(a: number, b: number): number;
 }
@@ -276,7 +276,7 @@ describe('TypeScript Tests', () => {
     }
     fn generate_webapi_template(&self, path: &Path) -> anyhow::Result<()> {
         let index_content: _ = r#"// Beejs - Web API Server
-// Created with `beejs init --template web-api`
+// Created with `bee init --template web-api`
 interface Route {
     method: string;
     path: string;
@@ -322,7 +322,7 @@ console.log('💡 Implement HTTP server using Beejs fetch/serve APIs.');
         fs::write(path.join("src/index.ts"), index_content)?;
         // 创建 API 测试
         let test_content: _ = r#"// API endpoint tests
-import { describe, it, expect } from 'beejs:test';
+import { describe, it, expect } from 'bee:test';
 describe('API Tests', () => {
     it('should return valid JSON structure', () => {
         const response = { message: 'test' };
@@ -339,9 +339,9 @@ describe('API Tests', () => {
         Ok(())
     }
     fn generate_cli_template(&self, path: &Path) -> anyhow::Result<()> {
-        let cli_content: _ = r#"#!/usr/bin/env beejs
+        let cli_content: _ = r#"#!/usr/bin/env bee
 // Beejs - CLI Tool Template
-// Created with `beejs init --template cli-tool`
+// Created with `bee init --template cli-tool`
 const args = process.argv.slice(2);
 const command = args[0];
 function printHelp() {
@@ -393,7 +393,7 @@ switch (command) {
         fs::write(path.join("src/cli.js"), cli_content)?;
         // CLI 测试
         let test_content: _ = r#"// CLI command tests
-import { describe, it, expect } from 'beejs:test';
+import { describe, it, expect } from 'bee:test';
 describe('CLI Commands', () => {
     it('should parse version flag', () => {
         const flags = ['-v', '--version', 'version'];
@@ -498,12 +498,12 @@ coverage/
         };
         self.formatter.numbered_item(
             1,
-            &format!("{}beejs run src/index.{}", project_dir, self.main_ext()),
+            &format!("{}bee run src/index.{}", project_dir, self.main_ext()),
         );
         self.formatter
             .numbered_item(2, "Edit src/ files to build your project");
         self.formatter
-            .numbered_item(3, "Run tests with: beejs test");
+            .numbered_item(3, "Run tests with: bee test");
         println!();
         self.formatter.info(&format!(
             "Template: {} ({})",

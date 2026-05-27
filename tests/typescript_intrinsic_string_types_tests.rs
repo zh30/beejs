@@ -18,13 +18,22 @@ console.log(result);
                 println!("Uppercase 基础转译结果:");
                 println!("{}", output.js_code);
                 // 类型别名应该被移除
-                assert!(!output.js_code.contains("type TU1"),
-                    "Should not contain type alias: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TU1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
                 // 保留 const 声明和 console.log
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Uppercase basic test passed");
             }
             Err(e) => {
@@ -45,10 +54,16 @@ console.log(result);
             Ok(output) => {
                 println!("Lowercase 基础转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TL1"),
-                    "Should not contain type alias: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TL1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
                 println!("✅ Lowercase basic test passed");
             }
             Err(e) => {
@@ -69,10 +84,16 @@ console.log(result);
             Ok(output) => {
                 println!("Capitalize 基础转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TC1"),
-                    "Should not contain type alias: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TC1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
                 println!("✅ Capitalize basic test passed");
             }
             Err(e) => {
@@ -93,10 +114,16 @@ console.log(result);
             Ok(output) => {
                 println!("Uncapitalize 基础转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TN1"),
-                    "Should not contain type alias: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TN1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
                 println!("✅ Uncapitalize basic test passed");
             }
             Err(e) => {
@@ -119,12 +146,21 @@ console.log(result);
                 println!("内建类型与联合类型转译结果:");
                 println!("{}", output.js_code);
                 // 类型别名应该被移除
-                assert!(!output.js_code.contains("type TUnion"),
-                    "Should not contain type TUnion: {}", output.js_code);
-                assert!(!output.js_code.contains("type TUpper"),
-                    "Should not contain type TUpper: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TUnion"),
+                    "Should not contain type TUnion: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type TUpper"),
+                    "Should not contain type TUpper: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
                 println!("✅ Intrinsic with union test passed");
             }
             Err(e) => {
@@ -147,13 +183,22 @@ console.log(result);
             Ok(output) => {
                 println!("内建类型在泛型中转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("function toUppercase"),
-                    "Should contain function: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("function toUppercase"),
+                    "Should contain function: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 // 类型注解应该被移除
-                assert!(!output.js_code.contains(": Uppercase<T>"),
-                    "Should remove type annotation: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains(": Uppercase<T>"),
+                    "Should remove type annotation: {}",
+                    output.js_code
+                );
                 println!("✅ Intrinsic in generic test passed");
             }
             Err(e) => {
@@ -176,12 +221,21 @@ console.log(output);
                 println!("组合内建类型转译结果:");
                 println!("{}", output.js_code);
                 // 类型别名应该被移除
-                assert!(!output.js_code.contains("type Cases"),
-                    "Should not contain type Cases: {}", output.js_code);
-                assert!(!output.js_code.contains("type Result"),
-                    "Should not contain type Result: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type Cases"),
+                    "Should not contain type Cases: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Result"),
+                    "Should not contain type Result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Combined intrinsic types test passed");
             }
             Err(e) => {
@@ -203,12 +257,21 @@ console.log(result);
                 println!("内建类型与模板字面量转译结果:");
                 println!("{}", output.js_code);
                 // 类型别名应该被移除
-                assert!(!output.js_code.contains("type TemplateWithUpper"),
-                    "Should not contain type TemplateWithUpper: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TemplateWithUpper"),
+                    "Should not contain type TemplateWithUpper: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Intrinsic with template literal test passed");
             }
             Err(e) => {
@@ -238,16 +301,31 @@ console.log(u, l, c, uc);
                 println!("所有内建类型转译结果:");
                 println!("{}", output.js_code);
                 // 所有类型别名应该被移除
-                assert!(!output.js_code.contains("type Upper"),
-                    "Should not contain type Upper: {}", output.js_code);
-                assert!(!output.js_code.contains("type Lower"),
-                    "Should not contain type Lower: {}", output.js_code);
-                assert!(!output.js_code.contains("type Cap"),
-                    "Should not contain type Cap: {}", output.js_code);
-                assert!(!output.js_code.contains("type Uncap"),
-                    "Should not contain type Uncap: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type Upper"),
+                    "Should not contain type Upper: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Lower"),
+                    "Should not contain type Lower: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Cap"),
+                    "Should not contain type Cap: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Uncap"),
+                    "Should not contain type Uncap: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ All intrinsic types test passed");
             }
             Err(e) => {
@@ -281,24 +359,39 @@ console.log(t1, t2, t3, t4, t5);
                 println!("{}", output.js_code);
 
                 // 验证没有警告（diagnostics 列表应该为空或只包含非错误信息）
-                let has_warnings = output.diagnostics.iter().any(|d| {
-                    d.message.contains("has invalid type definition")
-                });
-                assert!(!has_warnings,
+                let has_warnings = output
+                    .diagnostics
+                    .iter()
+                    .any(|d| d.message.contains("has invalid type definition"));
+                assert!(
+                    !has_warnings,
                     "Should not have invalid type definition warnings, got: {:?}",
-                    output.diagnostics);
+                    output.diagnostics
+                );
 
                 // 验证代码保留
-                assert!(output.js_code.contains("const t1"),
-                    "Should contain const t1: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const t1"),
+                    "Should contain const t1: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
 
                 // 验证类型别名被移除
-                assert!(!output.js_code.contains("type UpperTemplate"),
-                    "Should not contain type UpperTemplate: {}", output.js_code);
-                assert!(!output.js_code.contains("type Combined"),
-                    "Should not contain type Combined: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type UpperTemplate"),
+                    "Should not contain type UpperTemplate: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Combined"),
+                    "Should not contain type Combined: {}",
+                    output.js_code
+                );
 
                 println!("✅ Template literal intrinsic types without warnings test passed");
             }
@@ -320,12 +413,21 @@ console.log(result);
             Ok(output) => {
                 println!("Trim 基础转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TTrim1"),
-                    "Should not contain type alias: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TTrim1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ Trim basic test passed");
             }
             Err(e) => {
@@ -346,12 +448,21 @@ console.log(result);
             Ok(output) => {
                 println!("TrimLeft 基础转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TTrimLeft1"),
-                    "Should not contain type alias: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TTrimLeft1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ TrimLeft basic test passed");
             }
             Err(e) => {
@@ -372,12 +483,21 @@ console.log(result);
             Ok(output) => {
                 println!("TrimRight 基础转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TTrimRight1"),
-                    "Should not contain type alias: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TTrimRight1"),
+                    "Should not contain type alias: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ TrimRight basic test passed");
             }
             Err(e) => {
@@ -399,10 +519,16 @@ console.log(result);
             Ok(output) => {
                 println!("Trim 与联合类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TTrim"),
-                    "Should not contain type TTrim: {}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TTrim"),
+                    "Should not contain type TTrim: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
                 println!("✅ Trim with union test passed");
             }
             Err(e) => {
@@ -429,14 +555,26 @@ console.log(t, tl, tr);
             Ok(output) => {
                 println!("所有 Trim 类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(!output.js_code.contains("type TrimStr"),
-                    "Should not contain type TrimStr: {}", output.js_code);
-                assert!(!output.js_code.contains("type TrimLeftStr"),
-                    "Should not contain type TrimLeftStr: {}", output.js_code);
-                assert!(!output.js_code.contains("type TrimRightStr"),
-                    "Should not contain type TrimRightStr: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type TrimStr"),
+                    "Should not contain type TrimStr: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type TrimLeftStr"),
+                    "Should not contain type TrimLeftStr: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type TrimRightStr"),
+                    "Should not contain type TrimRightStr: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 println!("✅ All Trim types test passed");
             }
             Err(e) => {
@@ -467,25 +605,46 @@ console.log(cap, uncap);
                 println!("{}", output.js_code);
 
                 // 验证类型别名被移除
-                assert!(!output.js_code.contains("type ToCapitalize"),
-                    "Should not contain type ToCapitalize: {}", output.js_code);
-                assert!(!output.js_code.contains("type ToUncapitalize"),
-                    "Should not contain type ToUncapitalize: {}", output.js_code);
-                assert!(!output.js_code.contains("type CapResult"),
-                    "Should not contain type CapResult: {}", output.js_code);
-                assert!(!output.js_code.contains("type UncapResult"),
-                    "Should not contain type UncapResult: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type ToCapitalize"),
+                    "Should not contain type ToCapitalize: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type ToUncapitalize"),
+                    "Should not contain type ToUncapitalize: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type CapResult"),
+                    "Should not contain type CapResult: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type UncapResult"),
+                    "Should not contain type UncapResult: {}",
+                    output.js_code
+                );
 
                 // 验证代码保留
-                assert!(output.js_code.contains("const cap"),
-                    "Should contain const cap: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const cap"),
+                    "Should contain const cap: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
 
                 println!("✅ Capitalize/Uncapitalize in conditional types test passed");
             }
             Err(e) => {
-                panic!("Capitalize/Uncapitalize in conditional types test failed: {}", e);
+                panic!(
+                    "Capitalize/Uncapitalize in conditional types test failed: {}",
+                    e
+                );
             }
         }
     }
@@ -511,18 +670,33 @@ console.log(n1, n2, n3);
                 println!("{}", output.js_code);
 
                 // 验证类型别名被移除
-                assert!(!output.js_code.contains("type Nested1"),
-                    "Should not contain type Nested1: {}", output.js_code);
-                assert!(!output.js_code.contains("type Nested2"),
-                    "Should not contain type Nested2: {}", output.js_code);
-                assert!(!output.js_code.contains("type Nested3"),
-                    "Should not contain type Nested3: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("type Nested1"),
+                    "Should not contain type Nested1: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Nested2"),
+                    "Should not contain type Nested2: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("type Nested3"),
+                    "Should not contain type Nested3: {}",
+                    output.js_code
+                );
 
                 // 验证代码保留
-                assert!(output.js_code.contains("const n1"),
-                    "Should contain const n1: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const n1"),
+                    "Should contain const n1: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
 
                 println!("✅ Deeply nested intrinsic types test passed");
             }

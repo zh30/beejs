@@ -25,13 +25,21 @@ pub fn setup_net_api(
     let create_connection_func: _ = v8::FunctionTemplate::new(scope, net_connect_callback);
     let create_connection_instance: _ = create_connection_func.get_function(scope).unwrap();
     let create_connection_key: _ = v8::String::new(scope, "createConnection").unwrap();
-    net_obj.set(scope, create_connection_key.into(), create_connection_instance.into());
+    net_obj.set(
+        scope,
+        create_connection_key.into(),
+        create_connection_instance.into(),
+    );
 
     // createServer
     let create_server_func: _ = v8::FunctionTemplate::new(scope, net_create_server_callback);
     let create_server_instance: _ = create_server_func.get_function(scope).unwrap();
     let create_server_key: _ = v8::String::new(scope, "createServer").unwrap();
-    net_obj.set(scope, create_server_key.into(), create_server_instance.into());
+    net_obj.set(
+        scope,
+        create_server_key.into(),
+        create_server_instance.into(),
+    );
 
     // Server 构造函数
     let server_func: _ = v8::FunctionTemplate::new(scope, net_server_constructor_callback);
@@ -85,7 +93,11 @@ fn net_connect_callback(
     let handle_id = tcp_handle.id;
 
     // 尝试建立真实连接（带超时）
-    let timeout_secs = if connect_timeout > 0 { connect_timeout as u64 } else { 10 };
+    let timeout_secs = if connect_timeout > 0 {
+        connect_timeout as u64
+    } else {
+        10
+    };
     let connect_result = tcp_handle.connect(&host, port as u16);
     let (is_connected, remote_addr, remote_family, local_addr_val) = {
         let rt = tokio::runtime::Runtime::new().ok();
@@ -98,12 +110,35 @@ fn net_connect_callback(
                 match result {
                     Ok(Ok(())) => {
                         let info = tcp_handle.get_info();
-                        (true, info.remote_addr.clone(), info.family.clone(), info.local_addr.clone())
+                        (
+                            true,
+                            info.remote_addr.clone(),
+                            info.family.clone(),
+                            info.local_addr.clone(),
+                        )
                     }
-                    _ => (false, host.clone(), if host.contains(':') { "IPv6".to_string() } else { "IPv4".to_string() }, local_address)
+                    _ => (
+                        false,
+                        host.clone(),
+                        if host.contains(':') {
+                            "IPv6".to_string()
+                        } else {
+                            "IPv4".to_string()
+                        },
+                        local_address,
+                    ),
                 }
             }
-            None => (false, host.clone(), if host.contains(':') { "IPv6".to_string() } else { "IPv4".to_string() }, local_address),
+            None => (
+                false,
+                host.clone(),
+                if host.contains(':') {
+                    "IPv6".to_string()
+                } else {
+                    "IPv4".to_string()
+                },
+                local_address,
+            ),
         }
     };
 
@@ -139,7 +174,8 @@ fn net_connect_callback(
 
     // connect 事件标识
     let connect_key = v8::String::new(scope, "connect").unwrap();
-    let connect_val = v8::String::new(scope, if is_connected { "open" } else { "opening" }).unwrap();
+    let connect_val =
+        v8::String::new(scope, if is_connected { "open" } else { "opening" }).unwrap();
     socket_obj.set(scope, connect_key.into(), connect_val.into());
 
     // 存储连接句柄 ID
@@ -270,7 +306,11 @@ fn net_create_server_callback(
     let get_connections_func: _ = v8::FunctionTemplate::new(scope, server_get_connections_callback);
     let get_connections_instance: _ = get_connections_func.get_function(scope).unwrap();
     let get_connections_key: _ = v8::String::new(scope, "getConnections").unwrap();
-    server_obj.set(scope, get_connections_key.into(), get_connections_instance.into());
+    server_obj.set(
+        scope,
+        get_connections_key.into(),
+        get_connections_instance.into(),
+    );
 
     // ref/unref 方法
     let ref_func: _ = v8::FunctionTemplate::new(scope, server_ref_callback);
@@ -382,9 +422,7 @@ fn is_valid_ipv4(ip: &str) -> bool {
     if ip.split('.').count() != 4 {
         return false;
     }
-    ip.split('.').all(|part| {
-        part.parse::<u8>().is_ok()
-    })
+    ip.split('.').all(|part| part.parse::<u8>().is_ok())
 }
 
 /// 验证 IPv6 地址
@@ -398,7 +436,12 @@ fn is_valid_ipv6(ip: &str) -> bool {
 }
 
 /// 提取整数选项
-fn extract_integer_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: i32) -> i32 {
+fn extract_integer_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+    key: &str,
+    default: i32,
+) -> i32 {
     if options.is_undefined() || options.is_null() {
         return default;
     }
@@ -414,7 +457,12 @@ fn extract_integer_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::V
 }
 
 /// 提取字符串选项
-fn extract_string_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: &str) -> String {
+fn extract_string_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+    key: &str,
+    default: &str,
+) -> String {
     if options.is_undefined() || options.is_null() {
         return default.to_string();
     }
@@ -445,7 +493,8 @@ fn socket_write_callback(
         .unwrap_or_else(|| "utf8".to_string());
 
     // 转换为字符串
-    let data_str = data_val.to_string(scope)
+    let data_str = data_val
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -750,7 +799,9 @@ fn server_address_callback(
 ) {
     let this: _ = args.this();
     let address_key = v8::String::new(scope, "address").unwrap();
-    let address = this.get(scope, address_key.into()).unwrap_or(v8::null(scope).into());
+    let address = this
+        .get(scope, address_key.into())
+        .unwrap_or(v8::null(scope).into());
     retval.set(address);
 }
 

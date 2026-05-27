@@ -1,4 +1,4 @@
-#!/usr/bin/env beejs
+#!/usr/bin/env bee
 
 //! WebAssembly vs V8 性能对比基准测试
 //! 展示 Beejs 的 WebAssembly 集成性能优势

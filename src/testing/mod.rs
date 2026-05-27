@@ -12,26 +12,30 @@
 // - Timeout control and retry mechanisms
 // - Test filtering and sorting
 // - Performance benchmarking
-pub mod test_context;
 pub mod assertions;
-pub mod test_runner;
+pub mod test_context;
 pub mod test_discoverer;
+pub mod test_runner;
 pub mod v8_bindings;
 pub mod v8_test_executor; // v0.3.251: V8 test execution support
-// Stage 93 Phase 3.3 - Enhanced features
+                          // Stage 93 Phase 3.3 - Enhanced features
+pub mod coverage;
 pub mod enhanced_runner;
 pub mod parallel_executor;
+pub mod perf;
 pub mod test_timeout;
 
-pub use v8_bindings::*;
-pub use test_context::TestSuite;
-pub use v8_test_executor::V8TestExecutor;
-pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig};
-pub use parallel_executor::{ParallelExecutor, ParallelConfig};
-pub use test_timeout::{TestTimeout, TimeoutConfig};
+pub use coverage::*;
+pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig, EnhancedRunnerStats};
+pub use parallel_executor::{ParallelConfig, ParallelExecutor};
+pub use perf::*;
 /// Global test registry for collecting test cases during file execution
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
+pub use test_context::{AssertionResult, TestCase, TestResult, TestSuite};
+pub use test_timeout::{TestTimeout, TimeoutConfig};
+pub use v8_bindings::*;
+pub use v8_test_executor::V8TestExecutor;
 static TEST_REGISTRY: OnceLock<Mutex<HashMap<String, TestSuite>>> = OnceLock::new();
 /// Register a test suite
 pub fn register_suite(suite: TestSuite) {

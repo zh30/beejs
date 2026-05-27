@@ -18,7 +18,8 @@ impl Tensor {
             return Err(anyhow::anyhow!(
                 "Data size mismatch: expected {}, got {}",
                 expected_size,
-                data.len()));
+                data.len()
+            ));
         }
         Ok(Tensor { data, shape })
     }
@@ -80,7 +81,8 @@ impl Tensor {
             return Err(anyhow::anyhow!(
                 "Cannot reshape: size mismatch ({} vs {})",
                 new_size,
-                self.size()));
+                self.size()
+            ));
         }
         Ok(Tensor {
             data: self.data.clone(),
@@ -97,7 +99,10 @@ impl Tensor {
         if k != k2 {
             return Err(anyhow::anyhow!(
                 "matmul dimension mismatch: {}x{} * {}x{}",
-                m, k, k2, n
+                m,
+                k,
+                k2,
+                n
             ));
         }
         let mut result = vec![0.0; m * n];
@@ -148,13 +153,13 @@ impl Tensor {
             return Err(anyhow::anyhow!("softmax requires 1D tensor"));
         }
         let max_val: _ = self.data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-        let exp_sum: f32 = self.data.iter()
-            .map(|&x| (x - max_val).exp())
-            .sum();
+        let exp_sum: f32 = self.data.iter().map(|&x| (x - max_val).exp()).sum();
         if exp_sum == 0.0 {
             return Err(anyhow::anyhow!("Invalid softmax input"));
         }
-        let data: Vec<f32> = self.data.iter()
+        let data: Vec<f32> = self
+            .data
+            .iter()
             .map(|&x| (x - max_val).exp() / exp_sum)
             .collect();
         Ok(Tensor {
@@ -167,12 +172,8 @@ impl Tensor {
         if self.ndim() != 4 {
             return Err(anyhow::anyhow!("avg_pool requires 4D tensor (N, C, H, W)"));
         }
-        let (batch, channels, height, width) = (
-            self.shape[0],
-            self.shape[1],
-            self.shape[2],
-            self.shape[3],
-        );
+        let (batch, channels, height, width) =
+            (self.shape[0], self.shape[1], self.shape[2], self.shape[3]);
         let out_height: _ = (height - kernel_size) / stride + 1;
         let out_width: _ = (width - kernel_size) / stride + 1;
         let mut result = Vec::new();
@@ -196,7 +197,10 @@ impl Tensor {
                 }
             }
         }
-        Ok(Tensor::new(result, vec![batch, channels, out_height, out_width])?)
+        Ok(Tensor::new(
+            result,
+            vec![batch, channels, out_height, out_width],
+        )?)
     }
     /// 转换为字符串表示
     pub fn to_string(&self) -> String {
@@ -218,22 +222,25 @@ impl Tensor {
             .to_kind(tch::Kind::Float)
             .try_into()
             .context("Failed to convert PyTorch tensor to Vec<f32>")?;
-        let shape: Vec<usize> = tch_tensor
-            .dims()
-            .iter()
-            .map(|&d| d as usize)
-            .collect();
-        Ok(Tensor { data: data_vec, shape })
+        let shape: Vec<usize> = tch_tensor.dims().iter().map(|&d| d as usize).collect();
+        Ok(Tensor {
+            data: data_vec,
+            shape,
+        })
     }
     /// 转换为 PyTorch 张量（未启用功能时的占位符）
     #[cfg(not(feature = "tch"))]
     pub fn to_tch_tensor(&self, _device: &()) -> Result<Box<dyn std::fmt::Debug>> {
-        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features tch"))
+        Err(anyhow::anyhow!(
+            "PyTorch support not enabled. Enable with --features tch"
+        ))
     }
     /// 从 PyTorch 张量创建（未启用功能时的占位符）
     #[cfg(not(feature = "tch"))]
     pub fn from_tch_tensor(_tch_tensor: Box<dyn std::fmt::Debug>, _device: &()) -> Result<Self> {
-        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features tch"))
+        Err(anyhow::anyhow!(
+            "PyTorch support not enabled. Enable with --features tch"
+        ))
     }
 }
 impl fmt::Display for Tensor {
@@ -284,13 +291,17 @@ impl TensorOps {
         // 检查所有张量的形状（除了连接轴）
         for tensor in tensors.iter() {
             if tensor.ndim() != ndim {
-                return Err(anyhow::anyhow!("All tensors must have same number of dimensions"));
+                return Err(anyhow::anyhow!(
+                    "All tensors must have same number of dimensions"
+                ));
             }
             for (i, (&dim1, &dim2)) in first_shape.iter().zip(tensor.shape.iter()).enumerate() {
                 if i != axis && dim1 != dim2 {
                     return Err(anyhow::anyhow!(
                         "Shape mismatch on axis {} (expected {}, got {})",
-                        i, dim1, dim2
+                        i,
+                        dim1,
+                        dim2
                     ));
                 }
             }
@@ -316,7 +327,8 @@ impl TensorOps {
         if sum_sections != total_size {
             return Err(anyhow::anyhow!(
                 "Sections sum {} does not equal dimension size {}",
-                sum_sections, total_size
+                sum_sections,
+                total_size
             ));
         }
         let result: _ = Vec::new();
@@ -324,7 +336,9 @@ impl TensorOps {
         for &section_size in &sections {
             // 这里需要实现复杂的切片逻辑
             // 为了简化，这里只返回错误提示
-            return Err(anyhow::anyhow!("Split implementation requires complex slicing"));
+            return Err(anyhow::anyhow!(
+                "Split implementation requires complex slicing"
+            ));
         }
         Ok(result)
     }

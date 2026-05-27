@@ -8,9 +8,8 @@
 // - ScatterPlot: Correlation and distribution analysis
 // - AreaChart: Cumulative and range data
 
-
-use anyhow::{Result, Context, anyhow};
-use tracing::{debug, warn, error};
+use anyhow::{anyhow, Context, Result};
+use tracing::{debug, error, warn};
 /// Line Chart - For time series and continuous data
 pub struct LineChart {
     config: VisualizationConfig,
@@ -99,7 +98,8 @@ impl LineChart {
   </style>
   <rect width="100%" height="100%" fill="{}"/>
 "#,
-            width, height,
+            width,
+            height,
             self.config.text_color,
             "#e5e7eb",
             self.config.text_color,
@@ -127,10 +127,14 @@ impl LineChart {
             r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" class="axis"/>
   <line x1="{}" y1="{}" x2="{}" y2="{}" class="axis"/>
 "#,
-            padding.left, height - padding.bottom,
-            width - padding.right, height - padding.bottom,
-            padding.left, padding.top,
-            padding.left, height - padding.bottom
+            padding.left,
+            height - padding.bottom,
+            width - padding.right,
+            height - padding.bottom,
+            padding.left,
+            padding.top,
+            padding.left,
+            height - padding.bottom
         ));
         // Render grid
         if self.config.padding.bottom > 30 {
@@ -140,8 +144,10 @@ impl LineChart {
                 svg.push_str(&format!(
                     r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" class="grid"/>
 "#,
-                    padding.left, y,
-                    width - padding.right, y
+                    padding.left,
+                    y,
+                    width - padding.right,
+                    y
                 ));
             }
         }
@@ -156,13 +162,18 @@ impl LineChart {
             &self.color_palette.error,
         ];
         for (series_idx, series) in self.data.iter().enumerate() {
-            let color: _ = series.color.as_ref().unwrap_or(colors[series_idx % colors.len()]);
+            let color: _ = series
+                .color
+                .as_ref()
+                .unwrap_or(colors[series_idx % colors.len()]);
             if !series.data.is_empty() {
                 // Build path
                 let mut path = String::new();
                 for (point_idx, point) in series.data.iter().enumerate() {
                     let x: _ = padding.left + ((point.x - min_x) / (max_x - min_x)) * chart_width;
-                    let y: _ = height - padding.bottom - ((point.y - min_y) / (max_y - min_y)) * chart_height;
+                    let y: _ = height
+                        - padding.bottom
+                        - ((point.y - min_y) / (max_y - min_y)) * chart_height;
                     if point_idx == 0 {
                         path.push_str(&format!("M {} {}", x, y));
                     } else {
@@ -195,13 +206,22 @@ impl LineChart {
             let legend_x_start: _ = width / 2 - (self.data.len() as i32 * 100) / 2;
             for (series_idx, series) in self.data.iter().enumerate() {
                 let x: _ = legend_x_start + (series_idx as i32 * 100);
-                let color: _ = series.color.as_ref().unwrap_or(colors[series_idx % colors.len()]);
+                let color: _ = series
+                    .color
+                    .as_ref()
+                    .unwrap_or(colors[series_idx % colors.len()]);
                 svg.push_str(&format!(
                     r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="3"/>
   <text x="{}" y="{}" class="legend" text-anchor="start">{}</text>
 "#,
-                    x, legend_y, x + 20, legend_y, color,
-                    x + 25, legend_y + 5, series.name
+                    x,
+                    legend_y,
+                    x + 20,
+                    legend_y,
+                    color,
+                    x + 25,
+                    legend_y + 5,
+                    series.name
                 ));
             }
         }
@@ -237,13 +257,16 @@ impl Visualizable for LineChart {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
             error!("Failed to render line chart: {}", e);
-            format!("<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
-                    self.config.width, self.config.height, e)
+            format!(
+                "<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
+                self.config.width, self.config.height, e
+            )
         })
     }
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         // Convert flat data to DataSeries
-        let data_points: Vec<DataPoint> = data.into_iter()
+        let data_points: Vec<DataPoint> = data
+            .into_iter()
             .enumerate()
             .map(|(i, y)| DataPoint {
                 x: i as f64,
@@ -350,7 +373,8 @@ impl BarChart {
   </style>
   <rect width="100%" height="100%" fill="{}"/>
 "#,
-            width, height,
+            width,
+            height,
             self.config.text_color,
             "#e5e7eb",
             self.config.font_family,
@@ -377,10 +401,14 @@ impl BarChart {
             r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" class="axis"/>
   <line x1="{}" y1="{}" x2="{}" y2="{}" class="axis"/>
 "#,
-            padding.left, height - padding.bottom,
-            width - padding.right, height - padding.bottom,
-            padding.left, padding.top,
-            padding.left, height - padding.bottom
+            padding.left,
+            height - padding.bottom,
+            width - padding.right,
+            height - padding.bottom,
+            padding.left,
+            padding.top,
+            padding.left,
+            height - padding.bottom
         ));
         // Render bars
         let colors: _ = vec![
@@ -393,10 +421,14 @@ impl BarChart {
             &self.color_palette.error,
         ];
         let max_bars: _ = self.data.iter().map(|s| s.data.len()).max().unwrap_or(0);
-        let total_bar_width: _ = self.bar_width * max_bars as f64 + self.bar_gap * (max_bars as f64 - 1.0);
+        let total_bar_width: _ =
+            self.bar_width * max_bars as f64 + self.bar_gap * (max_bars as f64 - 1.0);
         let start_x: _ = padding.left + (chart_width - total_bar_width) / 2.0;
         for (series_idx, series) in self.data.iter().enumerate() {
-            let color: _ = series.color.as_ref().unwrap_or(colors[series_idx % colors.len()]);
+            let color: _ = series
+                .color
+                .as_ref()
+                .unwrap_or(colors[series_idx % colors.len()]);
             for (bar_idx, point) in series.data.iter().enumerate() {
                 let x: _ = start_x + bar_idx as f64 * (self.bar_width + self.bar_gap);
                 let bar_height: _ = ((point.y - min_y) / (max_y - min_y)) * chart_height;
@@ -410,7 +442,8 @@ impl BarChart {
                 svg.push_str(&format!(
                     r#"  <text x="{}" y="{}" class="label" text-anchor="middle" dy="-5">{}</text>
 "#,
-                    x + self.bar_width / 2.0, y,
+                    x + self.bar_width / 2.0,
+                    y,
                     format!("{:.1}", point.y)
                 ));
             }
@@ -441,15 +474,18 @@ impl Visualizable for BarChart {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
             error!("Failed to render bar chart: {}", e);
-            format!("<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
-                    self.config.width, self.config.height, e)
+            format!(
+                "<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
+                self.config.width, self.config.height, e
+            )
         })
     }
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         let series: _ = DataSeries {
             name: "Series 1".to_string(),
             data: {
-                let data_points: Vec<DataPoint> = data.into_iter()
+                let data_points: Vec<DataPoint> = data
+                    .into_iter()
                     .enumerate()
                     .map(|(i, y)| DataPoint {
                         x: i as f64,
@@ -548,7 +584,8 @@ impl PieChart {
   </style>
   <rect width="100%" height="100%" fill="{}"/>
 "#,
-            width, height,
+            width,
+            height,
             self.config.font_family,
             self.config.font_size,
             self.config.text_color,
@@ -563,9 +600,7 @@ impl PieChart {
         svg.push_str(&format!(
             r#"  <text x="{}" y="{}" class="title" text-anchor="middle">{}</text>
 "#,
-            center_x,
-            30,
-            self.config.title
+            center_x, 30, self.config.title
         ));
         // Render pie slices
         let colors: _ = vec![
@@ -585,7 +620,11 @@ impl PieChart {
             let y1: _ = center_y + radius * current_angle.sin();
             let x2: _ = center_x + radius * end_angle.cos();
             let y2: _ = center_y + radius * end_angle.sin();
-            let large_arc: _ = if slice_angle > std::f64::consts::PI { 1 } else { 0 };
+            let large_arc: _ = if slice_angle > std::f64::consts::PI {
+                1
+            } else {
+                0
+            };
             let color: _ = point.color.as_ref().unwrap_or(colors[idx % colors.len()]);
             // Draw slice
             if self.inner_radius > 0.0 {
@@ -645,18 +684,23 @@ impl Visualizable for PieChart {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
             error!("Failed to render pie chart: {}", e);
-            format!("<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
-                    self.config.width, self.config.height, e)
+            format!(
+                "<svg width=\"{}\" height=\"{}\"><text>Error: {}</text></svg>",
+                self.config.width, self.config.height, e
+            )
         })
     }
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
-        self.data = data.into_iter().map(|y| DataPoint {
-            x: 0.0,
-            y,
-            label: None,
-            color: None,
-            metadata: HashMap::new(),
-        }).collect();
+        self.data = data
+            .into_iter()
+            .map(|y| DataPoint {
+                x: 0.0,
+                y,
+                label: None,
+                color: None,
+                metadata: HashMap::new(),
+            })
+            .collect();
         Ok(())
     }
     fn get_config(&self) -> &VisualizationConfig {
@@ -710,7 +754,8 @@ impl LineChartBuilder {
         let series: _ = DataSeries {
             name: "Series 1".to_string(),
             data: {
-                let data_points: Vec<DataPoint> = data.into_iter()
+                let data_points: Vec<DataPoint> = data
+                    .into_iter()
                     .enumerate()
                     .map(|(i, y)| DataPoint {
                         x: i as f64,
@@ -794,7 +839,8 @@ impl BarChartBuilder {
         let series: _ = DataSeries {
             name: "Series 1".to_string(),
             data: {
-                let data_points: Vec<DataPoint> = data.into_iter()
+                let data_points: Vec<DataPoint> = data
+                    .into_iter()
                     .enumerate()
                     .map(|(i, y)| DataPoint {
                         x: i as f64,
@@ -1035,7 +1081,10 @@ mod tests {
     #[test]
     fn test_data_point_with_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("category".to_string(), serde_json::Value::String("test".to_string()));
+        metadata.insert(
+            "category".to_string(),
+            serde_json::Value::String("test".to_string()),
+        );
         let point: _ = DataPoint {
             x: 10.0,
             y: 20.0,

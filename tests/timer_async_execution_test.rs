@@ -2,11 +2,11 @@
 // Tests that verify delay > 0 setTimeout/setInterval callbacks actually execute
 // through the V8 main thread event loop integration
 
-use serial_test::serial;
+use beejs::nodejs_core::timers::{clear_all_async_timers, clear_all_timers};
 use beejs::MinimalRuntime;
-use beejs::nodejs_core::timers::{clear_all_timers, clear_all_async_timers};
-use std::time::Duration;
+use serial_test::serial;
 use std::thread;
+use std::time::Duration;
 
 fn cleanup_global_state() {
     clear_all_timers();
@@ -19,27 +19,21 @@ fn test_settimeout_async_executes_after_delay() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // Schedule a timer with a small delay
-    let _ = runtime.execute_code(r#"
+    // Short ref'ed timers should drain before execute_code returns so CLI eval
+    // can observe timer-backed async work.
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.asyncResult = 'before';
         setTimeout(() => {
             globalThis.asyncResult = 'after';
         }, 50);
-    "#).unwrap();
+        globalThis.asyncResult;
+    "#,
+        )
+        .unwrap();
 
-    // Immediately check - should still be 'before'
-    let check = runtime.execute_code("globalThis.asyncResult").unwrap();
-    assert_eq!(check.trim(), "before", "Timer should not execute immediately");
-
-    // Wait for the timer to fire (50ms delay + buffer)
-    thread::sleep(Duration::from_millis(100));
-
-    // Now the timer should have executed (after execute_fired_timers is called)
-    // Note: Since execute_code is called, the timer should have been executed
-    // if the delay has passed and the worker thread detected it
-    let check = runtime.execute_code("globalThis.asyncResult").unwrap();
-    // This might be 'before' or 'after' depending on timing
-    // The important thing is that the system works correctly
+    assert_eq!(result.trim(), "after");
 }
 
 #[test]
@@ -49,11 +43,15 @@ fn test_settimeout_zero_executes_immediately() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // setTimeout with delay=0 should execute immediately
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.testValue = 'initial';
         setTimeout(() => { globalThis.testValue = 'changed'; }, 0);
         globalThis.testValue;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Timer with delay=0 executes immediately during the same execute_code call
     assert_eq!(result.trim(), "changed");
@@ -66,13 +64,17 @@ fn test_clear_timeout_prevents_execution() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Schedule a timer and immediately clear it
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         globalThis.timerValue = 'initial';
         const id = setTimeout(() => {
             globalThis.timerValue = 'changed';
         }, 200);
         clearTimeout(id);
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Timer should be cancelled, value should still be initial
     let check = runtime.execute_code("globalThis.timerValue").unwrap();
@@ -88,18 +90,22 @@ fn test_clear_timeout_prevents_execution() {
 
 #[test]
 #[serial]
-fn test_multiple_setTimeout_zero() {
+fn test_multiple_set_timeout_zero() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Multiple delay=0 timers should all execute
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.count = 0;
         setTimeout(() => { globalThis.count += 1; }, 0);
         setTimeout(() => { globalThis.count += 1; }, 0);
         setTimeout(() => { globalThis.count += 1; }, 0);
         globalThis.count;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // All three timers execute immediately
     assert_eq!(result.trim(), "3");
@@ -112,12 +118,16 @@ fn test_timer_with_arguments_zero_delay() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Test timer with arguments (delay=0, executes immediately)
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         setTimeout((a, b, c) => {
             globalThis.argsResult = a + b + c;
         }, 0, 10, 20, 30);
         typeof globalThis.argsResult;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Should be 'undefined' before execution, then 'number' after
     // Since timer executes immediately, should be 'number'
@@ -136,16 +146,24 @@ fn test_setinterval_basic() {
 
     // Test that setInterval schedules callbacks correctly
     // First, verify the timer is created and can be cleared
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.intervalCount = 0;
         const id = setInterval(() => {
             globalThis.intervalCount += 1;
         }, 10);
         typeof id;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Timer should be created (id should be a number or object)
-    assert!(result.trim() == "number" || result.trim() == "object", "setInterval should return a timer ID, got: {}", result.trim());
+    assert!(
+        result.trim() == "number" || result.trim() == "object",
+        "setInterval should return a timer ID, got: {}",
+        result.trim()
+    );
 
     // Wait for the interval to fire
     thread::sleep(Duration::from_millis(100));
@@ -153,29 +171,41 @@ fn test_setinterval_basic() {
     // Check if callback was executed - this verifies the async integration works
     // Note: Due to timing, this may or may not have fired yet
     // The important thing is that the timer was scheduled correctly
-    let check = runtime.execute_code("typeof globalThis.intervalCount").unwrap();
+    let check = runtime
+        .execute_code("typeof globalThis.intervalCount")
+        .unwrap();
     assert_eq!(check.trim(), "number", "intervalCount should be a number");
 
     // Verify we can clear the interval (proves it was registered)
-    let clear_result = runtime.execute_code("clearInterval(id); 'cleared'").unwrap();
-    assert_eq!(clear_result.trim(), "cleared", "Should be able to clear the interval");
+    let clear_result = runtime
+        .execute_code("clearInterval(id); 'cleared'")
+        .unwrap();
+    assert_eq!(
+        clear_result.trim(),
+        "cleared",
+        "Should be able to clear the interval"
+    );
 }
 
 #[test]
 #[serial]
 fn test_clear_all_timers_function() {
-    use beejs::nodejs_core::timers::{clear_all_timers, clear_all_async_timers};
+    use beejs::nodejs_core::timers::{clear_all_async_timers, clear_all_timers};
 
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Create multiple timers
-    let _ = runtime.execute_code(r#"
+    let _ = runtime
+        .execute_code(
+            r#"
         globalThis.timer1Fired = false;
         globalThis.timer2Fired = false;
         setTimeout(() => { globalThis.timer1Fired = true; }, 100);
         setTimeout(() => { globalThis.timer2Fired = true; }, 100);
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // Clear all timers using Rust function (not exposed to JS)
     clear_all_timers();
@@ -198,24 +228,30 @@ fn test_invalid_timer_id_does_not_crash() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Clearing non-existent timers should not crash
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         clearTimeout(99999);
         clearInterval(88888);
         clearImmediate(77777);
         'no crash';
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     assert_eq!(result.trim(), "no crash");
 }
 
 #[test]
 #[serial]
-fn test_nested_setTimeout_zero() {
+fn test_nested_set_timeout_zero() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Nested setTimeout(..., 0) should all execute in the same event loop tick
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.nestedCount = 0;
         setTimeout(() => {
             globalThis.nestedCount += 1;
@@ -227,7 +263,9 @@ fn test_nested_setTimeout_zero() {
             }, 0);
         }, 0);
         globalThis.nestedCount;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // All nested timers with delay=0 execute immediately
     assert_eq!(result.trim(), "3");
@@ -240,13 +278,17 @@ fn test_timer_execution_order() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Timers should execute in the order they were scheduled
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.order = [];
         setTimeout(() => { globalThis.order.push('first'); }, 0);
         setTimeout(() => { globalThis.order.push('second'); }, 0);
         setTimeout(() => { globalThis.order.push('third'); }, 0);
         globalThis.order.join(',');
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     assert_eq!(result.trim(), "first,second,third");
 }
@@ -258,11 +300,15 @@ fn test_setimmediate_basic_execution() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // setImmediate executes in next event loop iteration
-    let result = runtime.execute_code(r#"
+    let result = runtime
+        .execute_code(
+            r#"
         globalThis.immediateValue = 'start';
         setImmediate(() => { globalThis.immediateValue = 'done'; });
         globalThis.immediateValue;
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
 
     // setImmediate executes after current execution (in next tick)
     // But since we're in the same execute_code call, it depends on implementation

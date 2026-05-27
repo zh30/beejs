@@ -12,15 +12,15 @@
 // - 内存和资源基准测试
 /// - 自动化性能回归检测
 use std::collections::HashMap;
-use std::time::SystemTime;
 use std::hash::Hash;
-pub mod startup;
-pub mod execution;
-pub mod memory;
-pub mod concurrent;
-pub mod javascript_core;
+use std::time::SystemTime;
 pub mod ai_inference_core;
+pub mod concurrent;
+pub mod execution;
+pub mod javascript_core;
+pub mod memory;
 pub mod memory_resource;
+pub mod startup;
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -239,14 +239,14 @@ impl BenchmarkFramework {
             0.0
         };
         // 获取平均内存统计
-        let avg_memory: _ = memory_stats.iter().fold(MemoryStats::default(), |acc, stats| {
-            MemoryStats {
+        let avg_memory: _ = memory_stats
+            .iter()
+            .fold(MemoryStats::default(), |acc, stats| MemoryStats {
                 current_rss: acc.current_rss + stats.current_rss,
                 peak_rss: acc.peak_rss.max(stats.peak_rss),
                 heap_allocated: acc.heap_allocated + stats.heap_allocated,
                 heap_used: acc.heap_used + stats.heap_used,
-            }
-        });
+            });
         BenchmarkResult {
             name: name.to_string(),
             metric_type,
@@ -280,7 +280,8 @@ impl BenchmarkFramework {
     /// 比较基准测试结果与基线
     pub fn compare_with_baseline(&self, result: &BenchmarkResult) -> Option<PerformanceDelta> {
         if let Some(baseline) = self.baseline_results.get(&result.name) {
-            let time_delta: _ = result.avg_duration.as_secs_f64() - baseline.avg_duration.as_secs_f64();
+            let time_delta: _ =
+                result.avg_duration.as_secs_f64() - baseline.avg_duration.as_secs_f64();
             let ops_delta: _ = result.operations_per_second - baseline.operations_per_second;
             Some(PerformanceDelta {
                 name: result.name.clone(),

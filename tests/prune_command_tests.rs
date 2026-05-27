@@ -1,59 +1,62 @@
-// beejs prune command tests
-// v0.3.230 - Test coverage for beejs prune command
+// bee prune command tests
+// v0.3.230 - Test coverage for bee prune command
 
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Get the path to the beejs binary
+/// Get the path to the bee binary
 fn beejs_path() -> PathBuf {
-    PathBuf::from("/Users/henry/code/beejs/target/debug/beejs")
+    PathBuf::from("/Users/henry/code/beejs/target/debug/bee")
 }
 
 #[cfg(test)]
 mod prune_command_tests {
     use super::*;
 
-    /// Test 1: beejs prune command should be recognized
+    /// Test 1: bee prune command should be recognized
     #[test]
     fn test_prune_command_exists() {
         let beejs = beejs_path();
-        assert!(beejs.exists(), "beejs binary should exist at {:?}", beejs);
+        assert!(beejs.exists(), "bee binary should exist at {:?}", beejs);
 
         let output = Command::new(&beejs)
             .arg("prune")
             .arg("--help")
             .output()
-            .expect("Failed to execute beejs prune --help");
+            .expect("Failed to execute bee prune --help");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should have successful exit code or show help
         assert!(
-            output.status.success() || stdout.contains("Remove unused dependencies") || stderr.contains("Remove unused dependencies"),
-            "beejs prune command should be recognized. stdout: {}, stderr: {}",
-            stdout, stderr
+            output.status.success()
+                || stdout.contains("Remove unused dependencies")
+                || stderr.contains("Remove unused dependencies"),
+            "bee prune command should be recognized. stdout: {}, stderr: {}",
+            stdout,
+            stderr
         );
     }
 
-    /// Test 2: beejs prune with no package.json should error
+    /// Test 2: bee prune with no package.json should error
     #[test]
     fn test_prune_no_package_json() {
         let temp_dir = TempDir::new().unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("prune")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs prune");
+            .expect("Failed to execute bee prune");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         assert!(
             !output.status.success(),
-            "beejs prune should fail without package.json"
+            "bee prune should fail without package.json"
         );
         assert!(
             stderr.contains("package.json not found"),
@@ -62,7 +65,7 @@ mod prune_command_tests {
         );
     }
 
-    /// Test 3: beejs prune with no node_modules should succeed
+    /// Test 3: bee prune with no node_modules should succeed
     #[test]
     fn test_prune_no_node_modules() {
         let temp_dir = TempDir::new().unwrap();
@@ -75,18 +78,18 @@ mod prune_command_tests {
         let package_json_path = temp_dir.path().join("package.json");
         fs::write(&package_json_path, package_json).unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("prune")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs prune");
+            .expect("Failed to execute bee prune");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(
             output.status.success(),
-            "beejs prune with no node_modules should succeed. stderr: {}",
+            "bee prune with no node_modules should succeed. stderr: {}",
             stderr
         );
         assert!(
@@ -96,7 +99,7 @@ mod prune_command_tests {
         );
     }
 
-    /// Test 4: beejs prune should preserve declared dependencies
+    /// Test 4: bee prune should preserve declared dependencies
     #[test]
     fn test_prune_preserves_declared_deps() {
         let temp_dir = TempDir::new().unwrap();
@@ -117,20 +120,24 @@ mod prune_command_tests {
         fs::create_dir_all(&node_modules).unwrap();
         let lodash = node_modules.join("lodash");
         fs::create_dir_all(&lodash).unwrap();
-        fs::write(lodash.join("package.json"), r#"{"name":"lodash","version":"4.17.21"}"#).unwrap();
+        fs::write(
+            lodash.join("package.json"),
+            r#"{"name":"lodash","version":"4.17.21"}"#,
+        )
+        .unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("prune")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs prune");
+            .expect("Failed to execute bee prune");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(
             output.status.success(),
-            "beejs prune should succeed. stderr: {}",
+            "bee prune should succeed. stderr: {}",
             stderr
         );
         // lodash should NOT be removed since it's declared
@@ -141,7 +148,7 @@ mod prune_command_tests {
         );
     }
 
-    /// Test 5: beejs prune should remove undeclared packages
+    /// Test 5: bee prune should remove undeclared packages
     #[test]
     fn test_prune_removes_undeclared() {
         let temp_dir = TempDir::new().unwrap();
@@ -164,25 +171,33 @@ mod prune_command_tests {
         // lodash (declared - should remain)
         let lodash = node_modules.join("lodash");
         fs::create_dir_all(&lodash).unwrap();
-        fs::write(lodash.join("package.json"), r#"{"name":"lodash","version":"4.17.21"}"#).unwrap();
+        fs::write(
+            lodash.join("package.json"),
+            r#"{"name":"lodash","version":"4.17.21"}"#,
+        )
+        .unwrap();
 
         // undeclared-package (not declared - should be removed)
         let undeclared = node_modules.join("undeclared-package");
         fs::create_dir_all(&undeclared).unwrap();
-        fs::write(undeclared.join("package.json"), r#"{"name":"undeclared-package","version":"1.0.0"}"#).unwrap();
+        fs::write(
+            undeclared.join("package.json"),
+            r#"{"name":"undeclared-package","version":"1.0.0"}"#,
+        )
+        .unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("prune")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs prune");
+            .expect("Failed to execute bee prune");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(
             output.status.success(),
-            "beejs prune should succeed. stderr: {}",
+            "bee prune should succeed. stderr: {}",
             stderr
         );
         // undeclared-package should be removed
@@ -196,7 +211,7 @@ mod prune_command_tests {
     /// Test 6: verify prune method in PackageManager
     #[test]
     fn test_package_manager_prune() {
-        use beejs::package_manager::{PackageManager, PackageManagerConfig, PackageJson};
+        use beejs::package_manager::{PackageJson, PackageManager, PackageManagerConfig};
 
         let temp_dir = TempDir::new().unwrap();
         let config = PackageManagerConfig {
@@ -213,7 +228,11 @@ mod prune_command_tests {
 
         let undeclared = node_modules.join("undeclared-pkg");
         fs::create_dir_all(&undeclared).unwrap();
-        fs::write(undeclared.join("package.json"), r#"{"name":"undeclared-pkg","version":"1.0.0"}"#).unwrap();
+        fs::write(
+            undeclared.join("package.json"),
+            r#"{"name":"undeclared-pkg","version":"1.0.0"}"#,
+        )
+        .unwrap();
 
         // Create package.json with no dependencies
         let package_json = PackageJson {
@@ -263,25 +282,33 @@ mod prune_command_tests {
         // @babel/core (declared - should remain)
         let babel_core = node_modules.join("@babel").join("core");
         fs::create_dir_all(&babel_core).unwrap();
-        fs::write(babel_core.join("package.json"), r#"{"name":"@babel/core","version":"7.0.0"}"#).unwrap();
+        fs::write(
+            babel_core.join("package.json"),
+            r#"{"name":"@babel/core","version":"7.0.0"}"#,
+        )
+        .unwrap();
 
         // @other/pkg (not declared - should be removed)
         let other_pkg = node_modules.join("@other").join("pkg");
         fs::create_dir_all(&other_pkg).unwrap();
-        fs::write(other_pkg.join("package.json"), r#"{"name":"@other/pkg","version":"1.0.0"}"#).unwrap();
+        fs::write(
+            other_pkg.join("package.json"),
+            r#"{"name":"@other/pkg","version":"1.0.0"}"#,
+        )
+        .unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("prune")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs prune");
+            .expect("Failed to execute bee prune");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(
             output.status.success(),
-            "beejs prune should succeed. stderr: {}",
+            "bee prune should succeed. stderr: {}",
             stderr
         );
         // @other/pkg should be removed

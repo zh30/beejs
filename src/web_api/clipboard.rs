@@ -5,8 +5,8 @@
 // v0.3.342: Initial implementation of Clipboard API
 
 use anyhow::Result;
-use rusty_v8 as v8;
 use once_cell::sync::Lazy;
+use rusty_v8 as v8;
 use std::sync::Mutex;
 
 /// Global clipboard state (in-memory storage for non-browser environment)
@@ -81,7 +81,8 @@ fn write_text_callback(
     let text_arg = args.get(0);
 
     let text = if text_arg.is_string() {
-        text_arg.to_string(scope)
+        text_arg
+            .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default()
     } else {

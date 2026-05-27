@@ -2,14 +2,7 @@
 // 提供功能降级策略和自动恢复机制
 pub mod manager;
 
-
-pub use manager::{
-    FallbackManager,
-    FallbackStrategy,
-    Feature,
-    FallbackEvent,
-    FallbackStats,
-};
+pub use manager::{FallbackEvent, FallbackManager, FallbackStats, FallbackStrategy, Feature};
 /// 创建降级管理器的便捷函数
 pub fn create_fallback_manager() -> FallbackManager {
     FallbackManager::new()
@@ -18,39 +11,72 @@ pub fn create_fallback_manager() -> FallbackManager {
 pub async fn create_fallback_manager_with_strategies() -> FallbackManager {
     let mut manager = FallbackManager::new();
     // V8 优化降级策略
-    manager.register_strategies(vec![
-        (Feature::V8Optimization, FallbackStrategy::RetryLater(std::time::Duration::from_millis(100)),
-        (Feature::V8Optimization, FallbackStrategy::DegradeToBasic),
-        (Feature::V8Optimization, FallbackStrategy::DisableFeature),
-    ]).await;
+    manager
+        .register_strategies(vec![
+            (
+                Feature::V8Optimization,
+                FallbackStrategy::RetryLater(std::time::Duration::from_millis(100)),
+            ),
+            (Feature::V8Optimization, FallbackStrategy::DegradeToBasic),
+            (Feature::V8Optimization, FallbackStrategy::DisableFeature),
+        ])
+        .await;
     // Python 运行时降级策略
-    manager.register_strategies(vec![
-        (Feature::PythonRuntime, FallbackStrategy::UseAlternative("Python subprocess".to_string()),
-        (Feature::PythonRuntime, FallbackStrategy::Ignore),
-    ]).await;
+    manager
+        .register_strategies(vec![
+            (
+                Feature::PythonRuntime,
+                FallbackStrategy::UseAlternative("Python subprocess".to_string()),
+            ),
+            (Feature::PythonRuntime, FallbackStrategy::Ignore),
+        ])
+        .await;
     // Go 运行时降级策略
-    manager.register_strategies(vec![
-        (Feature::GoRuntime, FallbackStrategy::SwitchToBackup("Go subprocess".to_string()),
-        (Feature::GoRuntime, FallbackStrategy::LogAndContinue),
-    ]).await;
+    manager
+        .register_strategies(vec![
+            (
+                Feature::GoRuntime,
+                FallbackStrategy::SwitchToBackup("Go subprocess".to_string()),
+            ),
+            (Feature::GoRuntime, FallbackStrategy::LogAndContinue),
+        ])
+        .await;
     // WebAssembly 降级策略
-    manager.register_strategies(vec![
-        (Feature::WebAssembly, FallbackStrategy::RetryLater(std::time::Duration::from_millis(200)),
-        (Feature::WebAssembly, FallbackStrategy::UseAlternative("V8 interpretation".to_string()),
-    ]).await;
+    manager
+        .register_strategies(vec![
+            (
+                Feature::WebAssembly,
+                FallbackStrategy::RetryLater(std::time::Duration::from_millis(200)),
+            ),
+            (
+                Feature::WebAssembly,
+                FallbackStrategy::UseAlternative("V8 interpretation".to_string()),
+            ),
+        ])
+        .await;
     // 企业级功能降级策略
-    manager.register_strategies(vec![
-        (Feature::KubernetesIntegration, FallbackStrategy::LogAndContinue),
-        (Feature::ServiceMesh, FallbackStrategy::Ignore),
-        (Feature::SecurityManager, FallbackStrategy::DisableFeature),
-        (Feature::ComplianceManager, FallbackStrategy::DisableFeature),
-    ]).await;
+    manager
+        .register_strategies(vec![
+            (
+                Feature::KubernetesIntegration,
+                FallbackStrategy::LogAndContinue,
+            ),
+            (Feature::ServiceMesh, FallbackStrategy::Ignore),
+            (Feature::SecurityManager, FallbackStrategy::DisableFeature),
+            (Feature::ComplianceManager, FallbackStrategy::DisableFeature),
+        ])
+        .await;
     // 边缘计算降级策略
-    manager.register_strategies(vec![
-        (Feature::EdgeComputing, FallbackStrategy::DegradeToBasic),
-        (Feature::OfflineMode, FallbackStrategy::Ignore),
-        (Feature::DistributedCoordination, FallbackStrategy::LogAndContinue),
-    ]).await;
+    manager
+        .register_strategies(vec![
+            (Feature::EdgeComputing, FallbackStrategy::DegradeToBasic),
+            (Feature::OfflineMode, FallbackStrategy::Ignore),
+            (
+                Feature::DistributedCoordination,
+                FallbackStrategy::LogAndContinue,
+            ),
+        ])
+        .await;
     manager
 }
 /// 降级工具函数
@@ -76,7 +102,9 @@ impl FallbackUtils {
             Feature::WebAssembly => FallbackStrategy::UseAlternative("V8".to_string()),
             Feature::IOSRuntime | Feature::AndroidRuntime => FallbackStrategy::LogAndContinue,
             Feature::KubernetesIntegration | Feature::ServiceMesh => FallbackStrategy::Ignore,
-            Feature::SecurityManager | Feature::ComplianceManager => FallbackStrategy::DisableFeature,
+            Feature::SecurityManager | Feature::ComplianceManager => {
+                FallbackStrategy::DisableFeature
+            }
             _ => FallbackStrategy::LogAndContinue,
         }
     }
@@ -147,8 +175,7 @@ macro_rules! with_fallback {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::time::Duration;
+
     #[tokio::test]
     async fn test_fallback_manager_creation() {
         let manager: _ = create_fallback_manager();
@@ -156,11 +183,13 @@ use std::time::Duration;
     }
     #[tokio::test]
     async fn test_fallback_manager_with_strategies() {
-        let mut manager = create_fallback_manager().await;
-        manager.register_strategy(
-            Feature::PythonRuntime,
-            FallbackStrategy::UseAlternative("Test alternative".to_string()),
-        ).await;
+        let mut manager = create_fallback_manager();
+        manager
+            .register_strategy(
+                Feature::PythonRuntime,
+                FallbackStrategy::UseAlternative("Test alternative".to_string()),
+            )
+            .await;
         let strategies: _ = manager.get_strategies(&Feature::PythonRuntime).await;
         assert!(strategies.is_some());
         assert!(!strategies.unwrap().is_empty());
@@ -177,12 +206,15 @@ use std::time::Duration;
         let v8_strategy: _ = FallbackUtils::get_default_strategy(&Feature::V8Optimization);
         assert!(matches!(v8_strategy, FallbackStrategy::DegradeToBasic));
         let python_strategy: _ = FallbackUtils::get_default_strategy(&Feature::PythonRuntime);
-        assert!(matches!(python_strategy, FallbackStrategy::UseAlternative(_));
+        assert!(matches!(
+            python_strategy,
+            FallbackStrategy::UseAlternative(_)
+        ));
     }
     #[test]
     fn test_fallback_suggestions() {
         let suggestions: _ = FallbackUtils::create_fallback_suggestions(&Feature::V8Optimization);
         assert!(!suggestions.is_empty());
-        assert!(suggestions.iter().any(|s| s.contains("V8"));
+        assert!(suggestions.iter().any(|s| s.contains("V8")));
     }
 }

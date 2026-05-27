@@ -6,9 +6,10 @@
 // - 分代 GC 优化
 // - 增量 GC 和并行 GC
 
-use anyhow::{Result, anyhow};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::sync::{Mutex, RwLock};
+use std::time::{Duration, Instant};
+use tokio::sync::{Mutex, RwLock};
 
 /// GC 配置
 #[derive(Debug, Clone)]
@@ -32,7 +33,7 @@ impl Default for GcConfig {
     fn default() -> Self {
         Self {
             initial_heap_threshold: 16 * 1024 * 1024, // 16MB
-            max_heap_threshold: 1024 * 1024 * 1024,  // 1GB
+            max_heap_threshold: 1024 * 1024 * 1024,   // 1GB
             growth_factor: 1.5,
             predictive_threshold: 0.8,
             incremental_gc: true,
@@ -151,12 +152,13 @@ impl AiGcPredictor {
         let features: _ = [current_heap as f64, allocation_rate, 0.0, 0.0];
         let score: _ = self.calculate_prediction_score(&features);
         // 基于历史 GC 间隔计算预测时间
-        let recent_intervals: Vec<Duration> = self.history
+        let recent_intervals: Vec<Duration> = self
+            .history
             .windows(2)
             .map(|w| w[1].timestamp.duration_since(w[0].timestamp))
             .collect();
-        let avg_interval: _ = recent_intervals.iter()
-            .sum::<Duration>() / recent_intervals.len() as u32;
+        let avg_interval: _ =
+            recent_intervals.iter().sum::<Duration>() / recent_intervals.len() as u32;
         Some(avg_interval * score as u32)
     }
     /// 更新预测模型
@@ -176,7 +178,11 @@ impl AiGcPredictor {
                 features[2] = rest.len() as f64;
                 features[3] = last.duration.as_secs_f64();
                 // 目标：是否触发 GC
-                target = if last.bytes_collected > last.heap_before / 4 { 1.0 } else { 0.0 };
+                target = if last.bytes_collected > last.heap_before / 4 {
+                    1.0
+                } else {
+                    0.0
+                };
             }
             // 计算预测误差
             let prediction: _ = self.calculate_prediction_score(&features);
@@ -192,7 +198,8 @@ impl AiGcPredictor {
     }
     /// 计算预测得分
     fn calculate_prediction_score(&self, features: &[f64; 4]) -> f64 {
-        features.iter()
+        features
+            .iter()
             .zip(self.weights.iter())
             .map(|(f, w)| f * w)
             .sum::<f64>()
@@ -235,7 +242,7 @@ impl EnhancedGcOptimizer {
     pub fn new(config: GcConfig) -> Self {
         Self {
             config,
-            heap_info: Arc::new(Mutex::new(HeapInfo {
+            heap_info: Arc::new(RwLock::new(HeapInfo {
                 current_size: 0,
                 used_size: 0,
                 peak_size: 0,
@@ -243,11 +250,11 @@ impl EnhancedGcOptimizer {
                 allocation_rate: 0.0,
                 collection_rate: 0.0,
             })),
-            predictor: Arc::new(Mutex::new(AiGcPredictor::new())),
-            metrics: Arc::new(Mutex::new(GcMetrics::default())),
+            predictor: Arc::new(RwLock::new(AiGcPredictor::new())),
+            metrics: Arc::new(GcMetrics::default()),
             event_history: Arc::new(Mutex::new(Vec::new())),
-            predictive_enabled: Arc::new(Mutex::new(AtomicBool::new(true))),
-            current_strategy: Arc::new(Mutex::new(GcStrategy::Standard)),
+            predictive_enabled: Arc::new(AtomicBool::new(true)),
+            current_strategy: Arc::new(RwLock::new(GcStrategy::Standard)),
         }
     }
     /// 使用默认配置创建
@@ -256,13 +263,17 @@ impl EnhancedGcOptimizer {
     }
     /// 记录内存分配
     pub async fn record_allocation(&self, size: usize) {
-        let mut heap = self.heap_info.write().await;
-        heap.current_size += size;
-        heap.used_size += size;
-        heap.object_count += 1;
-        if heap.current_size > heap.peak_size {
-            heap.peak_size = heap.current_size;
-            self.metrics.peak_memory_usage.store(heap.peak_size, Ordering::Relaxed);
+        {
+            let mut heap = self.heap_info.write().await;
+            heap.current_size += size;
+            heap.used_size += size;
+            heap.object_count += 1;
+            if heap.current_size > heap.peak_size {
+                heap.peak_size = heap.current_size;
+                self.metrics
+                    .peak_memory_usage
+                    .store(heap.peak_size, Ordering::Relaxed);
+            }
         }
         // 检查是否需要触发 GC
         self.check_and_trigger_gc(size).await;
@@ -275,38 +286,31 @@ impl EnhancedGcOptimizer {
     }
     /// 检查并触发 GC
     async fn check_and_trigger_gc(&self, allocation_size: usize) {
-        let decision: _ = self.should_trigger_gc(allocation_size).await;
+        let decision = self.should_trigger_gc(allocation_size).await;
         if decision.should_trigger {
             self.trigger_gc(decision).await;
         }
     }
     /// 判断是否应该触发 GC
-    async fn should_trigger_gc(&self, allocation_size: usize) -> GcTriggerDecision {
-        let heap: _ = self.heap_info.read().await;
-        let mut predictor = self.predictor.write().await;
+    async fn should_trigger_gc(&self, _allocation_size: usize) -> GcTriggerDecision {
+        let heap = self.heap_info.read().await;
+        let predictor = self.predictor.read().await;
         // 检查紧急情况
-        if heap.used_size + allocation_size > heap.current_size {
+        if heap.used_size > self.config.max_heap_threshold {
             return GcTriggerDecision {
                 should_trigger: true,
                 strategy: GcStrategy::Emergency,
-                reason: "Out of memory".to_string(),
+                reason: "Maximum heap threshold exceeded".to_string(),
                 confidence: 1.0,
             };
         }
-        // 检查堆大小阈值
-        let usage_ratio: _ = heap.used_size as f64 / heap.current_size as f64;
-        if usage_ratio > 0.9 {
-            return GcTriggerDecision {
-                should_trigger: true,
-                strategy: GcStrategy::Standard,
-                reason: "High memory usage".to_string(),
-                confidence: 0.95,
-            };
-        }
+
         // 预测性 GC 检查
         if self.predictive_enabled.load(Ordering::Relaxed) {
-            if let Some(predicted_time) = predictor.predict_next_gc(heap.current_size, heap.allocation_rate) {
-                let time_until_gc: _ = predicted_time;
+            if let Some(predicted_time) =
+                predictor.predict_next_gc(heap.current_size, heap.allocation_rate)
+            {
+                let time_until_gc = predicted_time;
                 if time_until_gc < Duration::from_millis(100) {
                     return GcTriggerDecision {
                         should_trigger: true,
@@ -316,6 +320,36 @@ impl EnhancedGcOptimizer {
                     };
                 }
             }
+
+            let historical_collections = self.metrics.total_collections.load(Ordering::Relaxed);
+            let predictive_pressure =
+                heap.used_size as f64 / self.config.initial_heap_threshold as f64;
+            if historical_collections >= 10
+                && predictive_pressure >= self.config.predictive_threshold
+            {
+                return GcTriggerDecision {
+                    should_trigger: true,
+                    strategy: GcStrategy::Predictive,
+                    reason: "Predictive heap pressure threshold".to_string(),
+                    confidence: predictor.accuracy.max(0.5),
+                };
+            }
+        }
+
+        // 检查堆大小阈值。current_size 记录当前已提交/已分配的堆大小，
+        // record_allocation 已经把本次分配计入其中，因此这里不能再次加上 allocation_size。
+        let usage_ratio = if heap.current_size > 0 {
+            heap.used_size as f64 / heap.current_size as f64
+        } else {
+            0.0
+        };
+        if heap.current_size >= self.config.initial_heap_threshold && usage_ratio > 0.9 {
+            return GcTriggerDecision {
+                should_trigger: true,
+                strategy: GcStrategy::Standard,
+                reason: "High memory usage".to_string(),
+                confidence: 0.95,
+            };
         }
         GcTriggerDecision {
             should_trigger: false,
@@ -325,10 +359,12 @@ impl EnhancedGcOptimizer {
         }
     }
     /// 触发 GC
-    async fn trigger_gc(&self, decision: GcTriggerDecision) {
-        let start_time: _ = Instant::now();
-        let heap: _ = self.heap_info.read().await;
-        let heap_before: _ = heap.current_size;
+    pub async fn trigger_gc(&self, decision: GcTriggerDecision) {
+        let start_time = Instant::now();
+        let heap_before = {
+            let heap = self.heap_info.read().await;
+            heap.current_size
+        };
         // 更新当前策略
         {
             let mut strategy = self.current_strategy.write().await;
@@ -336,10 +372,13 @@ impl EnhancedGcOptimizer {
         }
         // 模拟 GC 执行
         self.execute_gc(decision.strategy).await;
-        let duration: _ = start_time.elapsed();
-        let heap_after: _ = heap.current_size.saturating_sub(heap.used_size / 2);
+        let duration = start_time.elapsed();
+        let heap_after = {
+            let heap = self.heap_info.read().await;
+            heap.current_size.saturating_sub(heap.used_size / 2)
+        };
         // 记录 GC 事件
-        let event: _ = GcEvent {
+        let event = GcEvent {
             event_type: match decision.strategy {
                 GcStrategy::Emergency => GcEventType::Emergency,
                 GcStrategy::Predictive => GcEventType::Predictive,
@@ -354,15 +393,37 @@ impl EnhancedGcOptimizer {
             bytes_collected: heap_before.saturating_sub(heap_after),
         };
         // 更新统计
-        self.metrics.total_collections.fetch_add(1, Ordering::Relaxed);
-        self.metrics.total_bytes_collected.fetch_add(event.bytes_collected, Ordering::Relaxed);
-        self.metrics.total_gc_time_ms.fetch_add(duration.as_millis() as usize, Ordering::Relaxed);
+        self.metrics
+            .total_collections
+            .fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .total_bytes_collected
+            .fetch_add(event.bytes_collected, Ordering::Relaxed);
+        self.metrics
+            .total_gc_time_ms
+            .fetch_add(duration.as_millis() as usize, Ordering::Relaxed);
         match decision.strategy {
-            GcStrategy::Emergency => { self.metrics.emergency_collections.fetch_add(1, Ordering::Relaxed); }
-            GcStrategy::Predictive => { self.metrics.predictive_collections.fetch_add(1, Ordering::Relaxed); }
-            GcStrategy::Incremental => { self.metrics.incremental_collections.fetch_add(1, Ordering::Relaxed); }
-            GcStrategy::Parallel => { self.metrics.parallel_collections.fetch_add(1, Ordering::Relaxed); }
-            _ => {},
+            GcStrategy::Emergency => {
+                self.metrics
+                    .emergency_collections
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            GcStrategy::Predictive => {
+                self.metrics
+                    .predictive_collections
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            GcStrategy::Incremental => {
+                self.metrics
+                    .incremental_collections
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            GcStrategy::Parallel => {
+                self.metrics
+                    .parallel_collections
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            _ => {}
         }
         // 更新预测器
         {
@@ -446,8 +507,8 @@ impl EnhancedGcOptimizer {
             incremental_collections: self.metrics.incremental_collections.load(Ordering::Relaxed),
             parallel_collections: self.metrics.parallel_collections.load(Ordering::Relaxed),
             average_gc_time_ms: if self.metrics.total_collections.load(Ordering::Relaxed) > 0 {
-                self.metrics.total_gc_time_ms.load(Ordering::Relaxed) /
-                    self.metrics.total_collections.load(Ordering::Relaxed)
+                self.metrics.total_gc_time_ms.load(Ordering::Relaxed)
+                    / self.metrics.total_collections.load(Ordering::Relaxed)
             } else {
                 0
             },
@@ -491,6 +552,8 @@ impl GcMetricsSnapshot {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_gc_optimizer_creation() {
         let optimizer: _ = EnhancedGcOptimizer::default();
@@ -535,6 +598,3 @@ mod tests {
         assert!(prediction.is_some());
     }
 }
-use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
-use std::time::{Duration, Instant};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

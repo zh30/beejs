@@ -6,15 +6,15 @@ use rusty_v8 as v8;
 /// DNS 记录类型
 #[derive(Debug, Clone, Copy)]
 pub enum DnsRecordType {
-    A,       // IPv4 address
-    AAAA,    // IPv6 address
-    CNAME,   // Canonical name
-    MX,      // Mail exchange
-    NS,      // Name server
-    TXT,     // Text record
-    SOA,     // Start of authority
-    SRV,     // Service record
-    PTR,     // Pointer record
+    A,     // IPv4 address
+    AAAA,  // IPv6 address
+    CNAME, // Canonical name
+    MX,    // Mail exchange
+    NS,    // Name server
+    TXT,   // Text record
+    SOA,   // Start of authority
+    SRV,   // Service record
+    PTR,   // Pointer record
 }
 
 /// 设置dns API到全局作用域
@@ -74,7 +74,10 @@ fn dns_lookup_callback(
 
     // 获取主机名
     let hostname_str = if hostname.is_string() {
-        hostname.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        hostname
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope)
     } else {
         return;
     };
@@ -116,7 +119,11 @@ fn dns_lookup_callback(
             }
 
             // 调用回调
-            callback_fn.call(scope, undefined.into(), &[null_val.into(), result_arr.into()]);
+            callback_fn.call(
+                scope,
+                undefined.into(),
+                &[null_val.into(), result_arr.into()],
+            );
         }
         Err(err) => {
             // 错误，创建错误对象
@@ -147,7 +154,10 @@ fn dns_resolve4_callback(
     let callback = args.get(1);
 
     let hostname_str = if hostname.is_string() {
-        hostname.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        hostname
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope)
     } else {
         return;
     };
@@ -169,7 +179,11 @@ fn dns_resolve4_callback(
                 let addr_val = v8::String::new(scope, addr).unwrap();
                 result_arr.set_index(scope, i as u32, addr_val.into());
             }
-            callback_fn.call(scope, undefined.into(), &[null_val.into(), result_arr.into()]);
+            callback_fn.call(
+                scope,
+                undefined.into(),
+                &[null_val.into(), result_arr.into()],
+            );
         }
         Err(err) => {
             let err_msg = v8::String::new(scope, &err).unwrap();
@@ -188,7 +202,10 @@ fn dns_resolve6_callback(
     let callback = args.get(1);
 
     let hostname_str = if hostname.is_string() {
-        hostname.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        hostname
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope)
     } else {
         return;
     };
@@ -210,7 +227,11 @@ fn dns_resolve6_callback(
                 let addr_val = v8::String::new(scope, addr).unwrap();
                 result_arr.set_index(scope, i as u32, addr_val.into());
             }
-            callback_fn.call(scope, undefined.into(), &[null_val.into(), result_arr.into()]);
+            callback_fn.call(
+                scope,
+                undefined.into(),
+                &[null_val.into(), result_arr.into()],
+            );
         }
         Err(err) => {
             let err_msg = v8::String::new(scope, &err).unwrap();
@@ -230,7 +251,10 @@ fn dns_resolve_callback(
     let callback = args.get(2);
 
     let hostname_str = if hostname.is_string() {
-        hostname.to_string(scope).unwrap().to_rust_string_lossy(scope)
+        hostname
+            .to_string(scope)
+            .unwrap()
+            .to_rust_string_lossy(scope)
     } else {
         return;
     };
@@ -263,7 +287,11 @@ fn dns_resolve_callback(
     }
 
     let family = match record_type {
-        DnsRecordType::A | DnsRecordType::CNAME | DnsRecordType::MX | DnsRecordType::NS | DnsRecordType::TXT => 4,
+        DnsRecordType::A
+        | DnsRecordType::CNAME
+        | DnsRecordType::MX
+        | DnsRecordType::NS
+        | DnsRecordType::TXT => 4,
         DnsRecordType::AAAA => 6,
         _ => 4,
     };
@@ -281,7 +309,11 @@ fn dns_resolve_callback(
                 let addr_val = v8::String::new(scope, addr).unwrap();
                 result_arr.set_index(scope, i as u32, addr_val.into());
             }
-            callback_fn.call(scope, undefined.into(), &[null_val.into(), result_arr.into()]);
+            callback_fn.call(
+                scope,
+                undefined.into(),
+                &[null_val.into(), result_arr.into()],
+            );
         }
         Err(err) => {
             let err_msg = v8::String::new(scope, &err).unwrap();
@@ -323,7 +355,11 @@ fn dns_reverse_callback(
                 let hostname_val = v8::String::new(scope, hostname).unwrap();
                 result_arr.set_index(scope, i as u32, hostname_val.into());
             }
-            callback_fn.call(scope, undefined.into(), &[null_val.into(), result_arr.into()]);
+            callback_fn.call(
+                scope,
+                undefined.into(),
+                &[null_val.into(), result_arr.into()],
+            );
         }
         Err(err) => {
             let err_msg = v8::String::new(scope, &err).unwrap();
@@ -384,7 +420,12 @@ fn perform_dns_reverse(ip: &str) -> Result<Vec<String>, String> {
 }
 
 /// 从选项对象中提取 DNS 选项
-fn extract_dns_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: i32) -> i32 {
+fn extract_dns_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+    key: &str,
+    default: i32,
+) -> i32 {
     if options.is_undefined() || options.is_null() {
         return default;
     }

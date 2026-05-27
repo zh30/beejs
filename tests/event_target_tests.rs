@@ -5,9 +5,11 @@
 #[cfg(test)]
 mod tests {
     use beejs::MinimalRuntime;
+    use serial_test::serial;
 
     /// 测试 EventTarget 构造函数可用性
     #[test]
+    #[serial]
     fn test_event_target_constructor() {
         let code = r#"
             typeof EventTarget
@@ -15,12 +17,16 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "EventTarget constructor should be available");
+        assert!(
+            result.is_ok(),
+            "EventTarget constructor should be available"
+        );
         assert_eq!(result.unwrap().trim(), "function");
     }
 
     /// 测试 EventTarget 实例创建
     #[test]
+    #[serial]
     fn test_event_target_instance() {
         let code = r#"
             const target = new EventTarget();
@@ -35,6 +41,7 @@ mod tests {
 
     /// 测试 addEventListener 方法可用性
     #[test]
+    #[serial]
     fn test_add_event_listener() {
         let code = r#"
             const target = new EventTarget();
@@ -49,6 +56,7 @@ mod tests {
 
     /// 测试 addEventListener 错误处理 - 非函数类型
     #[test]
+    #[serial]
     fn test_add_event_listener_invalid_type() {
         let code = r#"
             const target = new EventTarget();
@@ -62,12 +70,16 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "addEventListener should throw error for non-function");
+        assert!(
+            result.is_ok(),
+            "addEventListener should throw error for non-function"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
     /// 测试 removeEventListener 方法可用性
     #[test]
+    #[serial]
     fn test_remove_event_listener() {
         let code = r#"
             const target = new EventTarget();
@@ -82,6 +94,7 @@ mod tests {
 
     /// 测试 dispatchEvent 方法可用性
     #[test]
+    #[serial]
     fn test_dispatch_event() {
         let code = r#"
             const target = new EventTarget();
@@ -96,6 +109,7 @@ mod tests {
 
     /// 测试基本事件监听和派发
     #[test]
+    #[serial]
     fn test_event_listen_and_dispatch() {
         let code = r#"
             let count = 0;
@@ -113,6 +127,7 @@ mod tests {
 
     /// 测试多个事件监听器
     #[test]
+    #[serial]
     fn test_multiple_event_listeners() {
         let code = r#"
             let count = 0;
@@ -131,6 +146,7 @@ mod tests {
 
     /// 测试不同事件类型
     #[test]
+    #[serial]
     fn test_different_event_types() {
         let code = r#"
             let test1Called = false;
@@ -145,12 +161,16 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "Different event types should work independently");
+        assert!(
+            result.is_ok(),
+            "Different event types should work independently"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
     /// 测试 Event 构造函数可用性
     #[test]
+    #[serial]
     fn test_event_constructor() {
         let code = r#"
             typeof Event
@@ -164,6 +184,7 @@ mod tests {
 
     /// 测试 Event 实例属性
     #[test]
+    #[serial]
     fn test_event_properties() {
         let code = r#"
             const event = new Event('test');
@@ -178,6 +199,7 @@ mod tests {
 
     /// 测试 CustomEvent 构造函数可用性
     #[test]
+    #[serial]
     fn test_custom_event_constructor() {
         let code = r#"
             typeof CustomEvent
@@ -185,12 +207,16 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "CustomEvent constructor should be available");
+        assert!(
+            result.is_ok(),
+            "CustomEvent constructor should be available"
+        );
         assert_eq!(result.unwrap().trim(), "function");
     }
 
     /// 测试 CustomEvent detail 属性
     #[test]
+    #[serial]
     fn test_custom_event_detail() {
         let code = r#"
             const detail = { foo: 'bar' };
@@ -206,6 +232,7 @@ mod tests {
 
     /// 测试事件中传递数据
     #[test]
+    #[serial]
     fn test_event_with_data() {
         let code = r#"
             let receivedData = null;
@@ -223,6 +250,7 @@ mod tests {
 
     /// 测试 preventDefault 方法
     #[test]
+    #[serial]
     fn test_prevent_default() {
         let code = r#"
             const event = new Event('test');
@@ -233,12 +261,16 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "preventDefault should set defaultPrevented flag");
+        assert!(
+            result.is_ok(),
+            "preventDefault should set defaultPrevented flag"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
     /// 测试扩展 EventTarget
     #[test]
+    #[serial]
     fn test_extend_event_target() {
         let code = r#"
             class MyEmitter extends EventTarget {

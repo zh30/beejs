@@ -29,7 +29,7 @@ impl Default for ReplConfig {
         Self {
             show_result: true,
             show_time: false,
-            prompt: "beejs> ".to_string(),
+            prompt: "bee> ".to_string(),
             continuation_prompt: "...   ".to_string(),
             enable_history: true,
             max_history: 1000,
@@ -387,7 +387,7 @@ use std::time::Instant;
         let config: _ = ReplConfig::default();
         assert!(config.show_result);
         assert!(!config.show_time);
-        assert_eq!(config.prompt, "beejs> ");
+        assert_eq!(config.prompt, "bee> ");
         assert!(config.enable_history);
     }
     #[test]

@@ -3,13 +3,13 @@
 
 use std::sync::Arc;
 
-use kube::{Client, Api, ResourceExt};
-use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
-use tracing::{info, warn, debug, error};
 use super::super::crd::{
     BeejsCluster, BeejsWorkload, ClusterPhase, Condition, ConditionStatus, ConditionType,
     WorkloadPhase,
 };
+use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
+use kube::{Api, Client, ResourceExt};
+use tracing::{debug, error, info, warn};
 /// Reconciler for managing resource reconciliation
 pub struct Reconciler {
     /// Kubernetes client
@@ -28,7 +28,10 @@ impl Reconciler {
         let start_time: _ = Instant::now();
         let name: _ = cluster.name_any();
         let namespace: _ = cluster.namespace().unwrap_or_default();
-        info!("Starting reconciliation for BeejsCluster: {} in {}", name, namespace);
+        info!(
+            "Starting reconciliation for BeejsCluster: {} in {}",
+            name, namespace
+        );
         // Get current state
         let current_state: _ = self.get_current_state(&cluster).await?;
         // Calculate desired state
@@ -57,7 +60,10 @@ impl Reconciler {
         let start_time: _ = Instant::now();
         let name: _ = workload.name_any();
         let namespace: _ = workload.namespace().unwrap_or_default();
-        info!("Starting reconciliation for BeejsWorkload: {} in {}", name, namespace);
+        info!(
+            "Starting reconciliation for BeejsWorkload: {} in {}",
+            name, namespace
+        );
         // Get current state
         let current_state: _ = self.get_workload_current_state(&workload).await?;
         // Calculate desired state
@@ -70,7 +76,8 @@ impl Reconciler {
             self.apply_workload_changes(&workload, &diff).await?;
         }
         // Update status
-        self.update_workload_status(&workload, &current_state).await?;
+        self.update_workload_status(&workload, &current_state)
+            .await?;
         let elapsed: _ = start_time.elapsed();
         debug!("Completed reconciliation for {} in {:?}", name, elapsed);
         Ok(ReconcileResult {
@@ -88,10 +95,19 @@ impl Reconciler {
         let statefulsets: _ = Api::<StatefulSet>::namespaced(self.client.clone(), &namespace);
         // Check StatefulSet status
         let statefulset: _ = statefulsets.get(&cluster.name_any()).await?;
-        let ready_replicas: _ = statefulset.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
-        let replicas: _ = statefulset.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
+        let ready_replicas: _ = statefulset
+            .status
+            .as_ref()
+            .and_then(|s| s.ready_replicas)
+            .unwrap_or(0) as u32;
+        let replicas: _ = statefulset
+            .spec
+            .as_ref()
+            .and_then(|s| s.replicas)
+            .unwrap_or(0) as u32;
         // Check Service status
-        let services: _ = Api::<k8s_openapi::api::core::v1::Service>::namespaced(self.client.clone(), &namespace);
+        let services: _ =
+            Api::<k8s_openapi::api::core::v1::Service>::namespaced(self.client.clone(), &namespace);
         let _service: _ = services.get(&cluster.name_any()).await?;
         // Determine phase based on ready replicas
         let phase: _ = if ready_replicas == 0 {
@@ -105,20 +121,18 @@ impl Reconciler {
             phase,
             ready_replicas,
             total_replicas: replicas,
-            conditions: vec![
-                Condition {
-                    condition_type: ConditionType::Ready,
-                    status: if ready_replicas == replicas {
-                        ConditionStatus::True
-                    } else {
-                        ConditionStatus::False
-                    },
-                    last_probe_time: Some(chrono::Utc::now().to_rfc3339()),
-                    last_transition_time: Some(chrono::Utc::now().to_rfc3339()),
-                    reason: Some("Reconciling".to_string()),
-                    message: Some(format!("{}/{} replicas ready", ready_replicas, replicas)),
+            conditions: vec![Condition {
+                condition_type: ConditionType::Ready,
+                status: if ready_replicas == replicas {
+                    ConditionStatus::True
+                } else {
+                    ConditionStatus::False
                 },
-            ],
+                last_probe_time: Some(chrono::Utc::now().to_rfc3339()),
+                last_transition_time: Some(chrono::Utc::now().to_rfc3339()),
+                reason: Some("Reconciling".to_string()),
+                message: Some(format!("{}/{} replicas ready", ready_replicas, replicas)),
+            }],
         })
     }
     /// Calculate desired state for cluster
@@ -130,16 +144,14 @@ impl Reconciler {
             phase: ClusterPhase::Running,
             ready_replicas: cluster.spec.nodes,
             total_replicas: cluster.spec.nodes,
-            conditions: vec![
-                Condition {
-                    condition_type: ConditionType::Ready,
-                    status: ConditionStatus::True,
-                    last_probe_time: Some(chrono::Utc::now().to_rfc3339()),
-                    last_transition_time: Some(chrono::Utc::now().to_rfc3339()),
-                    reason: Some("AllReplicasReady".to_string()),
-                    message: Some(format!("All {} replicas are ready", cluster.spec.nodes)),
-                },
-            ],
+            conditions: vec![Condition {
+                condition_type: ConditionType::Ready,
+                status: ConditionStatus::True,
+                last_probe_time: Some(chrono::Utc::now().to_rfc3339()),
+                last_transition_time: Some(chrono::Utc::now().to_rfc3339()),
+                reason: Some("AllReplicasReady".to_string()),
+                message: Some(format!("All {} replicas are ready", cluster.spec.nodes)),
+            }],
         })
     }
     /// Calculate diff between current and desired state
@@ -190,8 +202,16 @@ impl Reconciler {
         let deployments: _ = Api::<Deployment>::namespaced(self.client.clone(), &namespace);
         // Check Deployment status
         let deployment: _ = deployments.get(&workload.name_any()).await?;
-        let ready_replicas: _ = deployment.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
-        let replicas: _ = deployment.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
+        let ready_replicas: _ = deployment
+            .status
+            .as_ref()
+            .and_then(|s| s.ready_replicas)
+            .unwrap_or(0) as u32;
+        let replicas: _ = deployment
+            .spec
+            .as_ref()
+            .and_then(|s| s.replicas)
+            .unwrap_or(0) as u32;
         let phase: _ = if ready_replicas == 0 {
             WorkloadPhase::Pending
         } else if ready_replicas < replicas {
@@ -303,8 +323,8 @@ pub struct ReconcileResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::time::{Duration, Instant};
+    use std::collections::{BTreeMap, HashMap};
+    use std::time::{Duration, Instant};
     #[test]
     fn test_cluster_diff_empty() {
         let diff: _ = ClusterDiff {

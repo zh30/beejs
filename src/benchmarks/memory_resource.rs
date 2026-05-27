@@ -130,22 +130,18 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark_with_memory(
-            "memory_growth_curve",
-            MetricType::MemoryUsage,
-            || {
-                // 模拟内存逐步增长
-                let mut total_allocated = 0;
-                for i in 0..10 {
-                    let chunk_size: _ = 1024 * (i + 1); // 1KB, 2KB, 3KB, ...
-                    let _chunk: _ = vec![0u8; chunk_size];
-                    total_allocated += chunk_size;
-                    // 模拟工作负载
-                    std::thread::sleep(Duration::from_millis(10));
-                }
-                total_allocated
-            },
-        )
+        framework.run_benchmark_with_memory("memory_growth_curve", MetricType::MemoryUsage, || {
+            // 模拟内存逐步增长
+            let mut total_allocated = 0;
+            for i in 0..10 {
+                let chunk_size: _ = 1024 * (i + 1); // 1KB, 2KB, 3KB, ...
+                let _chunk: _ = vec![0u8; chunk_size];
+                total_allocated += chunk_size;
+                // 模拟工作负载
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            total_allocated
+        })
     }
     /// 垃圾回收性能测试
     pub fn garbage_collection_benchmark(&self) -> BenchmarkResult {
@@ -182,24 +178,20 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark_with_memory(
-            "memory_fragmentation",
-            MetricType::MemoryUsage,
-            || {
-                // 模拟内存碎片化：分配和释放不同大小的块
-                let mut allocations = Vec::new();
-                // 分配不同大小的块
-                for size in [64, 1024, 256, 4096, 128, 2048].iter() {
-                    allocations.push(vec![0u8; *size]);
-                }
-                // 释放中间的块以创建碎片
-                allocations.remove(2);
-                allocations.remove(3);
-                // 尝试分配一个大块
-                let _large_alloc: _ = vec![0u8; 3072];
-                allocations.len()
-            },
-        )
+        framework.run_benchmark_with_memory("memory_fragmentation", MetricType::MemoryUsage, || {
+            // 模拟内存碎片化：分配和释放不同大小的块
+            let mut allocations = Vec::new();
+            // 分配不同大小的块
+            for size in [64, 1024, 256, 4096, 128, 2048].iter() {
+                allocations.push(vec![0u8; *size]);
+            }
+            // 释放中间的块以创建碎片
+            allocations.remove(2);
+            allocations.remove(3);
+            // 尝试分配一个大块
+            let _large_alloc: _ = vec![0u8; 3072];
+            allocations.len()
+        })
     }
     /// CPU 使用率测试
     pub fn cpu_utilization_benchmark(&self) -> BenchmarkResult {
@@ -211,36 +203,32 @@ impl MemoryResourceBenchmark {
             compare_with_baseline: true,
         };
         let framework: _ = BenchmarkFramework::new(config);
-        framework.run_benchmark(
-            "cpu_utilization",
-            MetricType::OperationsPerSecond,
-            || {
-                // CPU 密集型计算
-                let num_threads: _ = num_cpus::get();
-                let results: _ = Arc::new(Mutex::new(Vec::new()));
-                let mut handles = vec![];
-                for _ in 0..num_threads {
-                    let results_clone: _ = Arc::clone(results);
-                    let handle: _ = thread::spawn(move || {
-                        // 计算密集型任务
-                        let mut sum = 0.0;
-                        for i in 0..1_000_000 {
-                            sum += (i as f64).sin() * (i as f64).cos();
-                        }
-                        {
-                            let mut vec = results_clone.lock().unwrap();
-                            vec.push(sum);
-                        }
-                    });
-                    handles.push(handle);
-                }
-                for handle in handles {
-                    handle.join().unwrap();
-                }
-                let results: _ = results.lock().unwrap();
-                results.len()
-            },
-        )
+        framework.run_benchmark("cpu_utilization", MetricType::OperationsPerSecond, || {
+            // CPU 密集型计算
+            let num_threads: _ = num_cpus::get();
+            let results: _ = Arc::new(Mutex::new(Vec::new()));
+            let mut handles = vec![];
+            for _ in 0..num_threads {
+                let results_clone: _ = Arc::clone(results);
+                let handle: _ = thread::spawn(move || {
+                    // 计算密集型任务
+                    let mut sum = 0.0;
+                    for i in 0..1_000_000 {
+                        sum += (i as f64).sin() * (i as f64).cos();
+                    }
+                    {
+                        let mut vec = results_clone.lock().unwrap();
+                        vec.push(sum);
+                    }
+                });
+                handles.push(handle);
+            }
+            for handle in handles {
+                handle.join().unwrap();
+            }
+            let results: _ = results.lock().unwrap();
+            results.len()
+        })
     }
     /// 多核并行性能测试
     pub fn multicore_parallel_benchmark(&self) -> BenchmarkResult {
@@ -330,14 +318,8 @@ impl MemoryResourceBenchmark {
                     result.avg_duration.as_secs_f64() * 1_000_000.0
                 ));
                 if let Some(memory) = &result.memory_stats {
-                    report.push_str(&format!(
-                      "  - 当前 RSS: {} bytes\n",
-                      memory.current_rss
-                    ));
-                    report.push_str(&format!(
-                      "  - 峰值 RSS: {} bytes\n\n",
-                      memory.peak_rss
-                    ));
+                    report.push_str(&format!("  - 当前 RSS: {} bytes\n", memory.current_rss));
+                    report.push_str(&format!("  - 峰值 RSS: {} bytes\n\n", memory.peak_rss));
                 }
             }
         }
@@ -351,8 +333,7 @@ impl MemoryResourceBenchmark {
             for result in cpu_results {
                 report.push_str(&format!(
                     "- {}: {:.0} ops/s\n",
-                    result.name,
-                    result.operations_per_second
+                    result.name, result.operations_per_second
                 ));
             }
             report.push_str("\n");
@@ -379,10 +360,7 @@ impl MemoryResourceBenchmark {
             / results.len().max(1);
         report.push_str(&format!("- 平均内存使用: {} bytes\n", avg_memory));
         // 计算总操作数
-        let total_ops: f64 = results
-            .iter()
-            .map(|r| r.operations_per_second)
-            .sum();
+        let total_ops: f64 = results.iter().map(|r| r.operations_per_second).sum();
         report.push_str(&format!("- 总操作数/秒: {:.0}\n\n", total_ops));
         report
     }

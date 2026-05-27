@@ -65,25 +65,29 @@ impl TestFilter {
     pub fn matches(&self, test_name: &str, suite_name: &str) -> bool {
         // If only_tests is set, only run tests that match include_patterns
         if self.only_tests && !self.include_patterns.is_empty() {
-            return self.include_patterns
+            return self
+                .include_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
         // If skip_tests is set, exclude tests that match exclude_patterns
         if self.skip_tests && !self.exclude_patterns.is_empty() {
-            return !self.exclude_patterns
+            return !self
+                .exclude_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
         // If include_patterns is set, only run tests that match
         if !self.include_patterns.is_empty() {
-            return self.include_patterns
+            return self
+                .include_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
         // If exclude_patterns is set, exclude matching tests
         if !self.exclude_patterns.is_empty() {
-            return !self.exclude_patterns
+            return !self
+                .exclude_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
@@ -152,7 +156,7 @@ impl EnhancedRunnerStats {
         }
         // Update average duration
         self.avg_duration = Duration::from_nanos(
-            (self.total_duration.as_nanos() / self.total_tests as u128) as u64
+            (self.total_duration.as_nanos() / self.total_tests as u128) as u64,
         );
     }
     pub fn add_skipped(&mut self) {
@@ -202,11 +206,7 @@ impl EnhancedRunner {
         }
     }
     /// Run a single test with retry logic
-    pub fn run_test_with_retry(
-        &self,
-        suite_name: &str,
-        test: &TestCase,
-    ) -> TestResult {
+    pub fn run_test_with_retry(&self, suite_name: &str, test: &TestCase) -> TestResult {
         let mut last_error = None;
         let mut result = None;
         for attempt in 0..=self.config.retry_count {
@@ -254,9 +254,11 @@ impl EnhancedRunner {
         // Run tests
         if self.config.parallel && tests.len() > 1 {
             // Run tests in parallel
-            let parallel_results: _ = self
-                .parallel_executor
-                .run_tests_parallel(&suite.name, &tests, self.config.timeout_config.default_timeout);
+            let parallel_results: _ = self.parallel_executor.run_tests_parallel(
+                &suite.name,
+                &tests,
+                self.config.timeout_config.default_timeout,
+            );
             for result in parallel_results {
                 let was_retried: _ = false; // Parallel tests don't retry
                 {
@@ -299,10 +301,7 @@ impl EnhancedRunner {
         results
     }
     /// Run multiple test suites
-    pub fn run_suites(
-        &self,
-        suites: Vec<TestSuite>,
-    ) -> (Vec<TestResult>, EnhancedRunnerStats) {
+    pub fn run_suites(&self, suites: Vec<TestSuite>) -> (Vec<TestResult>, EnhancedRunnerStats) {
         let stats = Arc::new(Mutex::new(EnhancedRunnerStats::new()));
         let mut all_results = Vec::new();
         for suite in suites {

@@ -7,7 +7,9 @@ mod message_channel_tests {
     use std::process::Command;
 
     fn beejs_path() -> PathBuf {
-        PathBuf::from(std::env::var("CARGO_BIN_EXE_BEEJS").unwrap_or_else(|_| "./target/release/beejs".to_string()))
+        PathBuf::from(
+            std::env::var("CARGO_BIN_EXE_bee").unwrap_or_else(|_| "./target/debug/bee".to_string()),
+        )
     }
 
     #[test]
@@ -15,7 +17,7 @@ mod message_channel_tests {
         let output = Command::new(beejs_path())
             .args(["eval", "console.log(typeof MessageChannel)"])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("function"), "MessageChannel should exist");
@@ -26,10 +28,13 @@ mod message_channel_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"const ch = new MessageChannel(); console.log(typeof ch.port1 === 'object' && typeof ch.port2 === 'object')"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "MessageChannel should have port1 and port2");
+        assert!(
+            stdout.contains("true"),
+            "MessageChannel should have port1 and port2"
+        );
     }
 
     #[test]
@@ -37,10 +42,13 @@ mod message_channel_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"const ch = new MessageChannel(); console.log(typeof ch.port1.postMessage === 'function')"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "port1 should have postMessage method");
+        assert!(
+            stdout.contains("true"),
+            "port1 should have postMessage method"
+        );
     }
 
     #[test]
@@ -48,7 +56,7 @@ mod message_channel_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"const ch = new MessageChannel(); console.log(typeof ch.port1.start === 'function')"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "port1 should have start method");
@@ -59,7 +67,7 @@ mod message_channel_tests {
         let output = Command::new(beejs_path())
             .args(["eval", r#"const ch = new MessageChannel(); console.log(typeof ch.port1.close === 'function')"#])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "port1 should have close method");
@@ -68,31 +76,46 @@ mod message_channel_tests {
     #[test]
     fn test_message_port_has_onmessage() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"const ch = new MessageChannel(); console.log('onmessage' in ch.port1)"#])
+            .args([
+                "eval",
+                r#"const ch = new MessageChannel(); console.log('onmessage' in ch.port1)"#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "port1 should have onmessage property");
+        assert!(
+            stdout.contains("true"),
+            "port1 should have onmessage property"
+        );
     }
 
     #[test]
     fn test_message_port_has_onmessageerror() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"const ch = new MessageChannel(); console.log('onmessageerror' in ch.port1)"#])
+            .args([
+                "eval",
+                r#"const ch = new MessageChannel(); console.log('onmessageerror' in ch.port1)"#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("true"), "port1 should have onmessageerror property");
+        assert!(
+            stdout.contains("true"),
+            "port1 should have onmessageerror property"
+        );
     }
 
     #[test]
     fn test_message_port_has_closed() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"const ch = new MessageChannel(); console.log('closed' in ch.port1)"#])
+            .args([
+                "eval",
+                r#"const ch = new MessageChannel(); console.log('closed' in ch.port1)"#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("true"), "port1 should have closed property");
@@ -102,7 +125,9 @@ mod message_channel_tests {
     fn test_basic_message_pass() {
         // Test that messages can be sent from port1 to port2 after start
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ch = new MessageChannel();
                 let received = null;
                 ch.port2.onmessage = function(e) { received = e.data; };
@@ -110,33 +135,45 @@ mod message_channel_tests {
                 ch.port1.postMessage('hello');
                 ch.port1.postMessage('world');
                 console.log(received);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("world"), "Should receive the last message sent");
+        assert!(
+            stdout.contains("world"),
+            "Should receive the last message sent"
+        );
     }
 
     #[test]
     fn test_close_port() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ch = new MessageChannel();
                 ch.port1.close();
                 console.log('closed');
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("closed"), "close() should execute without error");
+        assert!(
+            stdout.contains("closed"),
+            "close() should execute without error"
+        );
     }
 
     #[test]
     fn test_close_prevents_further_messages() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ch = new MessageChannel();
                 ch.port1.close();
                 let error = null;
@@ -146,58 +183,79 @@ mod message_channel_tests {
                     error = e.message;
                 }
                 console.log(error === null ? 'no error' : 'has error');
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         // postMessage on closed port should silently fail (not throw)
-        assert!(stdout.contains("no error") || stdout.contains("has error"), "Should handle postMessage on closed port");
+        assert!(
+            stdout.contains("no error") || stdout.contains("has error"),
+            "Should handle postMessage on closed port"
+        );
     }
 
     #[test]
     fn test_structured_clone_compatible() {
         // Test that complex objects can be passed through MessageChannel
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ch = new MessageChannel();
                 let received = null;
                 ch.port2.onmessage = function(e) { received = e.data; };
                 ch.port2.start();
                 ch.port1.postMessage({ foo: 'bar', num: 42, arr: [1, 2, 3] });
                 console.log(JSON.stringify(received));
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("foo") && stdout.contains("bar"), "Complex objects should be passed correctly");
+        assert!(
+            stdout.contains("foo") && stdout.contains("bar"),
+            "Complex objects should be passed correctly"
+        );
     }
 
     #[test]
     fn test_message_event_properties() {
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ch = new MessageChannel();
                 let eventData = null;
                 ch.port2.onmessage = function(e) { eventData = e; };
                 ch.port2.start();
                 ch.port1.postMessage('test message');
                 console.log(eventData.type + ',' + eventData.origin);
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("message"), "MessageEvent should have correct type");
-        assert!(stdout.contains(","), "MessageEvent should have origin property");
+        assert!(
+            stdout.contains("message"),
+            "MessageEvent should have correct type"
+        );
+        assert!(
+            stdout.contains(","),
+            "MessageEvent should have origin property"
+        );
     }
 
     #[test]
     fn test_queue_messages_before_start() {
         // Messages sent before start() should be queued and delivered after start()
         let output = Command::new(beejs_path())
-            .args(["eval", r#"
+            .args([
+                "eval",
+                r#"
                 const ch = new MessageChannel();
                 let received = [];
                 ch.port2.onmessage = function(e) { received.push(e.data); };
@@ -207,11 +265,15 @@ mod message_channel_tests {
                 // Start receiving
                 ch.port2.start();
                 console.log(received.length + ':' + received.join(','));
-            "#])
+            "#,
+            ])
             .output()
-            .expect("Failed to run beejs");
+            .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(stdout.contains("2:first,second"), "Queued messages should be delivered after start()");
+        assert!(
+            stdout.contains("2:first,second"),
+            "Queued messages should be delivered after start()"
+        );
     }
 }

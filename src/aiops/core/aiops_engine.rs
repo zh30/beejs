@@ -2,12 +2,11 @@
 //
 // Main engine that coordinates all AI Ops functionality.
 
-use crate::core::data_collector::::{DataCollector, Metric, PerformanceSnapshot};
-use crate::core::error::::{AIOpsError, Result};
-use crate::core::model_manager::::{ModelManager, ModelType};
+use super::data_collector::{DataCollector, Metric, PerformanceSnapshot};
+use super::error::{AIOpsError, Result};
+use super::model_manager::{ModelManager, ModelType};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 /// AI Ops configuration
@@ -94,9 +93,9 @@ impl AIOpsEngine {
     pub fn new(config: AIOpsConfig) -> Self {
         Self {
             config: config.clone(),
-            status: Arc::new(Mutex::new(EngineStatus::Stopped)))
-            model_manager: Arc::new(Mutex::new(ModelManager::new()))
-            data_collector: Arc::new(Mutex::new(DataCollector::new(config.collection_interval)))
+            status: Arc::new(RwLock::new(EngineStatus::Stopped)),
+            model_manager: Arc::new(ModelManager::new()),
+            data_collector: Arc::new(DataCollector::new(config.collection_interval)),
         }
     }
     /// Start the AI Ops engine
@@ -110,9 +109,10 @@ impl AIOpsEngine {
             *status = EngineStatus::Starting;
         }
         // Start data collection
-        self.data_collector.start().await.map_err(|e| {
-            AIOpsError::Other(format!("Failed to start data collector: {}", e))
-        })?;
+        self.data_collector
+            .start()
+            .await
+            .map_err(|e| AIOpsError::Other(format!("Failed to start data collector: {}", e)))?;
         // Load default models
         self.load_default_models().await?;
         // Update status to running

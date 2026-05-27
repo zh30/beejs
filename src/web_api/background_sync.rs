@@ -4,15 +4,25 @@
 
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// SyncEvent tag storage (internal use)
 static SYNC_TAGS: std::sync::OnceLock<Arc<Mutex<Vec<String>>>> = std::sync::OnceLock::new();
+static PENDING_WAIT_UNTIL: AtomicUsize = AtomicUsize::new(0);
 
 /// Get or initialize the sync tags storage
 fn get_sync_tags() -> &'static Arc<Mutex<Vec<String>>> {
     SYNC_TAGS.get_or_init(|| Arc::new(Mutex::new(Vec::new())))
+}
+
+pub fn has_pending_wait_until() -> bool {
+    PENDING_WAIT_UNTIL.load(Ordering::SeqCst) > 0
+}
+
+pub fn reset_pending_wait_until() {
+    PENDING_WAIT_UNTIL.store(0, Ordering::SeqCst);
 }
 
 /// Setup Background Sync API in V8 context
@@ -28,7 +38,6 @@ pub fn setup_background_sync_api(
     // Setup SyncManager (accessible via registration.sync)
     setup_sync_manager(scope, context, global)?;
 
-    eprintln!("✅ [v0.3.327] Background Sync API initialized");
     Ok(())
 }
 
@@ -90,7 +99,9 @@ fn sync_event_constructor_callback(
 
     // Get event type from first argument (should be 'sync')
     let event_type = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "sync").unwrap())
+        args.get(0)
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "sync").unwrap())
             .to_rust_string_lossy(scope)
     } else {
         "sync".to_string()
@@ -102,7 +113,8 @@ fn sync_event_constructor_callback(
         if let Some(options_obj) = options.to_object(scope) {
             let tag_key = v8::String::new(scope, "tag").unwrap();
             if let Some(tag) = options_obj.get(scope, tag_key.into()) {
-                tag.to_string(scope).unwrap_or_else(|| v8::String::new(scope, "").unwrap())
+                tag.to_string(scope)
+                    .unwrap_or_else(|| v8::String::new(scope, "").unwrap())
                     .to_rust_string_lossy(scope)
             } else {
                 String::from("default-sync")
@@ -201,7 +213,30 @@ fn sync_event_wait_until_callback(
 
         // Check if the argument is a promise
         if promise.is_promise() {
-            // If it's already a promise, return it directly for chaining
+            PENDING_WAIT_UNTIL.fetch_add(1, Ordering::SeqCst);
+
+            let done_func = v8::FunctionTemplate::new(scope, sync_event_wait_until_done_callback)
+                .get_function(scope)
+                .unwrap();
+            let then_key = v8::String::new(scope, "then").unwrap();
+            let mut attached_handler = false;
+
+            if let Ok(promise_obj) = v8::Local::<v8::Object>::try_from(promise) {
+                if let Some(then_value) = promise_obj.get(scope, then_key.into()) {
+                    if let Ok(then_func) = v8::Local::<v8::Function>::try_from(then_value) {
+                        let done_value: v8::Local<v8::Value> = done_func.into();
+                        let args = [done_value, done_value];
+                        if then_func.call(scope, promise, &args).is_some() {
+                            attached_handler = true;
+                        }
+                    }
+                }
+            }
+
+            if !attached_handler {
+                decrement_pending_wait_until();
+            }
+
             rv.set(promise);
         } else {
             // If not a promise, create a resolved promise
@@ -216,6 +251,20 @@ fn sync_event_wait_until_callback(
     }
 }
 
+fn sync_event_wait_until_done_callback(
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    decrement_pending_wait_until();
+}
+
+fn decrement_pending_wait_until() {
+    let _ = PENDING_WAIT_UNTIL.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |count| {
+        Some(count.saturating_sub(1))
+    });
+}
+
 /// SyncManager.register() callback
 fn sync_manager_register_callback(
     scope: &mut v8::HandleScope,
@@ -224,7 +273,9 @@ fn sync_manager_register_callback(
 ) {
     // Get tag from arguments
     let tag = if args.length() > 0 {
-        args.get(0).to_string(scope).unwrap_or_else(|| v8::String::new(scope, "").unwrap())
+        args.get(0)
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "").unwrap())
             .to_rust_string_lossy(scope)
     } else {
         String::from("default-sync")

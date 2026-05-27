@@ -3,7 +3,6 @@
 // 这个模块提供了性能指标分析功能，能够分析各种性能指标
 // 并生成优化建议。
 
-
 use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
 /// 性能指标类型
@@ -172,26 +171,18 @@ impl PerformanceAnalyzer {
         let (avg_cpu, avg_memory, avg_gc, avg_jit, avg_cache) =
             self.calculate_average_metrics(metrics);
         // 计算当前性能分数
-        let current_score: _ = self.calculate_performance_score(
-            avg_cpu,
-            avg_memory,
-            avg_gc,
-            avg_jit,
-            avg_cache,
-        );
+        let current_score: _ =
+            self.calculate_performance_score(avg_cpu, avg_memory, avg_gc, avg_jit, avg_cache);
         // 生成优化建议
-        let suggestions: _ = self.generate_optimization_suggestions(
-            avg_cpu,
-            avg_memory,
-            avg_gc,
-            avg_jit,
-            avg_cache,
-        );
+        let suggestions: _ =
+            self.generate_optimization_suggestions(avg_cpu, avg_memory, avg_gc, avg_jit, avg_cache);
         // 计算预期改进
         let estimated_improvement: _ = if !suggestions.is_empty() {
-            suggestions.iter()
+            suggestions
+                .iter()
                 .map(|s| s.expected_improvement * s.confidence)
-                .sum::<f64>() / suggestions.len() as f64
+                .sum::<f64>()
+                / suggestions.len() as f64
         } else {
             0.0
         };
@@ -209,10 +200,7 @@ impl PerformanceAnalyzer {
         }
     }
     /// 计算各类指标的平均值
-    fn calculate_average_metrics(
-        &self,
-        metrics: &PerformanceMetrics,
-    ) -> (f64, f64, f64, f64, f64) {
+    fn calculate_average_metrics(&self, metrics: &PerformanceMetrics) -> (f64, f64, f64, f64, f64) {
         let mut cpu_values = Vec::new();
         let mut memory_values = Vec::new();
         let mut gc_values = Vec::new();
@@ -263,8 +251,12 @@ impl PerformanceAnalyzer {
         // 缓存命中率权重 0.1（越高越好）
         let cache_score: _ = avg_cache;
         // 加权平均
-        (cpu_score * 0.3 + memory_score * 0.3 + gc_score * 0.2
-            + jit_score * 0.1 + cache_score * 0.1) * 100.0
+        (cpu_score * 0.3
+            + memory_score * 0.3
+            + gc_score * 0.2
+            + jit_score * 0.1
+            + cache_score * 0.1)
+            * 100.0
     }
     /// 生成优化建议
     fn generate_optimization_suggestions(
@@ -286,7 +278,8 @@ impl PerformanceAnalyzer {
                 recommended_value: "2048".to_string(),
                 expected_improvement: 15.0 + (avg_cpu - 70.0) * 0.5,
                 confidence: 0.8,
-                description: "增加 WebAssembly 内联函数大小可以减少函数调用开销，提高 CPU 效率".to_string(),
+                description: "增加 WebAssembly 内联函数大小可以减少函数调用开销，提高 CPU 效率"
+                    .to_string(),
             });
             suggestions.push(OptimizationSuggestion {
                 optimization_type: OptimizationType::InlineOptimization,
@@ -389,9 +382,8 @@ impl PerformanceAnalyzer {
             return 0.0;
         }
         // 基于置信度计算风险
-        let avg_confidence: f64 = suggestions.iter()
-            .map(|s| s.confidence)
-            .sum::<f64>() / suggestions.len() as f64;
+        let avg_confidence: f64 =
+            suggestions.iter().map(|s| s.confidence).sum::<f64>() / suggestions.len() as f64;
         // 风险与置信度成反比
         1.0 - avg_confidence
     }
@@ -404,7 +396,7 @@ impl Default for PerformanceAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::time::{Duration, SystemTime};
+    use std::time::{Duration, SystemTime};
     #[test]
     fn test_performance_analyzer_creation() {
         let analyzer: _ = PerformanceAnalyzer::new();

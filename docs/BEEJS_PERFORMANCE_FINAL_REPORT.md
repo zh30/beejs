@@ -1,5 +1,7 @@
 # Beejs 高性能 JavaScript/TypeScript 运行时 - 最终性能报告
 
+> 发布校验说明（2026-05-26）：本文件是历史阶段性能目标/总结，不代表 v0.1.0 public release 的当前性能事实。公开发布的性能结论必须以当前可复现命令输出为准；请优先参考 `docs/performance/PERFORMANCE_REPORT.md`。
+
 ## 🎯 项目目标
 
 创建一个比 Bun 更快的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，为 AI 时代提供高性能脚本执行能力。

@@ -2,13 +2,11 @@
 //
 // Manages AI/ML models for predictions and optimizations.
 
-use crate::core::error::::{AIOpsError, Result};
+use super::error::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex, RwLock};
 use std::collections::HashMap;
-use std::time::SystemTime;
-use std::hash::Hash;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Model types supported by the AI Ops engine
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -67,8 +65,8 @@ impl ModelManager {
     /// Create a new model manager
     pub fn new() -> Self {
         Self {
-            models: Arc::new(Mutex::new(HashMap::new()))
-            metadata: Arc::new(Mutex::new(HashMap::new()))
+            models: Arc::new(RwLock::new(HashMap::new())),
+            metadata: Arc::new(RwLock::new(HashMap::new())),
         }
     }
     /// Load a model
@@ -174,10 +172,7 @@ impl ModelManager {
                 // Basic validation: check if model has data
                 Ok(!model.data.is_empty())
             }
-            None => Err(AIOpsError::model(format!(
-                "Model {} not found",
-                model_id
-            )),
+            None => Err(AIOpsError::model(format!("Model {} not found", model_id))),
         }
     }
 }

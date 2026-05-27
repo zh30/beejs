@@ -3,14 +3,13 @@
 pub mod tracing;
 // Re-export observability types
 pub use tracing::{
-    DistributedTracer, TraceContext, SpanRecord, SpanStatus, SpanEvent,
-    PerformanceAnalysis, MetricsCollector, RequestMetrics, LatencyMetrics,
-    ErrorMetrics, MetricsReport,
+    DistributedTracer, ErrorMetrics, LatencyMetrics, MetricsCollector, MetricsReport,
+    PerformanceAnalysis, RequestMetrics, SpanEvent, SpanRecord, SpanStatus, TraceContext,
 };
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

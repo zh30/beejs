@@ -2,9 +2,9 @@
 // 实现多模型并行和动态切换系统，包括模型注册、智能路由和负载均衡
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
-use std::time::{Duration, Instant};
 use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
 /// 模型管理器配置
 #[derive(Debug, Clone)]
@@ -18,7 +18,7 @@ pub struct ManagerConfig {
 pub struct ModelInfo {
     pub name: String,
     pub version: String,
-    pub model_type: String,  // 简化为字符串类型
+    pub model_type: String, // 简化为字符串类型
     pub endpoint: String,
     pub capabilities: Vec<String>,
 }
@@ -142,7 +142,8 @@ impl ModelRouter {
     pub fn route_request(&self, capability: String) -> Result<String, String> {
         // 检查缓存
         let cache_key: _ = format!("route:{}", capability);
-        if let Some((cached_model, cached_time)) = self.route_cache.read().unwrap().get(&cache_key) {
+        if let Some((cached_model, cached_time)) = self.route_cache.read().unwrap().get(&cache_key)
+        {
             if cached_time.elapsed() < self.config.route_cache_ttl {
                 return Ok(cached_model.clone());
             }
@@ -176,7 +177,11 @@ impl ModelRouter {
                 // 选择负载最低的 (简化比较)
                 Ok(models
                     .iter()
-                    .min_by(|(_, a), (_, b)| a.load.partial_cmp(&b.load).unwrap_or(std::cmp::Ordering::Equal))
+                    .min_by(|(_, a), (_, b)| {
+                        a.load
+                            .partial_cmp(&b.load)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
                     .map(|(name, _)| (*name).clone())
                     .unwrap())
             }
@@ -184,7 +189,11 @@ impl ModelRouter {
                 // 选择吞吐量最高的 (简化比较)
                 Ok(models
                     .iter()
-                    .max_by(|(_, a), (_, b)| a.throughput.partial_cmp(&b.throughput).unwrap_or(std::cmp::Ordering::Equal))
+                    .max_by(|(_, a), (_, b)| {
+                        a.throughput
+                            .partial_cmp(&b.throughput)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
                     .map(|(name, _)| (*name).clone())
                     .unwrap())
             }
@@ -214,7 +223,10 @@ impl ModelRouter {
 }
 impl ModelManager {
     /// 创建新的模型管理器
-    pub fn new(runtime: &Arc<tokio::runtime::Runtime>, config: ManagerConfig) -> Result<Self, String> {
+    pub fn new(
+        runtime: &Arc<tokio::runtime::Runtime>,
+        config: ManagerConfig,
+    ) -> Result<Self, String> {
         let registry_config: _ = ModelRegistryConfig {
             auto_discovery: true,
             health_check_interval: Duration::from_secs(30),
@@ -377,11 +389,12 @@ mod tests {
         let mut registry = ModelRegistry::new(ModelRegistryConfig {
             auto_discovery: true,
             health_check_interval: Duration::from_secs(30),
-        }).unwrap();
+        })
+        .unwrap();
         let model_info: _ = ModelInfo {
             name: "test-model".to_string(),
             version: "1.0".to_string(),
-            model_type: "LanguageModel".to_string(),  // 简化为字符串
+            model_type: "LanguageModel".to_string(), // 简化为字符串
             endpoint: "http://localhost:8080".to_string(),
             capabilities: vec!["text-generation".to_string()],
         };
@@ -404,19 +417,26 @@ mod tests {
             load_balancing: LoadBalancingStrategy::LatencyBased,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),
-        }).unwrap();
-        router.add_model("model-a".to_string(), ModelMetrics {
-            latency: Duration::from_millis(50),
-            throughput: 100.0,
-            error_rate: 0.01,
-            load: 0.3,
-        });
-        router.add_model("model-b".to_string(), ModelMetrics {
-            latency: Duration::from_millis(80),
-            throughput: 150.0,
-            error_rate: 0.02,
-            load: 0.5,
-        });
+        })
+        .unwrap();
+        router.add_model(
+            "model-a".to_string(),
+            ModelMetrics {
+                latency: Duration::from_millis(50),
+                throughput: 100.0,
+                error_rate: 0.01,
+                load: 0.3,
+            },
+        );
+        router.add_model(
+            "model-b".to_string(),
+            ModelMetrics {
+                latency: Duration::from_millis(80),
+                throughput: 150.0,
+                error_rate: 0.02,
+                load: 0.5,
+            },
+        );
         let selected: _ = router.route_request("text-generation".to_string());
         assert!(selected.is_ok());
         assert_eq!(selected.unwrap(), "model-a".to_string());

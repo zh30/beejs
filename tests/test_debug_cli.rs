@@ -1,22 +1,19 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 // Test Stage 59: CLI Debugger Integration
 //
 // This test suite verifies the CLI debug command functionality
 
-use std::process::Command;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::process::Command;
 
 #[test]
 fn test_debug_command_exists() {
     // Verify that the debug command is recognized
-    let output: _ = Command::new("cargo")
-        .args(&["run", "--", "debug", "--help"])
+    let output = Command::new("cargo")
+        .args(["run", "--", "debug", "--help"])
         .output()
-        .expect("Failed to run beejs debug --help");
+        .expect("Failed to run bee debug --help");
 
-    let stderr: _ = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Check that help output is shown (not an error about unknown command)
     assert!(
@@ -29,23 +26,22 @@ fn test_debug_command_exists() {
 #[test]
 fn test_debug_script_command() {
     // Test that debug command accepts a script file
-    let test_script: _ = PathBuf::from("/tmp/test_debug_script.js");
+    let test_script = PathBuf::from("/tmp/test_debug_script.js");
 
     // Create a simple test script
-    std::fs::write(&test_script, "console.log('test');")
-        .expect("Failed to create test script");
+    std::fs::write(&test_script, "console.log('test');").expect("Failed to create test script");
 
-    let output: _ = Command::new("cargo")
-        .args(&["run", "--", "debug", test_script.to_str().unwrap()])
+    let output = Command::new("cargo")
+        .args(["run", "--", "debug", test_script.to_str().unwrap()])
         .output()
-        .expect("Failed to run beejs debug script.js");
+        .expect("Failed to run bee debug script.js");
 
     // The command should at least start (may exit with error due to unimplemented features)
     // but should not fail with "unknown command" error
-    let stderr: _ = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Clean up
-    let _: _ = std::fs::remove_file(&test_script);
+    let _ = std::fs::remove_file(&test_script);
 
     // Debug command should be recognized (even if not fully implemented)
     assert!(
@@ -57,13 +53,14 @@ fn test_debug_script_command() {
 
 #[test]
 fn test_debug_with_options() {
-    // Test debug command with various options
-    let test_script: _ = PathBuf::from("/tmp/test_debug_options.js");
-    std::fs::write(&test_script, "let x: _ = 42; console.log(x);")
+    // Current public CLI only supports `bee debug <file>`.
+    // Historical Stage 59 flags such as --port are intentionally not exposed.
+    let test_script = PathBuf::from("/tmp/test_debug_options.js");
+    std::fs::write(&test_script, "let x = 42; console.log(x);")
         .expect("Failed to create test script");
 
-    let output: _ = Command::new("cargo")
-        .args(&[
+    let output = Command::new("cargo")
+        .args([
             "run",
             "--",
             "debug",
@@ -72,84 +69,82 @@ fn test_debug_with_options() {
             "9229",
         ])
         .output()
-        .expect("Failed to run beejs debug with options");
+        .expect("Failed to run bee debug with options");
 
-    let stderr: _ = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Clean up
-    let _: _ = std::fs::remove_file(&test_script);
+    let _ = std::fs::remove_file(&test_script);
 
-    // Should not fail with parsing errors
     assert!(
-        !stderr.contains("unexpected argument") && !stderr.contains("invalid value"),
-        "Debug options should be parsed correctly. stderr: {}",
+        !output.status.success()
+            && stderr.contains("unexpected argument '--port'")
+            && stderr.contains("Usage: bee debug <FILE>"),
+        "Unsupported debug --port flag should be rejected by the current public CLI. stderr: {}",
         stderr
     );
 }
 
 #[test]
 fn test_debug_attach_command() {
-    // Test attach subcommand
-    let output: _ = Command::new("cargo")
-        .args(&["run", "--", "debug", "attach", "--pid", "1234"])
+    // Attach mode is a historical Stage 59 design, not part of the current public CLI.
+    let output = Command::new("cargo")
+        .args(["run", "--", "debug", "attach", "--pid", "1234"])
         .output()
-        .expect("Failed to run beejs debug attach");
+        .expect("Failed to run bee debug attach");
 
-    let stderr: _ = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // Should not fail with parsing errors
     assert!(
-        !stderr.contains("unexpected argument") && !stderr.contains("invalid value"),
-        "Debug attach should be parsed correctly. stderr: {}",
+        !output.status.success()
+            && stderr.contains("unexpected argument '--pid'")
+            && stderr.contains("Usage: bee debug <FILE>"),
+        "Unsupported debug attach mode should be rejected by the current public CLI. stderr: {}",
         stderr
     );
 }
 
 #[test]
 fn test_debug_inspect_command() {
-    // Test inspect subcommand
-    let output: _ = Command::new("cargo")
-        .args(&["run", "--", "debug", "inspect", "--port", "8080"])
+    // Inspect mode is a historical Stage 59 design, not part of the current public CLI.
+    let output = Command::new("cargo")
+        .args(["run", "--", "debug", "inspect", "--port", "8080"])
         .output()
-        .expect("Failed to run beejs debug inspect");
+        .expect("Failed to run bee debug inspect");
 
-    let stderr: _ = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // Should not fail with parsing errors
     assert!(
-        !stderr.contains("unexpected argument") && !stderr.contains("invalid value"),
-        "Debug inspect should be parsed correctly. stderr: {}",
+        !output.status.success()
+            && stderr.contains("unexpected argument '--port'")
+            && stderr.contains("Usage: bee debug <FILE>"),
+        "Unsupported debug inspect mode should be rejected by the current public CLI. stderr: {}",
         stderr
     );
 }
 
 #[test]
 fn test_debug_web_flag() {
-    // Test web UI flag
-    let test_script: _ = PathBuf::from("/tmp/test_debug_web.js");
+    // Web UI debugging is documented as future work and is not exposed in the current CLI.
+    let test_script = PathBuf::from("/tmp/test_debug_web.js");
     std::fs::write(&test_script, "console.log('web debug');")
         .expect("Failed to create test script");
 
-    let output: _ = Command::new("cargo")
-        .args(&[
-            "run",
-            "--",
-            "debug",
-            test_script.to_str().unwrap(),
-            "--web",
-        ])
+    let output = Command::new("cargo")
+        .args(["run", "--", "debug", test_script.to_str().unwrap(), "--web"])
         .output()
-        .expect("Failed to run beejs debug --web");
+        .expect("Failed to run bee debug --web");
 
-    let stderr: _ = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Clean up
-    let _: _ = std::fs::remove_file(&test_script);
+    let _ = std::fs::remove_file(&test_script);
 
-    // Should not fail with parsing errors
     assert!(
-        !stderr.contains("unexpected argument") && !stderr.contains("invalid value"),
-        "Debug --web flag should be parsed correctly. stderr: {}",
+        !output.status.success()
+            && stderr.contains("unexpected argument '--web'")
+            && stderr.contains("Usage: bee debug <FILE>"),
+        "Unsupported debug --web flag should be rejected by the current public CLI. stderr: {}",
         stderr
     );
 }

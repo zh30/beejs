@@ -1,7 +1,7 @@
 // Node.js Buffer模块实现
 /// 高性能二进制数据处理
 use anyhow::Result;
-use base64::{Engine, engine::general_purpose::STANDARD as BASE64_STANDARD};
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine};
 use rusty_v8 as v8;
 /// 设置Buffer API
 pub fn setup_buffer_api(
@@ -178,9 +178,13 @@ fn buffer_concat_callback(
             let _combined_data: Vec<u8> = Vec::new();
             let mut calculated_length: usize = 0;
             for i in 0..arr.length() {
-                if let Ok(buf) = v8::Local::<v8::Array>::try_from(arr.get_index(scope, i).unwrap()) {
+                if let Ok(buf) = v8::Local::<v8::Array>::try_from(arr.get_index(scope, i).unwrap())
+                {
                     let length_key: _ = v8::String::new(scope, "_length").unwrap();
-                    if let Some(len_val) = buf.get(scope, length_key.into()).and_then(|v| v.to_integer(scope)) {
+                    if let Some(len_val) = buf
+                        .get(scope, length_key.into())
+                        .and_then(|v| v.to_integer(scope))
+                    {
                         let len: _ = len_val.value() as usize;
                         calculated_length += len;
                         // Fixed: Skipping data access (requires newer V8 API)
@@ -188,7 +192,11 @@ fn buffer_concat_callback(
                     }
                 }
             }
-            let target_length: _ = if total_length > 0 { total_length } else { calculated_length };
+            let target_length: _ = if total_length > 0 {
+                total_length
+            } else {
+                calculated_length
+            };
             let buffer: _ = v8::ArrayBuffer::new(scope, target_length);
             // Fixed: ArrayBuffer created successfully
             // Note: Direct data access not available in rusty_v8 0.22
@@ -261,7 +269,11 @@ fn buffer_to_string_callback(
         .get(scope, length_key.into())
         .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
-    let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
+    let actual_end: usize = if end == -1 {
+        buffer_length as usize
+    } else {
+        (end.min(buffer_length)) as usize
+    };
     let actual_start: _ = (start as i64).min(buffer_length) as usize;
     if actual_start >= actual_end {
         retval.set(v8::String::new(scope, "").unwrap().into());
@@ -312,7 +324,11 @@ fn buffer_fill_callback(
         .get(scope, length_key.into())
         .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
-    let _actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
+    let _actual_end: usize = if end == -1 {
+        buffer_length as usize
+    } else {
+        (end.min(buffer_length)) as usize
+    };
     let _actual_start: _ = start.min(buffer_length) as usize;
     let _fill_value: _ = if value.is_number() {
         value.to_integer(scope).unwrap().value() as u8

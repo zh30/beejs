@@ -90,7 +90,7 @@ let result = runtime.execute_file("examples/hello.js")?;
 println!("Result: {:?}", result);
 
 // 执行 TypeScript 文件 (自动编译)
-let result = runtime.execute_file("examples/example.ts")?;
+let result = runtime.execute_file("examples/basics/typescript_demo.ts")?;
 ```
 
 ### execute_file_with_options()

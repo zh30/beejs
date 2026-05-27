@@ -6,7 +6,7 @@ use serial_test::serial;
 #[test]
 #[serial]
 fn test_snapshot_manager_warmup_stats() {
-    use beejs::v8_snapshot::{SnapshotManager, SnapshotConfig};
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
 
     let config = SnapshotConfig::default();
     let manager = SnapshotManager::new(config);
@@ -16,14 +16,17 @@ fn test_snapshot_manager_warmup_stats() {
 
     // 初始状态：没有预热
     assert_eq!(stats.builtins_warmed, 0, "初始 builtin_warmed 应该为 0");
-    assert_eq!(stats.snapshots_generated, 0, "初始 snapshots_generated 应该为 0");
+    assert_eq!(
+        stats.snapshots_generated, 0,
+        "初始 snapshots_generated 应该为 0"
+    );
     assert_eq!(stats.snapshots_loaded, 0, "初始 snapshots_loaded 应该为 0");
 }
 
 #[test]
 #[serial]
 fn test_snapshot_manager_warmup_builtins() {
-    use beejs::v8_snapshot::{SnapshotManager, SnapshotConfig};
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
 
     let config = SnapshotConfig::default();
     let manager = SnapshotManager::new(config);
@@ -40,7 +43,7 @@ fn test_snapshot_manager_warmup_builtins() {
 #[test]
 #[serial]
 fn test_snapshot_manager_creation() {
-    use beejs::v8_snapshot::{SnapshotManager, SnapshotConfig};
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
 
     let config = SnapshotConfig::default();
     let manager = SnapshotManager::new(config);
@@ -98,7 +101,7 @@ fn test_snapshot_metadata() {
 #[test]
 #[serial]
 fn test_generate_snapshot() {
-    use beejs::v8_snapshot::{SnapshotManager, SnapshotConfig};
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
 
     let config = SnapshotConfig::default();
     let manager = SnapshotManager::new(config);
@@ -112,13 +115,16 @@ fn test_generate_snapshot() {
 
     // 验证统计更新
     let stats = manager.get_stats();
-    assert_eq!(stats.snapshots_generated, 1, "生成后 snapshots_generated 应该为 1");
+    assert_eq!(
+        stats.snapshots_generated, 1,
+        "生成后 snapshots_generated 应该为 1"
+    );
 }
 
 #[test]
 #[serial]
 fn test_load_snapshot_not_found() {
-    use beejs::v8_snapshot::{SnapshotManager, SnapshotConfig};
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
 
     let config = SnapshotConfig::default();
     let manager = SnapshotManager::new(config);

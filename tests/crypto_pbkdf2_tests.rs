@@ -8,7 +8,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn beejs_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_beejs"))
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 fn run_js_test(code: &str) -> String {
@@ -20,11 +20,12 @@ fn run_js_test(code: &str) -> String {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     // Parse output - skip the "🐝 Running Beejs on:" line and "Result:" line
-    let lines: Vec<&str> = stdout.lines()
+    let lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
     lines.join("\n")
@@ -39,19 +40,17 @@ fn run_js_test_with_stderr(code: &str) -> (String, String) {
         .arg("run")
         .arg(&test_file)
         .output()
-        .expect("Failed to execute beejs");
+        .expect("Failed to execute bee");
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-    let stdout_lines: Vec<&str> = stdout.lines()
+    let stdout_lines: Vec<&str> = stdout
+        .lines()
         .filter(|line| !line.starts_with("🐝") && !line.starts_with("Result:"))
         .collect();
 
-    (
-        stdout_lines.join("\n"),
-        stderr,
-    )
+    (stdout_lines.join("\n"), stderr)
 }
 
 // ==================== pbkdf2Sync Tests ====================
@@ -63,7 +62,11 @@ fn test_pbkdf2_sync_function_exists() {
 console.log(typeof crypto.pbkdf2Sync === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected pbkdf2Sync to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected pbkdf2Sync to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -75,7 +78,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected SHA256 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected SHA256 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -87,7 +94,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 64 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected SHA512 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected SHA512 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -99,7 +110,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 16 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected MD5 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected MD5 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -111,7 +126,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 20 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected SHA1 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected SHA1 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -122,7 +141,11 @@ const result = crypto.pbkdf2Sync('password', 'salt', 10000, 32, 'sha256');
 console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected default iterations to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected default iterations to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -135,7 +158,11 @@ const areDifferent = result1.some((b, i) => b !== result2[i]);
 console.log(areDifferent ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different salts to produce different results: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different salts to produce different results: {}",
+        output
+    );
 }
 
 #[test]
@@ -148,7 +175,11 @@ const areDifferent = result1.some((b, i) => b !== result2[i]);
 console.log(areDifferent ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected different passwords to produce different results: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected different passwords to produce different results: {}",
+        output
+    );
 }
 
 #[test]
@@ -163,7 +194,11 @@ console.log(result32.length === 32 ? 'PASS' : 'FAIL');
 console.log(result64.length === 64 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected correct key lengths: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected correct key lengths: {}",
+        output
+    );
 }
 
 #[test]
@@ -174,7 +209,11 @@ const result = crypto.pbkdf2Sync('password', 'salt', 1000, 32, 'sha256');
 console.log(result.constructor.name === 'Uint8Array' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected Uint8Array return: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected Uint8Array return: {}",
+        output
+    );
 }
 
 #[test]
@@ -187,7 +226,11 @@ const areDifferent = result1.some((b, i) => b !== result2[i]);
 console.log(areDifferent ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected iterations to affect result: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected iterations to affect result: {}",
+        output
+    );
 }
 
 #[test]
@@ -199,7 +242,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected empty password to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected empty password to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -211,7 +258,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected empty salt to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected empty salt to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -223,7 +274,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected zero iterations to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected zero iterations to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -235,7 +290,11 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 256 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected large keylen to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected large keylen to work: {}",
+        output
+    );
 }
 
 // ==================== pbkdf2 (Async) Tests ====================
@@ -247,7 +306,11 @@ fn test_pbkdf2_function_exists() {
 console.log(typeof crypto.pbkdf2 === 'function' ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.trim() == "PASS", "Expected pbkdf2 to exist: {}", output);
+    assert!(
+        output.trim() == "PASS",
+        "Expected pbkdf2 to exist: {}",
+        output
+    );
 }
 
 #[test]
@@ -258,7 +321,11 @@ const result = crypto.pbkdf2('password', 'salt', 1, 32, 'sha256');
 console.log(result instanceof Promise ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected pbkdf2 to return Promise: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected pbkdf2 to return Promise: {}",
+        output
+    );
 }
 
 #[test]
@@ -273,7 +340,11 @@ crypto.pbkdf2('password', 'salt', 1, 32, 'sha256').then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async PBKDF2 to resolve: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async PBKDF2 to resolve: {}",
+        output
+    );
 }
 
 #[test]
@@ -287,7 +358,11 @@ crypto.pbkdf2('password', 'salt', 1, 32, 'sha256').then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async SHA256 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async SHA256 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -302,7 +377,11 @@ crypto.pbkdf2('password', 'salt', 1, 64, 'sha512').then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async SHA512 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async SHA512 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -316,7 +395,11 @@ crypto.pbkdf2('password', 'salt', 1, 16, 'md5').then(result => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async MD5 PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async MD5 PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -330,7 +413,11 @@ fn test_pbkdf2_async_await() {
 })();
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async/await PBKDF2 to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async/await PBKDF2 to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -345,7 +432,11 @@ fn test_pbkdf2_async_consistent_with_sync() {
 })();
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async and sync to produce same result: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async and sync to produce same result: {}",
+        output
+    );
 }
 
 // ==================== Edge Cases ====================
@@ -353,10 +444,15 @@ fn test_pbkdf2_async_consistent_with_sync() {
 #[test]
 #[serial]
 fn test_pbkdf2_sync_unsupported_algorithm() {
-    let (_, stderr) = run_js_test_with_stderr(r#"
+    let (_, stderr) = run_js_test_with_stderr(
+        r#"
 const result = crypto.pbkdf2Sync('password', 'salt', 1, 32, 'unsupported');
-"#);
-    assert!(stderr.contains("Unsupported"), "Expected error for unsupported algorithm");
+"#,
+    );
+    assert!(
+        stderr.contains("Unsupported"),
+        "Expected error for unsupported algorithm"
+    );
 }
 
 #[test]
@@ -368,7 +464,11 @@ crypto.pbkdf2('password', 'salt', 1, 32, 'unsupported').catch(err => {
 });
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected async error for unsupported algorithm: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected async error for unsupported algorithm: {}",
+        output
+    );
 }
 
 #[test]
@@ -379,7 +479,11 @@ const result = crypto.pbkdf2Sync('密码', 'salt', 1, 32, 'sha256');
 console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected UTF-8 password to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected UTF-8 password to work: {}",
+        output
+    );
 }
 
 #[test]
@@ -390,7 +494,11 @@ const result = crypto.pbkdf2Sync('password', '盐', 1, 32, 'sha256');
 console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected UTF-8 salt to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected UTF-8 salt to work: {}",
+        output
+    );
 }
 
 // ==================== Known Test Vectors ====================
@@ -411,7 +519,11 @@ console.log('Expected: ' + expected);
 console.log('Got: ' + resultHex);
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected known test vector to match: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected known test vector to match: {}",
+        output
+    );
 }
 
 #[test]
@@ -424,5 +536,9 @@ console.log(result instanceof Uint8Array ? 'PASS' : 'FAIL');
 console.log(result.length === 32 ? 'PASS' : 'FAIL');
 "#;
     let output = run_js_test(code);
-    assert!(output.contains("PASS"), "Expected high iteration count to work: {}", output);
+    assert!(
+        output.contains("PASS"),
+        "Expected high iteration count to work: {}",
+        output
+    );
 }

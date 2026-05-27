@@ -1,17 +1,16 @@
 // ONNX Runtime 推理引擎实现
 // 提供高性能的 ONNX 模型推理能力，支持 CPU 和 GPU 加速
 
-
 use crate::ai_inference::engine_interface::{
-    InferenceEngine, EngineFactory, ModelFormat, EngineType, InferenceOptions,
-    ModelHandle, InferenceResult, EngineStats, ModelInfo, TensorInfo
+    EngineFactory, EngineStats, EngineType, InferenceEngine, InferenceOptions, InferenceResult,
+    ModelFormat, ModelHandle, ModelInfo, TensorInfo,
 };
 use crate::ai_inference::tensor_ops::Tensor;
-use anyhow::{Result};
+use anyhow::Result;
 
 use async_trait::async_trait;
-use std::sync::RwLock;
 use std::path::Path;
+use std::sync::RwLock;
 /// ONNX Runtime 推理引擎
 #[derive(Debug)]
 pub struct OnnxEngine {
@@ -177,7 +176,11 @@ impl OnnxSession {
         Ok(())
     }
     /// 执行推理
-    pub async fn infer(&self, input: &Tensor, gpu_accelerator: Option<&OnnxGPUAccelerator>) -> Result<Tensor> {
+    pub async fn infer(
+        &self,
+        input: &Tensor,
+        gpu_accelerator: Option<&OnnxGPUAccelerator>,
+    ) -> Result<Tensor> {
         // 模拟推理计算时间
         let compute_time: _ = match gpu_accelerator {
             Some(_) => Duration::from_millis(5), // GPU 加速
@@ -194,9 +197,9 @@ impl OnnxGPUAccelerator {
     pub async fn new(engine_type: EngineType) -> Result<Self> {
         // 检查 GPU 可用性
         let device_id: _ = 0; // 默认设备 ID
-        // 初始化内存池
+                              // 初始化内存池
         let memory_pool: _ = GPUMemoryPool::new(1024 * 1024 * 1024)?; // 1GB 内存池
-        // 初始化流管理器
+                                                                      // 初始化流管理器
         let stream_manager: _ = StreamManager::new(4)?; // 4 个并发流
         Ok(OnnxGPUAccelerator {
             device_type: engine_type,
@@ -225,10 +228,7 @@ impl GPUMemoryPool {
     /// 分配内存
     pub fn allocate(&self, size: usize) -> Result<MemoryBlock> {
         // 简化实现：模拟内存分配
-        let block: _ = MemoryBlock {
-            size,
-            offset: 0,
-        };
+        let block: _ = MemoryBlock { size, offset: 0 };
         Ok(block)
     }
     /// 释放内存
@@ -329,7 +329,10 @@ impl InferenceEngine for OnnxEngine {
     async fn infer(&self, model: &ModelHandle, input: &Tensor) -> Result<InferenceResult> {
         let start: _ = Instant::now();
         // 执行推理
-        let output: _ = self.session.infer(input, self.gpu_accelerator.as_ref()).await?;
+        let output: _ = self
+            .session
+            .infer(input, self.gpu_accelerator.as_ref())
+            .await?;
         let inference_time: _ = start.elapsed();
         // 更新统计信息
         {
@@ -346,7 +349,11 @@ impl InferenceEngine for OnnxEngine {
             gpu_used: self.gpu_accelerator.is_some(),
         })
     }
-    async fn batch_infer(&self, model: &ModelHandle, inputs: &[Tensor]) -> Result<Vec<InferenceResult>> {
+    async fn batch_infer(
+        &self,
+        model: &ModelHandle,
+        inputs: &[Tensor],
+    ) -> Result<Vec<InferenceResult>> {
         let mut results = Vec::with_capacity(inputs.len());
         for input in inputs {
             let result: _ = self.infer(model, input).await?;
@@ -375,22 +382,18 @@ impl InferenceEngine for OnnxEngine {
             id: model.id.clone(),
             name: "ONNX Model".to_string(),
             format: ModelFormat::ONNX,
-            inputs: vec![
-                TensorInfo {
-                    name: "input".to_string(),
-                    shape: model.input_shape.clone(),
-                    data_type: "float32".to_string(),
-                    optional: false,
-                }
-            ],
-            outputs: vec![
-                TensorInfo {
-                    name: "output".to_string(),
-                    shape: model.output_shape.clone(),
-                    data_type: "float32".to_string(),
-                    optional: false,
-                }
-            ],
+            inputs: vec![TensorInfo {
+                name: "input".to_string(),
+                shape: model.input_shape.clone(),
+                data_type: "float32".to_string(),
+                optional: false,
+            }],
+            outputs: vec![TensorInfo {
+                name: "output".to_string(),
+                shape: model.output_shape.clone(),
+                data_type: "float32".to_string(),
+                optional: false,
+            }],
             parameter_count: 1000000, // 模拟值
             size_bytes: 50000000,     // 50MB
             engine_type: self.engine_type.clone(),
@@ -439,7 +442,9 @@ mod tests {
             memory_optimization: None,
             custom_options: std::collections::HashMap::new(),
         };
-        let model_handle: _ = engine.load_model(&model_path.to_string_lossy(), options).await?;
+        let model_handle: _ = engine
+            .load_model(&model_path.to_string_lossy(), options)
+            .await?;
         assert_eq!(model_handle.format, ModelFormat::ONNX);
         // 清理
         std::fs::remove_file(model_path)?;
@@ -503,6 +508,7 @@ mod tests {
         Ok(())
     }
 }
-use std::collections::{BTreeMap, HashMap};use std::time::Duration;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use std::time::Instant;

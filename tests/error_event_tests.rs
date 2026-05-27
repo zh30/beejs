@@ -6,9 +6,11 @@
 #[cfg(test)]
 mod tests {
     use beejs::MinimalRuntime;
+    use serial_test::serial;
 
     /// 测试 ErrorEvent 构造函数可用性
     #[test]
+    #[serial]
     fn test_error_event_constructor() {
         let code = r#"
             typeof ErrorEvent
@@ -22,6 +24,7 @@ mod tests {
 
     /// 测试 ErrorEvent 基本创建
     #[test]
+    #[serial]
     fn test_error_event_basic_creation() {
         let code = r#"
             const event = new ErrorEvent('error', {
@@ -39,12 +42,16 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "ErrorEvent should be creatable with options");
+        assert!(
+            result.is_ok(),
+            "ErrorEvent should be creatable with options"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
     /// 测试 ErrorEvent 默认值
     #[test]
+    #[serial]
     fn test_error_event_defaults() {
         let code = r#"
             const event = new ErrorEvent('error');
@@ -63,6 +70,7 @@ mod tests {
 
     /// 测试 ErrorEvent 继承自 Event
     #[test]
+    #[serial]
     fn test_error_event_inherits_from_event() {
         let code = r#"
             const event = new ErrorEvent('error', { message: 'test' });
@@ -77,6 +85,7 @@ mod tests {
 
     /// 测试 ErrorEvent with error object
     #[test]
+    #[serial]
     fn test_error_event_with_error_object() {
         let code = r#"
             const error = new Error('Original error');
@@ -95,6 +104,7 @@ mod tests {
 
     /// 测试 ErrorEvent 只读属性
     #[test]
+    #[serial]
     fn test_error_event_readonly_properties() {
         let code = r#"
             const event = new ErrorEvent('error', {
@@ -115,6 +125,7 @@ mod tests {
 
     /// 测试 ErrorEvent 作为事件类型
     #[test]
+    #[serial]
     fn test_error_event_as_event_type() {
         let code = r#"
             const event = new ErrorEvent('error', { message: 'Network error' });
@@ -129,6 +140,7 @@ mod tests {
 
     /// 测试 window.onerror 存在且可设置
     #[test]
+    #[serial]
     fn test_window_onerror_exists() {
         let code = r#"
             typeof window.onerror === 'function'
@@ -142,6 +154,7 @@ mod tests {
 
     /// 测试 window.onerror 可以捕获运行时错误
     #[test]
+    #[serial]
     fn test_window_onerror_catches_error() {
         let code = r#"
             let errorCaught = false;
@@ -173,12 +186,16 @@ mod tests {
             errorCaught === true
         "#;
         let check_result = runtime.execute_code(check_code);
-        assert!(check_result.is_ok(), "window.onerror should have caught the error");
+        assert!(
+            check_result.is_ok(),
+            "window.onerror should have caught the error"
+        );
         assert_eq!(check_result.unwrap().trim(), "true");
     }
 
     /// 测试 window.onerror 接收正确的错误信息
     #[test]
+    #[serial]
     fn test_window_onerror_receives_correct_info() {
         let code = r#"
             let receivedMessage = '';
@@ -203,12 +220,16 @@ mod tests {
             receivedMessage && receivedMessage.includes('Specific test error') && receivedError instanceof Error
         "#;
         let check_result = runtime.execute_code(check_code);
-        assert!(check_result.is_ok(), "window.onerror should receive correct error info");
+        assert!(
+            check_result.is_ok(),
+            "window.onerror should receive correct error info"
+        );
         assert_eq!(check_result.unwrap().trim(), "true");
     }
 
     /// 测试 window.onerror 返回 true 阻止默认处理
     #[test]
+    #[serial]
     fn test_window_onerror_prevents_default() {
         let code = r#"
             let errorHandled = false;
@@ -232,6 +253,7 @@ mod tests {
 
     /// 测试 window.onerror 可以被覆盖
     #[test]
+    #[serial]
     fn test_window_onerror_overwritable() {
         let code = r#"
             let callCount = 0;
@@ -256,6 +278,9 @@ mod tests {
         // 验证第二个 onerror 被设置
         let check_code = "callCount === 1"; // 只调用一次，因为覆盖了
         let check_result = runtime.execute_code(check_code);
-        assert!(check_result.is_ok(), "Only the last onerror should be called");
+        assert!(
+            check_result.is_ok(),
+            "Only the last onerror should be called"
+        );
     }
 }

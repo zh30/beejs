@@ -123,8 +123,8 @@ export class PackageManager {
             description: '',
             main: 'index.js',
             scripts: {
-                start: 'beejs index.js',
-                test: 'beejs test.js'
+                start: 'bee run index.js',
+                test: 'bee test test.js'
             },
             keywords: [],
             author: '',

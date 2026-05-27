@@ -455,7 +455,10 @@ mod tests {
         assert_eq!(io_config.outputs.as_ref().unwrap().len(), 1);
         assert_eq!(io_config.inputs.as_ref().unwrap()[0].source_type, "kafka");
         assert_eq!(io_config.outputs.as_ref().unwrap()[0].dest_type, "s3");
-        assert_eq!(io_config.buffer.as_ref().unwrap().size_bytes, Some(1024 * 1024));
+        assert_eq!(
+            io_config.buffer.as_ref().unwrap().size_bytes,
+            Some(1024 * 1024)
+        );
     }
     #[test]
     fn test_networking_config() {
@@ -474,9 +477,10 @@ mod tests {
             ingress: Some(IngressConfig {
                 enabled: true,
                 ingress_class: Some("nginx".to_string()),
-                annotations: Some(HashMap::from([
-                    ("cert-manager.io/cluster-issuer".to_string(), "letsencrypt".to_string()),
-                ])),
+                annotations: Some(HashMap::from([(
+                    "cert-manager.io/cluster-issuer".to_string(),
+                    "letsencrypt".to_string(),
+                )])),
                 hosts: Some(vec![IngressHost {
                     host: "api.example.com".to_string(),
                     paths: vec![IngressPath {
@@ -496,9 +500,22 @@ mod tests {
             network_policies: None,
         };
         assert!(networking.service.as_ref().unwrap().enabled);
-        assert_eq!(networking.service.as_ref().unwrap().service_type, "ClusterIP");
+        assert_eq!(
+            networking.service.as_ref().unwrap().service_type,
+            "ClusterIP"
+        );
         assert!(networking.ingress.as_ref().unwrap().enabled);
-        assert_eq!(networking.ingress.as_ref().unwrap().hosts.as_ref().unwrap().len(), 1);
+        assert_eq!(
+            networking
+                .ingress
+                .as_ref()
+                .unwrap()
+                .hosts
+                .as_ref()
+                .unwrap()
+                .len(),
+            1
+        );
         assert_eq!(
             networking.ingress.as_ref().unwrap().hosts.as_ref().unwrap()[0].host,
             "api.example.com"

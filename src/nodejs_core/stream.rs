@@ -898,7 +898,11 @@ fn transform_constructor_callback(
         let write_private_func: _ = v8::FunctionTemplate::new(scope, transform_write_callback);
         let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
         let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
-        stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+        stream_obj.set(
+            scope,
+            write_private_key.into(),
+            write_private_instance.into(),
+        );
     }
 
     // write方法 (公开)
@@ -988,9 +992,14 @@ fn transform_write_callback(
         if transform_func_val.is_function() {
             if let Ok(transform_func) = v8::Local::<v8::Function>::try_from(transform_func_val) {
                 // 创建一个内联的 callback 函数
-                let callback_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-                    // 空的 callback，什么都不做
-                });
+                let callback_template = v8::FunctionTemplate::new(
+                    scope,
+                    |_scope: &mut v8::HandleScope,
+                     _args: v8::FunctionCallbackArguments,
+                     _retval: v8::ReturnValue| {
+                        // 空的 callback，什么都不做
+                    },
+                );
                 let callback_func = callback_template.get_function(scope).unwrap();
 
                 // 调用 _transform(chunk, encoding, callback)
@@ -1138,7 +1147,11 @@ fn duplex_constructor_callback(
         let write_private_func: _ = v8::FunctionTemplate::new(scope, writable_write_callback);
         let write_private_instance: _ = write_private_func.get_function(scope).unwrap();
         let write_private_key: _ = v8::String::new(scope, "_write").unwrap();
-        stream_obj.set(scope, write_private_key.into(), write_private_instance.into());
+        stream_obj.set(
+            scope,
+            write_private_key.into(),
+            write_private_instance.into(),
+        );
     }
 
     // write方法 (公开)
@@ -1223,7 +1236,9 @@ fn stream_pipeline_callback(
         let source = streams[i];
         let destination = streams[i + 1];
 
-        if let (Some(source_obj), Some(_dest_obj)) = (source.to_object(scope), destination.to_object(scope)) {
+        if let (Some(source_obj), Some(_dest_obj)) =
+            (source.to_object(scope), destination.to_object(scope))
+        {
             // 检查是否是有效的流
             let pipe_key: v8::Local<v8::Value> = v8::String::new(scope, "pipe").unwrap().into();
 
@@ -1248,28 +1263,39 @@ fn stream_pipeline_callback(
     if let (Some(cb), Some(last)) = (callback, last_writable) {
         if let Some(last_obj) = last.to_object(scope) {
             // 获取事件名称：'end' 用于 Readable/Transform，'finish' 用于 Writable
-            let finish_key: v8::Local<v8::Value> = v8::String::new(scope, "_writableState").unwrap().into();
+            let finish_key: v8::Local<v8::Value> =
+                v8::String::new(scope, "_writableState").unwrap().into();
             let is_writable = last_obj.has(scope, finish_key).unwrap_or(false);
 
             let event_name = if is_writable { "finish" } else { "end" };
-            let _event_str: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
+            let _event_str: v8::Local<v8::Value> =
+                v8::String::new(scope, event_name).unwrap().into();
 
             // 使用独立的属性名存储回调，避免覆盖用户监听器
-            let pipeline_cb_key: v8::Local<v8::Value> = v8::String::new(scope, "_beejs_pipeline_cb_").unwrap().into();
+            let pipeline_cb_key: v8::Local<v8::Value> =
+                v8::String::new(scope, "_beejs_pipeline_cb_")
+                    .unwrap()
+                    .into();
             last_obj.set(scope, pipeline_cb_key, cb.into());
 
             // 创建一个包装函数，用于调用原始回调
             // 注意：不捕获任何变量，从对象属性获取回调
             let pipeline_callback_fn: v8::Local<v8::Function> = v8::FunctionTemplate::new(
                 scope,
-                |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 _retval: v8::ReturnValue| {
                     let this: v8::Local<v8::Object> = args.this();
                     if let Some(this_obj) = this.to_object(scope) {
-                        let cb_key: v8::Local<v8::Value> = v8::String::new(scope, "_beejs_pipeline_cb_").unwrap().into();
+                        let cb_key: v8::Local<v8::Value> =
+                            v8::String::new(scope, "_beejs_pipeline_cb_")
+                                .unwrap()
+                                .into();
                         if let Some(cb_val) = this_obj.get(scope, cb_key) {
                             if cb_val.is_function() {
                                 if let Ok(cb_fn) = v8::Local::<v8::Function>::try_from(cb_val) {
-                                    let args_arr: &[v8::Local<v8::Value>] = &[v8::null(scope).into()];
+                                    let args_arr: &[v8::Local<v8::Value>] =
+                                        &[v8::null(scope).into()];
                                     let undefined = v8::undefined(scope);
                                     cb_fn.call(scope, undefined.into(), args_arr);
 
@@ -1280,10 +1306,13 @@ fn stream_pipeline_callback(
                         }
                     }
                 },
-            ).get_function(scope).unwrap();
+            )
+            .get_function(scope)
+            .unwrap();
 
             // 直接在 last 对象上设置监听器（不使用 once）
-            let listener_key: v8::Local<v8::Value> = v8::String::new(scope, event_name).unwrap().into();
+            let listener_key: v8::Local<v8::Value> =
+                v8::String::new(scope, event_name).unwrap().into();
             last_obj.set(scope, listener_key, pipeline_callback_fn.into());
         }
     }
@@ -1439,7 +1468,11 @@ fn stream_passthrough_callback(
     writable_state_obj.set(scope, writable_ended_key.into(), writable_ended_val.into());
     let writable_finished_key: _ = v8::String::new(scope, "finished").unwrap();
     let writable_finished_val: _ = v8::Boolean::new(scope, false);
-    writable_state_obj.set(scope, writable_finished_key.into(), writable_finished_val.into());
+    writable_state_obj.set(
+        scope,
+        writable_finished_key.into(),
+        writable_finished_val.into(),
+    );
     let writable_flag_key: _ = v8::String::new(scope, "writable").unwrap();
     let writable_flag_val: _ = v8::Boolean::new(scope, true);
     writable_state_obj.set(scope, writable_flag_key.into(), writable_flag_val.into());
@@ -1481,4 +1514,3 @@ fn passthrough_write_callback(
         }
     }
 }
-

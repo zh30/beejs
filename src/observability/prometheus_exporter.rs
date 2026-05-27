@@ -6,12 +6,12 @@
 use anyhow::{Context, Result};
 use prometheus::{Counter, Opts, Registry, TextEncoder};
 use std::collections::{BTreeMap, HashMap};
+use std::io::Read;
+use std::net::{SocketAddr, TcpListener as StdTcpListener};
 use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info};
-use std::io::Read;
-use std::net::{SocketAddr, TcpListener as StdTcpListener};
 
 /// Prometheus metrics exporter
 pub struct PrometheusExporter {
@@ -84,7 +84,8 @@ impl PrometheusExporter {
     pub fn gather_metrics(&self) -> Result<String> {
         let metric_families: _ = self.registry.gather();
         let encoder: _ = TextEncoder::new();
-        let metrics_text: _ = encoder.encode_to_string(&metric_families)
+        let metrics_text: _ = encoder
+            .encode_to_string(&metric_families)
             .context("Failed to encode metrics")?;
         Ok(metrics_text)
     }
@@ -144,7 +145,8 @@ async fn serve_metrics(stream: &mut TcpStream, registry: &Registry) -> Result<()
     let metric_families: _ = registry.gather();
     // Encode to Prometheus text format
     let encoder: _ = prometheus::TextEncoder::new();
-    let metrics_text: _ = encoder.encode_to_string(&metric_families)
+    let metrics_text: _ = encoder
+        .encode_to_string(&metric_families)
         .context("Failed to encode metrics")?;
     // Prepare HTTP response
     let response: _ = format!(
@@ -197,7 +199,10 @@ mod tests {
         // Add a test counter
         let counter_opts: _ = Opts::new("test_counter".to_string(), "Test counter".to_string());
         let counter: _ = Counter::with_opts(counter_opts).unwrap();
-        exporter.registry().register(Box::new(counter.clone())).unwrap();
+        exporter
+            .registry()
+            .register(Box::new(counter.clone()))
+            .unwrap();
         counter.inc();
         let metrics: _ = exporter.gather_metrics();
         assert!(metrics.is_ok());
@@ -210,6 +215,6 @@ mod tests {
         // Just verify the exporter was created successfully
         // Check that registry is valid by verifying gather works (even if empty)
         let metrics: _ = exporter.registry().gather();
-        assert!(metrics.len() >= 0);  // Empty is OK
+        assert!(metrics.len() >= 0); // Empty is OK
     }
 }

@@ -4,11 +4,15 @@
 /// v0.3.84: 添加 HTTP Agent 连接池优化
 /// v0.3.73: 添加真实 HTTP 网络请求支持
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::net::{SocketAddr, ToSocketAddrs, TcpListener, TcpStream};
 use std::io::{Read, Write};
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
+use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -91,11 +95,15 @@ impl HttpServerMessageChannel {
 
     /// 生成新的连接 ID
     pub fn next_connection_id(&self) -> u64 {
-        self.next_connection_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+        self.next_connection_id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
     }
 
     /// 发送请求消息
-    pub fn send_request(&self, request: HttpRequestMessage) -> Result<(), crossbeam::channel::SendError<HttpRequestMessage>> {
+    pub fn send_request(
+        &self,
+        request: HttpRequestMessage,
+    ) -> Result<(), crossbeam::channel::SendError<HttpRequestMessage>> {
         self.request_sender.send(request)
     }
 
@@ -105,12 +113,17 @@ impl HttpServerMessageChannel {
     }
 
     /// 尝试接收响应（非阻塞）
-    pub fn try_recv_response(&self) -> Result<HttpResponseMessage, crossbeam::channel::TryRecvError> {
+    pub fn try_recv_response(
+        &self,
+    ) -> Result<HttpResponseMessage, crossbeam::channel::TryRecvError> {
         self.response_receiver.try_recv()
     }
 
     /// v0.3.90: 发送响应消息到后台线程
-    pub fn send_response(&self, response: HttpResponseMessage) -> Result<(), crossbeam::channel::SendError<HttpResponseMessage>> {
+    pub fn send_response(
+        &self,
+        response: HttpResponseMessage,
+    ) -> Result<(), crossbeam::channel::SendError<HttpResponseMessage>> {
         self.response_sender.send(response)
     }
 }
@@ -119,12 +132,39 @@ impl HttpServerMessageChannel {
 /// v0.3.89: 添加跨线程消息传递支持
 static mut HTTP_SERVER_CHANNEL: Option<Arc<Mutex<Option<HttpServerMessageChannel>>>> = None;
 
+static ACTIVE_HTTP_SERVER_STATES: Lazy<Mutex<Vec<Arc<HttpServerState>>>> =
+    Lazy::new(|| Mutex::new(Vec::new()));
+
+fn register_http_server_state(state: Arc<HttpServerState>) {
+    ACTIVE_HTTP_SERVER_STATES.lock().unwrap().push(state);
+}
+
+fn stop_all_http_server_states() {
+    let mut states = ACTIVE_HTTP_SERVER_STATES.lock().unwrap();
+    for state in states.iter() {
+        state.listening.store(false, Ordering::SeqCst);
+    }
+    states.clear();
+}
+
+fn stop_http_server_state(host: &str, port: u16) {
+    let mut states = ACTIVE_HTTP_SERVER_STATES.lock().unwrap();
+    for state in states.iter() {
+        if state.port == port && state.host == host {
+            state.listening.store(false, Ordering::SeqCst);
+        }
+    }
+    states.retain(|state| state.listening.load(Ordering::SeqCst));
+}
+
 /// 初始化全局消息通道
 #[allow(static_mut_refs)]
 pub fn init_http_server_channel() -> Arc<Mutex<Option<HttpServerMessageChannel>>> {
     unsafe {
         if HTTP_SERVER_CHANNEL.is_none() {
-            HTTP_SERVER_CHANNEL = Some(Arc::new(Mutex::new(Some(HttpServerMessageChannel::new(100)))));
+            HTTP_SERVER_CHANNEL = Some(Arc::new(Mutex::new(Some(HttpServerMessageChannel::new(
+                100,
+            )))));
         }
         HTTP_SERVER_CHANNEL.as_ref().unwrap().clone()
     }
@@ -133,9 +173,7 @@ pub fn init_http_server_channel() -> Arc<Mutex<Option<HttpServerMessageChannel>>
 /// 获取全局消息通道
 #[allow(static_mut_refs)]
 pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageChannel>>>> {
-    unsafe {
-        HTTP_SERVER_CHANNEL.as_ref().cloned()
-    }
+    unsafe { HTTP_SERVER_CHANNEL.as_ref().cloned() }
 }
 
 /// 重置全局消息通道
@@ -143,6 +181,8 @@ pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageCha
 /// 创建一个新的消息通道，丢弃所有未处理的消息
 #[allow(static_mut_refs)]
 pub fn reset_http_server_channel() {
+    stop_all_http_server_states();
+
     unsafe {
         if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
             let mut channel_guard = channel_arc.lock().unwrap();
@@ -192,9 +232,7 @@ pub fn try_recv_http_request() -> Option<HttpRequestMessage> {
                         // Channel is empty, no request available
                         None
                     }
-                    Err(crossbeam::channel::TryRecvError::Disconnected) => {
-                        None
-                    }
+                    Err(crossbeam::channel::TryRecvError::Disconnected) => None,
                 }
             } else {
                 None
@@ -299,7 +337,8 @@ impl HttpConnectionPool {
         if let Some(connections) = self.free_connections.get_mut(&key) {
             // 清理超时的连接
             connections.retain(|conn| {
-                conn.is_valid && conn.last_used.elapsed() < Duration::from_secs(self.connection_timeout)
+                conn.is_valid
+                    && conn.last_used.elapsed() < Duration::from_secs(self.connection_timeout)
             });
 
             // 如果有可用的空闲连接
@@ -321,7 +360,11 @@ impl HttpConnectionPool {
         let key = Self::get_key(host, port);
 
         // 统计当前该 key 的空闲连接数
-        let current_free = self.free_connections.get(&key).map(|v| v.len()).unwrap_or(0);
+        let current_free = self
+            .free_connections
+            .get(&key)
+            .map(|v| v.len())
+            .unwrap_or(0);
 
         if self.keep_alive && current_free < self.max_free_sockets {
             // 添加到空闲池
@@ -345,9 +388,7 @@ impl HttpConnectionPool {
         let timeout = Duration::from_secs(self.connection_timeout);
 
         for connections in self.free_connections.values_mut() {
-            connections.retain(|conn| {
-                conn.is_valid && conn.last_used.elapsed() < timeout
-            });
+            connections.retain(|conn| conn.is_valid && conn.last_used.elapsed() < timeout);
         }
 
         // 清理空的 key
@@ -396,7 +437,10 @@ pub fn get_connection_pool_stats() -> String {
             format!(
                 "active: {}, total_free: {}",
                 pool.active_count(),
-                pool.free_connections.values().map(|v| v.len()).sum::<usize>()
+                pool.free_connections
+                    .values()
+                    .map(|v| v.len())
+                    .sum::<usize>()
             )
         } else {
             "pool not initialized".to_string()
@@ -422,13 +466,15 @@ pub fn setup_http_api(
 
     // createServer - 使用普通 callback
     // v0.3.93: callback 中会直接从 context 获取全局对象
-    let create_server_func = v8::FunctionTemplate::new(
-        scope,
-        http_create_server_with_global_callback,
-    );
+    let create_server_func =
+        v8::FunctionTemplate::new(scope, http_create_server_with_global_callback);
     let create_server_instance: _ = create_server_func.get_function(scope).unwrap();
     let create_server_key: _ = v8::String::new(scope, "createServer").unwrap();
-    http_obj.set(scope, create_server_key.into(), create_server_instance.into());
+    http_obj.set(
+        scope,
+        create_server_key.into(),
+        create_server_instance.into(),
+    );
 
     // request
     let request_func: _ = v8::FunctionTemplate::new(scope, http_request_callback);
@@ -479,7 +525,8 @@ fn create_default_agent<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8
     agent_obj.set(scope, keep_alive_key.into(), keep_alive_val.into());
 
     // createConnection - v0.3.84: 返回连接池状态
-    let create_conn_func: _ = v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
+    let create_conn_func: _ =
+        v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
     let create_conn_instance: _ = create_conn_func.get_function(scope).unwrap();
     let create_conn_key: _ = v8::String::new(scope, "createConnection").unwrap();
     agent_obj.set(scope, create_conn_key.into(), create_conn_instance.into());
@@ -589,7 +636,8 @@ fn http_agent_callback(
     agent_obj.set(scope, keep_alive_key.into(), keep_alive_val.into());
 
     // createConnection
-    let create_conn_func: _ = v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
+    let create_conn_func: _ =
+        v8::FunctionTemplate::new(scope, http_agent_create_connection_callback);
     let create_conn_instance: _ = create_conn_func.get_function(scope).unwrap();
     let create_conn_key: _ = v8::String::new(scope, "createConnection").unwrap();
     agent_obj.set(scope, create_conn_key.into(), create_conn_instance.into());
@@ -598,7 +646,12 @@ fn http_agent_callback(
 }
 
 /// 提取整数选项
-fn extract_integer_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: i32) -> i32 {
+fn extract_integer_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+    key: &str,
+    default: i32,
+) -> i32 {
     if options.is_undefined() || options.is_null() {
         return default;
     }
@@ -606,7 +659,10 @@ fn extract_integer_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::V
         let key_str: _ = v8::String::new(scope, key).unwrap();
         if let Some(val) = obj.get(scope, key_str.into()) {
             if val.is_number() {
-                return val.to_integer(scope).unwrap_or(v8::Integer::new(scope, default)).value() as i32;
+                return val
+                    .to_integer(scope)
+                    .unwrap_or(v8::Integer::new(scope, default))
+                    .value() as i32;
             }
         }
     }
@@ -614,7 +670,12 @@ fn extract_integer_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::V
 }
 
 /// 提取布尔选项
-fn extract_boolean_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: bool) -> bool {
+fn extract_boolean_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+    key: &str,
+    default: bool,
+) -> bool {
     if options.is_undefined() || options.is_null() {
         return default;
     }
@@ -628,13 +689,21 @@ fn extract_boolean_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::V
 }
 
 /// 提取字符串选项 - v0.3.65
-fn extract_string_option(scope: &mut v8::HandleScope, options: &v8::Local<v8::Value>, key: &str, default: &str) -> String {
+fn extract_string_option(
+    scope: &mut v8::HandleScope,
+    options: &v8::Local<v8::Value>,
+    key: &str,
+    default: &str,
+) -> String {
     if options.is_undefined() || options.is_null() {
         return default.to_string();
     }
     if let Ok(obj) = v8::Local::<v8::Object>::try_from(*options) {
         let key_str: _ = v8::String::new(scope, key).unwrap();
         if let Some(val) = obj.get(scope, key_str.into()) {
+            if val.is_undefined() || val.is_null() {
+                return default.to_string();
+            }
             if let Some(s) = val.to_string(scope) {
                 return s.to_rust_string_lossy(scope);
             }
@@ -665,7 +734,9 @@ fn resolve_hostname(hostname: &str, port: u16) -> Result<SocketAddr, String> {
             // 将迭代器收集为 Vec
             let addrs_vec: Vec<SocketAddr> = addrs.collect();
             // 返回第一个地址
-            addrs_vec.first().copied()
+            addrs_vec
+                .first()
+                .copied()
                 .ok_or_else(|| "No addresses found".to_string())
         }
         Err(e) => Err(format!("DNS resolution failed: {}", e)),
@@ -710,9 +781,24 @@ fn http_server_close_callback(
 ) {
     let this: _ = args.this();
 
-    // 获取服务器状态
-    let _state_key = v8::String::new(scope, "_serverState").unwrap();
-    let _state_val = this.get(scope, _state_key.into());
+    let port = {
+        let port_key = v8::String::new(scope, "_serverPort").unwrap();
+        this.get(scope, port_key.into())
+            .and_then(|value| value.to_integer(scope))
+            .map(|value| value.value() as u16)
+    };
+
+    let host = {
+        let host_key = v8::String::new(scope, "_serverHost").unwrap();
+        this.get(scope, host_key.into())
+            .and_then(|value| value.to_string(scope))
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_else(|| "0.0.0.0".to_string())
+    };
+
+    if let Some(port) = port {
+        stop_http_server_state(&host, port);
+    }
 
     // 设置 listening 为 false
     let listening_key = v8::String::new(scope, "listening").unwrap();
@@ -775,7 +861,8 @@ fn http_request_callback(
 
     // 提取 headers
     let headers_key_str: _ = v8::String::new(scope, "headers").unwrap();
-    let headers = options.is_object()
+    let headers = options
+        .is_object()
         .then(|| {
             let obj = v8::Local::<v8::Object>::try_from(options).ok()?;
             obj.get(scope, headers_key_str.into())
@@ -853,7 +940,8 @@ fn http_get_callback(
 
     // 提取 headers
     let headers_key_str: _ = v8::String::new(scope, "headers").unwrap();
-    let headers = options.is_object()
+    let headers = options
+        .is_object()
         .then(|| {
             let obj = v8::Local::<v8::Object>::try_from(options).ok()?;
             obj.get(scope, headers_key_str.into())
@@ -910,7 +998,10 @@ fn http_server_listen_callback(
         ("0.0.0.0".to_string(), arg1)
     } else if arg1.is_string() {
         // 第二个参数是 host
-        let host_str = arg1.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_else(|| "0.0.0.0".to_string());
+        let host_str = arg1
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_else(|| "0.0.0.0".to_string());
         (host_str, args.get(2))
     } else {
         // 默认值
@@ -921,15 +1012,17 @@ fn http_server_listen_callback(
     // v0.3.89: 检查是否启用了消息通道模式
     let use_message_channel = get_http_server_channel().is_some();
     let server_state = Arc::new(HttpServerState {
-        listening: Arc::new(AtomicBool::new(false)),
+        listening: Arc::new(AtomicBool::new(true)),
         port,
         host: host.clone(),
         use_message_channel,
     });
+    register_http_server_state(server_state.clone());
 
     // 检查是否有 request handler
     let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
-    let has_handler = this.get(scope, handler_key.into())
+    let has_handler = this
+        .get(scope, handler_key.into())
         .map(|v| v.is_function())
         .unwrap_or(false);
 
@@ -956,6 +1049,14 @@ fn http_server_listen_callback(
     let address_key = v8::String::new(scope, "address").unwrap();
     let address_val = v8::String::new(scope, &format!("{}:{}", host, port)).unwrap();
     this.set(scope, address_key.into(), address_val.into());
+
+    let server_port_key = v8::String::new(scope, "_serverPort").unwrap();
+    let server_port_val = v8::Integer::new(scope, port as i32);
+    this.set(scope, server_port_key.into(), server_port_val.into());
+
+    let server_host_key = v8::String::new(scope, "_serverHost").unwrap();
+    let server_host_val = v8::String::new(scope, &host).unwrap();
+    this.set(scope, server_host_key.into(), server_host_val.into());
 
     // 调用回调函数（如果提供）
     if callback.is_function() {
@@ -1007,8 +1108,10 @@ fn http_req_end_callback(
     let callback: _ = args.get(0);
 
     // 从请求对象提取选项
-    let method = extract_string_property(scope, &this, "method").unwrap_or_else(|| "GET".to_string());
-    let host = extract_string_property(scope, &this, "hostname").unwrap_or_else(|| "localhost".to_string());
+    let method =
+        extract_string_property(scope, &this, "method").unwrap_or_else(|| "GET".to_string());
+    let host = extract_string_property(scope, &this, "hostname")
+        .unwrap_or_else(|| "localhost".to_string());
     let port = extract_integer_property(scope, &this, "port").unwrap_or(80);
     let path = extract_string_property(scope, &this, "path").unwrap_or_else(|| "/".to_string());
     let body = extract_string_property(scope, &this, "_body").unwrap_or_default();
@@ -1055,7 +1158,13 @@ fn http_req_end_callback(
     };
 
     // 创建响应对象
-    let res_obj = create_response_object_with_data(scope, status_code, &status_message, &response_headers, &response_body);
+    let res_obj = create_response_object_with_data(
+        scope,
+        status_code,
+        &status_message,
+        &response_headers,
+        &response_body,
+    );
 
     // v0.3.84: 在响应对象中存储连接池统计
     let pool_stats_key: _ = v8::String::new(scope, "_poolStats").unwrap();
@@ -1067,7 +1176,8 @@ fn http_req_end_callback(
         callback
     } else {
         let cb_key: _ = v8::String::new(scope, "_responseCallback").unwrap();
-        this.get(scope, cb_key.into()).unwrap_or(v8::undefined(scope).into())
+        this.get(scope, cb_key.into())
+            .unwrap_or(v8::undefined(scope).into())
     };
 
     if response_callback.is_function() {
@@ -1136,7 +1246,11 @@ fn create_response_object<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, 
     let remove_header_func: _ = v8::FunctionTemplate::new(scope, http_res_remove_header_callback);
     let remove_header_instance: _ = remove_header_func.get_function(scope).unwrap();
     let remove_header_key: _ = v8::String::new(scope, "removeHeader").unwrap();
-    res_obj.set(scope, remove_header_key.into(), remove_header_instance.into());
+    res_obj.set(
+        scope,
+        remove_header_key.into(),
+        remove_header_instance.into(),
+    );
 
     res_obj
 }
@@ -1263,7 +1377,9 @@ fn http_req_write_callback(
     if !chunk.is_undefined() {
         let body_key: _ = v8::String::new(scope, "_body").unwrap();
         // 获取现有 body
-        let existing_body = this.get(scope, body_key.into()).unwrap_or(v8::undefined(scope).into());
+        let existing_body = this
+            .get(scope, body_key.into())
+            .unwrap_or(v8::undefined(scope).into());
 
         // 追加新数据
         if existing_body.is_string() {
@@ -1327,7 +1443,9 @@ fn http_res_get_header_callback(
     let headers_key: _ = v8::String::new(scope, "headers").unwrap();
     let headers_obj: _ = this.get(scope, headers_key.into());
 
-    if let Ok(obj) = v8::Local::<v8::Object>::try_from(headers_obj.unwrap_or(v8::undefined(scope).into())) {
+    if let Ok(obj) =
+        v8::Local::<v8::Object>::try_from(headers_obj.unwrap_or(v8::undefined(scope).into()))
+    {
         let name_key: _ = v8::String::new(scope, &name).unwrap();
         let value: _ = obj.get(scope, name_key.into());
         if let Some(v) = value {
@@ -1356,7 +1474,8 @@ pub fn http_res_set_header_callback(
 
     let headers_key: _ = v8::String::new(scope, "headers").unwrap();
     let headers_obj = if let Ok(obj) = v8::Local::<v8::Object>::try_from(
-        this.get(scope, headers_key.into()).unwrap_or(v8::undefined(scope).into())
+        this.get(scope, headers_key.into())
+            .unwrap_or(v8::undefined(scope).into()),
     ) {
         obj
     } else {
@@ -1377,7 +1496,11 @@ pub fn http_res_write_head_callback(
     mut retval: v8::ReturnValue,
 ) {
     let this: _ = args.this();
-    let status_code: i32 = args.get(0).to_integer(scope).unwrap_or(v8::Integer::new(scope, 200)).value() as i32;
+    let status_code: i32 = args
+        .get(0)
+        .to_integer(scope)
+        .unwrap_or(v8::Integer::new(scope, 200))
+        .value() as i32;
     let status_message: String = args
         .get(1)
         .to_string(scope)
@@ -1418,7 +1541,9 @@ pub fn http_res_end_callback(
     if !data.is_undefined() {
         let body_key: _ = v8::String::new(scope, "_body").unwrap();
         // 获取现有 body
-        let existing_body = this.get(scope, body_key.into()).unwrap_or(v8::undefined(scope).into());
+        let existing_body = this
+            .get(scope, body_key.into())
+            .unwrap_or(v8::undefined(scope).into());
 
         // 追加新数据到现有 body
         if existing_body.is_string() {
@@ -1501,13 +1626,11 @@ impl HttpServerResponse {
 
     /// 生成 HTTP 响应字符串
     pub fn to_string(&mut self) -> String {
-        let mut response = format!(
-            "HTTP/1.1 {} {}\r\n",
-            self.status_code, self.status_message
-        );
+        let mut response = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_message);
 
         // 添加 Content-Length
-        self.headers.insert("Content-Length".to_string(), self.body.len().to_string());
+        self.headers
+            .insert("Content-Length".to_string(), self.body.len().to_string());
 
         // 添加所有 headers
         for (key, value) in &self.headers {
@@ -1624,17 +1747,19 @@ pub fn generate_http_response_v2(response: &HttpResponseMessage) -> Vec<u8> {
 }
 
 /// HTTP 服务器运行函数（在独立线程中运行）
-fn run_http_server(
-    server_state: Arc<HttpServerState>,
-    handler_code: String,
-) {
+fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
     let addr = format!("{}:{}", server_state.host, server_state.port);
+
+    if !server_state.listening.load(Ordering::SeqCst) {
+        return;
+    }
 
     // 创建 TCP 监听器
     let listener = match TcpListener::bind(&addr) {
         Ok(l) => l,
         Err(e) => {
             eprintln!("[Beejs] Failed to bind to {}: {}", addr, e);
+            server_state.listening.store(false, Ordering::SeqCst);
             return;
         }
     };
@@ -1647,14 +1772,25 @@ fn run_http_server(
         let val: libc::c_int = 1;
         let val_ptr = &val as *const libc::c_int as *const libc::c_void;
         let val_len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
-        if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len) } != 0 {
-            eprintln!("[Beejs] Failed to set SO_REUSEADDR: {}", std::io::Error::last_os_error());
+        if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len) }
+            != 0
+        {
+            eprintln!(
+                "[Beejs] Failed to set SO_REUSEADDR: {}",
+                std::io::Error::last_os_error()
+            );
         }
         // macOS 需要 SO_REUSEPORT 来完全解决端口重用问题
         #[cfg(target_os = "macos")]
         {
-            if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len) } != 0 {
-                eprintln!("[Beejs] Failed to set SO_REUSEPORT: {}", std::io::Error::last_os_error());
+            if unsafe {
+                libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len)
+            } != 0
+            {
+                eprintln!(
+                    "[Beejs] Failed to set SO_REUSEPORT: {}",
+                    std::io::Error::last_os_error()
+                );
             }
         }
     }
@@ -1662,8 +1798,9 @@ fn run_http_server(
     // 设置为非阻塞模式
     listener.set_nonblocking(true).ok();
 
-    // 设置 listening 为 true
-    server_state.listening.store(true, Ordering::SeqCst);
+    if !server_state.listening.load(Ordering::SeqCst) {
+        return;
+    }
 
     eprintln!("[Beejs] HTTP Server listening on {}", addr);
 
@@ -1773,7 +1910,10 @@ fn handle_connection(
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     // 没有数据可用，检查是否超时
                     if keep_alive_start.elapsed() > KEEP_ALIVE_TIMEOUT {
-                        eprintln!("[Beejs] Keep-Alive timeout ({}s), closing connection", KEEP_ALIVE_TIMEOUT.as_secs());
+                        eprintln!(
+                            "[Beejs] Keep-Alive timeout ({}s), closing connection",
+                            KEEP_ALIVE_TIMEOUT.as_secs()
+                        );
                         break;
                     }
                     // 短暂等待后重试
@@ -1812,10 +1952,7 @@ fn handle_connection(
 
         eprintln!(
             "[Beejs] {} {} {} (Keep-Alive: {})",
-            parsed_request.method,
-            parsed_request.url,
-            parsed_request.http_version,
-            _is_keep_alive
+            parsed_request.method, parsed_request.url, parsed_request.http_version, _is_keep_alive
         );
 
         // v0.3.89: 尝试通过消息通道发送到主线程处理
@@ -1858,12 +1995,15 @@ fn handle_connection(
             // 消息通道不可用，发送回退响应
             let fallback_body = format!(
                 "Beejs HTTP Server\nMethod: {}\nPath: {}\nHandler: not configured",
-                parsed_request.method,
-                parsed_request.path
+                parsed_request.method, parsed_request.path
             );
 
             // 根据 Keep-Alive 决定 Connection 头
-            let connection_header = if _is_keep_alive { "keep-alive" } else { "close" };
+            let connection_header = if _is_keep_alive {
+                "keep-alive"
+            } else {
+                "close"
+            };
 
             let mut response_data = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: {}\r\n\r\n",
@@ -1872,7 +2012,10 @@ fn handle_connection(
             );
             response_data.push_str(&fallback_body);
 
-            eprintln!("[Debug] Fallback path sending response with Connection: {}", connection_header);
+            eprintln!(
+                "[Debug] Fallback path sending response with Connection: {}",
+                connection_header
+            );
             if let Err(e) = stream.write_all(response_data.as_bytes()) {
                 eprintln!("[Beejs] Write error: {}", e);
             }
@@ -1909,42 +2052,76 @@ fn handle_connection(
                 match receiver.recv() {
                     Ok(response) => {
                         // 收到响应，根据 _is_keep_alive 决定是否关闭连接
-                        let connection_header = if _is_keep_alive { "keep-alive" } else { "close" };
+                        let connection_header = if _is_keep_alive {
+                            "keep-alive"
+                        } else {
+                            "close"
+                        };
                         eprintln!("[Debug] Received response from message channel");
-                        eprintln!("[Debug] response.connection_id: {}, response.status_code: {}", response.connection_id, response.status_code);
+                        eprintln!(
+                            "[Debug] response.connection_id: {}, response.status_code: {}",
+                            response.connection_id, response.status_code
+                        );
                         eprintln!("[Debug] response.headers: {:?}", response.headers);
 
                         // 生成响应并添加 Connection 头
                         let mut response_data = generate_http_response_v2(&response);
                         eprintln!("[Debug] Original response (bytes): {:?}", response_data);
-                        eprintln!("[Debug] Original response (utf8): {:?}", String::from_utf8_lossy(&response_data));
+                        eprintln!(
+                            "[Debug] Original response (utf8): {:?}",
+                            String::from_utf8_lossy(&response_data)
+                        );
 
                         // 如果还没有 Connection 头，添加它
-                        eprintln!("[Debug] response.headers before check: {:?}", response.headers);
+                        eprintln!(
+                            "[Debug] response.headers before check: {:?}",
+                            response.headers
+                        );
                         if !response.headers.contains_key("Connection") {
                             // 查找 \r\n\r\n（header 和 body 之间的分隔符）
                             // 注意：windows 找到的 \r\n\r\n 可能是 header 行的结尾 + header/body 分隔符的组合
                             // 需要在最后一个 header 的 \r\n 之后插入新的 header
-                            if let Some(separator_pos) = response_data.windows(4).rposition(|w| w == b"\r\n\r\n") {
-                                eprintln!("[Debug] Found \\r\\n\\r\\n at position {}", separator_pos);
-                                eprintln!("[Debug] 4 bytes at separator_pos: {:?}", &response_data[separator_pos..separator_pos+4]);
+                            if let Some(separator_pos) =
+                                response_data.windows(4).rposition(|w| w == b"\r\n\r\n")
+                            {
+                                eprintln!(
+                                    "[Debug] Found \\r\\n\\r\\n at position {}",
+                                    separator_pos
+                                );
+                                eprintln!(
+                                    "[Debug] 4 bytes at separator_pos: {:?}",
+                                    &response_data[separator_pos..separator_pos + 4]
+                                );
                                 // separator_pos 指向 \r\n\r\n 的第一个 \r
                                 // 需要在最后一个 header 的 \r\n 之后插入，即 separator_pos + 2
                                 let insert_pos = separator_pos + 2;
                                 eprintln!("[Debug] No Connection header in response, will add: {} at position {}", connection_header, insert_pos);
                                 // 使用 insert 逐字节插入，确保正确插入而不是替换
-                                let connection_header_bytes = format!("Connection: {}\r\n", connection_header).into_bytes();
+                                let connection_header_bytes =
+                                    format!("Connection: {}\r\n", connection_header).into_bytes();
                                 for i in (0..connection_header_bytes.len()).rev() {
                                     response_data.insert(insert_pos, connection_header_bytes[i]);
                                 }
-                                eprintln!("[Debug] After insert, response_data len: {}", response_data.len());
+                                eprintln!(
+                                    "[Debug] After insert, response_data len: {}",
+                                    response_data.len()
+                                );
                             } else {
-                                eprintln!("[Debug] No separator found, response_data len: {}", response_data.len());
+                                eprintln!(
+                                    "[Debug] No separator found, response_data len: {}",
+                                    response_data.len()
+                                );
                             }
                         }
 
-                        eprintln!("[Debug] Message channel path sending response with Connection: {}", connection_header);
-                        eprintln!("[Debug] Full response data: {:?}", String::from_utf8_lossy(&response_data));
+                        eprintln!(
+                            "[Debug] Message channel path sending response with Connection: {}",
+                            connection_header
+                        );
+                        eprintln!(
+                            "[Debug] Full response data: {:?}",
+                            String::from_utf8_lossy(&response_data)
+                        );
                         let _ = stream.write_all(&response_data);
 
                         // 如果不是 Keep-Alive，关闭连接
@@ -1983,7 +2160,8 @@ fn http_res_remove_header_callback(
 
     let headers_key: _ = v8::String::new(scope, "headers").unwrap();
     let headers_obj = if let Ok(obj) = v8::Local::<v8::Object>::try_from(
-        this.get(scope, headers_key.into()).unwrap_or(v8::undefined(scope).into())
+        this.get(scope, headers_key.into())
+            .unwrap_or(v8::undefined(scope).into()),
     ) {
         obj
     } else {
@@ -2109,7 +2287,11 @@ pub fn process_http_request_in_v8(
     let remove_header_fn = v8::FunctionTemplate::new(scope, http_res_remove_header_callback);
     let remove_header_instance = remove_header_fn.get_function(scope).unwrap();
     let remove_header_key = v8::String::new(scope, "removeHeader").unwrap();
-    res_obj.set(scope, remove_header_key.into(), remove_header_instance.into());
+    res_obj.set(
+        scope,
+        remove_header_key.into(),
+        remove_header_instance.into(),
+    );
 
     // 调用 request handler: handler(req, res)
     let this_val = v8::undefined(scope).into();
@@ -2121,13 +2303,23 @@ pub fn process_http_request_in_v8(
 
     // 从响应对象提取数据
     let status_code_key = v8::String::new(scope, "statusCode").unwrap();
-    let status_code_val = res_obj.get(scope, status_code_key.into()).unwrap_or(v8::Integer::new(scope, 200).into());
-    let status_code = status_code_val.to_int32(scope).map(|i| i.value() as u16).unwrap_or(200);
+    let status_code_val = res_obj
+        .get(scope, status_code_key.into())
+        .unwrap_or(v8::Integer::new(scope, 200).into());
+    let status_code = status_code_val
+        .to_int32(scope)
+        .map(|i| i.value() as u16)
+        .unwrap_or(200);
 
     // 提取 body
     let body_key = v8::String::new(scope, "_body").unwrap();
-    let body_val = res_obj.get(scope, body_key.into()).unwrap_or(v8::String::new(scope, "").unwrap().into());
-    let body_str = body_val.to_string(scope).map(|s| s.to_rust_string_lossy(scope)).unwrap_or_default();
+    let body_val = res_obj
+        .get(scope, body_key.into())
+        .unwrap_or(v8::String::new(scope, "").unwrap().into());
+    let body_str = body_val
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
     let body_bytes = body_str.into_bytes();
 
     // 提取 headers - 使用 GetPropertyNames 获取所有属性
@@ -2137,7 +2329,9 @@ pub fn process_http_request_in_v8(
     if let Some(headers_val) = res_obj.get(scope, res_headers_key.into()) {
         if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
             // 使用 GetPropertyNames 获取所有属性
-            let props = headers_obj.get_property_names(scope).unwrap_or(v8::Array::new(scope, 0));
+            let props = headers_obj
+                .get_property_names(scope)
+                .unwrap_or(v8::Array::new(scope, 0));
             for i in 0..props.length() {
                 if let Some(key_val) = props.get_index(scope, i) {
                     if let Some(key_str) = key_val.to_string(scope) {
@@ -2156,10 +2350,16 @@ pub fn process_http_request_in_v8(
 
     // 设置默认 headers（如果还没有设置的话）
     if !response_headers.contains_key("Content-Type") {
-        response_headers.insert("Content-Type".to_string(), "text/plain; charset=utf-8".to_string());
+        response_headers.insert(
+            "Content-Type".to_string(),
+            "text/plain; charset=utf-8".to_string(),
+        );
     }
 
-    eprintln!("[Debug] Response headers before HttpResponseMessage: {:?}", response_headers);
+    eprintln!(
+        "[Debug] Response headers before HttpResponseMessage: {:?}",
+        response_headers
+    );
 
     Some(HttpResponseMessage {
         connection_id: request.connection_id,
@@ -2264,10 +2464,7 @@ impl Default for HttpsServerConfig {
             port: 443,
             host: "0.0.0.0".to_string(),
             verify_client: false,
-            alpn_protocols: vec![
-                b"h2".to_vec(),
-                b"http/1.1".to_vec(),
-            ],
+            alpn_protocols: vec![b"h2".to_vec(), b"http/1.1".to_vec()],
         }
     }
 }
@@ -2294,8 +2491,8 @@ pub struct TlsCertificate {
 /// - `Err(String)` 加载失败
 pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertificate, String> {
     // 加载证书文件
-    let cert_file = File::open(cert_path)
-        .map_err(|e| format!("Failed to open certificate file: {}", e))?;
+    let cert_file =
+        File::open(cert_path).map_err(|e| format!("Failed to open certificate file: {}", e))?;
     let mut cert_reader = BufReader::new(cert_file);
 
     // 使用 rustls-pemfile 解析证书
@@ -2311,8 +2508,7 @@ pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertif
     }
 
     // 加载私钥文件
-    let key_file = File::open(key_path)
-        .map_err(|e| format!("Failed to open key file: {}", e))?;
+    let key_file = File::open(key_path).map_err(|e| format!("Failed to open key file: {}", e))?;
     let mut key_reader = BufReader::new(key_file);
 
     // 首先尝试解析 RSA 私钥
@@ -2326,8 +2522,8 @@ pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertif
     // 如果没有 RSA 密钥，尝试 PKCS8 格式
     if keys.is_empty() {
         drop(key_reader);
-        let key_file = File::open(key_path)
-            .map_err(|e| format!("Failed to reopen key file: {}", e))?;
+        let key_file =
+            File::open(key_path).map_err(|e| format!("Failed to reopen key file: {}", e))?;
         let mut key_reader = BufReader::new(key_file);
 
         let pkcs8_result = rustls_pemfile::pkcs8_private_keys(&mut key_reader);

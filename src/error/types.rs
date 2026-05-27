@@ -1,9 +1,9 @@
 // Stage 89 Phase 2: 统一错误处理类型定义
 // 提供完整的错误分类、上下文信息和恢复建议
 
-use std::collections::BTreeMap;
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::fmt;
+use thiserror::Error;
 
 /// 错误类型枚举 - 统一所有可能的错误
 #[derive(Debug, Error, Clone, PartialEq)]
@@ -73,10 +73,10 @@ pub struct StackFrame {
 /// 错误严重级别
 #[derive(Debug, Clone, PartialEq)]
 pub enum ErrorSeverity {
-    Low,        // 轻微错误，不影响主要功能
-    Medium,     // 中等错误，部分功能受影响
-    High,       // 严重错误，主要功能受影响
-    Critical,   // 关键错误，系统可能崩溃
+    Low,      // 轻微错误，不影响主要功能
+    Medium,   // 中等错误，部分功能受影响
+    High,     // 严重错误，主要功能受影响
+    Critical, // 关键错误，系统可能崩溃
 }
 impl fmt::Display for ErrorSeverity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -101,19 +101,15 @@ pub struct ErrorContext {
 }
 impl ErrorContext {
     /// 创建新的错误上下文
-    pub fn new(
-        error_type: BeejsError,
-        file: String,
-        line: u32,
-        function: String,
-    ) -> Self {
+    pub fn new(error_type: BeejsError, file: String, line: u32, function: String) -> Self {
         let source_location: _ = Some(SourceLocation::new(file, line, function));
+        let severity: _ = Self::determine_severity(&error_type);
         let recovery_suggestions: _ = Self::generate_recovery_suggestions(&error_type);
         Self {
             error_type,
             source_location,
             stack_trace: Vec::new(),
-            severity: Self::determine_severity(&error_type),
+            severity,
             timestamp: std::time::Instant::now(),
             recovery_suggestions,
             metadata: HashMap::new(),
@@ -121,12 +117,13 @@ impl ErrorContext {
     }
     /// 创建无源位置的错误上下文
     pub fn new_without_location(error_type: BeejsError) -> Self {
+        let severity: _ = Self::determine_severity(&error_type);
         let recovery_suggestions: _ = Self::generate_recovery_suggestions(&error_type);
         Self {
             error_type,
             source_location: None,
             stack_trace: Vec::new(),
-            severity: Self::determine_severity(&error_type),
+            severity,
             timestamp: std::time::Instant::now(),
             recovery_suggestions,
             metadata: HashMap::new(),
@@ -136,7 +133,9 @@ impl ErrorContext {
     fn determine_severity(error: &BeejsError) -> ErrorSeverity {
         match error {
             BeejsError::V8Error(_) | BeejsError::JsExecutionError(_) => ErrorSeverity::High,
-            BeejsError::MultiLanguageError(_) | BeejsError::PlatformError(_) => ErrorSeverity::Medium,
+            BeejsError::MultiLanguageError(_) | BeejsError::PlatformError(_) => {
+                ErrorSeverity::Medium
+            }
             BeejsError::CompilationError(_) | BeejsError::RuntimeError(_) => ErrorSeverity::High,
             BeejsError::SecurityError(_) => ErrorSeverity::Critical,
             BeejsError::PerformanceError(_) | BeejsError::NetworkError(_) => ErrorSeverity::Medium,
@@ -228,7 +227,11 @@ impl ErrorContext {
 }
 impl fmt::Display for ErrorContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error: {} (Severity: {})", self.error_type, self.severity)?;
+        write!(
+            f,
+            "Error: {} (Severity: {})",
+            self.error_type, self.severity
+        )?;
         if let Some(ref loc) = self.source_location {
             write!(f, " at {}", loc.to_string())?;
         }

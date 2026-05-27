@@ -1,15 +1,15 @@
 // V8 快照管理器
 // 负责快照的生成、加载、缓存和管理
 
-use anyhow::{Result, anyhow};
+use crate::v8_snapshot::{SnapshotConfig, V8Snapshot};
+use anyhow::{anyhow, Result};
 use rusty_v8 as v8;
-use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, Duration};
-use crate::v8_snapshot::{V8Snapshot, SnapshotConfig};
-use serde::{Serialize, Deserialize};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 /// 快照管理器
 pub struct SnapshotManager {
     /// 快照缓存
@@ -212,10 +212,7 @@ impl SnapshotManager {
         Ok(())
     }
     /// 生成并缓存快照
-    pub fn generate_and_cache_snapshot(
-        &self,
-        snapshot_id: &str,
-    ) -> Result<V8Snapshot> {
+    pub fn generate_and_cache_snapshot(&self, snapshot_id: &str) -> Result<V8Snapshot> {
         let snapshot: _ = self.generate_snapshot()?;
         // 缓存快照
         {
@@ -386,9 +383,9 @@ impl Default for SnapshotStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     #[allow(unused)]
     use serial_test::serial;
+    use tempfile::tempdir;
     #[test]
     fn test_snapshot_manager_creation() {
         let config: _ = SnapshotConfig::default();
@@ -417,7 +414,9 @@ mod tests {
         let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();
         assert_eq!(list.len(), 1);
         // 加载快照
-        let loaded: _ = manager.load_snapshot_from_disk(&snapshot.version, base_dir).unwrap();
+        let loaded: _ = manager
+            .load_snapshot_from_disk(&snapshot.version, base_dir)
+            .unwrap();
         assert_eq!(loaded.version, snapshot.version);
         assert_eq!(loaded.size_bytes, snapshot.size_bytes);
     }

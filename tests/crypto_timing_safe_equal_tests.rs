@@ -60,7 +60,12 @@ fn test_timing_safe_equal_different_lengths() {
     assert!(result.is_ok());
     let binding = result.unwrap();
     let output = binding.trim();
-    assert!(output.contains("must") || output.contains("length") || output.contains("same") || output == "no error");
+    assert!(
+        output.contains("must")
+            || output.contains("length")
+            || output.contains("same")
+            || output == "no error"
+    );
 }
 
 #[test]

@@ -1,8 +1,8 @@
 // Kubernetes Operator Controller Module
 // Provides reconciliation logic for BeejsCluster and BeejsWorkload resources
 pub mod controller;
-pub mod reconciler;
 pub mod lifecycle;
+pub mod reconciler;
 // Re-export types for convenience
 
 use controller::{ClusterController, Error as ControllerError};

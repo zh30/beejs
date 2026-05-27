@@ -3,9 +3,10 @@
 pub mod mobile_runtime;
 pub mod wasm_runtime;
 
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
-use anyhow::{Result, Error};
+use anyhow::Result;
+use mobile_runtime::MobileRuntime;
+use std::sync::Arc;
+use wasm_runtime::{BeeWasmAPI, JS2WASMCompiler, WASMRuntime};
 
 /// Unified cross-platform runtime
 #[derive(Debug)]
@@ -50,7 +51,8 @@ impl CrossPlatformRuntime {
                         return Err(anyhow::anyhow!("WASM compilation failed"));
                     }
                     let module_name: _ = "dynamic_module";
-                    wasm.load_module(module_name.to_string(), compilation.module.binary).await?;
+                    wasm.load_module(module_name.to_string(), compilation.module.binary)
+                        .await?;
                     wasm.execute_wasm(module_name, "main", &[]).await
                 } else {
                     Err(anyhow::anyhow!("WASM runtime not initialized"))
@@ -74,12 +76,15 @@ impl CrossPlatformRuntime {
     }
     /// Check if platform is supported
     pub fn is_platform_supported(&self, platform: &str) -> bool {
-        self.supported_platforms().iter()
+        self.supported_platforms()
+            .iter()
             .any(|p| p.to_lowercase() == platform.to_lowercase())
     }
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     struct MockBeeWasmAPI;
     impl BeeWasmAPI for MockBeeWasmAPI {
         fn console_log(&self, _message: &str) -> Result<(), anyhow::Error> {
@@ -104,13 +109,17 @@ mod tests {
         let result: _ = runtime.execute("ios", "console.log('Hello iOS')").await;
         assert!(result.is_ok());
         // Test Android execution
-        let result: _ = runtime.execute("android", "console.log('Hello Android')").await;
+        let result: _ = runtime
+            .execute("android", "console.log('Hello Android')")
+            .await;
         assert!(result.is_ok());
         // Initialize WASM runtime
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
+        let bee_api: _ = Arc::new(MockBeeWasmAPI);
         runtime.init_wasm(bee_api).unwrap();
         // Test WASM execution
-        let result: _ = runtime.execute("wasm", "function main() { return 'Hello WASM'; }").await;
+        let result: _ = runtime
+            .execute("wasm", "function main() { return 'Hello WASM'; }")
+            .await;
         assert!(result.is_ok());
     }
     #[tokio::test]
@@ -120,12 +129,12 @@ mod tests {
         assert!(platforms.is_empty());
         runtime.init_mobile().unwrap();
         let platforms: _ = runtime.supported_platforms();
-        assert!(platforms.contains(&"ios".to_string());
-        assert!(platforms.contains(&"android".to_string());
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
+        assert!(platforms.contains(&"ios".to_string()));
+        assert!(platforms.contains(&"android".to_string()));
+        let bee_api: _ = Arc::new(MockBeeWasmAPI);
         runtime.init_wasm(bee_api).unwrap();
         let platforms: _ = runtime.supported_platforms();
-        assert!(platforms.contains(&"wasm".to_string());
+        assert!(platforms.contains(&"wasm".to_string()));
     }
     #[tokio::test]
     async fn test_platform_support_check() {

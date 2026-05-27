@@ -2,15 +2,13 @@
 //
 // Collects system metrics and performance data for AI analysis.
 
-
-use crate::core::error::{AIOpsError, Result};
+use super::error::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tokio::sync::Mutex;
 use tokio::time;
-use std::time::Duration;
-use std::time::SystemTime;
-use std::hash::Hash;
 /// Metric types for monitoring
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricType {
@@ -41,7 +39,7 @@ pub struct Metric {
     /// Timestamp
     pub timestamp: Duration,
     /// Labels/tags for the metric
-    pub labels: std::collections::HashMap<String, String>,
+    pub labels: HashMap<String, String>,
 }
 /// Performance snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,9 +68,9 @@ pub struct DataCollector {
     /// Collection interval
     interval: Duration,
     /// Latest metrics cache
-    latest_metrics: std::sync::Arc<tokio::sync::Mutex<Vec<Metric>>>,
+    latest_metrics: Arc<Mutex<Vec<Metric>>>,
     /// Metrics history (last N collections)
-    history: std::sync::Arc<tokio::sync::Mutex<Vec<PerformanceSnapshot>>>,
+    history: Arc<Mutex<Vec<PerformanceSnapshot>>>,
 }
 impl DataCollector {
     /// Create a new data collector
@@ -87,8 +85,8 @@ impl DataCollector {
     pub fn new(interval: Duration) -> Self {
         Self {
             interval,
-            latest_metrics: std::sync::Arc::new(Mutex::new(tokio::sync::Mutex::new(Vec::new()))
-            history: std::sync::Arc::new(Mutex::new(tokio::sync::Mutex::new(Vec::new()))
+            latest_metrics: Arc::new(Mutex::new(Vec::new())),
+            history: Arc::new(Mutex::new(Vec::new())),
         }
     }
     /// Start data collection
@@ -160,13 +158,13 @@ impl DataCollector {
             .unwrap_or_default();
         PerformanceSnapshot {
             timestamp: now,
-            cpu_usage: 0.0,      // TODO: Collect actual CPU usage
-            memory_usage: 0,     // TODO: Collect actual memory usage
-            disk_io: 0.0,        // TODO: Collect actual disk I/O
-            network_io: 0,       // TODO: Collect actual network I/O
-            request_latency: 0.0, // TODO: Collect actual request latency
+            cpu_usage: 0.0,          // TODO: Collect actual CPU usage
+            memory_usage: 0,         // TODO: Collect actual memory usage
+            disk_io: 0.0,            // TODO: Collect actual disk I/O
+            network_io: 0,           // TODO: Collect actual network I/O
+            request_latency: 0.0,    // TODO: Collect actual request latency
             request_throughput: 0.0, // TODO: Collect actual throughput
-            error_rate: 0.0,     // TODO: Collect actual error rate
+            error_rate: 0.0,         // TODO: Collect actual error rate
         }
     }
     /// Convert performance snapshot to metrics
@@ -180,7 +178,7 @@ impl DataCollector {
     /// Returns `Vec<Metric>` containing individual metrics
     fn metrics_from_snapshot(snapshot: &PerformanceSnapshot) -> Vec<Metric> {
         let timestamp: _ = snapshot.timestamp;
-        let labels: _ = std::collections::HashMap::new();
+        let labels: _ = HashMap::new();
         vec![
             Metric {
                 metric_type: MetricType::CpuUsage,

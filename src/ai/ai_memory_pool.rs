@@ -316,7 +316,7 @@ impl AiMemoryPool {
         // 极优化：只分配小量内存用于标记，避免大块分配开销
         let warmup_size: _ = std::cmp::min(
             (model_config.total_memory() as f32 * model_config.warmup_ratio) as usize,
-            64 * 1024 // 限制为 64KB
+            64 * 1024, // 限制为 64KB
         );
         // 只做一次小量分配用于缓存预热
         if warmup_size > 0 {

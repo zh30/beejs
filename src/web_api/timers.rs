@@ -1,12 +1,12 @@
 // Timer API implementation for Web standard
 // Provides setTimeout, setInterval, clearTimeout, clearInterval
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use rusty_v8 as v8;
-use std::sync::atomic::AtomicU64;
 use once_cell::sync::Lazy;
+use rusty_v8 as v8;
+use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -17,11 +17,17 @@ fn next_timer_id() -> u64 {
 /// Timer storage for cleared timers
 /// Note: In a real async runtime, we would use a proper event loop
 /// This is a simplified synchronous implementation
-static CLEARED_TIMERS: Lazy<Arc<Mutex<HashMap<u64, bool>>>> = Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
+static CLEARED_TIMERS: Lazy<Arc<Mutex<HashMap<u64, bool>>>> =
+    Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 /// Check if a timer has been cleared
 #[allow(dead_code)]
 fn is_timer_cleared(id: u64) -> bool {
-    CLEARED_TIMERS.lock().unwrap().get(&id).copied().unwrap_or(false)
+    CLEARED_TIMERS
+        .lock()
+        .unwrap()
+        .get(&id)
+        .copied()
+        .unwrap_or(false)
 }
 /// Mark a timer as cleared
 fn mark_timer_cleared(id: u64) {
@@ -57,7 +63,11 @@ pub fn setup_timer_api(
     let queue_microtask_template: _ = v8::FunctionTemplate::new(scope, queue_microtask_callback);
     let queue_microtask_func: _ = queue_microtask_template.get_function(scope).unwrap();
     let queue_microtask_key: _ = v8::String::new(scope, "queueMicrotask").unwrap();
-    global.set(scope, queue_microtask_key.into(), queue_microtask_func.into());
+    global.set(
+        scope,
+        queue_microtask_key.into(),
+        queue_microtask_func.into(),
+    );
 
     // Setup setImmediate (v0.2.5)
     let set_immediate_template: _ = v8::FunctionTemplate::new(scope, set_immediate_callback);
@@ -69,7 +79,11 @@ pub fn setup_timer_api(
     let clear_immediate_template: _ = v8::FunctionTemplate::new(scope, clear_immediate_callback);
     let clear_immediate_func: _ = clear_immediate_template.get_function(scope).unwrap();
     let clear_immediate_key: _ = v8::String::new(scope, "clearImmediate").unwrap();
-    global.set(scope, clear_immediate_key.into(), clear_immediate_func.into());
+    global.set(
+        scope,
+        clear_immediate_key.into(),
+        clear_immediate_func.into(),
+    );
 
     Ok(())
 }
@@ -91,7 +105,8 @@ fn set_timeout_callback(
         return;
     }
     // Get delay (default 0)
-    let delay_ms: _ = args.get(1)
+    let delay_ms: _ = args
+        .get(1)
         .to_integer(scope)
         .map(|i| i.value().max(0) as u64)
         .unwrap_or(0);
@@ -106,7 +121,10 @@ fn set_timeout_callback(
         // For non-zero delays, we can't truly implement async in synchronous V8
         // This is a limitation - real implementation needs event loop integration
         // For now, we just return the timer ID and log a warning
-        eprintln!("⚠️ setTimeout with delay {}ms - async timers require event loop integration", delay_ms);
+        eprintln!(
+            "⚠️ setTimeout with delay {}ms - async timers require event loop integration",
+            delay_ms
+        );
     }
     // Return timer ID
     let timer_id_val: _ = v8::Number::new(scope, timer_id as f64);
@@ -128,12 +146,16 @@ fn set_interval_callback(
         return;
     }
     // Get interval (default 0, but per spec minimum is 4ms)
-    let interval_ms: _ = args.get(1)
+    let interval_ms: _ = args
+        .get(1)
         .to_integer(scope)
-        .map(|i| i.value().max(4) as u64)  // Minimum 4ms per spec
+        .map(|i| i.value().max(4) as u64) // Minimum 4ms per spec
         .unwrap_or(4);
     // Log warning about async limitation
-    eprintln!("⚠️ setInterval with interval {}ms - async timers require event loop integration", interval_ms);
+    eprintln!(
+        "⚠️ setInterval with interval {}ms - async timers require event loop integration",
+        interval_ms
+    );
     // Return timer ID
     let timer_id_val: _ = v8::Number::new(scope, timer_id as f64);
     retval.set(timer_id_val.into());
@@ -144,7 +166,8 @@ fn clear_timeout_callback(
     args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
-    let timer_id: _ = args.get(0)
+    let timer_id: _ = args
+        .get(0)
         .to_integer(scope)
         .map(|i| i.value() as u64)
         .unwrap_or(0);
@@ -158,7 +181,8 @@ fn clear_interval_callback(
     args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
-    let timer_id: _ = args.get(0)
+    let timer_id: _ = args
+        .get(0)
         .to_integer(scope)
         .map(|i| i.value() as u64)
         .unwrap_or(0);
@@ -174,7 +198,8 @@ fn queue_microtask_callback(
 ) {
     let callback: _ = args.get(0);
     if !callback.is_function() {
-        let error: _ = v8::String::new(scope, "queueMicrotask: callback must be a function").unwrap();
+        let error: _ =
+            v8::String::new(scope, "queueMicrotask: callback must be a function").unwrap();
         let error_obj: _ = v8::Exception::type_error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
@@ -205,9 +230,8 @@ fn set_immediate_callback(
     }
 
     // Collect any additional arguments to pass to the callback
-    let callback_args: Vec<v8::Local<v8::Value>> = (1..args.length())
-        .map(|i| args.get(i))
-        .collect();
+    let callback_args: Vec<v8::Local<v8::Value>> =
+        (1..args.length()).map(|i| args.get(i)).collect();
 
     // Execute callback immediately (simplified implementation)
     // In a full async runtime, this would be scheduled for the next event loop iteration
@@ -227,7 +251,8 @@ fn clear_immediate_callback(
     args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
-    let timer_id: _ = args.get(0)
+    let timer_id: _ = args
+        .get(0)
         .to_integer(scope)
         .map(|i| i.value() as u64)
         .unwrap_or(0);
@@ -237,7 +262,7 @@ fn clear_immediate_callback(
 }
 #[cfg(test)]
 mod tests {
-    use super::{next_timer_id, is_timer_cleared, mark_timer_cleared};
+    use super::{is_timer_cleared, mark_timer_cleared, next_timer_id};
 
     #[test]
     fn test_timer_id_generation() {

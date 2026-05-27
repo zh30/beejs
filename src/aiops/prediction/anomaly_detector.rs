@@ -3,12 +3,12 @@
 // Detects anomalies in system metrics using statistical methods and machine learning.
 // Supports various types of anomalies including spikes, drops, level shifts, and trends.
 
-use crate::core::data_collector::::{Metric, MetricType};
-use crate::core::error::::{AIOpsError, Result};
+use crate::aiops::core::data_collector::{Metric, MetricType};
+use crate::aiops::core::error::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
 use std::hash::Hash;
+use std::time::Duration;
 
 /// Types of anomalies that can be detected
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -106,7 +106,7 @@ pub trait AnomalyDetector {
     /// Detect anomaly for a single metric
     async fn detect_anomaly(&self, metric: &Metric, history: &[Metric]) -> Result<AnomalyResult>;
     /// Detect anomalies for multiple metrics
-    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult>;
+    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult>>;
     /// Update baseline with new metrics
     async fn update_baseline(&mut self, metrics: &[Metric]) -> Result<()>;
     /// Get detection statistics
@@ -165,11 +165,7 @@ impl StatisticalAnomalyDetector {
         }
     }
     /// Detect specific anomaly type
-    fn detect_anomaly_type(
-        &self,
-        metric: &Metric,
-        stats: &AnomalyStats,
-    ) -> Option<Anomaly> {
+    fn detect_anomaly_type(&self, metric: &Metric, stats: &AnomalyStats) -> Option<Anomaly> {
         let threshold: _ = self.config.threshold_std_dev * stats.std_dev;
         if stats.std_dev == 0.0 {
             return None;
@@ -184,10 +180,7 @@ impl StatisticalAnomalyDetector {
             };
             let severity: _ = (z_score / self.config.threshold_std_dev).min(1.0);
             let confidence: _ = (z_score / (self.config.threshold_std_dev * 2.0)).min(1.0);
-            let expected_range: _ = (
-                stats.mean - threshold,
-                stats.mean + threshold,
-            );
+            let expected_range: _ = (stats.mean - threshold, stats.mean + threshold);
             let deviation: _ = metric.value - stats.mean;
             Some(Anomaly {
                 anomaly_type,
@@ -227,7 +220,7 @@ impl AnomalyDetector for StatisticalAnomalyDetector {
             stats,
         })
     }
-    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult> {
+    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult>> {
         let mut results = Vec::new();
         for (i, metric) in metrics.iter().enumerate() {
             let history: _ = if i >= self.config.min_samples {
@@ -261,10 +254,7 @@ mod tests {
         }
     }
     fn create_test_metrics(values: Vec<f64>) -> Vec<Metric> {
-        values
-            .into_iter()
-            .map(|v| create_test_metric(v))
-            .collect()
+        values.into_iter().map(|v| create_test_metric(v)).collect()
     }
     #[tokio::test]
     async fn test_no_anomaly_normal_values() {

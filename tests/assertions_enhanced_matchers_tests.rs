@@ -11,7 +11,6 @@
 // - toBeGreaterThanOrEqual / toBeLessThanOrEqual: Boundary comparisons
 
 use beejs::testing::assertions::*;
-use serde_json::Value;
 
 /// Test toBeTruthy matcher - basic values
 #[test]
@@ -82,7 +81,8 @@ fn test_to_have_property_exists() {
 /// Test toHaveProperty matcher - property with specific value
 #[test]
 fn test_to_have_property_with_value() {
-    let matcher = ExtendedMatcher::to_have_property("name".to_string(), Some(serde_json::json!("John")));
+    let matcher =
+        ExtendedMatcher::to_have_property("name".to_string(), Some(serde_json::json!("John")));
     let obj = serde_json::json!({"name": "John", "age": 30});
     assert!(matcher.matches(&obj));
 }
@@ -90,7 +90,8 @@ fn test_to_have_property_with_value() {
 /// Test toHaveProperty matcher - property with wrong value
 #[test]
 fn test_to_have_property_wrong_value() {
-    let matcher = ExtendedMatcher::to_have_property("name".to_string(), Some(serde_json::json!("Jane")));
+    let matcher =
+        ExtendedMatcher::to_have_property("name".to_string(), Some(serde_json::json!("Jane")));
     let obj = serde_json::json!({"name": "John", "age": 30});
     assert!(!matcher.matches(&obj));
 }
@@ -236,19 +237,24 @@ fn test_matcher_messages() {
     let falsy_msg = ExtendedMatcher::to_be_falsy().message(&serde_json::json!(true));
     assert!(falsy_msg.contains("falsy"));
 
-    let throw_msg = ExtendedMatcher::to_throw(Some("error".to_string())).message(&serde_json::json!({}));
+    let throw_msg =
+        ExtendedMatcher::to_throw(Some("error".to_string())).message(&serde_json::json!({}));
     assert!(throw_msg.contains("throw"));
 
-    let property_msg = ExtendedMatcher::to_have_property("key".to_string(), None).message(&serde_json::json!({}));
+    let property_msg =
+        ExtendedMatcher::to_have_property("key".to_string(), None).message(&serde_json::json!({}));
     assert!(property_msg.contains("property"));
 
-    let instance_msg = ExtendedMatcher::to_be_instance_of("String".to_string()).message(&serde_json::json!(42));
+    let instance_msg =
+        ExtendedMatcher::to_be_instance_of("String".to_string()).message(&serde_json::json!(42));
     assert!(instance_msg.contains("instance"));
 
-    let match_obj_msg = ExtendedMatcher::to_match_object(serde_json::json!({})).message(&serde_json::json!({}));
+    let match_obj_msg =
+        ExtendedMatcher::to_match_object(serde_json::json!({})).message(&serde_json::json!({}));
     assert!(match_obj_msg.contains("match"));
 
-    let strict_msg = ExtendedMatcher::to_strict_equal(serde_json::json!(1)).message(&serde_json::json!(2));
+    let strict_msg =
+        ExtendedMatcher::to_strict_equal(serde_json::json!(1)).message(&serde_json::json!(2));
     assert!(strict_msg.contains("strict"));
 }
 

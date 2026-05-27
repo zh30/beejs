@@ -18,13 +18,22 @@ console.log(x);
                 println!("satisfies 基础转译结果:");
                 println!("{}", output.js_code);
                 // satisfies 断言应该被移除，但表达式应该保留
-                assert!(output.js_code.contains("const x"),
-                    "Should contain const x: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const x"),
+                    "Should contain const x: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
                 // 验证 satisfies 被移除
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Basic satisfies test passed");
             }
             Err(e) => {
@@ -44,10 +53,16 @@ console.log(greeting);
             Ok(output) => {
                 println!("satisfies 字符串字面量转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const greeting"),
-                    "Should contain const greeting: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const greeting"),
+                    "Should contain const greeting: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies string literal test passed");
             }
             Err(e) => {
@@ -67,12 +82,21 @@ console.log(nums);
             Ok(output) => {
                 println!("satisfies 数组类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const nums"),
-                    "Should contain const nums: {}", output.js_code);
-                assert!(output.js_code.contains("1, 2, 3"),
-                    "Should contain array elements: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const nums"),
+                    "Should contain const nums: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("1, 2, 3"),
+                    "Should contain array elements: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies array type test passed");
             }
             Err(e) => {
@@ -92,14 +116,26 @@ console.log(point);
             Ok(output) => {
                 println!("satisfies 对象类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const point"),
-                    "Should contain const point: {}", output.js_code);
-                assert!(output.js_code.contains("x: 10"),
-                    "Should contain x property: {}", output.js_code);
-                assert!(output.js_code.contains("y: 20"),
-                    "Should contain y property: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const point"),
+                    "Should contain const point: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("x: 10"),
+                    "Should contain x property: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("y: 20"),
+                    "Should contain y property: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies object type test passed");
             }
             Err(e) => {
@@ -119,10 +155,16 @@ console.log(strings);
             Ok(output) => {
                 println!("satisfies 泛型类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const strings"),
-                    "Should contain const strings: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const strings"),
+                    "Should contain const strings: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies generic type test passed");
             }
             Err(e) => {
@@ -147,12 +189,21 @@ console.log(getConfig());
             Ok(output) => {
                 println!("satisfies 函数返回转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("function getConfig"),
-                    "Should contain function: {}", output.js_code);
-                assert!(output.js_code.contains("console.log"),
-                    "Should contain console.log: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("function getConfig"),
+                    "Should contain function: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("console.log"),
+                    "Should contain console.log: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies in function test passed");
             }
             Err(e) => {
@@ -172,12 +223,21 @@ console.log(flag);
             Ok(output) => {
                 println!("satisfies 布尔类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const flag"),
-                    "Should contain const flag: {}", output.js_code);
-                assert!(output.js_code.contains("true"),
-                    "Should contain true: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const flag"),
+                    "Should contain const flag: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("true"),
+                    "Should contain true: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies boolean test passed");
             }
             Err(e) => {
@@ -202,12 +262,21 @@ console.log(nested);
             Ok(output) => {
                 println!("satisfies 嵌套对象转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const nested"),
-                    "Should contain const nested: {}", output.js_code);
-                assert!(output.js_code.contains("user"),
-                    "Should contain user property: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const nested"),
+                    "Should contain const nested: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("user"),
+                    "Should contain user property: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies nested object test passed");
             }
             Err(e) => {
@@ -227,10 +296,16 @@ console.log(value);
             Ok(output) => {
                 println!("satisfies 联合类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const value"),
-                    "Should contain const value: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const value"),
+                    "Should contain const value: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies union type test passed");
             }
             Err(e) => {
@@ -253,10 +328,16 @@ console.log(items);
             Ok(output) => {
                 println!("satisfies 数组元素转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const items"),
-                    "Should contain const items: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const items"),
+                    "Should contain const items: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies in array test passed");
             }
             Err(e) => {
@@ -278,14 +359,26 @@ console.log(a, b, c);
             Ok(output) => {
                 println!("satisfies 多重转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const a"),
-                    "Should contain const a: {}", output.js_code);
-                assert!(output.js_code.contains("const b"),
-                    "Should contain const b: {}", output.js_code);
-                assert!(output.js_code.contains("const c"),
-                    "Should contain const c: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const a"),
+                    "Should contain const a: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const b"),
+                    "Should contain const b: {}",
+                    output.js_code
+                );
+                assert!(
+                    output.js_code.contains("const c"),
+                    "Should contain const c: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Multiple satisfies test passed");
             }
             Err(e) => {
@@ -305,10 +398,16 @@ console.log(tuple);
             Ok(output) => {
                 println!("satisfies 元组类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const tuple"),
-                    "Should contain const tuple: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const tuple"),
+                    "Should contain const tuple: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies tuple test passed");
             }
             Err(e) => {
@@ -333,10 +432,16 @@ console.log(user);
             Ok(output) => {
                 println!("satisfies 接口类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const user"),
-                    "Should contain const user: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const user"),
+                    "Should contain const user: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies interface test passed");
             }
             Err(e) => {
@@ -358,10 +463,16 @@ console.log(point);
             Ok(output) => {
                 println!("satisfies 类型别名转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const point"),
-                    "Should contain const point: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const point"),
+                    "Should contain const point: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies type alias test passed");
             }
             Err(e) => {
@@ -381,10 +492,16 @@ console.log(map);
             Ok(output) => {
                 println!("satisfies Map 类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const map"),
-                    "Should contain const map: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const map"),
+                    "Should contain const map: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies Map type test passed");
             }
             Err(e) => {
@@ -404,10 +521,16 @@ console.log(promise);
             Ok(output) => {
                 println!("satisfies Promise 类型转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const promise"),
-                    "Should contain const promise: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const promise"),
+                    "Should contain const promise: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies Promise test passed");
             }
             Err(e) => {
@@ -428,13 +551,22 @@ console.log(result);
             Ok(output) => {
                 println!("satisfies 表达式转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const result"),
-                    "Should contain const result: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const result"),
+                    "Should contain const result: {}",
+                    output.js_code
+                );
                 // 表达式应该被保留（不会被计算）
-                assert!(output.js_code.contains("(1 + 2) * 3") || output.js_code.contains("1 + 2 * 3"),
-                    "Should contain expression: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("(1 + 2) * 3") || output.js_code.contains("1 + 2 * 3"),
+                    "Should contain expression: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies preserves value test passed");
             }
             Err(e) => {
@@ -454,10 +586,16 @@ console.log(config);
             Ok(output) => {
                 println!("satisfies 和 as const 混合转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const config"),
-                    "Should contain const config: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const config"),
+                    "Should contain const config: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Mixed as const and satisfies test passed");
             }
             Err(e) => {
@@ -477,10 +615,16 @@ console.log(value);
             Ok(output) => {
                 println!("satisfies 三元表达式转译结果:");
                 println!("{}", output.js_code);
-                assert!(output.js_code.contains("const value"),
-                    "Should contain const value: {}", output.js_code);
-                assert!(!output.js_code.contains("satisfies"),
-                    "satisfies should be removed: {}", output.js_code);
+                assert!(
+                    output.js_code.contains("const value"),
+                    "Should contain const value: {}",
+                    output.js_code
+                );
+                assert!(
+                    !output.js_code.contains("satisfies"),
+                    "satisfies should be removed: {}",
+                    output.js_code
+                );
                 println!("✅ Satisfies in ternary test passed");
             }
             Err(e) => {

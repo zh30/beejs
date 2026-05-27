@@ -3,33 +3,32 @@
 pub mod crd;
 /// Re-export CRD types for convenient access
 pub use crd::{
-    Affinity, BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec,
-    ClusterPhase, Condition, ConditionStatus, ConditionType, DistributedConfig,
-    HPAConfig, MonitoringConfig, NetworkPolicyConfig, PodAffinity, PodAntiAffinity,
-    PreferredSchedulingTerm, ResourceRequirements, RetryConfig, SecurityConfig,
-    SecurityContext, ServiceDiscoveryConfig, ServiceMonitorConfig, Toleration,
-    WorkloadPhase,
+    Affinity, BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,
+    Condition, ConditionStatus, ConditionType, DistributedConfig, HPAConfig, MonitoringConfig,
+    NetworkPolicyConfig, PodAffinity, PodAntiAffinity, PreferredSchedulingTerm,
+    ResourceRequirements, RetryConfig, SecurityConfig, SecurityContext, ServiceDiscoveryConfig,
+    ServiceMonitorConfig, Toleration, WorkloadPhase,
 };
 /// Re-export Operator types
 pub use operator::{
     ClusterController, ClusterDiff, ClusterLifecycle, ClusterState, ControllerError,
     LifecycleError, ReconcileResult, WorkloadDiff, WorkloadLifecycle, WorkloadState,
 };
-/// Operator controller for managing resources
-pub mod operator;
 /// HPA autoscaling module
 pub mod autoscaling;
+/// Operator controller for managing resources
+pub mod operator;
 /// Re-export autoscaling types
 pub use autoscaling::{
-    HPAController, Metrics, MetricsClient, Scaler, ScalingResult, ResourceType,
-    ScalePolicyType, HPAError, MetricsError, ScalerError,
+    HPAController, HPAError, Metrics, MetricsClient, MetricsError, ResourceType, ScalePolicyType,
+    Scaler, ScalerError, ScalingResult,
 };
 // TODO: Add StatefulSet management
 // pub mod statefulset;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_crd_exports() {
         // Verify that CRD types are properly exported

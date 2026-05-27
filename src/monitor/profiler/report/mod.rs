@@ -3,6 +3,6 @@
 pub mod summary;
 
 pub use summary::{
-    PerformanceSummary, MemorySummary, OptimizationRecommendation,
-    RecommendationType, Priority, Difficulty,
+    Difficulty, MemorySummary, OptimizationRecommendation, PerformanceSummary, Priority,
+    RecommendationType,
 };

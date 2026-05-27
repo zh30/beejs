@@ -34,15 +34,15 @@ jobs:
     - name: Install Beejs Runtime
       run: |
         # Download and install Beejs
-        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/beejs-linux-x64.tar.gz -o beejs.tar.gz
-        tar -xzf beejs.tar.gz
-        chmod +x beejs
-        sudo mv beejs /usr/local/bin/
+        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz -o bee.tar.gz
+        tar -xzf bee.tar.gz
+        chmod +x bee
+        sudo mv bee /usr/local/bin/
 
     - name: Verify Beejs Installation
       run: |
-        beejs --version
-        beejs --help
+        bee --version
+        bee --help
 
     - name: Install dependencies
       run: |
@@ -55,12 +55,12 @@ jobs:
     - name: Run Beejs Tests
       run: |
         echo "Running Beejs test suite..."
-        beejs test --reporter=json --output=test-results.json
+        bee test --reporter=json --output=test-results.json
 
     - name: Run Performance Benchmarks
       run: |
         echo "Running performance benchmarks..."
-        beejs run benchmarks/comprehensive_benchmark.js
+        bee run benchmarks/comprehensive_benchmark.js
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
@@ -86,22 +86,22 @@ jobs:
 
     - name: Install Beejs Runtime
       run: |
-        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/beejs-linux-x64.tar.gz -o beejs.tar.gz
-        tar -xzf beejs.tar.gz
-        chmod +x beejs
-        sudo mv beejs /usr/local/bin/
+        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz -o bee.tar.gz
+        tar -xzf bee.tar.gz
+        chmod +x bee
+        sudo mv bee /usr/local/bin/
 
     - name: Build Application
       run: |
         echo "Building application with Beejs..."
         # Example: Build TypeScript
         if [ -f tsconfig.json ]; then
-          beejs run build.ts
+          bee run build.ts
         fi
 
         # Example: Bundle JavaScript
         if [ -f src/index.js ]; then
-          beejs bundle src/index.js --outfile dist/bundle.js
+          bee bundle src/index.js --outfile dist/bundle.js
         fi
 
     - name: Upload Build Artifacts
@@ -120,17 +120,17 @@ jobs:
 
     - name: Install Beejs Runtime
       run: |
-        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/beejs-linux-x64.tar.gz -o beejs.tar.gz
-        tar -xzf beejs.tar.gz
-        chmod +x beejs
-        sudo mv beejs /usr/local/bin/
+        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz -o bee.tar.gz
+        tar -xzf bee.tar.gz
+        chmod +x bee
+        sudo mv bee /usr/local/bin/
 
     - name: Run Linting
       run: |
         echo "Running linter..."
         # Example: Lint JavaScript/TypeScript
         if [ -f .eslintrc.js ]; then
-          beejs run node_modules/.bin/eslint src/ --format=json --output-file=eslint-results.json
+          bee run node_modules/.bin/eslint src/ --format=json --output-file=eslint-results.json
         fi
 
     - name: Upload Lint Results
@@ -150,16 +150,16 @@ jobs:
 
     - name: Install Beejs Runtime
       run: |
-        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/beejs-linux-x64.tar.gz -o beejs.tar.gz
-        tar -xzf beejs.tar.gz
-        chmod +x beejs
-        sudo mv beejs /usr/local/bin/
+        curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz -o bee.tar.gz
+        tar -xzf bee.tar.gz
+        chmod +x bee
+        sudo mv bee /usr/local/bin/
 
     - name: Run Security Scan
       run: |
         echo "Running security scan..."
         # Example: Scan for vulnerabilities
-        beejs run scripts/security-scan.js
+        bee run scripts/security-scan.js
 
     - name: Upload Security Report
       uses: actions/upload-artifact@v4

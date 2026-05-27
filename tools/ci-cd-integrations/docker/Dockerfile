@@ -12,15 +12,15 @@ RUN apk add --no-cache \
 
 # Install Beejs Runtime
 ARG BEEJS_VERSION=0.1.0
-RUN curl -L "https://github.com/beejs-team/beejs/releases/download/v${BEEJS_VERSION}/beejs-linux-x64.tar.gz" \
-    -o beejs.tar.gz \
-    && tar -xzf beejs.tar.gz \
-    && chmod +x beejs \
-    && mv beejs /usr/local/bin/ \
-    && rm beejs.tar.gz
+RUN curl -L "https://github.com/beejs-team/beejs/releases/download/v${BEEJS_VERSION}/bee-linux-x64.tar.gz" \
+    -o bee.tar.gz \
+    && tar -xzf bee.tar.gz \
+    && chmod +x bee \
+    && mv bee /usr/local/bin/ \
+    && rm bee.tar.gz
 
 # Verify installation
-RUN beejs --version
+RUN bee --version
 
 # Create app directory
 WORKDIR /app
@@ -50,10 +50,10 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD beejs --version || exit 1
+    CMD bee --version || exit 1
 
 # Default command
-CMD ["beejs", "start"]
+CMD ["bee", "start"]
 
 # Development stage
 FROM base AS development
@@ -71,13 +71,13 @@ RUN npm install -g \
 VOLUME ["/app"]
 
 # Default to interactive mode
-CMD ["beejs", "repl"]
+CMD ["bee", "repl"]
 
 # Test stage
 FROM development AS test
 
 # Run tests
-RUN beejs test --reporter=json --output=/tmp/test-results.json
+RUN bee test --reporter=json --output=/tmp/test-results.json
 
 # Save test results
 VOLUME ["/tmp/test-results.json"]
@@ -86,7 +86,7 @@ VOLUME ["/tmp/test-results.json"]
 FROM development AS build
 
 # Build application
-RUN beejs bundle src/index.js --outfile=dist/bundle.js
+RUN bee bundle src/index.js --outfile=dist/bundle.js
 
 # Export build artifacts
 VOLUME ["/app/dist"]
@@ -97,16 +97,16 @@ FROM node:18-alpine AS bundle
 WORKDIR /app
 
 # Copy Beejs binary
-COPY --from=base /usr/local/bin/beejs /usr/local/bin/beejs
+COPY --from=base /usr/local/bin/bee /usr/local/bin/bee
 
 # Copy built bundle
 COPY --from=build /app/dist/bundle.js /app/bundle.js
 
 # Set permissions
-RUN chmod +x /usr/local/bin/beejs
+RUN chmod +x /usr/local/bin/bee
 
 # Verify
-RUN beejs --version
+RUN bee --version
 
 # Export bundle
 VOLUME ["/app/bundle.js"]

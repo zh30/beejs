@@ -8,10 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 
-use tracing::{error, info};
-use std::time::{Duration, Instant};
-use std::time::SystemTime;
 use std::path::Path;
+use std::time::SystemTime;
+use std::time::{Duration, Instant};
+use tracing::{error, info};
 
 /// Alert severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,20 +113,22 @@ impl HttpWebhookNotifier {
 }
 impl AlertNotifier for HttpWebhookNotifier {
     fn send(&self, alert: &Alert) -> Result<()> {
-        let payload: _ = serde_json::to_string(alert)
-            .context("Failed to serialize alert")?;
+        let payload: _ = serde_json::to_string(alert).context("Failed to serialize alert")?;
         let client: _ = Client::new();
-        let mut request = client.post(&self.url)
+        let mut request = client
+            .post(&self.url)
             .body(payload)
             .header("Content-Type", "application/json");
         // Add custom headers
         for (key, value) in &self.headers {
             request = request.header(key, value);
         }
-        let response: _ = request.send()
-            .context("Failed to send webhook")?;
+        let response: _ = request.send().context("Failed to send webhook")?;
         if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Webhook returned status: {}", response.status()));
+            return Err(anyhow::anyhow!(
+                "Webhook returned status: {}",
+                response.status()
+            ));
         }
         info!("Alert sent via HTTP webhook to {}", self.url);
         Ok(())
@@ -139,12 +141,10 @@ impl AlertNotifier for HttpWebhookNotifier {
 pub struct ConsoleNotifier;
 impl AlertNotifier for ConsoleNotifier {
     fn send(&self, alert: &Alert) -> Result<()> {
-        println!("ALERT [{}] {}: {} (value: {}, threshold: {})",
-                 alert.severity,
-                 alert.name,
-                 alert.description,
-                 alert.value,
-                 alert.threshold);
+        println!(
+            "ALERT [{}] {}: {} (value: {}, threshold: {})",
+            alert.severity, alert.name, alert.description, alert.value, alert.threshold
+        );
         Ok(())
     }
     fn name(&self) -> &str {
@@ -200,23 +200,26 @@ impl AlertingSystem {
     }
     /// Load alert rules from file
     pub async fn load_rules_from_file(&self, file_path: &str) -> Result<()> {
-        let content: _ = fs::read_to_string(Path::new(file_path))
-            .context("Failed to read alert rules file")?;
-        let rules: Vec<AlertRule> = serde_yaml::from_str(&content)
-            .context("Failed to parse alert rules")?;
+        let content: _ =
+            fs::read_to_string(Path::new(file_path)).context("Failed to read alert rules file")?;
+        let rules: Vec<AlertRule> =
+            serde_yaml::from_str(&content).context("Failed to parse alert rules")?;
         let mut rules_guard = self.rules.write().await;
         rules_guard.clear();
         rules_guard.extend(rules);
-        info!("Loaded {} alert rules from {}", rules_guard.len(), file_path);
+        info!(
+            "Loaded {} alert rules from {}",
+            rules_guard.len(),
+            file_path
+        );
         Ok(())
     }
     /// Save alert rules to file
     pub async fn save_rules_to_file(&self, file_path: &str) -> Result<()> {
         let rules: _ = self.rules.read().await;
-        let content: _ = serde_yaml::to_string(&*rules)
-            .context("Failed to serialize alert rules")?;
-        fs::write(Path::new(file_path), content)
-            .context("Failed to write alert rules file")?;
+        let content: _ =
+            serde_yaml::to_string(&*rules).context("Failed to serialize alert rules")?;
+        fs::write(Path::new(file_path), content).context("Failed to write alert rules file")?;
         info!("Saved {} alert rules to {}", rules.len(), file_path);
         Ok(())
     }
@@ -305,10 +308,12 @@ impl AlertingSystem {
         Ok(())
     }
     /// Find a metric by name
-    fn find_metric<'a>(&self, metrics: &'a [MetricFamily], metric_name: &str) -> Option<&'a MetricFamily> {
-        metrics.iter().find(|m| {
-            m.get_name() == metric_name
-        })
+    fn find_metric<'a>(
+        &self,
+        metrics: &'a [MetricFamily],
+        metric_name: &str,
+    ) -> Option<&'a MetricFamily> {
+        metrics.iter().find(|m| m.get_name() == metric_name)
     }
     /// Check a single rule against a metric
     async fn check_rule(&self, rule: &AlertRule, metric: &MetricFamily) -> Result<Option<Alert>> {

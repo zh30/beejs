@@ -6,7 +6,10 @@ use rusty_v8 as v8;
 
 /// Setup CustomEvent API in V8 context
 /// CustomEvent provides a way to create custom events with custom data (detail)
-pub fn setup_custom_event_api(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Local<v8::Context>) {
+pub fn setup_custom_event_api(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) {
     let global = context.global(scope);
 
     // Create CustomEvent constructor
@@ -33,13 +36,20 @@ pub fn setup_custom_event_api(scope: &mut v8::ContextScope<v8::HandleScope>, con
     }
 
     // Set up prototype methods - preventDefault from Event
-    let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this = args.this();
-        let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-        let true_val = v8::Boolean::new(scope, true);
-        this.set(scope, default_prevented_key, true_val.into());
-    }).unwrap();
-    let prevent_default_key: v8::Local<v8::Name> = v8::String::new(scope, "preventDefault").unwrap().into();
+    let prevent_default_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this = args.this();
+            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
+            let true_val = v8::Boolean::new(scope, true);
+            this.set(scope, default_prevented_key, true_val.into());
+        },
+    )
+    .unwrap();
+    let prevent_default_key: v8::Local<v8::Name> =
+        v8::String::new(scope, "preventDefault").unwrap().into();
     prototype.set(scope, prevent_default_key.into(), prevent_default_fn.into());
 
     // Set CustomEvent as global constructor (for instanceof checks)
@@ -68,7 +78,10 @@ fn custom_event_constructor(
     if args.length() >= 1 {
         let type_arg = args.get(0);
         if type_arg.is_string() {
-            event_type = type_arg.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            event_type = type_arg
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
         }
     }
 
@@ -77,13 +90,31 @@ fn custom_event_constructor(
         let dict = args.get(1);
         if dict.is_object() {
             let dict: v8::Local<v8::Object> = unsafe { v8::Local::cast(dict) };
+            let mut has_explicit_detail = false;
 
             // Get detail property
             let detail_key = v8::String::new(scope, "detail").unwrap();
             if let Some(val) = dict.get(scope, detail_key.into()) {
                 if !val.is_undefined() {
                     detail = Some(val);
+                    has_explicit_detail = true;
                 }
+            }
+
+            // Older Beejs examples passed the payload object directly, or under
+            // a "data" key, instead of the standard { detail } eventInitDict.
+            if !has_explicit_detail {
+                let data_key = v8::String::new(scope, "data").unwrap();
+                if let Some(val) = dict.get(scope, data_key.into()) {
+                    if !val.is_undefined() {
+                        detail = Some(val);
+                        has_explicit_detail = true;
+                    }
+                }
+            }
+
+            if !has_explicit_detail {
+                detail = Some(dict.into());
             }
 
             // Get bubbles property
@@ -137,7 +168,11 @@ fn custom_event_constructor(
     // Set defaultPrevented (readonly, but we set initial value)
     let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
     let default_prevented_val = v8::Boolean::new(scope, false);
-    event_obj.set(scope, default_prevented_key.into(), default_prevented_val.into());
+    event_obj.set(
+        scope,
+        default_prevented_key.into(),
+        default_prevented_val.into(),
+    );
 
     // Set isTrusted
     let is_trusted_key = v8::String::new(scope, "isTrusted").unwrap();
@@ -145,13 +180,20 @@ fn custom_event_constructor(
     event_obj.set(scope, is_trusted_key.into(), is_trusted_val.into());
 
     // Add preventDefault method
-    let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this = args.this();
-        let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-        let true_val = v8::Boolean::new(scope, true);
-        this.set(scope, default_prevented_key, true_val.into());
-    }).unwrap();
-    let prevent_default_key: v8::Local<v8::Name> = v8::String::new(scope, "preventDefault").unwrap().into();
+    let prevent_default_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this = args.this();
+            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
+            let true_val = v8::Boolean::new(scope, true);
+            this.set(scope, default_prevented_key, true_val.into());
+        },
+    )
+    .unwrap();
+    let prevent_default_key: v8::Local<v8::Name> =
+        v8::String::new(scope, "preventDefault").unwrap().into();
     event_obj.set(scope, prevent_default_key.into(), prevent_default_fn.into());
 
     rv.set(event_obj.into());
@@ -195,20 +237,31 @@ pub fn create_custom_event_object<'a>(
 
     let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
     let default_prevented_val = v8::Boolean::new(scope, false);
-    event_obj.set(scope, default_prevented_key.into(), default_prevented_val.into());
+    event_obj.set(
+        scope,
+        default_prevented_key.into(),
+        default_prevented_val.into(),
+    );
 
     let is_trusted_key = v8::String::new(scope, "isTrusted").unwrap();
     let is_trusted_val = v8::Boolean::new(scope, false);
     event_obj.set(scope, is_trusted_key.into(), is_trusted_val.into());
 
     // Add preventDefault method
-    let prevent_default_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-        let this = args.this();
-        let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-        let true_val = v8::Boolean::new(scope, true);
-        this.set(scope, default_prevented_key, true_val.into());
-    }).unwrap();
-    let prevent_default_key: v8::Local<v8::Name> = v8::String::new(scope, "preventDefault").unwrap().into();
+    let prevent_default_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         _retval: v8::ReturnValue| {
+            let this = args.this();
+            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
+            let true_val = v8::Boolean::new(scope, true);
+            this.set(scope, default_prevented_key, true_val.into());
+        },
+    )
+    .unwrap();
+    let prevent_default_key: v8::Local<v8::Name> =
+        v8::String::new(scope, "preventDefault").unwrap().into();
     event_obj.set(scope, prevent_default_key.into(), prevent_default_fn.into());
 
     event_obj

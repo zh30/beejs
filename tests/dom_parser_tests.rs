@@ -147,7 +147,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "Special characters should be properly escaped");
+        assert!(
+            result.is_ok(),
+            "Special characters should be properly escaped"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 

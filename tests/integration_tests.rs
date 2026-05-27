@@ -1,112 +1,109 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use beejs::Runtime;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
 // Add serial_test to ensure integration tests run serially to avoid concurrency issues
 use serial_test::serial;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
 #[test]
 #[serial]
 fn test_hello_world() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
-    let result: _ = runtime.execute_code(r#"console.log("Hello, World!");"#);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(r#"console.log("Hello, World!");"#);
     assert!(result.is_ok());
     // console.log returns undefined
-    let result_str: _ = result.unwrap();
+    let result_str = result.unwrap();
     assert!(result_str.contains("undefined"));
 }
 
 #[test]
 #[ignore = "Known issue: V8 Isolate lifecycle crash when multiple tests create/destroy Runtime instances"]
 fn test_type_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test number types
-    let result: _ = runtime.execute_code("42");
+    let result = runtime.execute_code("42");
     assert!(result.is_ok());
 
     // Test string types
-    let result: _ = runtime.execute_code("'hello world'");
+    let result = runtime.execute_code("'hello world'");
     assert!(result.is_ok());
 
     // Test boolean types
-    let result: _ = runtime.execute_code("true");
+    let result = runtime.execute_code("true");
     assert!(result.is_ok());
 
     // Test array types
-    let result: _ = runtime.execute_code("[1, 2, 3, 4, 5]");
+    let result = runtime.execute_code("[1, 2, 3, 4, 5]");
     assert!(result.is_ok());
 
     // Test object types - use proper object literal
-    let result: _ = runtime.execute_code("({ name: 'test', value: 42 })");
+    let result = runtime.execute_code("({ name: 'test', value: 42 })");
     assert!(result.is_ok());
 }
 
 #[test]
 #[serial]
 fn test_arithmetic_operations() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Addition
-    let result: _ = runtime.execute_code("5 + 3");
+    let result = runtime.execute_code("5 + 3");
     assert!(result.is_ok());
 
     // Subtraction
-    let result: _ = runtime.execute_code("10 - 4");
+    let result = runtime.execute_code("10 - 4");
     assert!(result.is_ok());
 
     // Multiplication
-    let result: _ = runtime.execute_code("6 * 7");
+    let result = runtime.execute_code("6 * 7");
     assert!(result.is_ok());
 
     // Division
-    let result: _ = runtime.execute_code("15 / 3");
+    let result = runtime.execute_code("15 / 3");
     assert!(result.is_ok());
 
     // Modulo
-    let result: _ = runtime.execute_code("17 % 5");
+    let result = runtime.execute_code("17 % 5");
     assert!(result.is_ok());
 }
 
 #[test]
 #[serial]
 fn test_function_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         function add(a, b) {
             return a + b;
         }
         add(5, 3);
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
 }
 
 #[test]
 #[serial]
 fn test_arrow_function() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const multiply = (a, b) => a * b;
         multiply(4, 5);
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
 }
 
 #[test]
 #[serial]
 fn test_class_definition() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         class Calculator {
             constructor() {
                 this.result = 0;
@@ -131,52 +128,52 @@ fn test_class_definition() {
         calc.add(5).multiply(3).getResult();
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
 }
 
 #[test]
 #[ignore = "需要修复V8 Isolate在异常情况下的清理问题"]
 fn test_error_handling() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test undefined variable reference
-    let result: _ = runtime.execute_code("undefined_variable");
+    let result = runtime.execute_code("undefined_variable");
     assert!(
         result.is_err(),
         "Should return error for undefined variable"
     );
 
     // Test syntax error
-    let result: _ = runtime.execute_code("const x = ;");
+    let result = runtime.execute_code("const x = ;");
     assert!(result.is_err(), "Should return error for syntax error");
 }
 
 #[test]
 #[ignore = "需要实现V8事件循环支持以处理Promise异步执行"]
 fn test_async_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // 注意：当前运行时是同步的，没有事件循环
     // Promise.resolve() 会创建但不会执行，then 回调也不会被调用
     // 这是一个已知限制，需要在未来的版本中实现事件循环支持
 
-    let code: _ = r#"
+    let code = r#"
         Promise.resolve(42).then(value => value * 2);
     "#;
 
     // 当前实现会执行 Promise.resolve() 但不会等待 then 回调
     // 这可能导致未定义行为，因此测试被忽略
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
 }
 
 #[test]
 #[serial]
 fn test_module_exports() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const utils = {
             greet: (name) => `Hello, ${name}!`,
             add: (a, b) => a + b,
@@ -186,14 +183,14 @@ fn test_module_exports() {
         utils.greet("Beejs");
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
 }
 
 #[test]
 #[serial]
 fn test_file_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temporary JavaScript file
     let mut file = NamedTempFile::new().unwrap();
@@ -201,17 +198,17 @@ fn test_file_execution() {
     writeln!(file, "const y = 20;").unwrap();
     writeln!(file, "x + y;").unwrap();
 
-    let path: _ = file.path().to_path_buf();
-    let result: _ = runtime.execute_file(&path);
+    let path = file.path().to_path_buf();
+    let result = runtime.execute_file(&path);
     assert!(result.is_ok());
 }
 
 #[test]
 #[ignore = "Known issue: V8 Isolate lifecycle crash when multiple tests create/destroy Runtime instances"]
 fn test_performance_sequential_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         (function() {
             var sum = 0;
             for (var i = 0; i < 1000; i++) {
@@ -222,7 +219,7 @@ fn test_performance_sequential_execution() {
     "#;
 
     for i in 0..10 {
-        let result: _ = runtime.execute_code(code);
+        let result = runtime.execute_code(code);
         assert!(result.is_ok(), "Iteration {} failed", i);
     }
 
@@ -232,15 +229,15 @@ fn test_performance_sequential_execution() {
 #[test]
 #[serial]
 fn test_memory_efficient_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test with large data structures
-    let code: _ = r#"
+    let code = r#"
         const largeArray = new Array(10000).fill(0).map((_, i) => i);
         largeArray.length;
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
 
     // Note: execution_count() method removed - runtime doesn't track this
@@ -249,47 +246,47 @@ fn test_memory_efficient_execution() {
 #[test]
 #[serial]
 fn test_console_api_complete() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test console.log
-    let result: _ = runtime.execute_code(r#"console.log("test log");"#);
+    let result = runtime.execute_code(r#"console.log("test log");"#);
     assert!(result.is_ok());
 
     // Test console.error (if available, otherwise skip this assertion)
-    let result: _ = runtime.execute_code(r#"console.error("test error");"#);
+    let _result = runtime.execute_code(r#"console.error("test error");"#);
     // console.error may not be available in all runtime configurations
     // If it fails, that's acceptable - the test will still pass overall
 
     // Test console.warn (if available)
-    let result: _ = runtime.execute_code(r#"console.warn("test warn");"#);
+    let _result = runtime.execute_code(r#"console.warn("test warn");"#);
     // console.warn may not be available - that's acceptable
 
     // Test console.info (if available)
-    let result: _ = runtime.execute_code(r#"console.info("test info");"#);
+    let _result = runtime.execute_code(r#"console.info("test info");"#);
     // console.info may not be available - that's acceptable
 
     // Test console.debug (if available)
-    let result: _ = runtime.execute_code(r#"console.debug("test debug");"#);
+    let _result = runtime.execute_code(r#"console.debug("test debug");"#);
     // console.debug may not be available - that's acceptable
 
     // Verify all methods return undefined
-    let result: _ = runtime.execute_code(r#"typeof console.log;"#);
+    let result = runtime.execute_code(r#"typeof console.log;"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("function"));
 
-    let result: _ = runtime.execute_code(r#"typeof console.error;"#);
+    let result = runtime.execute_code(r#"typeof console.error;"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("function"));
 
-    let result: _ = runtime.execute_code(r#"typeof console.warn;"#);
+    let result = runtime.execute_code(r#"typeof console.warn;"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("function"));
 
-    let result: _ = runtime.execute_code(r#"typeof console.info;"#);
+    let result = runtime.execute_code(r#"typeof console.info;"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("function"));
 
-    let result: _ = runtime.execute_code(r#"typeof console.debug;"#);
+    let result = runtime.execute_code(r#"typeof console.debug;"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("function"));
 }
@@ -298,8 +295,8 @@ fn test_console_api_complete() {
 #[ignore = "Known issue: V8 Isolate lifecycle crash when multiple tests create/destroy Runtime instances"]
 fn test_initialization_with_custom_params() {
     // Test with smaller stack and heap sizes
-    let runtime: _ = Runtime::new(4, 536870912, true, false); // pool_size=4, 512MB heap
-    // Note: is_ok() and unwrap() removed - Runtime is not a Result type
-    // assert!(runtime.is_initialized());
-    // Note: execution_count() method removed - runtime doesn't track this
+    let _runtime = Runtime::new(4, 536870912, true, false); // pool_size=4, 512MB heap
+                                                            // Note: is_ok() and unwrap() removed - Runtime is not a Result type
+                                                            // assert!(runtime.is_initialized());
+                                                            // Note: execution_count() method removed - runtime doesn't track this
 }

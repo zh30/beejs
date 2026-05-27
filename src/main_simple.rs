@@ -16,14 +16,14 @@ fn main() -> Result<()> {
 
     if args.len() < 2 {
         println!("Usage:");
-        println!("  beejs run <file>    Run a JavaScript/TypeScript file");
-        println!("  beejs eval <code>   Evaluate JavaScript code");
-        println!("  beejs repl          Start interactive REPL");
-        println!("  beejs version       Display version information");
+        println!("  bee run <file>    Run a JavaScript/TypeScript file");
+        println!("  bee eval <code>   Evaluate JavaScript code");
+        println!("  bee repl          Start interactive REPL");
+        println!("  bee version       Display version information");
         println!();
         println!("Examples:");
-        println!("  beejs run script.js");
-        println!("  beejs eval 'console.log(\"Hello\")'");
+        println!("  bee run script.js");
+        println!("  bee eval 'console.log(\"Hello\")'");
         return Ok(());
     }
 
@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         }
         _ => {
             eprintln!("Unknown command: {}", command);
-            eprintln!("Use 'beejs' without arguments to see usage");
+            eprintln!("Use 'bee' without arguments to see usage");
             std::process::exit(1);
         }
     }
@@ -126,7 +126,7 @@ fn run_repl() -> Result<()> {
     let mut buffer = String::new();
 
     loop {
-        print!("beejs> ");
+        print!("bee> ");
         std::io::stdout().flush()?;
 
         buffer.clear();

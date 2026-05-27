@@ -25,7 +25,7 @@ services:
     command: >
       sh -c "
         echo '🐝 Starting Beejs development server...' &&
-        beejs run --watch src/index.js
+        bee run --watch src/index.js
       "
     networks:
       - beejs-network
@@ -49,7 +49,7 @@ services:
     command: >
       sh -c "
         echo '🧪 Running Beejs tests...' &&
-        beejs test --reporter=json --output=/tmp/test-results.json &&
+        bee test --reporter=json --output=/tmp/test-results.json &&
         cat /tmp/test-results.json
       "
     networks:
@@ -76,7 +76,7 @@ services:
     command: >
       sh -c "
         echo '🔨 Building application...' &&
-        beejs bundle src/index.js --outfile=dist/bundle.js --minify &&
+        bee bundle src/index.js --outfile=dist/bundle.js --minify &&
         echo '✅ Build complete' &&
         ls -lah dist/
       "
@@ -97,12 +97,12 @@ services:
       - BEEJS_ENV=production
       - NODE_ENV=production
       - PORT=3000
-    command: ["beejs", "start"]
+    command: ["bee", "start"]
     networks:
       - beejs-network
     restart: always
     healthcheck:
-      test: ["CMD", "beejs", "--version"]
+      test: ["CMD", "bee", "--version"]
       interval: 30s
       timeout: 10s
       retries: 3

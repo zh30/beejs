@@ -4,23 +4,21 @@ pub mod dockerfile;
 pub mod security;
 /// Re-export dockerfile types
 pub use dockerfile::{
-    MultiStageBuilder, BuilderStage, RuntimeStage, Optimization,
-    BaseImageOptimization, LayerCachingOptimization, SecurityHardeningOptimization,
-    MultiArchOptimization, Optimizer, OptimizationStrategy, OptimizationSuggestion,
-    ImpactLevel, LayerMinimizationStrategy, BaseImageOptimizationStrategy,
-    CacheOptimizationStrategy, SecurityHardeningStrategy, SizeOptimizationStrategy,
-    Error as DockerfileError,
+    BaseImageOptimization, BaseImageOptimizationStrategy, BuilderStage, CacheOptimizationStrategy,
+    Error as DockerfileError, ImpactLevel, LayerCachingOptimization, LayerMinimizationStrategy,
+    MultiArchOptimization, MultiStageBuilder, Optimization, OptimizationStrategy,
+    OptimizationSuggestion, Optimizer, RuntimeStage, SecurityHardeningOptimization,
+    SecurityHardeningStrategy, SizeOptimizationStrategy,
 };
 /// Re-export security types
 pub use security::{
-    SecurityScanner, ContainerImage, ImageLayer, Vulnerability, VulnerabilitySeverity,
-    ComplianceIssue, ComplianceSeverity, Secret, ScanReport, ScanConfig,
-    HealthCheckConfig, SecurityError,
+    ComplianceIssue, ComplianceSeverity, ContainerImage, HealthCheckConfig, ImageLayer, ScanConfig,
+    ScanReport, Secret, SecurityError, SecurityScanner, Vulnerability, VulnerabilitySeverity,
 };
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+    use std::collections::{BTreeMap, HashMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

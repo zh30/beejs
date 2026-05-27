@@ -1,21 +1,18 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use beejs::Runtime;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
 // Add serial_test to ensure V8 tests run serially to avoid concurrency issues
 use serial_test::serial;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 
 #[test]
 #[serial]
 fn test_v8_hello_world() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     // Use a calculation that returns a value instead of just console.log
-    let result: _ = runtime.execute_code(r#"console.log("Hello, V8!"); 5 + 3;"#);
+    let result = runtime.execute_code(r#"console.log("Hello, V8!"); 5 + 3;"#);
     assert!(result.is_ok());
-    let output: _ = result.unwrap();
+    let output = result.unwrap();
     // Check for the result value instead of console.log output
     assert!(output.contains("8"));
 }
@@ -23,21 +20,21 @@ fn test_v8_hello_world() {
 #[test]
 #[serial]
 fn test_v8_arithmetic() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test addition
-    let result: _ = runtime.execute_code("5 + 3");
+    let result = runtime.execute_code("5 + 3");
     assert!(result.is_ok());
-    let output: _ = result.unwrap();
+    let output = result.unwrap();
     assert_eq!(output.trim(), "8");
 
     // Test multiplication
-    let result: _ = runtime.execute_code("6 * 7");
+    let result = runtime.execute_code("6 * 7");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "42");
 
     // Test complex expression
-    let result: _ = runtime.execute_code("(10 + 5) * 2 - 3");
+    let result = runtime.execute_code("(10 + 5) * 2 - 3");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "27");
 }
@@ -45,15 +42,15 @@ fn test_v8_arithmetic() {
 #[test]
 #[serial]
 fn test_v8_variables() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const x = 10;
         const y = 20;
         x + y;
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "30");
 }
@@ -61,16 +58,16 @@ fn test_v8_variables() {
 #[test]
 #[serial]
 fn test_v8_functions() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         function add(a, b) {
             return a + b;
         }
         add(5, 3);
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "8");
 }
@@ -78,14 +75,14 @@ fn test_v8_functions() {
 #[test]
 #[serial]
 fn test_v8_arrow_functions() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const multiply = (a, b) => a * b;
         multiply(4, 5);
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "20");
 }
@@ -93,9 +90,9 @@ fn test_v8_arrow_functions() {
 #[test]
 #[serial]
 fn test_v8_objects() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const person = {
             name: "Alice",
             age: 30,
@@ -106,7 +103,7 @@ fn test_v8_objects() {
         person.greet();
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("Hello, Alice"));
 }
@@ -114,14 +111,14 @@ fn test_v8_objects() {
 #[test]
 #[serial]
 fn test_v8_arrays() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const arr = [1, 2, 3, 4, 5];
         arr.reduce((a, b) => a + b, 0);
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "15");
 }
@@ -130,15 +127,15 @@ fn test_v8_arrays() {
 #[ignore = "需要实现V8事件循环支持以处理Promise异步执行"]
 #[serial]
 fn test_v8_async_promise() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         Promise.resolve(42).then(value => value * 2);
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    let output: _ = result.unwrap();
+    let output = result.unwrap();
     // Promise resolution should work
     assert!(output.contains("84") || output.contains("Promise"));
 }
@@ -146,36 +143,35 @@ fn test_v8_async_promise() {
 #[test]
 #[serial]
 fn test_v8_error_handling_syntax_error() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test various syntax errors
-    let test_cases: _ = vec![
-        "const x = ;",
-        "function () {",
-        "if () {",
-        "let y: _ = 123abc",
-    ];
+    let test_cases = vec!["const x = ;", "function () {", "if () {", "let y = 123abc"];
 
     for code in test_cases {
-        let result: _ = runtime.execute_code(code);
+        let result = runtime.execute_code(code);
         // These should all fail with syntax errors
-        assert!(result.is_err(), "Code '{}' should produce a syntax error", code);
+        assert!(
+            result.is_err(),
+            "Code '{}' should produce a syntax error",
+            code
+        );
     }
 }
 
 #[test]
 #[serial]
 fn test_v8_error_handling_reference_error() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let result: _ = runtime.execute_code("console.log(undefined_variable)");
+    let result = runtime.execute_code("console.log(undefined_variable)");
     assert!(result.is_err());
 }
 
 #[test]
 #[serial]
 fn test_v8_file_execution() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temporary JavaScript file
     let mut file = NamedTempFile::new().unwrap();
@@ -183,8 +179,8 @@ fn test_v8_file_execution() {
     writeln!(file, "const y = 20;").unwrap();
     writeln!(file, "x + y;").unwrap();
 
-    let path: _ = file.path().to_path_buf();
-    let result: _ = runtime.execute_file(&path);
+    let path = file.path().to_path_buf();
+    let result = runtime.execute_file(&path);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "30");
 }
@@ -192,15 +188,15 @@ fn test_v8_file_execution() {
 #[test]
 #[serial]
 fn test_v8_console_output() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, true, false); // verbose mode
+    let runtime = Runtime::new(67108864, 1073741824, true, false); // verbose mode
 
-    let code: _ = r#"
+    let code = r#"
         console.log("Test message");
         console.log("Number:", 42);
         "done";
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("done"));
 }
@@ -208,17 +204,17 @@ fn test_v8_console_output() {
 #[test]
 #[serial]
 fn test_v8_string_operations() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test string concatenation
-    let result: _ = runtime.execute_code(r#""Hello" + " " + "World""#);
+    let result = runtime.execute_code(r#""Hello" + " " + "World""#);
     assert!(result.is_ok());
     // The output may be "HelloWorld" or "Hello World" depending on fast path optimization
-    let output: _ = result.unwrap();
+    let output = result.unwrap();
     assert!(output.contains("Hello") && output.contains("World"));
 
     // Test string length
-    let result: _ = runtime.execute_code(r#""JavaScript".length"#);
+    let result = runtime.execute_code(r#""JavaScript".length"#);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "10");
 }
@@ -226,20 +222,20 @@ fn test_v8_string_operations() {
 #[test]
 #[serial]
 fn test_v8_boolean_operations() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test true
-    let result: _ = runtime.execute_code("true");
+    let result = runtime.execute_code("true");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 
     // Test false
-    let result: _ = runtime.execute_code("false");
+    let result = runtime.execute_code("false");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "false");
 
     // Test comparison
-    let result: _ = runtime.execute_code("5 > 3");
+    let result = runtime.execute_code("5 > 3");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
@@ -247,15 +243,15 @@ fn test_v8_boolean_operations() {
 #[test]
 #[serial]
 fn test_v8_null_undefined() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test null
-    let result: _ = runtime.execute_code("null");
+    let result = runtime.execute_code("null");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "null");
 
     // Test undefined
-    let result: _ = runtime.execute_code("undefined");
+    let result = runtime.execute_code("undefined");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "undefined");
 }
@@ -263,9 +259,9 @@ fn test_v8_null_undefined() {
 #[test]
 #[serial]
 fn test_v8_conditional_logic() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
+    let code = r#"
         const x = 10;
         if (x > 5) {
             "greater";
@@ -274,7 +270,7 @@ fn test_v8_conditional_logic() {
         }
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("greater"));
 }
@@ -282,17 +278,17 @@ fn test_v8_conditional_logic() {
 #[test]
 #[serial]
 fn test_v8_loops() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let code: _ = r#"
-        let sum: _ = 0;
-        for (let i: _ = 1; i <= 5; i++) {
+    let code = r#"
+        let sum = 0;
+        for (let i = 1; i <= 5; i++) {
             sum += i;
         }
         sum;
     "#;
 
-    let result: _ = runtime.execute_code(code);
+    let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "15");
 }
@@ -300,15 +296,15 @@ fn test_v8_loops() {
 #[test]
 #[serial]
 fn test_v8_json() {
-    let runtime: _ = Runtime::new(67108864, 1073741824, false, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test JSON.stringify
-    let result: _ = runtime.execute_code(r#"JSON.stringify({name: "test", value: 42})"#);
+    let result = runtime.execute_code(r#"JSON.stringify({name: "test", value: 42})"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("test"));
 
     // Test JSON.parse
-    let result: _ = runtime.execute_code(r#"JSON.parse('{"name": "test"}').name"#);
+    let result = runtime.execute_code(r#"JSON.parse('{"name": "test"}').name"#);
     assert!(result.is_ok());
     assert!(result.unwrap().contains("test"));
 }

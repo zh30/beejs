@@ -2,7 +2,7 @@
  * Beejs Hot Reload Demo
  *
  * This file demonstrates the hot reload functionality.
- * Run with: beejs run demo.js --watch
+ * Run with: bee run demo.js --watch
  *
  * The browser will automatically reload when this file changes.
  */

@@ -68,7 +68,10 @@ impl TypeDefinitionGenerator {
         Self { config }
     }
     /// 为 JavaScript 代码生成 TypeScript 类型定义
-    pub async fn generate_types(&self, _source: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn generate_types(
+        &self,
+        _source: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // 简化的类型生成器实现
         // 实际实现需要解析 JavaScript 代码并生成 .d.ts 文件
         let mut dts_content = String::new();
@@ -126,7 +129,10 @@ impl TypeDefinitionGenerator {
             dts_content.push_str("}\n");
         }
         // 写入文件
-        let output_file: _ = self.config.output_dir.join(format!("{}.d.ts", package.name));
+        let output_file: _ = self
+            .config
+            .output_dir
+            .join(format!("{}.d.ts", package.name));
         Ok(output_file)
     }
 }
@@ -274,12 +280,20 @@ impl ReactRuntime {
         Ok(output)
     }
     /// JSX 转换
-    pub async fn transform_jsx(&self, jsx_code: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn transform_jsx(
+        &self,
+        jsx_code: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         // 简化的 JSX 转换
         // 实际实现需要完整的 JSX 解析和转换
+        if !self.config.jsx_transform {
+            return Ok(jsx_code.to_string());
+        }
+
         let mut transformed = jsx_code.to_string();
-        // 简单的 JSX 替换示例
+        // 简单的 JSX 替换示例：支持无属性和带属性的 div 起始标签。
         transformed = transformed.replace("<div>", "<div data-jsx=\"true\">");
+        transformed = transformed.replace("<div ", "<div data-jsx=\"true\" ");
         Ok(transformed)
     }
 }
@@ -303,7 +317,10 @@ impl Default for VsCodeExtensionConfig {
             publisher: "beejs-team".to_string(),
             engines,
             categories: vec!["Languages".to_string(), "Other".to_string()],
-            activation_events: vec!["onLanguage:javascript".to_string(), "onLanguage:typescript".to_string()],
+            activation_events: vec![
+                "onLanguage:javascript".to_string(),
+                "onLanguage:typescript".to_string(),
+            ],
         }
     }
 }
@@ -384,11 +401,20 @@ impl EcosystemIntegrator {
         Ok(())
     }
     /// 生成项目类型定义
-    pub async fn generate_project_types(&self, project_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn generate_project_types(
+        &self,
+        project_path: &PathBuf,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let package_json_path: _ = project_path.join("package.json");
         if package_json_path.exists() {
-            let package_info: _ = self.package_manager.parse_package_json(&package_json_path).await?;
-            let _output_file: _ = self.type_generator.generate_package_types(&package_info).await?;
+            let package_info: _ = self
+                .package_manager
+                .parse_package_json(&package_json_path)
+                .await?;
+            let _output_file: _ = self
+                .type_generator
+                .generate_package_types(&package_info)
+                .await?;
             println!("Generated types for package: {}", package_info.name);
         }
         Ok(())

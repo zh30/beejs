@@ -1,8 +1,8 @@
 #![allow(clippy::all)]
 // Clean imports - removing unused ones
+use std::collections::HashMap;
 use std::sync::Once;
 use std::sync::{Mutex, OnceLock};
-use std::collections::HashMap;
 use std::time::Instant;
 // Beejs: 高性能 JavaScript/TypeScript 运行时
 //
@@ -22,124 +22,153 @@ use std::time::Instant;
 use rusty_v8 as v8;
 use std::hash::Hash;
 // 模块声明
-// Stage 92: AI 原生性能引擎 (temporarily disabled)
-// pub mod ai {
-//     pub mod ai_performance_engine;
-//     pub mod performance_predictor;
-//     pub mod intelligent_scheduler;
-//     pub mod auto_optimizer;
-//     pub mod predictive_scaler;
-//     pub mod tensor_optimizer;
-//     pub mod llm_engine;
-//     pub mod model_manager;
-//     pub mod code_generator;
-//     pub mod ai_memory_pool;
-//     pub mod ai_batch_processor;
-//     pub mod ai_async_queue;
-//     pub mod model_interface;
-// }
-// pub mod benchmarks;  // Temporarily disabled due to compilation errors
-// pub mod performance_reporter;  // Temporarily disabled - depends on benchmarks
-// pub mod performance_regression;  // Temporarily disabled - compilation issues
-// pub mod performance_analyzer;  // Temporarily disabled - compilation issues
-// pub mod performance_comparison;  // Temporarily disabled - compilation issues
+// Stage 92: AI 原生性能引擎 (enabled via feature "ai")
+#[cfg(feature = "ai")]
+pub mod ai {
+    pub mod ai_async_queue;
+    pub mod ai_batch_processor;
+    pub mod ai_memory_pool;
+    pub mod ai_performance_engine;
+    pub mod auto_optimizer;
+    pub mod code_generator;
+    pub mod intelligent_scheduler;
+    pub mod llm_engine;
+    pub mod model_interface;
+    pub mod model_manager;
+    pub mod performance_predictor;
+    pub mod predictive_scaler;
+    pub mod tensor_optimizer;
+}
+
+#[cfg(feature = "benchmarks")]
+pub mod benchmarks;
+#[cfg(feature = "benchmarks")]
+pub mod performance_analyzer;
+#[cfg(feature = "benchmarks")]
+pub mod performance_comparison;
+#[cfg(feature = "benchmarks")]
+pub mod performance_regression;
+#[cfg(feature = "benchmarks")]
+pub mod performance_reporter;
+
 // pub mod automation;  // Temporarily disabled - depends on missing types
 // pub mod analysis;  // Temporarily disabled - compilation issues
-// pub mod monitor;  // Temporarily disabled - compilation issues
+
+#[cfg(feature = "observability")]
+pub mod monitor;
+
 // pub mod runtime_lite;  // Temporarily disabled - compilation issues
 // pub mod runtime_core;  // Temporarily disabled - compilation issues
-pub mod runtime_minimal;  // Minimal runtime for basic JavaScript execution
-pub mod event_loop;  // v0.2.0: 异步事件循环实现
-// pub mod v8_context_pool;  // Temporarily disabled - compilation issues
-// pub mod v8_engine;  // Temporarily disabled - compilation issues
-// pub mod smart_cache;  // Temporarily disabled - compilation issues
-// pub mod lib_minimal;
-// pub mod memory_pool;  // Temporarily disabled - compilation issues
-// pub mod nodejs_core;  // Temporarily disabled - compilation issues in many sub-modules
-pub mod nodejs_core;  // v0.3.50: Enabled for path and fs modules
-// pub mod process_pool;  // Temporarily disabled - compilation issues
-pub mod v8_snapshot;  // v0.3.232: Enabled for builtin warmup functionality
-// pub mod startup_optimizer;  // Temporarily disabled - compilation issues
-// pub mod nodejs_polyfill;  // Temporarily disabled for Stage 60
-// pub mod jit_optimizer;  // Temporarily disabled - compilation issues
-// pub mod inline_cache;  // Temporarily disabled - compilation issues
-// pub mod nodejs;  // Temporarily disabled for Stage 60
-// pub mod code_analyzer;  // Temporarily disabled - compilation issues
-// pub mod module_loader;  // Temporarily disabled - compilation issues
-pub mod package_manager;  // v0.3.101: Package manager - now enabled with fs fix
-pub mod watcher;  // v0.3.100: Hot reload module - now enabled
-pub mod watcher_websocket;  // v0.3.103: WebSocket hot reload for cross-client broadcasting
-// pub mod repl;  // Temporarily disabled - compilation issues
-// pub mod cli;  // Stage 93: CLI tools - Temporarily disabled due to compilation errors
-// pub mod edge;  // Temporarily disabled - incomplete implementation
-pub mod web_api;  // Stage 75: Web Streams API for AI workloads - enabled
-// pub mod debugger;  // Temporarily disabled - compilation issues
-// pub mod observability;  // Temporarily disabled - compilation issues
+pub mod event_loop;
+pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution // v0.2.0: 异步事件循环实现
+                         // pub mod v8_context_pool;  // Temporarily disabled - compilation issues
+                         // pub mod v8_engine;  // Temporarily disabled - compilation issues
+                         // pub mod smart_cache;  // Temporarily disabled - compilation issues
+                         // pub mod lib_minimal;
+                         // pub mod memory_pool;  // Temporarily disabled - compilation issues
+                         // pub mod nodejs_core;  // Temporarily disabled - compilation issues in many sub-modules
+pub mod nodejs_core; // v0.3.50: Enabled for path and fs modules
+                     // pub mod process_pool;  // Temporarily disabled - compilation issues
+pub mod v8_snapshot; // v0.3.232: Enabled for builtin warmup functionality
+                     // pub mod startup_optimizer;  // Temporarily disabled - compilation issues
+                     // pub mod nodejs_polyfill;  // Temporarily disabled for Stage 60
+                     // pub mod jit_optimizer;  // Temporarily disabled - compilation issues
+                     // pub mod inline_cache;  // Temporarily disabled - compilation issues
+                     // pub mod nodejs;  // Temporarily disabled for Stage 60
+                     // pub mod code_analyzer;  // Temporarily disabled - compilation issues
+                     // pub mod module_loader;  // Temporarily disabled - compilation issues
+pub mod package_manager; // v0.3.101: Package manager - now enabled with fs fix
+pub mod watcher; // v0.3.100: Hot reload module - now enabled
+pub mod watcher_websocket; // v0.3.103: WebSocket hot reload for cross-client broadcasting
+                           // pub mod repl;  // Temporarily disabled - compilation issues
+                           // pub mod cli;  // Stage 93: CLI tools - Temporarily disabled due to compilation errors
+                           // pub mod edge;  // Temporarily disabled - incomplete implementation
+pub mod web_api; // Stage 75: Web Streams API for AI workloads - enabled
+
+#[cfg(feature = "observability")]
+pub mod observability;
+
 // pub mod runtime_config;  // Temporarily disabled - compilation issues
-pub mod ecosystem_lite;  // v0.3.233: Enabled for package manager tests
-// pub mod security;  // Stage 84: 企业级安全与合规 - temporarily disabled
-// pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps) - temporarily disabled
-// pub mod ai_inference;  // Temporarily disabled - compilation issues
-// pub mod multilang;  // Stage 88 Phase 1: 多语言支持 - temporarily disabled
-// pub mod platform;  // Stage 88 Phase 2: 跨平台运行时 - temporarily disabled
-// pub mod cloud_native;  // Temporarily disabled - compilation issues
-// Stage 83: Enterprise modules
-// pub mod enterprise;  // Stage 88 Phase 3: 企业级解决方案 - temporarily disabled
-// pub mod error;  // Stage 89 Phase 2: 统一错误处理系统 - temporarily disabled
-// pub mod fallback;  // Stage 89 Phase 2: 优雅降级机制 - temporarily disabled
-// pub mod concurrent_execution;  // Temporarily disabled - compilation issues
-// pub mod shared_memory;  // Temporarily disabled - compilation issues
-// pub mod shared_object_cache;  // Temporarily disabled - compilation issues
-// pub mod memory_mapped_file;  // Temporarily disabled - compilation issues
-// pub mod lock_free_temp;  // Temporarily disabled - compilation issues
-// pub mod network;  // Temporarily disabled - compilation issues
-// pub mod zero_copy;  // Temporarily disabled - compilation issues
-// pub mod string_interner;  // Temporarily disabled - compilation issues
-// pub mod distributed;  // Temporarily disabled - compilation issues
-// pub mod isolate_prewarmer;  // Temporarily disabled - compilation issues
-// pub mod precompiled_cache;  // Moved to startup module
-// pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化 (moved to inline mod at line 21-35)
-// pub mod optimization;  // Stage 78 Phase 4: 极致性能监控 (temporarily disabled)
-// pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
-// pub mod ecosystem;  // Stage 80: 生态系统完善 (moved to Stage 91 Phase 3)
-// pub mod profiler;  // Temporarily disabled due to compilation issues
-// pub mod code_cache;  // Temporarily disabled due to compilation issues
-// pub mod stage_38_smart_process_pool;  // Temporarily disabled - compilation issues
-// pub mod cloud;  // Temporarily disabled - compilation issues
-// pub mod wasm_optimized;  // Temporarily disabled - compilation issues
-// pub mod wasm_integration;  // Temporarily disabled - compilation issues
-// pub mod wasm;  // Temporarily disabled - compilation issues
-// pub mod io;  // Temporarily disabled - compilation issues
-// pub mod realtime;  // Temporarily disabled - compilation issues
-// pub mod quantum_computing;  // Temporarily disabled - compilation issues
-// pub mod neural_network;  // Temporarily disabled - compilation issues
-// pub mod metaverse;  // Temporarily disabled - compilation issues
-// pub mod holographic;  // Temporarily disabled - compilation issues
-// pub mod immersive_interaction;  // Temporarily disabled - compilation issues
-// pub mod distributed_metaverse;  // Temporarily disabled - compilation issues
-// pub mod startup;  // Temporarily disabled - compilation issues
-// pub mod tools;  // Temporarily disabled - compilation issues
-// Stage 43.0: 完整生态系统与极致性能优化
-// pub mod nodejs_core;  // Temporarily disabled for Stage 60
-// pub mod bundler;  // Temporarily disabled - compilation issues
-// pub mod plugin;  // Temporarily disabled - compilation issues
-// pub mod jit;  // Temporarily disabled - compilation issues
-// pub mod memory;  // Temporarily disabled - compilation issues
-// pub mod simd;  // Temporarily disabled - compilation issues
-// pub mod package;  // Temporarily disabled - compilation issues
-// Stage 48: TypeScript 支持
-pub mod typescript;  // v0.3.102: TypeScript 转译支持
-// pub mod stage_48_optimized_process_pool;
-// pub mod stage_48_ai_workload_optimizer;
-// Stage 56.4: Testing Framework
-pub mod testing;  // v0.3.251: Testing framework enabled
-// 重新导出 REPL 相关类型
-// pub use repl::{Repl, ReplConfig};  // Temporarily disabled
-// 重新导出 WebAssembly 相关类型
-// pub use wasm_integration::{initialize_wasm, check_wasm_support};  // Temporarily disabled
-// 重新导出 I/O 相关类型
-// pub use io::{DmaEngine, DmaBuffer, DmaDirection, MemoryMapper, MappedFile, MapOptions, MemoryAdvice};  // Temporarily disabled
-// Define OptimizeMode here since it's used by multiple modules
+pub mod ecosystem_lite; // v0.3.233: Enabled for package manager tests
+
+#[cfg(feature = "enterprise")]
+pub mod security;
+
+#[cfg(feature = "ai")]
+pub mod aiops;
+
+#[cfg(feature = "ai")]
+pub mod ai_inference;
+
+#[cfg(feature = "multilang")]
+pub mod multilang;
+
+#[cfg(feature = "multilang")]
+pub mod platform; // Stage 88 Phase 2: 跨平台运行时
+
+#[cfg(feature = "cloudnative")]
+pub mod cloud_native;
+
+// Enterprise stage modules are retained in src/enterprise but are not part of
+// the v0.1 public runtime surface.
+// #[cfg(feature = "enterprise")]
+// pub mod enterprise;
+
+pub mod error; // Stage 89 Phase 2: 统一错误处理系统
+pub mod fallback; // Stage 89 Phase 2: 优雅降级机制
+                  // pub mod concurrent_execution;  // Temporarily disabled - compilation issues
+                  // pub mod shared_memory;  // Temporarily disabled - compilation issues
+                  // pub mod shared_object_cache;  // Temporarily disabled - compilation issues
+                  // pub mod memory_mapped_file;  // Temporarily disabled - compilation issues
+                  // pub mod lock_free_temp;  // Temporarily disabled - compilation issues
+                  // pub mod network;  // Temporarily disabled - compilation issues
+                  // pub mod zero_copy;  // Temporarily disabled - compilation issues
+                  // pub mod string_interner;  // Temporarily disabled - compilation issues
+                  // pub mod distributed;  // Temporarily disabled - compilation issues
+                  // pub mod isolate_prewarmer;  // Temporarily disabled - compilation issues
+                  // pub mod precompiled_cache;  // Moved to startup module
+                  // pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化 (moved to inline mod at line 21-35)
+                  // pub mod optimization;  // Stage 78 Phase 4: 极致性能监控 (temporarily disabled)
+                  // pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
+                  // pub mod ecosystem;  // Stage 80: 生态系统完善 (moved to Stage 91 Phase 3)
+                  // pub mod profiler;  // Temporarily disabled due to compilation issues
+                  // pub mod code_cache;  // Temporarily disabled due to compilation issues
+                  // pub mod stage_38_smart_process_pool;  // Temporarily disabled - compilation issues
+                  // pub mod cloud;  // Temporarily disabled - compilation issues
+                  // pub mod wasm_optimized;  // Temporarily disabled - compilation issues
+                  // pub mod wasm_integration;  // Temporarily disabled - compilation issues
+                  // pub mod wasm;  // Temporarily disabled - compilation issues
+                  // pub mod io;  // Temporarily disabled - compilation issues
+                  // pub mod realtime;  // Temporarily disabled - compilation issues
+                  // pub mod quantum_computing;  // Temporarily disabled - compilation issues
+                  // pub mod neural_network;  // Temporarily disabled - compilation issues
+                  // pub mod metaverse;  // Temporarily disabled - compilation issues
+                  // pub mod holographic;  // Temporarily disabled - compilation issues
+                  // pub mod immersive_interaction;  // Temporarily disabled - compilation issues
+                  // pub mod distributed_metaverse;  // Temporarily disabled - compilation issues
+                  // pub mod startup;  // Temporarily disabled - compilation issues
+                  // pub mod tools;  // Temporarily disabled - compilation issues
+                  // Stage 43.0: 完整生态系统与极致性能优化
+                  // pub mod nodejs_core;  // Temporarily disabled for Stage 60
+                  // pub mod bundler;  // Temporarily disabled - compilation issues
+                  // pub mod plugin;  // Temporarily disabled - compilation issues
+                  // pub mod jit;  // Temporarily disabled - compilation issues
+pub mod memory; // Temporarily disabled - compilation issues
+                // pub mod simd;  // Temporarily disabled - compilation issues
+                // pub mod package;  // Temporarily disabled - compilation issues
+                // Stage 48: TypeScript 支持
+pub mod typescript; // v0.3.102: TypeScript 转译支持
+                    // pub mod stage_48_optimized_process_pool;
+                    // pub mod stage_48_ai_workload_optimizer;
+                    // Stage 56.4: Testing Framework
+pub mod testing; // v0.3.251: Testing framework enabled
+                 // 重新导出 REPL 相关类型
+                 // pub use repl::{Repl, ReplConfig};  // Temporarily disabled
+                 // 重新导出 WebAssembly 相关类型
+                 // pub use wasm_integration::{initialize_wasm, check_wasm_support};  // Temporarily disabled
+                 // 重新导出 I/O 相关类型
+                 // pub use io::{DmaEngine, DmaBuffer, DmaDirection, MemoryMapper, MappedFile, MapOptions, MemoryAdvice};  // Temporarily disabled
+                 // Define OptimizeMode here since it's used by multiple modules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OptimizeMode {
     Speed,
@@ -316,47 +345,40 @@ impl Server {
 }
 // use tracing::{debug, info, warn, error}; // Unused
 // 核心运行时
-use anyhow::{Result, anyhow};
-/// Global flag to track V8 initialization state
-static V8_INITIALIZED: std::sync::OnceLock<std::sync::atomic::AtomicBool> = std::sync::OnceLock::new();
+use anyhow::{anyhow, Result};
+/// Global result to track V8 initialization state.
+static V8_INIT_RESULT: std::sync::OnceLock<std::result::Result<(), String>> =
+    std::sync::OnceLock::new();
 /// Initialize V8 engine (idempotent - safe to call multiple times)
 pub fn initialize_v8() -> Result<()> {
-    // Check if already initialized
-    let initialized_flag: _ = V8_INITIALIZED.get_or_init(|| {
-        std::sync::atomic::AtomicBool::new(false)
-    });
-    // Only initialize if not already done
-    if !initialized_flag.load(std::sync::atomic::Ordering::SeqCst) {
+    let init_result = V8_INIT_RESULT.get_or_init(|| {
         use rusty_v8 as v8;
         // Stage 92: V8 初始化优化 - 使用高性能运行时配置
         // 参考 Bun 和 Node.js 的优化策略
         let v8_flags: _ = vec![
             // JIT 编译器优化（使用稳定支持的标志）
-            "--opt".to_string(),                          // 启用优化
-            "--max-old-space-size=4096".to_string(),      // 4GB 老生代堆（生产环境）
-            "--gc-interval=240".to_string(),              // GC 间隔（降低频率提升吞吐量）
+            "--opt".to_string(),                     // 启用优化
+            "--max-old-space-size=4096".to_string(), // 4GB 老生代堆（生产环境）
+            "--gc-interval=240".to_string(),         // GC 间隔（降低频率提升吞吐量）
         ];
         let v8_flags_str: _ = v8_flags.join(" ");
         v8::V8::set_flags_from_string(&v8_flags_str);
         // Create platform
-        let platform: _ = v8::new_default_platform()
-            .unwrap();
+        let platform: _ = v8::new_default_platform().unwrap();
         // Initialize V8
         v8::V8::initialize_platform(platform);
         v8::V8::initialize();
-        // Mark as initialized
-        initialized_flag.store(true, std::sync::atomic::Ordering::SeqCst);
-    }
-    Ok(())
+        Ok(())
+    });
+
+    init_result
+        .as_ref()
+        .map(|_| ())
+        .map_err(|message| anyhow!(message.clone()))
 }
 /// Check if V8 is initialized
 pub fn is_v8_initialized() -> bool {
-    // Check the global flag
-    if let Some(flag) = V8_INITIALIZED.get() {
-        flag.load(std::sync::atomic::Ordering::SeqCst)
-    } else {
-        false
-    }
+    matches!(V8_INIT_RESULT.get(), Some(Ok(())))
 }
 /// Check if V8 is available for use in tests
 /// Returns true if V8 can be safely initialized, false if already poisoned
@@ -366,7 +388,9 @@ pub fn is_v8_available() -> bool {
     CHECK.call_once(|| {
         // Try to initialize V8 if not already done
         if let Err(_) = initialize_v8() {
-            unsafe { AVAILABLE = false; }
+            unsafe {
+                AVAILABLE = false;
+            }
         }
     });
     unsafe { AVAILABLE }
@@ -398,7 +422,12 @@ pub struct Runtime {
 }
 impl Runtime {
     /// 创建新的运行时实例
-    pub fn new(pool_size: usize, max_memory: usize, enable_optimization: bool, verbose: bool) -> Self {
+    pub fn new(
+        pool_size: usize,
+        max_memory: usize,
+        enable_optimization: bool,
+        verbose: bool,
+    ) -> Self {
         Self {
             config: PerformanceConfig {
                 pool_size,
@@ -412,12 +441,7 @@ impl Runtime {
     }
     /// 创建默认配置的运行时
     pub fn new_default() -> Self {
-        Self::new(
-            num_cpus::get(),
-            1024 * 1024 * 1024,
-            true,
-            false,
-        )
+        Self::new(num_cpus::get(), 1024 * 1024 * 1024, true, false)
     }
     /// 创建带优化配置的运行时
     pub fn new_with_optimization(
@@ -451,8 +475,7 @@ impl Runtime {
         // 获取或创建持久化的运行时实例
         let mut runtime_ref = self.lite_runtime.borrow_mut();
         let runtime = runtime_ref.get_or_insert_with(|| {
-            crate::runtime_minimal::MinimalRuntime::new()
-                .expect("Failed to create MinimalRuntime")
+            crate::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime")
         });
         runtime.execute_code(code)
     }
@@ -462,7 +485,8 @@ impl Runtime {
             .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
 
         // Get the directory and file path for __dirname and __filename
-        let dir_path = path.parent()
+        let dir_path = path
+            .parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| String::from("."));
         let file_path = path.to_string_lossy().to_string();
@@ -547,7 +571,9 @@ pub fn console_log_callback(
             output.push(' ');
         }
         let arg: _ = args.get(i);
-        let arg_str: _ = arg.to_string(_scope).unwrap_or_else(|| v8::String::new(_scope, "<unknown>").unwrap());
+        let arg_str: _ = arg
+            .to_string(_scope)
+            .unwrap_or_else(|| v8::String::new(_scope, "<unknown>").unwrap());
         output.push_str(&arg_str.to_rust_string_lossy(_scope));
     }
     println!("{}", output);
@@ -679,7 +705,8 @@ pub fn console_table_callback(
                             let key = keys.get_index(scope, j).unwrap();
                             let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
                             let value = obj.get(scope, key).unwrap();
-                            let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                            let value_str =
+                                value.to_string(scope).unwrap().to_rust_string_lossy(scope);
                             row.push_str(&format!("{}: {}", key_str, value_str));
                             if j < key_count - 1 {
                                 row.push_str(", ");

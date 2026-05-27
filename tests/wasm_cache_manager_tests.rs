@@ -1,10 +1,9 @@
-/// WASM Cache Manager Tests - LFU Eviction Strategy
-/// Tests for the LFU (Least Frequently Used) cache eviction implementation
+//! WASM Cache Manager Tests - LFU Eviction Strategy
+//! Tests for the LFU (Least Frequently Used) cache eviction implementation
 
 #[cfg(test)]
 mod cache_manager_tests {
     use std::collections::HashMap;
-    use std::time::Duration;
 
     /// Test 1: LFU entry selection - find the entry with lowest access count
     #[test]
@@ -23,7 +22,8 @@ mod cache_manager_tests {
         entries.insert("module_d".to_string(), (1, "rarely used"));
 
         // Find LFU entry (minimum access count)
-        let lfu_entry = entries.iter()
+        let lfu_entry = entries
+            .iter()
             .min_by_key(|(_, (count, _))| *count)
             .map(|(name, (_, desc))| (name.clone(), desc));
 
@@ -48,7 +48,8 @@ mod cache_manager_tests {
         entries.insert("medium".to_string(), 50);
 
         // Find LFU entry
-        let lfu_key = entries.iter()
+        let lfu_key = entries
+            .iter()
             .min_by_key(|(_, count)| *count)
             .map(|(name, _)| name.clone())
             .unwrap();
@@ -78,14 +79,16 @@ mod cache_manager_tests {
         entries.insert("module_y".to_string(), 5);
 
         // Both have same access count, min_by_key may return either
-        let lfu_entry = entries.iter()
+        let lfu_entry = entries
+            .iter()
             .min_by_key(|(_, count)| *count)
             .map(|(name, _)| name.clone());
 
         assert!(lfu_entry.is_some());
         // Both have count 5, so either could be returned
-        assert!(lfu_entry == Some("module_x".to_string()) ||
-                lfu_entry == Some("module_y".to_string()));
+        assert!(
+            lfu_entry == Some("module_x".to_string()) || lfu_entry == Some("module_y".to_string())
+        );
         println!("✅ LFU 相等访问次数测试通过: 可以找到访问次数最少的条目");
     }
 
@@ -104,7 +107,8 @@ mod cache_manager_tests {
 
         // Simulate eviction of 3 LFU entries
         for _ in 0..3 {
-            let lfu_key = entries.iter()
+            let lfu_key = entries
+                .iter()
                 .min_by_key(|(_, count)| *count)
                 .map(|(name, _)| name.clone())
                 .unwrap();
@@ -125,14 +129,15 @@ mod cache_manager_tests {
         println!("🧪 测试 LFU vs LRU 淘汰策略对比");
 
         // LFU scenario: 某些条目被频繁访问，某些很少
-        let cache_hits = vec![
+        let cache_hits = [
             ("frequently_used", 100),
             ("rarely_used", 1),
             ("sometimes_used", 20),
         ];
 
         // LFU 应该淘汰 rarely_used
-        let lfu_evicted = cache_hits.iter()
+        let lfu_evicted = cache_hits
+            .iter()
             .min_by_key(|(_, count)| *count)
             .map(|(name, _)| name);
 
@@ -154,7 +159,8 @@ mod cache_manager_tests {
         entries.insert("warm".to_string(), 10);
 
         // Evict LFU
-        let lfu_key = entries.iter()
+        let lfu_key = entries
+            .iter()
             .min_by_key(|(_, count)| *count)
             .map(|(name, _)| name.clone())
             .unwrap();
@@ -195,7 +201,8 @@ mod cache_manager_tests {
         // 模拟 5 次 LFU 淘汰
         let mut evicted_modules = Vec::new();
         for _ in 0..5 {
-            let lfu_key = entries.iter()
+            let lfu_key = entries
+                .iter()
                 .min_by_key(|(_, (count, _))| *count)
                 .map(|(name, _)| name.clone())
                 .unwrap();
@@ -237,7 +244,8 @@ mod cache_manager_tests {
         entries.insert("rare_old".to_string(), (1, true));
 
         // 在 LFU + TTL 策略中，过期的低频条目优先淘汰
-        let mut candidates: Vec<_> = entries.iter()
+        let mut candidates: Vec<_> = entries
+            .iter()
             .filter(|(_, (_, is_expired))| *is_expired)
             .map(|(name, (count, _))| (name.clone(), *count))
             .collect();

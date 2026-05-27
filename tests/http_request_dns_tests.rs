@@ -1,8 +1,8 @@
 // HTTP Request 增强测试 - v0.3.68
 // 测试 http.request() 使用真实 DNS 解析和 TCP 连接
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -39,7 +39,11 @@ fn test_http_request_with_dns_resolution() {
         typeof req;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "object", "http.request should return an object");
+    assert_eq!(
+        result.trim(),
+        "object",
+        "http.request should return an object"
+    );
 }
 
 #[test]
@@ -70,7 +74,11 @@ fn test_http_request_dns_resolve4() {
         typeof dns.resolve4;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "dns.resolve4 should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "dns.resolve4 should be a function"
+    );
 }
 
 #[test]
@@ -83,7 +91,11 @@ fn test_http_request_dns_resolve6() {
         typeof dns.resolve6;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "dns.resolve6 should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "dns.resolve6 should be a function"
+    );
 }
 
 #[test]
@@ -97,7 +109,11 @@ fn test_http_request_dns_reverse() {
         typeof dns.reverse;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "dns.reverse should be a function");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "dns.reverse should be a function"
+    );
 }
 
 #[test]
@@ -125,7 +141,11 @@ fn test_http_request_with_all_options() {
         req.path === '/v1/users/123';
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "All options should be correctly parsed");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "All options should be correctly parsed"
+    );
 }
 
 #[test]
@@ -143,7 +163,11 @@ fn test_http_request_callback_with_response() {
         typeof req._responseCallback;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "function", "Callback should be stored in _responseCallback");
+    assert_eq!(
+        result.trim(),
+        "function",
+        "Callback should be stored in _responseCallback"
+    );
 }
 
 #[test]
@@ -175,7 +199,11 @@ fn test_http_request_with_body_write() {
         req._body;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "part1part2", "Multiple writes should be concatenated");
+    assert_eq!(
+        result.trim(),
+        "part1part2",
+        "Multiple writes should be concatenated"
+    );
 }
 
 #[test]
@@ -211,5 +239,9 @@ fn test_http_request_dns_resolved_address() {
         req.hostname === '127.0.0.1' && req.port === 80;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    assert_eq!(result.trim(), "true", "Request object should be correctly created with hostname and port");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "Request object should be correctly created with hostname and port"
+    );
 }

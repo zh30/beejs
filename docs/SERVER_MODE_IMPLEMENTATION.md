@@ -1,5 +1,7 @@
 # Beejs Server Mode 实施总结
 
+> 发布校验说明（2026-05-26）：本文是历史实现总结。当前 public CLI 的服务器命令是 `bee serve [--host HOST] [--port PORT]`；`beejs server` 以及 `--max-connections`、`--timeout` 不是当前公开命令契约。
+
 ## 🎯 概述
 
 成功实现了 Beejs Server 模式，这是一个高性能的 HTTP 服务器，用于执行 JavaScript/TypeScript 代码。该服务器通过单次初始化、多次复用的架构，彻底避免了重复的 V8 引擎初始化开销。
@@ -10,7 +12,7 @@
 - ✅ 创建了完整的 server 模块 (`src/server/mod.rs`)
 - ✅ 集成了 tiny_http HTTP 服务器框架
 - ✅ 实现了 Server 结构体和配置管理
-- ✅ 添加了 CLI 命令支持 (`beejs server`)
+- ✅ 添加了 CLI 命令支持（历史名称为 `beejs server`，当前 public CLI 为 `bee serve`）
 
 ### 阶段 2: HTTP /eval API 端点 ✅
 - ✅ 实现了 `/api/v1/eval` POST 端点
@@ -76,10 +78,10 @@ pub struct Server {
 ### 启动服务器
 ```bash
 # 基本启动（默认端口 3000）
-beejs server
+bee serve
 
 # 自定义配置
-beejs server --host 127.0.0.1 --port 3000 --max-connections 1000 --timeout 30000
+bee serve --host 127.0.0.1 --port 3000
 ```
 
 ### API 使用示例

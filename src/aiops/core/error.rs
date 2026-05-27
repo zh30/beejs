@@ -1,8 +1,8 @@
 // AI Ops Error Types
 //
+use std::collections::{BTreeMap, HashMap};
 /// Defines all error types used in the AI Ops module.
 use thiserror::Error;
-use std::collections::{HashMap, BTreeMap};
 /// Result type for AI Ops operations
 pub type Result<T> = std::result::Result<T, AIOpsError>;
 /// AI Ops Error types

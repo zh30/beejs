@@ -56,9 +56,9 @@ Ensure Beejs is installed on your system:
 
 ```bash
 # Option 1: Download from GitHub
-curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/beejs-linux-x64.tar.gz
-tar -xzf beejs-linux-x64.tar.gz
-sudo mv beejs /usr/local/bin/
+curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz
+tar -xzf bee-linux-x64.tar.gz
+sudo mv bee /usr/local/bin/
 
 # Option 2: Using npm
 npm install -g @beejs/runtime
@@ -71,7 +71,7 @@ npm install -g @beejs/runtime
 1. Open Settings (`Ctrl+,`)
 2. Search for "Beejs Runtime"
 3. Configure settings:
-   - `beejs.runtimePath`: Path to Beejs executable (default: `beejs`)
+   - `beejs.runtimePath`: Path to Beejs executable (default: `bee`)
    - `beejs.debugPort`: Debug port (default: `9229`)
    - `beejs.enableTypeChecking`: Enable TypeScript type checking (default: `true`)
    - `beejs.maxMemory`: Maximum memory allocation (default: `512m`)
@@ -106,7 +106,7 @@ Create `.vscode/settings.json`:
 
 ```json
 {
-  "beejs.runtimePath": "/usr/local/bin/beejs",
+  "beejs.runtimePath": "/usr/local/bin/bee",
   "beejs.debugPort": 9229,
   "beejs.enableTypeChecking": true,
   "beejs.maxMemory": "512m"
@@ -125,7 +125,7 @@ Create `.vscode/launch.json`:
       "request": "launch",
       "name": "Debug Current File",
       "program": "${file}",
-      "runtimeExecutable": "beejs"
+      "runtimeExecutable": "bee"
     }
   ]
 }
@@ -222,7 +222,7 @@ npm run compile
 ## Troubleshooting
 
 ### Beejs Not Found
-- Verify Beejs is installed: `beejs --version`
+- Verify Beejs is installed: `bee --version`
 - Check `beejs.runtimePath` setting
 - Try reinstalling Beejs
 

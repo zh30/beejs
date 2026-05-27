@@ -1,8 +1,8 @@
 // Metrics collection for HPA
+use super::super::crd::CustomMetric;
 /// Gathers resource usage metrics from Kubernetes
 use kube::api::ListParams;
 use tracing::{debug, warn};
-use super::super::crd::CustomMetric;
 /// Metrics client for collecting pod and resource metrics
 pub struct MetricsClient {
     /// Kubernetes client
@@ -21,7 +21,10 @@ impl MetricsClient {
         }
     }
     /// Collect pod metrics
-    pub async fn collect_pod_metrics(&self, label_selector: &str) -> Result<PodMetricsSummary, Error> {
+    pub async fn collect_pod_metrics(
+        &self,
+        label_selector: &str,
+    ) -> Result<PodMetricsSummary, Error> {
         let _params: _ = ListParams::default().labels(label_selector);
         // Note: Metrics API requires metrics-server to be installed in cluster
         // This is a simplified implementation that returns empty metrics when unavailable

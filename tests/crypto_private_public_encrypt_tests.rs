@@ -6,7 +6,7 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_crypto_privateEncrypt_exists() {
+fn test_crypto_private_encrypt_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.privateEncrypt");
     assert!(result.is_ok());
@@ -15,7 +15,7 @@ fn test_crypto_privateEncrypt_exists() {
 
 #[test]
 #[serial]
-fn test_crypto_publicDecrypt_exists() {
+fn test_crypto_public_decrypt_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.publicDecrypt");
     assert!(result.is_ok());
@@ -24,7 +24,7 @@ fn test_crypto_publicDecrypt_exists() {
 
 #[test]
 #[serial]
-fn test_privateEncrypt_returns_buffer() {
+fn test_private_encrypt_returns_buffer() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const privateKey = `-----BEGIN PRIVATE KEY-----
@@ -41,7 +41,7 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_publicDecrypt_returns_buffer() {
+fn test_public_decrypt_returns_buffer() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const publicKey = `-----BEGIN PUBLIC KEY-----
@@ -58,7 +58,7 @@ test-public-key-placeholder
 
 #[test]
 #[serial]
-fn test_privateEncrypt_with_encoding() {
+fn test_private_encrypt_with_encoding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const privateKey = `-----BEGIN PRIVATE KEY-----
@@ -78,7 +78,7 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_publicDecrypt_with_encoding() {
+fn test_public_decrypt_with_encoding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const publicKey = `-----BEGIN PUBLIC KEY-----
@@ -95,7 +95,7 @@ test-public-key-placeholder
 
 #[test]
 #[serial]
-fn test_privateEncrypt_with_rsa_padding() {
+fn test_private_encrypt_with_rsa_padding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const privateKey = `-----BEGIN PRIVATE KEY-----
@@ -112,7 +112,7 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_privateEncrypt_invalid_key() {
+fn test_private_encrypt_invalid_key() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         try {
@@ -129,7 +129,7 @@ fn test_privateEncrypt_invalid_key() {
 
 #[test]
 #[serial]
-fn test_publicDecrypt_invalid_key() {
+fn test_public_decrypt_invalid_key() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         try {
@@ -170,7 +170,7 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_privateEncrypt_empty_data() {
+fn test_private_encrypt_empty_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const privateKey = `-----BEGIN PRIVATE KEY-----
@@ -187,7 +187,7 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_publicDecrypt_empty_data() {
+fn test_public_decrypt_empty_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const publicKey = `-----BEGIN PUBLIC KEY-----
@@ -204,7 +204,7 @@ test-public-key-placeholder
 
 #[test]
 #[serial]
-fn test_privateEncrypt_oaep_padding() {
+fn test_private_encrypt_oaep_padding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const privateKey = `-----BEGIN PRIVATE KEY-----
@@ -224,7 +224,7 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_publicDecrypt_oaep_padding() {
+fn test_public_decrypt_oaep_padding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const publicKey = `-----BEGIN PUBLIC KEY-----

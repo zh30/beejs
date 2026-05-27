@@ -24,7 +24,7 @@ echo ""
 
 # 2. 运行 Beejs 基准测试
 echo "📊 运行 Beejs 基准测试..."
-cargo run --release --bin beejs -- --eval 'console.log("Beejs startup test")' > /dev/null 2>&1 || true
+cargo run --release --bin bee -- eval 'console.log("Beejs startup test")' > /dev/null 2>&1 || true
 
 # 3. 生成对比报告
 echo "📝 生成性能对比报告..."

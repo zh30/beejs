@@ -2,14 +2,13 @@
 // 基于机器学习的智能性能优化系统
 // 提供性能预测、自动调优和自适应调度功能
 
-
-use tokio::sync::RwLock as AsyncRwLock;
-use serde::{Deserialize, Serialize};
-use crate::ai::tensor_optimizer::TensorOptimizer;
 use crate::ai::performance_predictor::PerformancePredictor;
+use crate::ai::tensor_optimizer::TensorOptimizer;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::sync::RwLock;
+use tokio::sync::RwLock as AsyncRwLock;
 /// 性能指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -127,7 +126,9 @@ impl AiPerformanceEngine {
     pub fn new(config: AiPerformanceEngineConfig) -> Self {
         Self {
             config: config.clone(),
-            metrics_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
+            metrics_history: Arc::new(RwLock::new(VecDeque::with_capacity(
+                config.prediction_window,
+            ))),
             predictor: Arc::new(Mutex::new(PerformancePredictor::new(config.clone()))),
             tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer::new())),
             prediction_cache: Arc::new(Mutex::new(HashMap::new())),
@@ -149,7 +150,9 @@ impl AiPerformanceEngine {
         }
     }
     /// 预测性能
-    pub async fn predict_performance(&self) -> Result<PerformancePrediction, Box<dyn std::error::Error>> {
+    pub async fn predict_performance(
+        &self,
+    ) -> Result<PerformancePrediction, Box<dyn std::error::Error>> {
         let history: _ = self.metrics_history.read().await;
         if history.len() < 10 {
             return Err("历史数据不足，无法进行预测".into());
@@ -171,7 +174,9 @@ impl AiPerformanceEngine {
         Ok(prediction)
     }
     /// 自动调优
-    pub async fn auto_tune(&self) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
+    pub async fn auto_tune(
+        &self,
+    ) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
         let prediction: _ = self.predict_performance().await?;
         // 根据预测结果生成优化建议
         let mut suggestions = prediction.optimization_suggestions;
@@ -206,8 +211,10 @@ impl AiPerformanceEngine {
         if current.is_empty() || baseline.is_empty() {
             return false;
         }
-        let current_avg_latency: f64 = current.iter().map(|m| m.latency).sum::<f64>() / current.len() as f64;
-        let baseline_avg_latency: f64 = baseline.iter().map(|m| m.latency).sum::<f64>() / baseline.len() as f64;
+        let current_avg_latency: f64 =
+            current.iter().map(|m| m.latency).sum::<f64>() / current.len() as f64;
+        let baseline_avg_latency: f64 =
+            baseline.iter().map(|m| m.latency).sum::<f64>() / baseline.len() as f64;
         // 如果当前延迟比基线高 20%，则认为发生回归
         current_avg_latency > baseline_avg_latency * 1.2
     }
@@ -261,7 +268,8 @@ impl AiPerformanceEngine {
         }
         // 计算平均指标
         let avg_cpu: _ = history.iter().map(|m| m.cpu_usage).sum::<f64>() / history.len() as f64;
-        let avg_memory: _ = history.iter().map(|m| m.memory_usage).sum::<f64>() / history.len() as f64;
+        let avg_memory: _ =
+            history.iter().map(|m| m.memory_usage).sum::<f64>() / history.len() as f64;
         let avg_gc_time: _ = history.iter().map(|m| m.gc_time).sum::<f64>() / history.len() as f64;
         // 基于 CPU 使用率生成建议
         if avg_cpu > 80.0 {
@@ -304,7 +312,10 @@ impl AiPerformanceEngine {
         Ok(suggestions)
     }
     /// 应用优化建议
-    async fn apply_optimizations(&self, suggestions: &[OptimizationSuggestion]) -> Result<(), Box<dyn std::error::Error>> {
+    async fn apply_optimizations(
+        &self,
+        suggestions: &[OptimizationSuggestion],
+    ) -> Result<(), Box<dyn std::error::Error>> {
         for suggestion in suggestions {
             tracing::info!(
                 "应用优化建议: {} = {} (当前: {}, 预期提升: {}%)",
@@ -331,10 +342,10 @@ impl AiPerformanceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
-use std::sync::{Arc, Mutex};
-use tracing::{debug, info, warn, error};
-use std::time::{Duration, Instant};
+    use std::collections::BTreeMap;
+    use std::sync::{Arc, Mutex};
+    use std::time::{Duration, Instant};
+    use tracing::{debug, error, info, warn};
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();

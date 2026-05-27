@@ -1,59 +1,62 @@
-// beejs install command tests
-// v0.3.229 - Test coverage for beejs install command
+// bee install command tests
+// v0.3.229 - Test coverage for bee install command
 
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Get the path to the beejs binary
+/// Get the path to the bee binary
 fn beejs_path() -> PathBuf {
-    PathBuf::from("/Users/henry/code/beejs/target/debug/beejs")
+    PathBuf::from("/Users/henry/code/beejs/target/debug/bee")
 }
 
 #[cfg(test)]
 mod install_command_tests {
     use super::*;
 
-    /// Test 1: beejs install command should be recognized
+    /// Test 1: bee install command should be recognized
     #[test]
     fn test_install_command_exists() {
         let beejs = beejs_path();
-        assert!(beejs.exists(), "beejs binary should exist at {:?}", beejs);
+        assert!(beejs.exists(), "bee binary should exist at {:?}", beejs);
 
         let output = Command::new(&beejs)
             .arg("install")
             .arg("--help")
             .output()
-            .expect("Failed to execute beejs install --help");
+            .expect("Failed to execute bee install --help");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         // Should have successful exit code or show help
         assert!(
-            output.status.success() || stdout.contains("Install dependencies") || stderr.contains("Install dependencies"),
-            "beejs install command should be recognized. stdout: {}, stderr: {}",
-            stdout, stderr
+            output.status.success()
+                || stdout.contains("Install dependencies")
+                || stderr.contains("Install dependencies"),
+            "bee install command should be recognized. stdout: {}, stderr: {}",
+            stdout,
+            stderr
         );
     }
 
-    /// Test 2: beejs install with no package.json should error
+    /// Test 2: bee install with no package.json should error
     #[test]
     fn test_install_no_package_json() {
         let temp_dir = TempDir::new().unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("install")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs install");
+            .expect("Failed to execute bee install");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         assert!(
             !output.status.success(),
-            "beejs install should fail without package.json"
+            "bee install should fail without package.json"
         );
         assert!(
             stderr.contains("package.json not found"),
@@ -62,7 +65,7 @@ mod install_command_tests {
         );
     }
 
-    /// Test 3: beejs install with empty dependencies should succeed
+    /// Test 3: bee install with empty dependencies should succeed
     #[test]
     fn test_install_empty_dependencies() {
         let temp_dir = TempDir::new().unwrap();
@@ -75,18 +78,18 @@ mod install_command_tests {
         let package_json_path = temp_dir.path().join("package.json");
         fs::write(&package_json_path, package_json).unwrap();
 
-        let output = Command::new(&beejs_path())
+        let output = Command::new(beejs_path())
             .arg("install")
             .current_dir(temp_dir.path())
             .output()
-            .expect("Failed to execute beejs install");
+            .expect("Failed to execute bee install");
 
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
 
         assert!(
             output.status.success(),
-            "beejs install with empty dependencies should succeed. stderr: {}",
+            "bee install with empty dependencies should succeed. stderr: {}",
             stderr
         );
         assert!(

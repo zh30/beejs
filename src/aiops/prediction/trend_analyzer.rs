@@ -3,12 +3,12 @@
 // Analyzes time series data to detect trends, calculate trend strength,
 // and predict future values.
 
-use crate::core::data_collector::::{Metric, MetricType};
-use crate::core::error::::{AIOpsError, Result};
+use crate::aiops::core::data_collector::{Metric, MetricType};
+use crate::aiops::core::error::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
 use std::hash::Hash;
+use std::time::Duration;
 
 /// Trend direction
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -96,7 +96,7 @@ pub trait TrendAnalyzer {
     /// Analyze trend in metrics
     async fn analyze_trend(&self, metrics: &[Metric]) -> Result<TrendResult>;
     /// Predict future values
-    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>;
+    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>>;
     /// Detect trend changes
     async fn detect_trend_change(&self, metrics: &[Metric]) -> Result<bool>;
     /// Get trend statistics
@@ -123,9 +123,7 @@ impl LinearTrendAnalyzer {
         }
     }
     /// Calculate linear regression
-    fn calculate_linear_regression(
-        metrics: &[Metric],
-    ) -> Option<(f64, f64, f64)> {
+    fn calculate_linear_regression(metrics: &[Metric]) -> Option<(f64, f64, f64)> {
         if metrics.len() < 2 {
             return None;
         }
@@ -230,7 +228,7 @@ impl LinearTrendAnalyzer {
 impl TrendAnalyzer for LinearTrendAnalyzer {
     async fn analyze_trend(&self, metrics: &[Metric]) -> Result<TrendResult> {
         if metrics.len() < self.config.min_data_points {
-            return Err(AIOpsError::Config("Insufficient data points".to_string());
+            return Err(AIOpsError::Config("Insufficient data points".to_string()));
         }
         let stats: _ = Self::calculate_stats(metrics);
         let time_span: _ = if metrics.len() >= 2 {
@@ -282,15 +280,17 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
             })
         }
     }
-    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64> {
+    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>> {
         if metrics.len() < self.config.min_data_points {
-            return Err(AIOpsError::Config("Insufficient data points".to_string());
+            return Err(AIOpsError::Config("Insufficient data points".to_string()));
         }
         if let Some((slope, intercept, _)) = Self::calculate_linear_regression(metrics) {
             let predictions: _ = Self::predict_values(slope, intercept, metrics.len(), horizon);
             Ok(predictions)
         } else {
-            Err(AIOpsError::Config("Unable to calculate regression".to_string())
+            Err(AIOpsError::Config(
+                "Unable to calculate regression".to_string(),
+            ))
         }
     }
     async fn detect_trend_change(&self, metrics: &[Metric]) -> Result<bool> {
@@ -309,7 +309,8 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
             && first_direction != TrendDirection::Stable
             && second_direction != TrendDirection::Stable;
         // Detect significant change in trend strength
-        let strength_change: _ = (first_result.trend.strength - second_result.trend.strength).abs() > 0.3;
+        let strength_change: _ =
+            (first_result.trend.strength - second_result.trend.strength).abs() > 0.3;
         Ok(direction_changed || strength_change)
     }
     fn get_stats(&self) -> &TrendStats {

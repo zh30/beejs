@@ -1,11 +1,11 @@
 // Python Runtime Integration
 // Provides seamless integration between Beejs and Python
 
-use anyhow::{Result, anyhow};
-use pyo3::::{PyObject, PyResult, Python, types::PyDict};
-use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
+use anyhow::{anyhow, Result};
+use pyo3::types::{PyDict, PyModule};
+use pyo3::{pyfunction, wrap_pyfunction, PyObject, PyResult, Python};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Python GIL (Global Interpreter Lock) manager
 #[derive(Debug)]
@@ -40,16 +40,14 @@ pub trait BeeRuntimeInterface: Send + Sync {
 impl PythonGIL {
     /// Create a new Python GIL manager
     pub fn new() -> Result<Self> {
-        Python::with_gil(|py| {
-            Ok(PythonGIL { _python: py })
-        })
+        Python::with_gil(|py| Ok(PythonGIL { _python: py }))
     }
 }
 impl PythonRuntime {
     /// Create a new Python runtime
     pub fn new(bee_api: Arc<BeeAPI>) -> Result<Self> {
-        let gil: _ = Arc::new(Mutex::new(PythonGIL::new()),?);
-        let context_pool: _ = Arc::new(Mutex::new(Vec::new()),;
+        let gil: _ = Arc::new(PythonGIL::new()?);
+        let context_pool: _ = Arc::new(RwLock::new(Vec::new()));
         Ok(PythonRuntime {
             gil,
             bee_api,
@@ -65,7 +63,11 @@ impl PythonRuntime {
             Python::with_gil(|py| {
                 let globals: _ = PyDict::new(py).into();
                 let locals: _ = PyDict::new(py).into();
-                Ok(PythonContext { py, globals, locals })
+                Ok(PythonContext {
+                    py,
+                    globals,
+                    locals,
+                })
             })
         }
     }
@@ -78,7 +80,11 @@ impl PythonRuntime {
     pub async fn execute_python(&self, code: &str) -> Result<String> {
         let context: _ = self.get_context().await?;
         let result: _ = Python::with_gil(|py| {
-            let result: _ = py.run(code, Some(context.globals.clone()), Some(context.locals.clone());
+            let result: _ = py.run(
+                code,
+                Some(context.globals.clone()),
+                Some(context.locals.clone()),
+            );
             match result {
                 Ok(_) => {
                     // Try to get the last expression value
@@ -122,7 +128,11 @@ impl PythonRuntime {
             let bee_api_obj: _ = pyo3::types::PyModule::from_object(py, bee_module)?;
             context.globals.set_item(py, "bee", bee_api_obj)?;
             // Execute the user code
-            let result: _ = py.run(code, Some(context.globals.clone()), Some(context.locals.clone());
+            let result: _ = py.run(
+                code,
+                Some(context.globals.clone()),
+                Some(context.locals.clone()),
+            );
             match result {
                 Ok(_) => {
                     let value: _ = context.globals.get_item(py, "_");
@@ -160,12 +170,17 @@ fn bee_execute(script: &str) -> PyResult<String> {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    fn bee_api() -> Arc<BeeAPI> {
+        Arc::new(BeeAPI {
+            runtime: Arc::new(MockBeeRuntime),
+        })
+    }
+
     #[tokio::test]
     async fn test_python_basic_execution() {
-        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),
-            runtime: Arc::new(MockBeeRuntime))
-        });
-        let runtime: _ = PythonRuntime::new(bee_api).unwrap();
+        let runtime: _ = PythonRuntime::new(bee_api()).unwrap();
         let result: _ = runtime.execute_python("print('Hello from Python!')").await;
         assert!(result.is_ok());
         let result: _ = runtime.execute_python("2 + 2").await;
@@ -174,12 +189,12 @@ mod tests {
     }
     #[tokio::test]
     async fn test_python_function_call() {
-        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),
-            runtime: Arc::new(MockBeeRuntime))
-        });
-        let runtime: _ = PythonRuntime::new(bee_api).unwrap();
+        let runtime: _ = PythonRuntime::new(bee_api()).unwrap();
         // First define a function
-        runtime.execute_python("def test_func(x, y): return x + y").await.unwrap();
+        runtime
+            .execute_python("def test_func(x, y): return x + y")
+            .await
+            .unwrap();
         let result: _ = runtime
             .call_python_function("__main__", "test_func", &["3".to_string(), "4".to_string()])
             .await;
@@ -187,10 +202,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_python_bee_api() {
-        let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),
-            runtime: Arc::new(MockBeeRuntime))
-        });
-        let runtime: _ = PythonRuntime::new(bee_api).unwrap();
+        let runtime: _ = PythonRuntime::new(bee_api()).unwrap();
         let code: _ = r#"
 bee.get_variable("test_var")
 "#;

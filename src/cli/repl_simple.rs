@@ -18,7 +18,7 @@ pub struct SimpleReplConfig {
 impl Default for SimpleReplConfig {
     fn default() -> Self {
         Self {
-            prompt: "beejs> ".to_string(),
+            prompt: "bee> ".to_string(),
             history_size: 100,
         }
     }

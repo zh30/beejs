@@ -3,11 +3,6 @@
 //
 // v0.3.263: TDD tests for enhanced test command filtering
 
-use std::path::PathBuf;
-use tempfile::TempDir;
-use std::fs::File;
-use std::io::Write;
-
 /// Test that test-name-pattern filter works correctly
 #[test]
 fn test_test_name_pattern_filter() {

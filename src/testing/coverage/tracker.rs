@@ -1,7 +1,8 @@
 // Coverage Tracker
 // Tracks code coverage during test execution
 
-use std::collections::{BTreeMap, HashMap};
+use super::CoverageStats;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// Coverage tracking configuration
@@ -65,7 +66,7 @@ impl LineCoverage {
 #[derive(Debug, Clone, Default)]
 pub struct BranchCoverage {
     pub total_branches: HashMap<usize, usize>, // line_number -> branch_count
-    pub covered_branches: HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32>>, // (line_number, branch_index) -> hit_count
+    pub covered_branches: HashMap<(usize, usize), u32>, // (line_number, branch_index) -> hit_count
 }
 impl BranchCoverage {
     pub fn new() -> Self {
@@ -80,7 +81,10 @@ impl BranchCoverage {
     }
     /// Mark a branch as covered
     pub fn mark_covered(&mut self, line_number: usize, branch_index: usize) {
-        *self.covered_branches.entry((line_number, branch_index)).or_insert(0) += 1;
+        *self
+            .covered_branches
+            .entry((line_number, branch_index))
+            .or_insert(0) += 1;
     }
     /// Get coverage percentage
     pub fn coverage_percentage(&self) -> f64 {
@@ -118,11 +122,16 @@ impl FunctionCoverage {
     }
     /// Register a function
     pub fn register_function(&mut self, function_name: String, line_number: usize) {
-        self.total_functions.entry(function_name.clone()).or_insert(line_number);
+        self.total_functions
+            .entry(function_name.clone())
+            .or_insert(line_number);
     }
     /// Mark a function as covered
     pub fn mark_covered(&mut self, function_name: &str) {
-        *self.covered_functions.entry(function_name.to_string()).or_insert(0) += 1;
+        *self
+            .covered_functions
+            .entry(function_name.to_string())
+            .or_insert(0) += 1;
     }
     /// Get coverage percentage
     pub fn coverage_percentage(&self) -> f64 {
@@ -188,7 +197,7 @@ impl CoverageTracker {
     pub fn new(config: CoverageTrackingConfig) -> Self {
         CoverageTracker {
             config,
-            files: Arc::new(Mutex::new(HashMap::new()))
+            files: Arc::new(Mutex::new(HashMap::new())),
         }
     }
     /// Create a new coverage tracker with default config
@@ -199,7 +208,7 @@ impl CoverageTracker {
     pub fn register_file(&self, file_path: String) {
         let mut files = self.files.lock().unwrap();
         if !files.contains_key(&file_path) {
-            files.insert(file_path, PerFileCoverage::new(file_path));
+            files.insert(file_path.clone(), PerFileCoverage::new(file_path));
         }
     }
     /// Mark a line as covered
@@ -209,6 +218,9 @@ impl CoverageTracker {
         }
         let mut files = self.files.lock().unwrap();
         if let Some(file_coverage) = files.get_mut(file_path) {
+            if line_number > file_coverage.line_coverage.total_lines {
+                file_coverage.line_coverage.total_lines = line_number;
+            }
             file_coverage.line_coverage.mark_covered(line_number);
         }
     }
@@ -219,7 +231,9 @@ impl CoverageTracker {
         }
         let mut files = self.files.lock().unwrap();
         if let Some(file_coverage) = files.get_mut(file_path) {
-            file_coverage.branch_coverage.add_branch(line_number, branch_index);
+            file_coverage
+                .branch_coverage
+                .add_branch(line_number, branch_index);
         }
     }
     /// Mark a branch as covered
@@ -229,7 +243,9 @@ impl CoverageTracker {
         }
         let mut files = self.files.lock().unwrap();
         if let Some(file_coverage) = files.get_mut(file_path) {
-            file_coverage.branch_coverage.mark_covered(line_number, branch_index);
+            file_coverage
+                .branch_coverage
+                .mark_covered(line_number, branch_index);
         }
     }
     /// Register a function
@@ -239,7 +255,9 @@ impl CoverageTracker {
         }
         let mut files = self.files.lock().unwrap();
         if let Some(file_coverage) = files.get_mut(file_path) {
-            file_coverage.function_coverage.register_function(function_name, line_number);
+            file_coverage
+                .function_coverage
+                .register_function(function_name, line_number);
         }
     }
     /// Mark a function as covered
@@ -327,9 +345,18 @@ static GLOBAL_TRACKER: once_cell::sync::OnceCell<Arc<CoverageTracker>> =
     once_cell::sync::OnceCell::new();
 /// Initialize global coverage tracker
 pub fn init_global_tracker(config: CoverageTrackingConfig) -> Arc<CoverageTracker> {
-    let tracker: _ = Arc::new(Mutex::new(CoverageTracker::new(config)),;
-    GLOBAL_TRACKER.set(tracker.clone()).ok();
-    tracker
+    let tracker = Arc::new(CoverageTracker::new(config));
+    match GLOBAL_TRACKER.set(tracker.clone()) {
+        Ok(()) => tracker,
+        Err(_) => {
+            let existing = GLOBAL_TRACKER
+                .get()
+                .expect("global tracker should be initialized")
+                .clone();
+            existing.clear();
+            existing
+        }
+    }
 }
 /// Get global coverage tracker
 pub fn get_global_tracker() -> Option<Arc<CoverageTracker>> {
@@ -337,6 +364,8 @@ pub fn get_global_tracker() -> Option<Arc<CoverageTracker>> {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_line_coverage() {
         let mut line_coverage = LineCoverage::new(10);
@@ -362,7 +391,10 @@ mod tests {
         function_coverage.register_function("another_func".to_string(), 20);
         function_coverage.mark_covered("test_func");
         assert_eq!(function_coverage.coverage_percentage(), 50.0);
-        assert_eq!(function_coverage.uncovered_functions(), vec!["another_func".to_string()]);
+        assert_eq!(
+            function_coverage.uncovered_functions(),
+            vec!["another_func".to_string()]
+        );
     }
     #[test]
     fn test_coverage_tracker() {

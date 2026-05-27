@@ -142,7 +142,7 @@ function main() {
  * 调试器使用指南
  *
  * 1. 启动调试模式:
- *    beejs debug examples/debugging/breakpoint_debug.js
+ *    bee debug examples/debugging/breakpoint_debug.js
  *
  * 2. 断点类型:
  *

@@ -18,7 +18,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "AbortController constructor should be available");
+        assert!(
+            result.is_ok(),
+            "AbortController constructor should be available"
+        );
         assert_eq!(result.unwrap().trim(), "function");
     }
 
@@ -77,7 +80,10 @@ mod tests {
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "AbortSignal.aborted should be false initially");
+        assert!(
+            result.is_ok(),
+            "AbortSignal.aborted should be false initially"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 

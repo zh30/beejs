@@ -1,6 +1,11 @@
 # Beejs API 文档
 
-欢迎使用 Beejs API 文档！这里提供了 Beejs 运行时所有公共接口的详细说明。
+> 当前状态：此文件保留为历史 API 设计草案，不代表 Beejs v0.1 当前公开用户合同。
+> v0.1 的公开入口以 `Cargo.toml`、`src/main.rs`、`src/lib.rs`、`docs/CLI_USAGE_GUIDE.md`
+> 和可执行测试为准。下面提到的 JS `Runtime` 构造器、覆盖率、benchmark、heap/profile
+> 等接口需要重新验证或重新设计后才能作为公开 API 发布。
+
+欢迎使用 Beejs API 文档！这里记录历史阶段的 API 设计意图。
 
 ## 📚 目录
 
@@ -249,7 +254,7 @@ test("快照测试", () => {
 运行快照测试:
 
 ```bash
-beejs test --update-snapshot  # 更新快照
+bee test --update-snapshot  # 更新快照
 ```
 
 #### 性能测试
@@ -263,10 +268,11 @@ describe("性能测试", () => {
 });
 ```
 
-运行性能测试:
+历史草案中的性能测试命令:
 
 ```bash
-beejs test --benchmark
+# 当前 v0.1 CLI 尚未提供专用 benchmark 子命令。
+# 请使用外部 benchmark harness 或脚本内 console.time()。
 ```
 
 #### 并行测试
@@ -286,7 +292,7 @@ describe("并行测试", () => {
 启用并行执行:
 
 ```bash
-beejs test --parallel
+bee test --parallel
 ```
 
 ### 测试选项
@@ -314,7 +320,7 @@ module.exports = {
 #### 启动调试
 
 ```bash
-beejs debug script.js
+bee debug script.js
 ```
 
 #### 断点类型
@@ -400,7 +406,7 @@ async function asyncFunction() {
 
 ```javascript
 // 启动时启用远程调试
-beejs debug --remote --port 9229 script.js
+bee debug --remote --port 9229 script.js
 ```
 
 在 Chrome 中打开: `chrome://inspect`
@@ -584,9 +590,9 @@ function benchmark(name, fn, iterations = 10000) {
 ### 命令行选项
 
 ```bash
-beejs run --heap 512MB script.js
-beejs test --parallel --coverage
-beejs debug --break-on-exception script.js
+bee run script.js
+bee test examples/testing/math.test.js --parallel
+bee debug script.js
 ```
 
 ## 错误处理

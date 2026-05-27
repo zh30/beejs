@@ -110,12 +110,7 @@ pub struct FluxHelmRelease {
 }
 impl FluxHelmRelease {
     /// Create a new Flux Helm release
-    pub fn new(
-        name: String,
-        namespace: String,
-        chart_name: String,
-        chart_repo: String,
-    ) -> Self {
+    pub fn new(name: String, namespace: String, chart_name: String, chart_repo: String) -> Self {
         Self {
             name,
             namespace,
@@ -197,7 +192,9 @@ impl GitOpsManager {
     }
     /// Get Flux Helm release by name
     pub fn get_helm_release(&self, name: &str) -> Option<&FluxHelmRelease> {
-        self.helm_releases.iter().find(|release| release.name == name)
+        self.helm_releases
+            .iter()
+            .find(|release| release.name == name)
     }
     /// Sync ArgoCD application
     pub fn sync_application(&self, name: &str) -> Result<GitOpsSyncStatus, Error> {
@@ -254,10 +251,7 @@ impl GitOpsManager {
             for app in &self.applications {
                 statuses.push(GitOpsSyncStatus {
                     success: true,
-                    message: format!(
-                        "Application '{}' is synced",
-                        app.name
-                    ),
+                    message: format!("Application '{}' is synced", app.name),
                     name: Some(app.name.clone()),
                     release_name: None,
                 });
@@ -266,10 +260,7 @@ impl GitOpsManager {
             for release in &self.helm_releases {
                 statuses.push(GitOpsSyncStatus {
                     success: true,
-                    message: format!(
-                        "Helm release '{}' is synced",
-                        release.name
-                    ),
+                    message: format!("Helm release '{}' is synced", release.name),
                     name: None,
                     release_name: Some(release.name.clone()),
                 });
@@ -286,18 +277,11 @@ impl GitOpsManager {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Invalid GitOps tool: expected {expected}, got {actual}")]
-    InvalidTool {
-        expected: String,
-        actual: String,
-    },
+    InvalidTool { expected: String, actual: String },
     #[error("Application not found: {name}")]
-    ApplicationNotFound {
-        name: String,
-    },
+    ApplicationNotFound { name: String },
     #[error("Helm release not found: {name}")]
-    HelmReleaseNotFound {
-        name: String,
-    },
+    HelmReleaseNotFound { name: String },
     #[error("GitOps error: {0}")]
     GitOpsError(String),
     #[error("Configuration error: {0}")]
@@ -306,9 +290,8 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
 
-
     use super::*;
-use std::path::Path;
+    use std::path::Path;
     #[test]
     fn test_argocd_application_creation() {
         let app: _ = ArgoCDApplication::new(
@@ -320,7 +303,10 @@ use std::path::Path;
         );
         assert_eq!(app.name, "beejs-app");
         assert_eq!(app.environment, "production");
-        assert_eq!(app.repo_url, "https://github.com/example/beejs-manifests.git");
+        assert_eq!(
+            app.repo_url,
+            "https://github.com/example/beejs-manifests.git"
+        );
         assert_eq!(app.target_revision, "main");
         assert_eq!(app.path, "/manifests");
         assert!(app.sync_policy.automatic);

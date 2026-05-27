@@ -1,309 +1,241 @@
-# Beejs 🚀
+# Beejs
 
-[![Performance](https://img.shields.io/badge/Performance-1000x%2B-brightgreen)](#性能对比)
-[![Test Coverage](https://img.shields.io/badge/Test%20Coverage-95%25-success)](#测试套件)
-[![Stage](https://img.shields.io/badge/Stage-93-green)](#项目阶段)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](#许可证)
+[![Release](https://img.shields.io/badge/release-v0.1.0-blue)](#current-status)
+[![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-**Beejs** 是一个极致高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 构建，专为 AI 时代提供极速的脚本执行能力。
+Beejs is a JavaScript/TypeScript runtime built with Rust and V8. The v0.1 release focuses on a predictable CLI for running scripts, evaluating snippets, using a REPL, executing TypeScript through the built-in transpilation path, and experimenting with an evolving Node.js and Web API compatibility layer.
 
-## 🎯 核心优势
+This repository also contains historical stage work, experiments, benchmarks, reports, and feature-gated modules. For current behavior, use `Cargo.toml`, `src/lib.rs`, `src/main.rs`, and executable tests as the source of truth.
 
-- **🚀 极致性能**: 比 Bun 快 **100-1000x**，AI 工作负载优化
-- **🔧 Rust + V8**: 系统级性能 + 引擎深度优化
-- **🧠 AI 优化**: 专为 AI 推理、批处理、张量操作优化
-- **🧪 完整测试框架**: 并行测试、快照测试、性能基准、覆盖率分析
-- **🔍 高级调试器**: 条件断点、异步栈追踪、远程调试
-- **📦 智能包管理**: npm/yarn/pnpm 兼容，依赖解析优化
-- **⚡ 零拷贝 I/O**: 网络和文件系统极致优化
-- **📊 智能监控**: 微秒级性能追踪，实时热点分析
+## Why Beejs
 
-## 📊 性能对比
+- Rust-based runtime architecture with explicit module boundaries.
+- V8-backed JavaScript execution.
+- A focused CLI for scripts, eval, REPL sessions, tests, simple bundling, serving, project setup, and lightweight package workflows.
+- Built-in TypeScript transpilation before execution for `.ts` and `.tsx` files.
+- Actively developed Node.js and Web API compatibility surfaces.
+- Testable examples and transparent release scope for contributors who want to work on runtime internals.
 
-| 测试项目 | Bun | Node.js | **Beejs** | 性能提升 |
-|----------|-----|---------|-----------|----------|
-| 简单算术 | 97K | 90K | **100M** | 🚀 比 Bun 快 **102,404%** |
-| 字符串操作 | 19K | 15K | **33M** | 🚀 比 Bun 快 **170,728%** |
-| 数组操作 | 9K | 7K | **2.7M** | 🚀 比 Bun 快 **28,641%** |
-| 对象操作 | 1.4K | 650 | **20M** | 🚀 比 Bun 快 **1,375,510%** |
+## Current Status
 
-## 🚀 快速开始
+Beejs v0.1.0 is a core runtime release. It is suitable for experimenting with the runtime, learning how the internals fit together, running repository examples, trying scripting workflows, and contributing to compatibility work.
 
-### 安装
+It is not yet positioned as a complete replacement for established production JavaScript runtimes. Some modules in the repository are retained for staged development, are behind Cargo features, or are not part of the default public runtime surface.
 
-#### 一键安装 (推荐)
+## Installation
+
+The current checkout can be built from source:
+
+```bash
+git clone https://github.com/zh30/beejs.git
+cd beejs
+cargo build --release
+./target/release/bee --version
+```
+
+When public GitHub Release artifacts are available, the release automation is
+configured to produce prebuilt archives for:
+
+- macOS x86_64
+- macOS arm64
+- Linux x86_64
+
+After those artifacts are published and `install.sh` is available from the
+default branch, install the latest published release with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
 ```
 
-可选参数:
+Install a specific release or choose a custom install directory:
 
 ```bash
-# 指定版本
-BEEJS_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
-
-# 指定安装目录
-BEEJS_INSTALL_DIR=~/.beejs/bin curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | BEEJS_VERSION=v0.1.0 sh
+curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | BEEJS_INSTALL_DIR="$HOME/.local/bin" sh
 ```
 
-#### 从源码构建
+## Quick Start
+
+Evaluate JavaScript:
 
 ```bash
-# 克隆仓库
-git clone https://github.com/zh30/beejs.git
-cd beejs
-
-# 构建 (需要 Rust 1.70+)
-cargo build --release
-
-# 运行
-./beejs --version
+bee eval "1 + 1"
 ```
 
-### 运行示例
+Run a JavaScript file:
 
 ```bash
-# 执行简单脚本
-./beejs run examples/basics/hello_world.js
-
-# 运行基准测试
-./beejs run examples/performance/micro_benchmarks.js
-
-# 运行测试
-./beejs test examples/testing/parallel_tests.test.js
-
-# 启动调试器
-./beejs debug examples/debugging/breakpoint_debug.js
-
-# 交互式 REPL
-./beejs repl
-
-# 交互式 REPL (TypeScript 模式)
-./beejs repl --typescript
+bee run examples/basics/hello_world.js
 ```
 
-### 分类示例
+Run a TypeScript file:
 
 ```bash
-# 基础示例
-./beejs run examples/basics/async_await.js
-./beejs run examples/basics/module_system.js
-
-# 测试示例
-./beejs test examples/testing/snapshot_test.test.js
-./beejs test examples/testing/perf_test.test.js
-
-# 性能示例
-./beejs run examples/performance/micro_benchmarks.js
-
-# AI 工作负载
-./beejs run examples/ai/ai_workload_demo.js
+bee run examples/basics/typescript_demo.ts
 ```
 
-### 示例代码
-
-```javascript
-// hello.js
-console.log("Hello from Beejs!");
-
-// 性能测试
-let sum = 0;
-for (let i = 0; i < 1000000; i++) {
-    sum += i;
-}
-console.log(`Sum: ${sum}`);
-
-// 预期输出: Sum: 499999500000
-// 性能: 100M+ ops/sec
-```
-
-## 📁 项目结构
-
-```
-beejs/
-├── src/                    # 源代码
-│   ├── lib.rs             # 主库
-│   ├── runtime_lite.rs    # 轻量级运行时
-│   ├── smart_cache.rs     # 智能缓存
-│   ├── monitor/           # 性能监控
-│   ├── debugger/          # 调试器
-│   └── ...                # 其他模块
-├── tests/                 # 测试套件 (70 测试)
-├── examples/              # 示例代码
-├── docs/                  # 文档
-├── beejs                  # 可执行文件
-├── BEEJS_PERFORMANCE_FINAL_REPORT.md  # 性能报告
-└── PROGRESS.md            # 项目进度
-```
-
-## 🎮 功能特性
-
-### ✅ 已实现 (Stage 93)
-
-#### 核心运行时
-- [x] **极致性能执行引擎** - 基于 V8 + Rust JIT 深度优化
-- [x] **TypeScript 支持** - 原生编译和执行 (开发中)
-- [x] **零拷贝 I/O** - 网络和文件系统极致优化
-- [x] **智能缓存系统** - LRU + 自适应预取 + 多级缓存
-- [x] **并发执行** - 多线程并行处理，Rayon 驱动
-
-#### Stage 93 全新功能
-- [x] **完整测试框架** - 并行执行、快照测试、性能基准、覆盖率分析
-- [x] **高级调试器** - 条件断点、异步栈追踪、远程调试、源码映射
-- [x] **智能包管理** - npm/yarn/pnpm 兼容、版本锁定、依赖解析
-- [x] **AI 优化特性** - 批处理、张量操作、推理加速
-- [x] **智能监控** - 微秒级追踪、热点分析、性能回归检测
-
-#### 性能优化
-- [x] **JIT 编译器优化** - 动态编译阈值调整、内联策略
-- [x] **内存管理优化** - 自适应 GC、零拷贝、分配器优化
-- [x] **网络极致优化** - 智能预取、拓扑感知、批量 I/O
-- [x] **智能代码优化** - AI 驱动的代码分析和优化建议
-- [x] **模块系统** - 完整的模块解析和加载
-- [x] **进程池** - 复用系统实现 10-50x 性能提升
-- [x] **测试套件** - 70 个测试，90% 通过率
-- [x] **AI 代码生成器** - Stage 81: 集成 AI 辅助开发
-- [x] **团队协作优化** - Stage 82: 智能代码审查和效率分析
-- [x] **企业级架构** - Stage 83: Kubernetes、多租户、监控支持 (模块就绪)
-
-### 🔄 开发中
-
-- [ ] **V8 API 兼容性** - 完善 rusty_v8 0.22 兼容性
-- [ ] **企业级功能集成** - 完善 K8s Operator 和多租户隔离
-- [ ] **CI/CD 集成** - 自动化测试和部署
-- [ ] **Grafana 仪表板** - 可视化性能监控
-- [ ] **更多基准测试** - 扩展测试覆盖
-
-## 🧪 测试
+Start the REPL:
 
 ```bash
-# 运行所有测试
-cargo test
-
-# 运行特定测试
-cargo test runtime_lite
-
-# 查看测试覆盖率
-cargo install cargo-tarpaulin
-cargo tarpaulin --out html
+bee repl
 ```
 
-## 📈 基准测试
+Run a test file:
 
 ```bash
-# 运行综合基准测试
-./beejs comprehensive_benchmark.js
-
-# 查看性能报告
-cat benchmark_reports/*.json
+bee test examples/testing/math.test.js
 ```
 
-## 📖 文档
-
-- [最终性能报告](BEEJS_PERFORMANCE_FINAL_REPORT.md) - 完整的性能分析
-- [项目进度](PROGRESS.md) - Stage 1-93 开发历程
-- [快速开始指南](docs/guides/QUICK_START.md) - 5 分钟上手 Beejs
-- [API 文档](docs/api/README.md) - 完整的 API 参考
-- [使用指南](CLI_USAGE_GUIDE.md) - CLI 命令参考
-- [示例代码](examples/) - 按分类整理的示例
-
-## 🏆 项目成就
-
-### Stage 93 成果 (最新)
-
-#### Phase 1-3: 性能极致优化
-- ✅ **JIT 编译器智能增强** - 动态编译阈值调整，内联策略优化
-- ✅ **内存优化** - 零拷贝技术，自适应 GC，分配器优化，内存压缩
-- ✅ **网络极致优化** - 智能预取，拓扑感知，零拷贝增强，批量 I/O
-- ✅ **智能代码补全** - AI 驱动的代码分析和补全
-- ✅ **代码优化建议** - 自动代码优化建议系统
-
-#### Phase 3.1-3.3: 生态完善
-- ✅ **包管理器增强** - npm/yarn/pnpm 兼容，依赖解析优化，版本锁定
-- ✅ **调试器增强** - 条件断点，异步栈追踪，性能分析，远程调试
-- ✅ **测试框架增强** - 并行执行，快照测试，性能基准，覆盖率分析
-
-### 历史成就 (Stage 60-92)
-
-- ✅ AI 代码生成器集成 (Stage 81)
-- ✅ 团队协作优化系统 (Stage 82)
-- ✅ 企业级架构基础 (Stage 83)
-- ✅ 企业级安全与合规 (Stage 84)
-- ✅ AI 驱动运维 (Stage 85)
-- ✅ 智能缓存系统实现 (Stage 60)
-- ✅ 性能监控系统完善
-- ✅ 调试器功能集成
-- ✅ 测试套件建设
-- ✅ 模块系统开发
-
-### 性能指标
-
-- **简单算术**: 100,000,000 ops/sec
-- **字符串操作**: 33,333,333 ops/sec
-- **对象操作**: 20,000,000 ops/sec
-- **大规模计算**: 142,857,143 ops/sec
-
-## 🤝 贡献
-
-我们欢迎社区贡献！
-
-### 贡献指南
-
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
-4. 推送分支 (`git push origin feature/amazing-feature`)
-5. 提交 Pull Request
-
-### 开发设置
+When working from a source checkout before installation, use the release binary path:
 
 ```bash
-# 安装 Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+./target/release/bee eval "1 + 1"
+./target/release/bee run examples/basics/hello_world.js
+./target/release/bee test examples/testing/math.test.js
+```
 
-# 安装依赖
-cargo fetch
+## CLI Overview
 
-# 构建
+```bash
+bee --version
+bee --help
+bee run <file> [args...]
+bee eval <code>
+bee repl
+bee test [file]
+bee bundle <entry> --outfile dist/bundle.js
+bee debug <file>
+bee serve --host localhost --port 3000
+bee init [name]
+bee create js my-app
+bee create ts my-ts-app
+bee add <package>
+bee remove <package>
+bee install
+bee prune
+bee bunx <package> [args...]
+bee upgrade [package]
+```
+
+The global `--verbose` flag belongs before the subcommand:
+
+```bash
+bee --verbose run examples/basics/hello_world.js
+```
+
+See the [CLI usage guide](docs/CLI_USAGE_GUIDE.md) for command options and additional examples.
+
+## TypeScript
+
+Beejs reads `.ts` and `.tsx` files through the TypeScript module before passing JavaScript to the runtime:
+
+```bash
+bee run examples/basics/typescript_demo.ts
+```
+
+The TypeScript path is intended for direct runtime execution. Compatibility and diagnostics are evolving with the rest of the project.
+
+## Testing
+
+Beejs includes a Jest-style test framework under `src/testing/` and exposes it through the CLI:
+
+```bash
+bee test
+bee test examples/testing/math.test.js
+bee test examples/testing/math.test.js --test-name-pattern "adds"
+bee test examples/testing/math.test.js --bail
+bee test examples/testing/math.test.js --timeout 10
+```
+
+Repository-level Rust tests live under `tests/`:
+
+```bash
+cargo test --lib
+cargo test --test beejs_core_tests
+cargo test --test cli_release_tests
+```
+
+## What Works Today
+
+The default build currently includes these major areas:
+
+- `src/main.rs`: the active Cargo binary entry for the `bee` CLI.
+- `src/runtime_minimal.rs`: the V8 execution runtime used by the CLI.
+- `src/typescript/`: TypeScript transpilation used for `.ts` and `.tsx` execution.
+- `src/nodejs_core/`: Node.js compatibility work, including modules such as `fs`, `crypto`, `events`, `buffer`, `path`, `os`, `url`, `dns`, `process`, timers, streams, HTTP, networking, readline, and CommonJS `require`.
+- `src/web_api/`: Web API compatibility work, including fetch, WebSocket, Web Crypto, URL, events, FormData, Abort, Blob, timers, encoding, performance, streams, compression, structured clone, workers, service workers, broadcast channels, and message channels.
+- `src/testing/`: the CLI test framework and V8 test execution support.
+- `src/package_manager.rs`: lightweight package management commands.
+- `src/watcher.rs` and `src/watcher_websocket.rs`: watch and hot reload support.
+
+Feature-gated and staged modules such as AI, observability, enterprise, cloud-native, and multi-language work are not default public commitments until their feature builds and behavior are verified.
+
+## Roadmap
+
+- Improve runtime stability and isolate lifecycle behavior.
+- Broaden Node.js and Web API compatibility with executable tests.
+- Refine the TypeScript execution path and diagnostics.
+- Improve package management workflows and project setup commands.
+- Expand documentation and examples around supported behavior.
+- Graduate optional feature modules only after build and behavior verification.
+
+## Development
+
+Common build and quality commands:
+
+```bash
 cargo build
-
-# 测试
-cargo test
-
-# 格式化
-cargo fmt
-
-# Lint
-cargo clippy
+cargo build --release
+cargo test --lib
+cargo test --test beejs_core_tests
+cargo test --test cli_release_tests
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
 ```
 
-## 📜 许可证
+The Makefile also provides common shortcuts:
 
-本项目基于 [MIT 许可证](LICENSE) 开源。
+```bash
+make build
+make test
+make fmt
+make lint
+```
 
-## 🙏 致谢
+When changing feature-gated modules, also run the relevant feature check, for example:
 
-- [V8](https://v8.dev/) - Google 的高性能 JavaScript 引擎
-- [Rust](https://www.rust-lang.org/) - 系统级编程语言
-- [rusty_v8](https://github.com/denoland/rusty_v8) - V8 Rust 绑定
-- [Bun](https://bun.sh/) - 激励我们追求极致性能
+```bash
+cargo check --features observability
+cargo check --features enterprise
+cargo check --features ai
+```
 
-## 📞 联系我们
+If a historical feature is not currently buildable, call that out in the pull request rather than documenting it as a default capability.
 
-- 项目维护者: Henry Zhang
-- 助手: Claude Code Assistant
-- 邮箱: [your-email@example.com](mailto:your-email@example.com)
+## Documentation And Examples
 
----
+- [CLI usage guide](docs/CLI_USAGE_GUIDE.md)
+- [Examples](examples/)
+- [License](LICENSE)
 
-<div align="center">
+Historical `docs/STAGE_*`, `docs/IMPLEMENTATION_PLAN_STAGE_*`, and benchmark reports are useful for design context, but they may describe goals or past stage results rather than the current v0.1 default build.
 
-**🚀 Beejs - 超越 Bun 的高性能 JavaScript/TypeScript 运行时**
+## Contributing
 
-[性能报告](BEEJS_PERFORMANCE_FINAL_REPORT.md) •
-[文档](docs/) •
-[问题](https://github.com/zh30/beejs/issues) •
-[讨论](https://github.com/zh30/beejs/discussions)
+Contributions should be scoped to the current runtime surface unless a change intentionally works on a feature-gated module. Before opening a pull request, include:
 
-</div>
+- The change scope and affected modules.
+- Commands or tests that were run.
+- Any behavior that was not verified.
+- Notes for feature-gated work if the relevant feature does not currently compile.
+
+For CLI behavior, runtime APIs, Node.js compatibility, Web API compatibility, TypeScript execution, or test framework changes, prefer executable tests over example-only changes.
+
+## Security And Reporting
+
+For security-sensitive issues, avoid publishing exploit details before maintainers have had time to triage. Use the repository's private vulnerability reporting channel if available, or open a minimal issue asking for a secure contact path.
+
+## License
+
+Beejs is released under the [MIT License](LICENSE).

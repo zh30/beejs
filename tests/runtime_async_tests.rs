@@ -3,9 +3,9 @@
 
 #[cfg(test)]
 mod async_runtime_tests {
-    use std::sync::{Arc, Mutex};
+
+    use beejs::runtime_minimal::MinimalRuntime;
     use std::time::Duration;
-    use crate::runtime_minimal::MinimalRuntime;
 
     #[test]
     #[serial_test::serial]
@@ -13,17 +13,19 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试异步执行
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             let executed = false;
             setTimeout(() => {
                 executed = true;
             }, 10);
             executed;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
-        // 异步模式下，代码应该立即执行（不等待回调）
-        assert_eq!(result.unwrap().trim(), "false");
+        // Short ref'ed timers are drained so CLI eval observes timer-backed async work.
+        assert_eq!(result.unwrap().trim(), "true");
     }
 
     #[test]
@@ -32,17 +34,18 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试真实的 HTTP fetch
-        let result = runtime.execute_code(r#"
-            fetch('https://httpbin.org/json')
-                .then(response => response.json())
-                .then(data => data.slideshow.title)
-                .catch(error => 'Error: ' + error.message);
-        "#);
+        let result = runtime.execute_code(
+            r#"
+            const response = fetch('https://httpbin.org/json');
+            typeof response === 'object' &&
+            typeof response.json === 'function' &&
+            typeof response.status === 'number';
+        "#,
+        );
 
         assert!(result.is_ok());
-        // 应该返回 Promise 对象，而不是立即完成
         let output = result.unwrap();
-        assert!(output.contains("Promise") || output.contains("then"));
+        assert_eq!(output.trim(), "true");
     }
 
     #[test]
@@ -51,10 +54,12 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试 WebSocket 构造函数
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const ws = new WebSocket('ws://echo.websocket.org/');
             ws.readyState;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         // WebSocket 应该被支持
@@ -68,12 +73,14 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试 async/await 语法
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             async function test() {
                 return 'Hello from async';
             }
             test();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let output = result.unwrap();
@@ -86,13 +93,15 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试 Promise.all
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             Promise.all([
                 Promise.resolve(1),
                 Promise.resolve(2),
                 Promise.resolve(3)
             ]).then(values => values.join(','));
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let output = result.unwrap();
@@ -105,20 +114,24 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试带选项的 fetch
-        let result = runtime.execute_code(r#"
-            fetch('https://httpbin.org/post', {
+        let result = runtime.execute_code(
+            r#"
+            const response = fetch('https://httpbin.org/post', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({test: true})
-            }).then(response => response.status);
-        "#);
+            });
+            typeof response === 'object' &&
+            typeof response.status === 'number' &&
+            response.ok === true;
+        "#,
+        );
 
         assert!(result.is_ok());
-        // 应该返回 Promise
         let output = result.unwrap();
-        assert!(output.contains("Promise"));
+        assert_eq!(output.trim(), "true");
     }
 
     #[test]
@@ -127,17 +140,19 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试多个定时器
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             let count = 0;
             setTimeout(() => { count += 1; }, 5);
             setTimeout(() => { count += 1; }, 5);
             setTimeout(() => { count += 1; }, 5);
             count;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
-        // 立即执行，count 应该为 0（回调还未执行）
-        assert_eq!(result.unwrap().trim(), "0");
+        // Short ref'ed timers are drained before returning.
+        assert_eq!(result.unwrap().trim(), "3");
     }
 
     #[test]
@@ -146,13 +161,15 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试清除定时器
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const timerId = setTimeout(() => {
                 console.log('This should not execute');
             }, 100);
             clearTimeout(timerId);
             'Timer cleared';
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap().trim(), "Timer cleared");
@@ -164,7 +181,8 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试 WebSocket 事件处理
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const ws = new WebSocket('ws://echo.websocket.org/');
             let events = [];
             ws.onopen = () => events.push('open');
@@ -172,7 +190,8 @@ mod async_runtime_tests {
             ws.onerror = (error) => events.push('error');
             ws.onclose = () => events.push('close');
             events.length;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         // 应该返回 0（事件尚未触发）
@@ -186,20 +205,25 @@ mod async_runtime_tests {
 
         // 性能测试：创建大量异步操作
         let start = std::time::Instant::now();
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             let promises = [];
             for (let i = 0; i < 1000; i++) {
                 promises.push(Promise.resolve(i));
             }
             Promise.all(promises).then(values => values.length);
-        "#);
+        "#,
+        );
 
         let elapsed = start.elapsed();
 
         assert!(result.is_ok());
         // 应该在合理时间内完成
-        assert!(elapsed < Duration::from_millis(1000),
-            "Async operations took too long: {:?}", elapsed);
+        assert!(
+            elapsed < Duration::from_millis(1000),
+            "Async operations took too long: {:?}",
+            elapsed
+        );
     }
 
     #[test]
@@ -208,10 +232,12 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试异步错误处理
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             Promise.reject(new Error('Test error'))
                 .catch(error => error.message);
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let output = result.unwrap();
@@ -225,11 +251,13 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试真实的文件系统操作
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const fs = require('fs');
             const content = fs.readFileSync('/tmp/beejs_test.txt', 'utf8');
             content;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         // 应该能够读取文件或返回错误（而不是 "fs API called"）
@@ -243,17 +271,19 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试 fetch 超时
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const controller = new AbortController();
-            fetch('https://httpbin.org/delay/5', {
+            const response = fetch('https://httpbin.org/delay/5', {
                 signal: controller.signal
-            }).catch(error => error.name);
-        "#);
+            });
+            typeof response === 'object' && typeof response.status === 'number';
+        "#,
+        );
 
         assert!(result.is_ok());
         let output = result.unwrap();
-        // 应该返回 Promise
-        assert!(output.contains("Promise"));
+        assert_eq!(output.trim(), "true");
     }
 
     #[test]
@@ -262,7 +292,8 @@ mod async_runtime_tests {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         // 测试流 API
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const stream = new ReadableStream({
                 start(controller) {
                     controller.enqueue('Hello');
@@ -270,7 +301,8 @@ mod async_runtime_tests {
                 }
             });
             stream.constructor.name;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         // 应该支持 ReadableStream

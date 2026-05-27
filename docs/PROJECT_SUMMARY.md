@@ -142,8 +142,8 @@ Beejs 高性能架构
 - [x] 性能对比报告
 
 ### 📦 发布产物
-- **二进制文件**: `beejs-v0.1.0-production.tar.gz` (18MB)
-- **发布包**: `beejs-release/` 目录
+- **二进制文件**: `dist/releases/beejs-v0.1.0-production.tar.gz` (18MB)
+- **发布包**: `dist/releases/beejs-release/` 目录
 - **源代码**: 完整的 Rust 源码
 - **文档**: 完整的文档体系
 

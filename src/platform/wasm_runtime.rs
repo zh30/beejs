@@ -1,10 +1,11 @@
 // WebAssembly Runtime
 // Provides WebAssembly (WASM) support for cross-platform execution
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex, RwLock};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use wasmtime::{Engine, Instance, Module, Store, TypedFunc};
 
 /// WebAssembly runtime engine
@@ -57,9 +58,9 @@ pub struct JS2WASMCompiler {
 impl WASMRuntime {
     /// Create a new WASM runtime
     pub fn new(bee_api: Arc<dyn BeeWasmAPI>) -> Result<Self> {
-        let engine: _ = Arc::new(Mutex::new(Engine::default()),;
-        let modules: _ = Arc::new(Mutex::new(HashMap::new()),;
-        let host_functions: _ = Arc::new(Mutex::new(HostFunctions { bee_api })),;
+        let engine: _ = Arc::new(Engine::default());
+        let modules: _ = Arc::new(RwLock::new(HashMap::new()));
+        let host_functions: _ = Arc::new(HostFunctions { bee_api });
         Ok(WASMRuntime {
             engine,
             modules,
@@ -71,13 +72,10 @@ impl WASMRuntime {
         let module: _ = Module::new(&self.engine, &binary)?;
         let mut modules = self.modules.write().await;
         // Get exports and imports
-        let exports: Vec<String> = module
-            .exports()
-            .map(|e| e.name().to_string())
-            .collect();
+        let exports: Vec<String> = module.exports().map(|e| e.name().to_string()).collect();
         let imports: Vec<String> = module
             .imports()
-            .map(|i| format!("{}/{}", i.module(), i.name())
+            .map(|i| format!("{}/{}", i.module(), i.name()))
             .collect();
         let wasm_module: _ = WASMModule {
             name: name.clone(),
@@ -89,24 +87,35 @@ impl WASMRuntime {
         Ok(wasm_module)
     }
     /// Execute WASM module
-    pub async fn execute_wasm(&self, module_name: &str, function: &str, args: &[i32]) -> Result<String> {
+    pub async fn execute_wasm(
+        &self,
+        module_name: &str,
+        function: &str,
+        args: &[i32],
+    ) -> Result<String> {
         let modules: _ = self.modules.read().await;
-        let module: _ = modules.get(module_name)
+        let module: _ = modules
+            .get(module_name)
             .ok_or_else(|| anyhow!("Module '{}' not found", module_name))?;
         let mut store = Store::default();
         let wasi: _ = WasiCtx::default();
         store.set_wasi(Some(wasi));
-        let instance: _ = Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
+        let instance: _ =
+            Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
         // Try to find and call the function
         if let Some(func) = instance.get_func(&mut store, function) {
             let typed_func: TypedFunc<i32, i32> = func.typed(&mut store)?;
-            let result: _ = typed_func.call(&mut store, args[0]).map_err(|e| anyhow!("WASM execution error: {}", e))?;
+            let result: _ = typed_func
+                .call(&mut store, args[0])
+                .map_err(|e| anyhow!("WASM execution error: {}", e))?;
             Ok(format!("WASM result: {}", result))
         } else {
             // If function not found, try _start (entry point)
             if let Some(start_func) = instance.get_func(&mut store, "_start") {
                 let typed_start: TypedFunc<(), ()> = start_func.typed(&mut store)?;
-                typed_start.call(&mut store, ()).map_err(|e| anyhow!("WASM start error: {}", e))?;
+                typed_start
+                    .call(&mut store, ())
+                    .map_err(|e| anyhow!("WASM start error: {}", e))?;
                 Ok("WASM module executed successfully".to_string())
             } else {
                 Err(anyhow!("Function '{}' not found in module", function))
@@ -116,31 +125,36 @@ impl WASMRuntime {
     /// Execute WASM with host functions
     pub async fn execute_with_host(&self, module_name: &str, function: &str) -> Result<String> {
         let modules: _ = self.modules.read().await;
-        let module: _ = modules.get(module_name)
+        let module: _ = modules
+            .get(module_name)
             .ok_or_else(|| anyhow!("Module '{}' not found", module_name))?;
         let mut store = Store::default();
         let wasi: _ = WasiCtx::default();
         store.set_wasi(Some(wasi));
         // Create host function linkage
         let host_funcs: _ = self.host_functions.clone();
-        let instance: _ = Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
+        let instance: _ =
+            Instance::new(&mut store, &Module::new(&self.engine, &module.binary)?, &[])?;
         if let Some(func) = instance.get_func(&mut store, function) {
             let typed_func: TypedFunc<(), ()> = func.typed(&mut store)?;
-            typed_func.call(&mut store, ()).map_err(|e| anyhow!("WASM execution error: {}", e))?;
+            typed_func
+                .call(&mut store, ())
+                .map_err(|e| anyhow!("WASM execution error: {}", e))?;
             Ok("WASM with host functions executed".to_string())
         } else {
             Err(anyhow!("Function '{}' not found", function))
         }
     }
     /// List loaded modules
-    pub async fn list_modules(&self) -> Result<Vec<String> {
+    pub async fn list_modules(&self) -> Result<Vec<String>> {
         let modules: _ = self.modules.read().await;
         Ok(modules.keys().cloned().collect())
     }
     /// Get module info
     pub async fn get_module_info(&self, name: &str) -> Result<WASMModule> {
         let modules: _ = self.modules.read().await;
-        modules.get(name)
+        modules
+            .get(name)
             .cloned()
             .ok_or_else(|| anyhow!("Module '{}' not found", name))
     }
@@ -149,7 +163,7 @@ impl JS2WASMCompiler {
     /// Create a new JavaScript to WASM compiler
     pub fn new() -> Result<Self> {
         Ok(JS2WASMCompiler {
-            engine: Arc::new(Mutex::new(Engine::default()))
+            engine: Arc::new(Engine::default()),
         })
     }
     /// Compile JavaScript to WASM
@@ -198,12 +212,15 @@ fn generate_minimal_wasm() -> Vec<u8> {
     // This is a placeholder - real compilation would generate proper WASM
     vec![
         0x00, 0x61, 0x73, 0x6D, // \0asm magic number
-        0x01, 0x00, 0x00, 0x00, // version 1
-        // ... rest of WASM binary would be here
+        0x01, 0x00, 0x00,
+        0x00, // version 1
+              // ... rest of WASM binary would be here
     ]
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     struct MockBeeWasmAPI;
     impl BeeWasmAPI for MockBeeWasmAPI {
         fn console_log(&self, message: &str) -> Result<()> {
@@ -222,7 +239,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_wasm_runtime_creation() {
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
+        let bee_api: _ = Arc::new(MockBeeWasmAPI);
         let runtime: _ = WASMRuntime::new(bee_api).unwrap();
         let modules: _ = runtime.list_modules().await;
         assert!(modules.is_ok());
@@ -230,7 +247,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_wasm_module_loading() {
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
+        let bee_api: _ = Arc::new(MockBeeWasmAPI);
         let runtime: _ = WASMRuntime::new(bee_api).unwrap();
         let wasm_binary: _ = generate_minimal_wasm();
         let result: _ = runtime.load_module("test".to_string(), wasm_binary).await;
@@ -268,10 +285,13 @@ function hello() {
     }
     #[tokio::test]
     async fn test_wasm_module_info() {
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
+        let bee_api: _ = Arc::new(MockBeeWasmAPI);
         let runtime: _ = WASMRuntime::new(bee_api).unwrap();
         let wasm_binary: _ = generate_minimal_wasm();
-        runtime.load_module("test".to_string(), wasm_binary).await.unwrap();
+        runtime
+            .load_module("test".to_string(), wasm_binary)
+            .await
+            .unwrap();
         let info: _ = runtime.get_module_info("test").await;
         assert!(info.is_ok());
         assert_eq!(info.unwrap().name, "test");

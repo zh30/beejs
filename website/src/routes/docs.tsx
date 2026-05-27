@@ -104,10 +104,10 @@ function ManualSection({
 }: {
   title: string
   subtitle?: string
-  body?: string[]
-  list?: string[]
-  code?: string[]
-  cards?: { title: string; desc: string }[]
+  body?: readonly string[]
+  list?: readonly string[]
+  code?: readonly string[]
+  cards?: readonly { readonly title: string; readonly desc: string }[]
   kicker: string
 }) {
   return (

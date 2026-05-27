@@ -1,5 +1,7 @@
 # Beejs 用户指南
 
+> 发布校验说明（2026-05-26）：本文命令以当前 public CLI 为准：`bee run <file>`、`bee eval <code>`、`bee repl`、`bee test <path>`、`bee debug <file>`、`bee serve`。
+
 欢迎使用 Beejs - 高性能 JavaScript/TypeScript 运行时！本指南将帮助您快速上手并充分利用 Beejs 的强大功能。
 
 ## 📚 目录
@@ -26,7 +28,7 @@ console.log("高性能 JavaScript/TypeScript 运行时");
 运行：
 
 ```bash
-./beejs hello.js
+bee run hello.js
 ```
 
 ### TypeScript 支持
@@ -51,7 +53,7 @@ console.log(`Hello, ${user.name}!`);
 直接运行：
 
 ```bash
-./beejs hello.ts
+bee run hello.ts
 ```
 
 ## 📦 安装指南
@@ -83,7 +85,7 @@ cargo install --path .
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
-beejs --version
+bee --version
 ```
 
 ### 预编译二进制 (手动)
@@ -94,15 +96,15 @@ VERSION=v0.1.0
 TARGET=x86_64-unknown-linux-gnu
 
 # 下载指定版本
-curl -L https://github.com/zh30/beejs/releases/download/${VERSION}/beejs-${VERSION}-${TARGET}.tar.gz -o beejs.tar.gz
+curl -L https://github.com/zh30/beejs/releases/download/${VERSION}/bee-${VERSION}-${TARGET}.tar.gz -o bee.tar.gz
 
 # 解压
-tar -xzf beejs.tar.gz
+tar -xzf bee.tar.gz
 
 # 安装
 mkdir -p ~/.beejs/bin
-mv beejs ~/.beejs/bin/
-chmod +x ~/.beejs/bin/beejs
+mv bee ~/.beejs/bin/
+chmod +x ~/.beejs/bin/bee
 export PATH=\"$HOME/.beejs/bin:$PATH\"
 ```
 
@@ -112,22 +114,21 @@ export PATH=\"$HOME/.beejs/bin:$PATH\"
 
 ```bash
 # 查看帮助
-./beejs --help
+bee --help
 
 # 查看版本
-./beejs --version
+bee --version
 
 # 运行脚本
-./beejs script.js
+bee run script.js
 
 # 交互式 REPL
-./beejs
+bee repl
 
 # 启用详细输出
-./beejs --verbose script.js
+bee --verbose run script.js
 
-# 设置堆大小
-./beejs --max-heap-size 1GB script.js
+# 当前 public CLI 不支持 --max-heap-size
 ```
 
 ### 配置文件
@@ -296,7 +297,7 @@ console.log(suggestions);
 
 ```javascript
 // 启用调试模式
-./beejs --debug script.js
+bee debug script.js
 
 // 在脚本中使用调试器
 import { debugger } from 'beejs/debugger';

@@ -3,10 +3,10 @@
 // Stage 90 Phase 2.2: 实现增量垃圾回收和自适应 GC 调优
 // 目标：低延迟 GC 模式，高吞吐量模式，避免停顿
 
-use std::collections::{BTreeMap, HashMap};
+use crate::memory::GLOBAL_MEMORY_STATS;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 /// GC 配置
 #[derive(Debug, Clone)]
@@ -127,10 +127,14 @@ impl Clone for GCStats {
     fn clone(&self) -> Self {
         Self {
             gc_count: AtomicUsize::new(self.gc_count.load(Ordering::Relaxed)),
-            total_bytes_collected: AtomicUsize::new(self.total_bytes_collected.load(Ordering::Relaxed)),
+            total_bytes_collected: AtomicUsize::new(
+                self.total_bytes_collected.load(Ordering::Relaxed),
+            ),
             total_pause_time: AtomicUsize::new(self.total_pause_time.load(Ordering::Relaxed)),
             avg_gc_time: self.avg_gc_time,
-            incremental_gc_count: AtomicUsize::new(self.incremental_gc_count.load(Ordering::Relaxed)),
+            incremental_gc_count: AtomicUsize::new(
+                self.incremental_gc_count.load(Ordering::Relaxed),
+            ),
             full_gc_count: AtomicUsize::new(self.full_gc_count.load(Ordering::Relaxed)),
             memory_pressure_level: self.memory_pressure_level,
             success_rate: self.success_rate,
@@ -158,12 +162,11 @@ impl IncrementalGC {
     }
     /// 触发增量 GC
     pub fn trigger_incremental_gc(&self) -> Result<GCStats, &'static str> {
-        if self.is_running.compare_exchange(
-            false,
-            true,
-            Ordering::Relaxed,
-            Ordering::Relaxed
-        ).is_err() {
+        if self
+            .is_running
+            .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+            .is_err()
+        {
             return Err("GC already running");
         }
         let start_time: _ = Instant::now();
@@ -172,7 +175,7 @@ impl IncrementalGC {
             state.start_time = Some(start_time);
             state.phase = GCPhase::Mark;
         }
-        let result: _ = self.run_incremental_collection();
+        let _ = self.run_incremental_collection();
         // 更新统计
         {
             let mut state = self.state.lock().unwrap();
@@ -220,7 +223,6 @@ impl IncrementalGC {
     }
     /// 运行完整收集
     fn run_full_collection(&self) -> Result<(), &'static str> {
-        let start_time: _ = Instant::now();
         // 标记阶段
         {
             let mut state = self.state.lock().unwrap();
@@ -279,16 +281,33 @@ impl IncrementalGC {
     }
     /// 获取统计信息
     pub fn get_stats(&self) -> GCStats {
-        let global_stats: _ = GLOBAL_MEMORY_STATS.get_stats();
-        let state: _ = self.state.lock().unwrap();
+        let global_stats = GLOBAL_MEMORY_STATS.get_stats();
+        let state = self.state.lock().unwrap();
+        let gc_run = state.last_gc_time.is_some();
+        let count = if gc_run { 1usize } else { 0usize };
         GCStats {
-            gc_count: AtomicUsize::new(1),
+            gc_count: AtomicUsize::new(count),
             total_bytes_collected: AtomicUsize::new(state.bytes_collected),
             total_pause_time: AtomicUsize::new(state.total_pause_time.as_micros() as usize),
-            avg_gc_time: state.total_pause_time / 1, // 简化计算
-            incremental_gc_count: AtomicUsize::new(if self.config.enable_incremental_gc { 1 } else { 0 }),
-            full_gc_count: AtomicUsize::new(if !self.config.enable_incremental_gc { 1 } else { 0 }),
-            memory_pressure_level: global_stats.current_usage as f64 / self.config.gc_threshold as f64,
+            avg_gc_time: if count > 0 {
+                state.total_pause_time / count as u32
+            } else {
+                Duration::from_secs(0)
+            },
+            incremental_gc_count: AtomicUsize::new(
+                if gc_run && self.config.enable_incremental_gc {
+                    1
+                } else {
+                    0
+                },
+            ),
+            full_gc_count: AtomicUsize::new(if gc_run && !self.config.enable_incremental_gc {
+                1
+            } else {
+                0
+            }),
+            memory_pressure_level: global_stats.current_usage as f64
+                / self.config.gc_threshold as f64,
             success_rate: 1.0,
         }
     }
@@ -350,6 +369,8 @@ impl Drop for IncrementalGC {
 }
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_incremental_gc_creation() {
         let config: _ = GCConfig::default();

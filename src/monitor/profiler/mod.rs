@@ -2,24 +2,24 @@
 // Stage 76: 企业级性能分析系统
 // 提供函数跟踪、热点分析、性能报告等高级功能
 
-use analyzer::{CallStackAnalyzer, Hotspot, HotspotAnalyzer, StackFrame};
 use analyzer::hotspot::{MemoryStats, TimeStats};
+use analyzer::{CallStackAnalyzer, Hotspot, HotspotAnalyzer, StackFrame};
 use collector::{FunctionStats, FunctionTraceHandle, FunctionTracker, TrackerStats};
-use report::{Difficulty, OptimizationRecommendation, PerformanceSummary, Priority, RecommendationType};
+use report::{
+    Difficulty, OptimizationRecommendation, PerformanceSummary, Priority, RecommendationType,
+};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 // use storage::::{PerformanceEvent, PerformanceEventType, RingBuffer, SamplingConfig, SamplingStrategy};
 
-pub mod collector;
 pub mod analyzer;
-pub mod storage;
+pub mod collector;
 pub mod report;
+pub mod storage;
 // pub mod cli_integration; // TODO: 实现 CLI 集成
 // 重新导出分析器类型
-pub use analyzer::{
-    CallStackAnalysis, Bottleneck, BottleneckType, RecursionInfo, DepthStats,
-};
+pub use analyzer::{Bottleneck, BottleneckType, CallStackAnalysis, DepthStats, RecursionInfo};
 /// 高级性能分析器配置
 #[derive(Debug, Clone)]
 pub struct AdvancedProfilerConfig {
@@ -84,10 +84,8 @@ pub struct AdvancedProfiler {
 impl AdvancedProfiler {
     /// 创建新的高级性能分析器
     pub fn new(config: AdvancedProfilerConfig) -> Self {
-        let function_tracker: _ = FunctionTracker::new(
-            config.event_buffer_capacity,
-            config.sampling_config.clone(),
-        );
+        let function_tracker: _ =
+            FunctionTracker::new(config.event_buffer_capacity, config.sampling_config.clone());
         let stack_analyzer: _ = if config.enable_stack_analysis {
             Some(CallStackAnalyzer::new(config.max_call_depth))
         } else {
@@ -138,7 +136,9 @@ impl AdvancedProfiler {
             .as_ref()
             .map(|a| a.get_current_stack().len())
             .unwrap_or(0);
-        let handle: _ = self.function_tracker.track_function(function_name, start_memory, call_depth);
+        let handle: _ =
+            self.function_tracker
+                .track_function(function_name, start_memory, call_depth);
         // 同时记录到调用栈分析器
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
             let timestamp: _ = std::time::SystemTime::now()
@@ -155,23 +155,23 @@ impl AdvancedProfiler {
         handle: FunctionTraceHandle,
         end_memory: usize,
     ) -> Option<FunctionStats> {
-        let stats: _ = self.function_tracker.record_return(handle.clone(), end_memory);
+        let stats: _ = self
+            .function_tracker
+            .record_return(handle.clone(), end_memory);
         // 同时记录到调用栈分析器
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
             let timestamp: _ = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
-            stack_analyzer.exit_function(
-                &handle.function_name,
-                timestamp,
-                end_memory,
-            );
+            stack_analyzer.exit_function(&handle.function_name, timestamp, end_memory);
         }
         // 记录到热点分析器
         if let Some(hotspot_analyzer) = &mut self.hotspot_analyzer {
             if let Some(ref function_stats) = stats {
-                let execution_time: _ = Duration::from_nanos(function_stats.total_time.as_nanos() as u64 / function_stats.call_count.max(1));
+                let execution_time: _ = Duration::from_nanos(
+                    function_stats.total_time.as_nanos() as u64 / function_stats.call_count.max(1),
+                );
                 let avg_memory: _ = function_stats.avg_memory as usize;
                 hotspot_analyzer.record_execution(
                     &handle.function_name,
@@ -208,7 +208,10 @@ impl AdvancedProfiler {
         summary
     }
     /// 生成优化建议
-    fn generate_recommendations(&self, summary: &PerformanceSummary) -> Vec<OptimizationRecommendation> {
+    fn generate_recommendations(
+        &self,
+        summary: &PerformanceSummary,
+    ) -> Vec<OptimizationRecommendation> {
         let mut recommendations = Vec::new();
         // 基于热点函数生成建议
         for hotspot in &summary.hotspots {
@@ -235,7 +238,10 @@ impl AdvancedProfiler {
                     },
                     title: format!("优化函数: {}", hotspot.function_name),
                     description: suggestion.clone(),
-                    expected_impact: format!("可减少 {:.1}% 的执行时间", hotspot.heat_score * 100.0),
+                    expected_impact: format!(
+                        "可减少 {:.1}% 的执行时间",
+                        hotspot.heat_score * 100.0
+                    ),
                     difficulty: Difficulty::Medium,
                 });
             }
@@ -276,8 +282,13 @@ impl AdvancedProfiler {
         if self.config.report_config.generate_html {
             let html: _ = summary.to_html();
             if let Some(ref output_dir) = self.config.report_config.output_dir {
-                let filename: _ = format!("{}/performance_report_{}.html", output_dir, chrono::Utc::now().timestamp());
-                fs::write(&filename, &html).map_err(|e| format!("Failed to write HTML report: {}", e))?;
+                let filename: _ = format!(
+                    "{}/performance_report_{}.html",
+                    output_dir,
+                    chrono::Utc::now().timestamp()
+                );
+                fs::write(&filename, &html)
+                    .map_err(|e| format!("Failed to write HTML report: {}", e))?;
                 output.push_str(&format!("\nHTML 报告已保存到: {}\n", filename));
             }
         }
@@ -309,7 +320,10 @@ impl AdvancedProfiler {
     }
     /// 获取所有函数统计
     pub fn get_all_function_stats(&self) -> Vec<FunctionStats> {
-        self.function_tracker.get_all_function_stats().into_values().collect()
+        self.function_tracker
+            .get_all_function_stats()
+            .into_values()
+            .collect()
     }
 }
 /// 实时性能快照

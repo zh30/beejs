@@ -1,8 +1,8 @@
 // StringDecoder 模块测试 - v0.3.48
 // 测试 StringDecoder 功能
 
-use serial_test::serial;
 use beejs::runtime_minimal::MinimalRuntime;
+use serial_test::serial;
 
 #[test]
 #[serial]
@@ -26,9 +26,8 @@ fn test_string_decoder_constructor_exists() {
 #[serial]
 fn test_string_decoder_default_encoding() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder._encoding"
-    );
+    let result = runtime
+        .execute_code("const decoder = new string_decoder.StringDecoder(); decoder._encoding");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "utf8");
 }
@@ -38,7 +37,7 @@ fn test_string_decoder_default_encoding() {
 fn test_string_decoder_custom_encoding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder('utf8'); decoder._encoding"
+        "const decoder = new string_decoder.StringDecoder('utf8'); decoder._encoding",
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "utf8");
@@ -48,9 +47,8 @@ fn test_string_decoder_custom_encoding() {
 #[serial]
 fn test_string_decoder_write_method_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); typeof decoder.write"
-    );
+    let result = runtime
+        .execute_code("const decoder = new string_decoder.StringDecoder(); typeof decoder.write");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -59,9 +57,8 @@ fn test_string_decoder_write_method_exists() {
 #[serial]
 fn test_string_decoder_end_method_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); typeof decoder.end"
-    );
+    let result = runtime
+        .execute_code("const decoder = new string_decoder.StringDecoder(); typeof decoder.end");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "function");
 }
@@ -70,9 +67,8 @@ fn test_string_decoder_end_method_exists() {
 #[serial]
 fn test_string_decoder_write_simple() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder.write('hello')"
-    );
+    let result = runtime
+        .execute_code("const decoder = new string_decoder.StringDecoder(); decoder.write('hello')");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "hello");
 }
@@ -81,9 +77,8 @@ fn test_string_decoder_write_simple() {
 #[serial]
 fn test_string_decoder_write_empty() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder.write('')"
-    );
+    let result = runtime
+        .execute_code("const decoder = new string_decoder.StringDecoder(); decoder.write('')");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "");
 }
@@ -92,9 +87,8 @@ fn test_string_decoder_write_empty() {
 #[serial]
 fn test_string_decoder_end_simple() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder.end('world')"
-    );
+    let result = runtime
+        .execute_code("const decoder = new string_decoder.StringDecoder(); decoder.end('world')");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "world");
 }
@@ -103,9 +97,8 @@ fn test_string_decoder_end_simple() {
 #[serial]
 fn test_string_decoder_end_empty() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder.end('')"
-    );
+    let result =
+        runtime.execute_code("const decoder = new string_decoder.StringDecoder(); decoder.end('')");
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "");
 }
@@ -129,7 +122,7 @@ fn test_string_decoder_write_then_end() {
 fn test_string_decoder_utf8_characters() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder.write('你好世界')"
+        "const decoder = new string_decoder.StringDecoder(); decoder.write('你好世界')",
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "你好世界");
@@ -140,7 +133,7 @@ fn test_string_decoder_utf8_characters() {
 fn test_string_decoder_emoji_characters() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code(
-        "const decoder = new string_decoder.StringDecoder(); decoder.write('🚀 Beejs')"
+        "const decoder = new string_decoder.StringDecoder(); decoder.write('🚀 Beejs')",
     );
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "🚀 Beejs");

@@ -12,15 +12,20 @@ mod url_search_params_tests {
     fn test_url_search_params_constructor_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             typeof URLSearchParams;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "function",
-            "Expected URLSearchParams to be a function, got: {}", output);
+        assert_eq!(
+            output, "function",
+            "Expected URLSearchParams to be a function, got: {}",
+            output
+        );
     }
 
     #[test]
@@ -28,16 +33,17 @@ mod url_search_params_tests {
     fn test_url_search_params_empty_constructor() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams();
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "",
-            "Expected empty query string, got: {}", output);
+        assert_eq!(output, "", "Expected empty query string, got: {}", output);
     }
 
     #[test]
@@ -45,17 +51,22 @@ mod url_search_params_tests {
     fn test_url_search_params_from_string() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&baz=qux');
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should contain both parameters
-        assert!(output.contains("foo=bar") && output.contains("baz=qux"),
-            "Expected query string with foo=bar and baz=qux, got: {}", output);
+        assert!(
+            output.contains("foo=bar") && output.contains("baz=qux"),
+            "Expected query string with foo=bar and baz=qux, got: {}",
+            output
+        );
     }
 
     #[test]
@@ -63,17 +74,22 @@ mod url_search_params_tests {
     fn test_url_search_params_from_object() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams({ foo: 'bar', baz: 'qux' });
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should contain both parameters (order may vary)
-        assert!(output.contains("foo=bar") && output.contains("baz=qux"),
-            "Expected query string with foo=bar and baz=qux, got: {}", output);
+        assert!(
+            output.contains("foo=bar") && output.contains("baz=qux"),
+            "Expected query string with foo=bar and baz=qux, got: {}",
+            output
+        );
     }
 
     // v0.3.353: append() method tests
@@ -82,19 +98,24 @@ mod url_search_params_tests {
     fn test_url_search_params_append() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams();
             params.append('foo', 'bar');
             params.append('foo', 'baz');
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should contain foo=bar and foo=baz (multiple values)
-        assert!(output.contains("foo=bar") && output.contains("foo=baz"),
-            "Expected query string with multiple foo values, got: {}", output);
+        assert!(
+            output.contains("foo=bar") && output.contains("foo=baz"),
+            "Expected query string with multiple foo values, got: {}",
+            output
+        );
     }
 
     // v0.3.353: delete() method tests
@@ -103,18 +124,23 @@ mod url_search_params_tests {
     fn test_url_search_params_delete() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&baz=qux');
             params.delete('foo');
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should only contain baz=qux
-        assert!(!output.contains("foo=bar") && output.contains("baz=qux"),
-            "Expected query string without foo, got: {}", output);
+        assert!(
+            !output.contains("foo=bar") && output.contains("baz=qux"),
+            "Expected query string without foo, got: {}",
+            output
+        );
     }
 
     // v0.3.353: get() method tests
@@ -123,17 +149,18 @@ mod url_search_params_tests {
     fn test_url_search_params_get() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&foo=baz&qux=quux');
             params.get('foo');
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // get() returns first value
-        assert_eq!(output, "bar",
-            "Expected first value 'bar', got: {}", output);
+        assert_eq!(output, "bar", "Expected first value 'bar', got: {}", output);
     }
 
     #[test]
@@ -141,16 +168,21 @@ mod url_search_params_tests {
     fn test_url_search_params_get_nonexistent() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar');
             params.get('nonexistent');
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "null",
-            "Expected null for nonexistent key, got: {}", output);
+        assert_eq!(
+            output, "null",
+            "Expected null for nonexistent key, got: {}",
+            output
+        );
     }
 
     // v0.3.353: getAll() method tests
@@ -159,17 +191,22 @@ mod url_search_params_tests {
     fn test_url_search_params_get_all() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&foo=baz&qux=quux');
             params.getAll('foo').toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // getAll() returns array of all values
-        assert!(output.contains("bar") && output.contains("baz"),
-            "Expected array with bar and baz, got: {}", output);
+        assert!(
+            output.contains("bar") && output.contains("baz"),
+            "Expected array with bar and baz, got: {}",
+            output
+        );
     }
 
     // v0.3.353: has() method tests
@@ -178,16 +215,21 @@ mod url_search_params_tests {
     fn test_url_search_params_has() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar');
             params.has('foo').toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "true",
-            "Expected true for existing key, got: {}", output);
+        assert_eq!(
+            output, "true",
+            "Expected true for existing key, got: {}",
+            output
+        );
     }
 
     #[test]
@@ -195,16 +237,21 @@ mod url_search_params_tests {
     fn test_url_search_params_has_nonexistent() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar');
             params.has('nonexistent').toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "false",
-            "Expected false for nonexistent key, got: {}", output);
+        assert_eq!(
+            output, "false",
+            "Expected false for nonexistent key, got: {}",
+            output
+        );
     }
 
     // v0.3.353: set() method tests
@@ -213,18 +260,25 @@ mod url_search_params_tests {
     fn test_url_search_params_set() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&foo=baz');
             params.set('foo', 'qux');
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // set() replaces all values with single value
-        assert!(output.contains("foo=qux") && !output.contains("foo=bar") && !output.contains("foo=baz"),
-            "Expected query string with single foo=qux, got: {}", output);
+        assert!(
+            output.contains("foo=qux")
+                && !output.contains("foo=bar")
+                && !output.contains("foo=baz"),
+            "Expected query string with single foo=qux, got: {}",
+            output
+        );
     }
 
     // v0.3.353: toString() method tests
@@ -233,16 +287,21 @@ mod url_search_params_tests {
     fn test_url_search_params_to_string() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&baz=qux');
             typeof params.toString;
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "function",
-            "Expected toString to be a function, got: {}", output);
+        assert_eq!(
+            output, "function",
+            "Expected toString to be a function, got: {}",
+            output
+        );
     }
 
     // v0.3.353: forEach() method tests
@@ -251,19 +310,24 @@ mod url_search_params_tests {
     fn test_url_search_params_for_each() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&baz=qux');
             let keys = [];
             params.forEach((value, key) => keys.push(key));
             keys.sort().toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should iterate over both keys
-        assert!(output.contains("baz") && output.contains("foo"),
-            "Expected keys to contain baz and foo, got: {}", output);
+        assert!(
+            output.contains("baz") && output.contains("foo"),
+            "Expected keys to contain baz and foo, got: {}",
+            output
+        );
     }
 
     // v0.3.353: entries() iterator tests
@@ -272,18 +336,23 @@ mod url_search_params_tests {
     fn test_url_search_params_entries() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar');
             const entries = params.entries();
             const first = entries.next().value;
             first ? first[0] + '=' + first[1] : '';
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert_eq!(output, "foo=bar",
-            "Expected first entry to be foo=bar, got: {}", output);
+        assert_eq!(
+            output, "foo=bar",
+            "Expected first entry to be foo=bar, got: {}",
+            output
+        );
     }
 
     // v0.3.353: keys() iterator tests
@@ -292,19 +361,24 @@ mod url_search_params_tests {
     fn test_url_search_params_keys() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&baz=qux');
             const keys = params.keys();
             const first = keys.next().value;
             first || '';
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // First key should be either 'foo' or 'baz'
-        assert!(output == "foo" || output == "baz",
-            "Expected first key to be foo or baz, got: {}", output);
+        assert!(
+            output == "foo" || output == "baz",
+            "Expected first key to be foo or baz, got: {}",
+            output
+        );
     }
 
     // v0.3.353: values() iterator tests
@@ -313,19 +387,24 @@ mod url_search_params_tests {
     fn test_url_search_params_values() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('foo=bar&baz=qux');
             const values = params.values();
             const first = values.next().value;
             first || '';
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // First value should be either 'bar' or 'qux'
-        assert!(output == "bar" || output == "qux",
-            "Expected first value to be bar or qux, got: {}", output);
+        assert!(
+            output == "bar" || output == "qux",
+            "Expected first value to be bar or qux, got: {}",
+            output
+        );
     }
 
     // v0.3.353: URL encoding tests
@@ -334,17 +413,22 @@ mod url_search_params_tests {
     fn test_url_search_params_encodes_special_chars() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams({ foo: 'bar baz' });
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should URL-encode spaces as %20 or +
-        assert!(output.contains("foo=") && output.contains("%20") || output.contains("foo=bar+baz"),
-            "Expected encoded query string with space, got: {}", output);
+        assert!(
+            output.contains("foo=") && output.contains("%20") || output.contains("foo=bar+baz"),
+            "Expected encoded query string with space, got: {}",
+            output
+        );
     }
 
     // v0.3.353: Sort() method tests
@@ -353,17 +437,22 @@ mod url_search_params_tests {
     fn test_url_search_params_sort() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
-        let result = runtime.execute_code(r#"
+        let result = runtime.execute_code(
+            r#"
             const params = new URLSearchParams('z=1&a=2&m=3');
             params.sort();
             params.toString();
-        "#);
+        "#,
+        );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         // Should be sorted: a=2&m=3&z=1
-        assert_eq!(output, "a=2&m=3&z=1",
-            "Expected sorted query string, got: {}", output);
+        assert_eq!(
+            output, "a=2&m=3&z=1",
+            "Expected sorted query string, got: {}",
+            output
+        );
     }
 }

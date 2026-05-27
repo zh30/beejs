@@ -1,6 +1,6 @@
 //! V8 Test Executor - Executes JavaScript test functions in V8 isolate
 //!
-//! This module provides the ability to run test cases (stored as V8 Global<Function>)
+//! This module provides the ability to run test cases (stored as V8 `Global<Function>`)
 //! within a V8 isolate context. It handles:
 //! - V8 isolate creation and lifecycle
 //! - JS function execution with error handling
@@ -98,7 +98,9 @@ impl V8TestExecutor {
                     // Use &mut tc (TryCatch) for operations since it derefs to HandleScope
                     let exc_local = v8::Local::new(&mut tc, exc);
                     let exc_str = exc_local.to_string(&mut tc);
-                    exc_str.map(|s| s.to_rust_string_lossy(&mut tc)).or_else(|| Some("Unknown error".to_string()))
+                    exc_str
+                        .map(|s| s.to_rust_string_lossy(&mut tc))
+                        .or_else(|| Some("Unknown error".to_string()))
                 } else {
                     Some("Unknown error".to_string())
                 };
@@ -179,123 +181,175 @@ impl Default for V8TestExecutor {
 /// Set up testing APIs in V8 context (simplified version)
 fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>) {
     // Create expect function - simplified to not use closures
-    let expect_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let actual = args.get(0);
+    let expect_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let actual = args.get(0);
 
-        // Create expectation object
-        let expect_obj = v8::Object::new(scope);
+            // Create expectation object
+            let expect_obj = v8::Object::new(scope);
 
-        // Store actual in a property named "_actual" for matchers to access
-        let actual_key = v8::String::new(scope, "_actual").unwrap();
-        expect_obj.set(scope, actual_key.into(), actual);
-
-        // Add toBe matcher
-        let to_be_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let expected = args.get(0);
-            // Get _actual from the same object (this is a simplification)
-            let actual_val: v8::Local<v8::Value> = v8::undefined(scope).into();
-            let result = actual_val.strict_equals(expected);
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_be_key = v8::String::new(scope, "toBe").unwrap();
-        expect_obj.set(scope, to_be_key.into(), to_be_fn.into());
-
-        // Add toEqual matcher - simplified to not use closures (V8 Function constraints)
-        let to_equal_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let expected = args.get(0);
-            // Get _actual from the expect object's property
-            let this_obj = args.this();
+            // Store actual in a property named "_actual" for matchers to access
             let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            // Use strict equality for comparison
-            let result = actual_val.strict_equals(expected);
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_equal_key = v8::String::new(scope, "toEqual").unwrap();
-        expect_obj.set(scope, to_equal_key.into(), to_equal_fn.into());
+            expect_obj.set(scope, actual_key.into(), actual);
 
-        // Add toBeTruthy matcher - v0.3.254: Check if actual value is truthy
-        let to_truthy_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this_obj = args.this();
-            let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            // Truthy check: not null, not undefined, not 0, not false, not empty string, not NaN
-            let is_truthy = !actual_val.is_null_or_undefined()
-                && !actual_val.is_false()
-                && !actual_val.is_undefined()
-                && !actual_val.is_null();
-            // Additional check for 0 and empty string
-            let result = if actual_val.is_number() {
-                let num = actual_val.to_number(scope).unwrap();
-                num.value() != 0.0
-            } else if actual_val.is_string() {
-                let str_val = actual_val.to_string(scope).unwrap();
-                str_val.length() > 0
-            } else {
-                is_truthy
-            };
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_truthy_key = v8::String::new(scope, "toBeTruthy").unwrap();
-        expect_obj.set(scope, to_truthy_key.into(), to_truthy_fn.into());
+            // Add toBe matcher
+            let to_be_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let expected = args.get(0);
+                    // Get _actual from the same object (this is a simplification)
+                    let actual_val: v8::Local<v8::Value> = v8::undefined(scope).into();
+                    let result = actual_val.strict_equals(expected);
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_be_key = v8::String::new(scope, "toBe").unwrap();
+            expect_obj.set(scope, to_be_key.into(), to_be_fn.into());
 
-        // Add toBeFalsy matcher - v0.3.254: Check if actual value is falsy
-        let to_falsy_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this_obj = args.this();
-            let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            // Falsy check: null, undefined, 0, false, empty string, NaN
-            let is_falsy = actual_val.is_null_or_undefined()
-                || actual_val.is_false()
-                || actual_val.is_undefined()
-                || actual_val.is_null();
-            // Additional check for 0 and empty string
-            let result = if actual_val.is_number() {
-                let num = actual_val.to_number(scope).unwrap();
-                num.value() == 0.0
-            } else if actual_val.is_string() {
-                let str_val = actual_val.to_string(scope).unwrap();
-                str_val.length() == 0
-            } else {
-                is_falsy
-            };
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_falsy_key = v8::String::new(scope, "toBeFalsy").unwrap();
-        expect_obj.set(scope, to_falsy_key.into(), to_falsy_fn.into());
+            // Add toEqual matcher - simplified to not use closures (V8 Function constraints)
+            let to_equal_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let expected = args.get(0);
+                    // Get _actual from the expect object's property
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    // Use strict equality for comparison
+                    let result = actual_val.strict_equals(expected);
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_equal_key = v8::String::new(scope, "toEqual").unwrap();
+            expect_obj.set(scope, to_equal_key.into(), to_equal_fn.into());
 
-        // Add toContain matcher - v0.3.254: Check if string/array contains value
-        let to_contain_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this_obj = args.this();
-            let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            let expected = args.get(0);
+            // Add toBeTruthy matcher - v0.3.254: Check if actual value is truthy
+            let to_truthy_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    // Truthy check: not null, not undefined, not 0, not false, not empty string, not NaN
+                    let is_truthy = !actual_val.is_null_or_undefined()
+                        && !actual_val.is_false()
+                        && !actual_val.is_undefined()
+                        && !actual_val.is_null();
+                    // Additional check for 0 and empty string
+                    let result = if actual_val.is_number() {
+                        let num = actual_val.to_number(scope).unwrap();
+                        num.value() != 0.0
+                    } else if actual_val.is_string() {
+                        let str_val = actual_val.to_string(scope).unwrap();
+                        str_val.length() > 0
+                    } else {
+                        is_truthy
+                    };
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_truthy_key = v8::String::new(scope, "toBeTruthy").unwrap();
+            expect_obj.set(scope, to_truthy_key.into(), to_truthy_fn.into());
 
-            let result = if actual_val.is_string() && expected.is_string() {
-                // String contains
-                let actual_str = actual_val.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                let expected_str = expected.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                actual_str.contains(&expected_str)
-            } else if actual_val.is_object() {
-                // Check if it's an array - borrow scope once
-                let length_key = v8::String::new(scope, "length").unwrap();
-                if let Some(obj) = actual_val.to_object(scope) {
-                    if let Some(length_val) = obj.get(scope, length_key.into()) {
-                        if length_val.is_number() {
-                            // Array contains (using strict equality)
-                            let arr = v8::Local::<v8::Array>::try_from(actual_val).ok();
-                            if let Some(arr) = arr {
-                                let len = arr.length();
-                                let mut found = false;
-                                for i in 0..len {
-                                    if let Some(item) = arr.get_index(scope, i as u32) {
-                                        if item.strict_equals(expected) {
-                                            found = true;
-                                            break;
+            // Add toBeFalsy matcher - v0.3.254: Check if actual value is falsy
+            let to_falsy_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    // Falsy check: null, undefined, 0, false, empty string, NaN
+                    let is_falsy = actual_val.is_null_or_undefined()
+                        || actual_val.is_false()
+                        || actual_val.is_undefined()
+                        || actual_val.is_null();
+                    // Additional check for 0 and empty string
+                    let result = if actual_val.is_number() {
+                        let num = actual_val.to_number(scope).unwrap();
+                        num.value() == 0.0
+                    } else if actual_val.is_string() {
+                        let str_val = actual_val.to_string(scope).unwrap();
+                        str_val.length() == 0
+                    } else {
+                        is_falsy
+                    };
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_falsy_key = v8::String::new(scope, "toBeFalsy").unwrap();
+            expect_obj.set(scope, to_falsy_key.into(), to_falsy_fn.into());
+
+            // Add toContain matcher - v0.3.254: Check if string/array contains value
+            let to_contain_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    let expected = args.get(0);
+
+                    let result = if actual_val.is_string() && expected.is_string() {
+                        // String contains
+                        let actual_str = actual_val
+                            .to_string(scope)
+                            .unwrap()
+                            .to_rust_string_lossy(scope);
+                        let expected_str = expected
+                            .to_string(scope)
+                            .unwrap()
+                            .to_rust_string_lossy(scope);
+                        actual_str.contains(&expected_str)
+                    } else if actual_val.is_object() {
+                        // Check if it's an array - borrow scope once
+                        let length_key = v8::String::new(scope, "length").unwrap();
+                        if let Some(obj) = actual_val.to_object(scope) {
+                            if let Some(length_val) = obj.get(scope, length_key.into()) {
+                                if length_val.is_number() {
+                                    // Array contains (using strict equality)
+                                    let arr = v8::Local::<v8::Array>::try_from(actual_val).ok();
+                                    if let Some(arr) = arr {
+                                        let len = arr.length();
+                                        let mut found = false;
+                                        for i in 0..len {
+                                            if let Some(item) = arr.get_index(scope, i as u32) {
+                                                if item.strict_equals(expected) {
+                                                    found = true;
+                                                    break;
+                                                }
+                                            }
                                         }
+                                        found
+                                    } else {
+                                        false
                                     }
+                                } else {
+                                    false
                                 }
-                                found
                             } else {
                                 false
                             }
@@ -304,125 +358,189 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                         }
                     } else {
                         false
-                    }
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_contain_key = v8::String::new(scope, "toContain").unwrap();
-        expect_obj.set(scope, to_contain_key.into(), to_contain_fn.into());
+                    };
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_contain_key = v8::String::new(scope, "toContain").unwrap();
+            expect_obj.set(scope, to_contain_key.into(), to_contain_fn.into());
 
-        // Add toThrow matcher - v0.3.254: Check if function throws (not applicable in this context)
-        let to_throw_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            // toThrow is typically used with expect(() => fn()).toThrow()
-            // For now, return true (passes) as we can't easily check if a function threw
-            // In a full implementation, this would need to wrap the call in try-catch
-            retval.set(v8::Boolean::new(scope, true).into());
-        }).unwrap();
-        let to_throw_key = v8::String::new(scope, "toThrow").unwrap();
-        expect_obj.set(scope, to_throw_key.into(), to_throw_fn.into());
+            // Add toThrow matcher - v0.3.254: Check if function throws (not applicable in this context)
+            let to_throw_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 _args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    // toThrow is typically used with expect(() => fn()).toThrow()
+                    // For now, return true (passes) as we can't easily check if a function threw
+                    // In a full implementation, this would need to wrap the call in try-catch
+                    retval.set(v8::Boolean::new(scope, true).into());
+                },
+            )
+            .unwrap();
+            let to_throw_key = v8::String::new(scope, "toThrow").unwrap();
+            expect_obj.set(scope, to_throw_key.into(), to_throw_fn.into());
 
-        // Add toHaveLength matcher - v0.3.254: Check if string/array has expected length
-        let to_length_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this_obj = args.this();
-            let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            let expected = args.get(0);
+            // Add toHaveLength matcher - v0.3.254: Check if string/array has expected length
+            let to_length_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    let expected = args.get(0);
 
-            let expected_len = if expected.is_number() {
-                expected.to_number(scope).unwrap().value() as u32
-            } else {
-                0
-            };
+                    let expected_len = if expected.is_number() {
+                        expected.to_number(scope).unwrap().value() as u32
+                    } else {
+                        0
+                    };
 
-            let actual_len: usize = if actual_val.is_string() {
-                actual_val.to_string(scope).unwrap().length()
-            } else if actual_val.is_object() {
-                // Try to cast to array
-                if let Ok(arr) = v8::Local::<v8::Array>::try_from(actual_val) {
-                    arr.length() as usize
-                } else {
-                    0
-                }
-            } else {
-                0
-            };
-            let expected_len_usize = expected_len as usize;
+                    let actual_len: usize = if actual_val.is_string() {
+                        actual_val.to_string(scope).unwrap().length()
+                    } else if actual_val.is_object() {
+                        // Try to cast to array
+                        if let Ok(arr) = v8::Local::<v8::Array>::try_from(actual_val) {
+                            arr.length() as usize
+                        } else {
+                            0
+                        }
+                    } else {
+                        0
+                    };
+                    let expected_len_usize = expected_len as usize;
 
-            retval.set(v8::Boolean::new(scope, actual_len == expected_len_usize).into());
-        }).unwrap();
-        let to_length_key = v8::String::new(scope, "toHaveLength").unwrap();
-        expect_obj.set(scope, to_length_key.into(), to_length_fn.into());
+                    retval.set(v8::Boolean::new(scope, actual_len == expected_len_usize).into());
+                },
+            )
+            .unwrap();
+            let to_length_key = v8::String::new(scope, "toHaveLength").unwrap();
+            expect_obj.set(scope, to_length_key.into(), to_length_fn.into());
 
-        // Add toBeDefined matcher - v0.3.254: Check if value is not undefined
-        let to_defined_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this_obj = args.this();
-            let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            let result = !actual_val.is_undefined();
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_defined_key = v8::String::new(scope, "toBeDefined").unwrap();
-        expect_obj.set(scope, to_defined_key.into(), to_defined_fn.into());
+            // Add toBeDefined matcher - v0.3.254: Check if value is not undefined
+            let to_defined_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    let result = !actual_val.is_undefined();
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_defined_key = v8::String::new(scope, "toBeDefined").unwrap();
+            expect_obj.set(scope, to_defined_key.into(), to_defined_fn.into());
 
-        // Add toBeNull matcher - v0.3.254: Check if value is null
-        let to_null_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let this_obj = args.this();
-            let actual_key = v8::String::new(scope, "_actual").unwrap();
-            let actual_val = this_obj.get(scope, actual_key.into()).unwrap_or(v8::undefined(scope).into());
-            let result = actual_val.is_null();
-            retval.set(v8::Boolean::new(scope, result).into());
-        }).unwrap();
-        let to_null_key = v8::String::new(scope, "toBeNull").unwrap();
-        expect_obj.set(scope, to_null_key.into(), to_null_fn.into());
+            // Add toBeNull matcher - v0.3.254: Check if value is null
+            let to_null_fn = v8::Function::new(
+                scope,
+                |scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 mut retval: v8::ReturnValue| {
+                    let this_obj = args.this();
+                    let actual_key = v8::String::new(scope, "_actual").unwrap();
+                    let actual_val = this_obj
+                        .get(scope, actual_key.into())
+                        .unwrap_or(v8::undefined(scope).into());
+                    let result = actual_val.is_null();
+                    retval.set(v8::Boolean::new(scope, result).into());
+                },
+            )
+            .unwrap();
+            let to_null_key = v8::String::new(scope, "toBeNull").unwrap();
+            expect_obj.set(scope, to_null_key.into(), to_null_fn.into());
 
-        retval.set(expect_obj.into());
-    }).unwrap();
+            retval.set(expect_obj.into());
+        },
+    )
+    .unwrap();
     let expect_key = v8::String::new(scope, "expect").unwrap();
     global.set(scope, expect_key.into(), expect_fn.into());
 
     // Add test/it functions
-    let test_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let _name: String = args.get(0).to_rust_string_lossy(scope);
-        retval.set(v8::undefined(scope).into());
-    }).unwrap();
+    let test_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let _name: String = args.get(0).to_rust_string_lossy(scope);
+            retval.set(v8::undefined(scope).into());
+        },
+    )
+    .unwrap();
     let test_key = v8::String::new(scope, "test").unwrap();
     global.set(scope, test_key.into(), test_fn.into());
 
     // Add describe function
-    let describe_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let _name: String = args.get(0).to_rust_string_lossy(scope);
-        retval.set(v8::undefined(scope).into());
-    }).unwrap();
+    let describe_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let _name: String = args.get(0).to_rust_string_lossy(scope);
+            retval.set(v8::undefined(scope).into());
+        },
+    )
+    .unwrap();
     let describe_key = v8::String::new(scope, "describe").unwrap();
     global.set(scope, describe_key.into(), describe_fn.into());
 
     // Add beforeEach/afterEach/beforeAll/afterAll
-    let before_each_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        retval.set(v8::undefined(scope).into());
-    }).unwrap();
+    let before_each_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            retval.set(v8::undefined(scope).into());
+        },
+    )
+    .unwrap();
     let before_each_key = v8::String::new(scope, "beforeEach").unwrap();
     global.set(scope, before_each_key.into(), before_each_fn.into());
 
-    let after_each_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        retval.set(v8::undefined(scope).into());
-    }).unwrap();
+    let after_each_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            retval.set(v8::undefined(scope).into());
+        },
+    )
+    .unwrap();
     let after_each_key = v8::String::new(scope, "afterEach").unwrap();
     global.set(scope, after_each_key.into(), after_each_fn.into());
 
-    let before_all_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        retval.set(v8::undefined(scope).into());
-    }).unwrap();
+    let before_all_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            retval.set(v8::undefined(scope).into());
+        },
+    )
+    .unwrap();
     let before_all_key = v8::String::new(scope, "beforeAll").unwrap();
     global.set(scope, before_all_key.into(), before_all_fn.into());
 
-    let after_all_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        retval.set(v8::undefined(scope).into());
-    }).unwrap();
+    let after_all_fn = v8::Function::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            retval.set(v8::undefined(scope).into());
+        },
+    )
+    .unwrap();
     let after_all_key = v8::String::new(scope, "afterAll").unwrap();
     global.set(scope, after_all_key.into(), after_all_fn.into());
 }

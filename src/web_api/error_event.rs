@@ -6,7 +6,10 @@ use rusty_v8 as v8;
 
 /// Setup ErrorEvent API in V8 context
 /// ErrorEvent provides detailed information about script errors
-pub fn setup_error_event_api(scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Local<v8::Context>) {
+pub fn setup_error_event_api(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) {
     let global = context.global(scope);
 
     // Create ErrorEvent constructor
@@ -45,12 +48,22 @@ pub fn setup_error_event_api(scope: &mut v8::ContextScope<v8::HandleScope>, cont
 
 /// Set up window.onerror property
 /// Simply initializes it as a property on window that JavaScript can set/get
-fn setup_window_onerror(scope: &mut v8::ContextScope<v8::HandleScope>, global: v8::Local<v8::Object>) {
+fn setup_window_onerror(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    global: v8::Local<v8::Object>,
+) {
     let onerror_key = v8::String::new(scope, "onerror").unwrap();
 
-    // Initialize onerror as undefined
-    let undefined = v8::undefined(scope).into();
-    global.set(scope, onerror_key.into(), undefined);
+    let onerror_fn = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         _args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            rv.set(v8::Boolean::new(_scope, false).into());
+        },
+    )
+    .unwrap();
+    global.set(scope, onerror_key.into(), onerror_fn.into());
 
     // Set window as an alias to globalThis for browser compatibility
     let window_key = v8::String::new(scope, "window").unwrap();
@@ -77,6 +90,19 @@ fn error_event_constructor(
     let mut lineno = 0;
     let mut colno = 0;
     let mut error_obj: Option<v8::Local<v8::Value>> = None;
+
+    if args.length() > 0 {
+        let first_arg = args.get(0);
+        if first_arg.is_string() {
+            let first_arg = first_arg
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
+            if first_arg != "error" {
+                message = first_arg;
+            }
+        }
+    }
 
     // Parse eventInitDict if second argument is provided
     if args.length() > 1 {
@@ -176,7 +202,11 @@ fn error_event_constructor(
     // Set defaultPrevented (readonly, but we set initial value)
     let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
     let default_prevented_val = v8::Boolean::new(scope, false);
-    event_obj.set(scope, default_prevented_key.into(), default_prevented_val.into());
+    event_obj.set(
+        scope,
+        default_prevented_key.into(),
+        default_prevented_val.into(),
+    );
 
     // Set isTrusted
     let is_trusted_key = v8::String::new(scope, "isTrusted").unwrap();
@@ -245,7 +275,11 @@ pub fn create_error_event_object<'a>(
 
     let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
     let default_prevented_val = v8::Boolean::new(scope, false);
-    event_obj.set(scope, default_prevented_key.into(), default_prevented_val.into());
+    event_obj.set(
+        scope,
+        default_prevented_key.into(),
+        default_prevented_val.into(),
+    );
 
     let is_trusted_key = v8::String::new(scope, "isTrusted").unwrap();
     let is_trusted_val = v8::Boolean::new(scope, false);
