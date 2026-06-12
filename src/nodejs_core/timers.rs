@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::event_loop::get_async_timer_manager;
+use crate::event_loop::{get_async_timer_manager, TimerScheduleError};
 
 /// Timer type enumeration
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -236,6 +236,17 @@ pub fn remove_timer_metadata(timer_id: u64) {
     metadata.remove(&timer_id);
 }
 
+fn throw_timer_schedule_error(scope: &mut v8::HandleScope, err: TimerScheduleError) {
+    let message = v8::String::new(scope, &format!("timer scheduling failed: {}", err)).unwrap();
+    let error = v8::Exception::error(scope, message);
+    scope.throw_exception(error.into());
+}
+
+fn cleanup_scheduled_timer_state(timer_id: u64) {
+    remove_timer_metadata(timer_id);
+    let _ = remove_timer_callback(timer_id);
+}
+
 /// Remove timer callback from registry
 pub fn remove_timer_callback(
     timer_id: u64,
@@ -335,11 +346,14 @@ fn create_timer_object<'a>(
             if let Some(info) = metadata.get_mut(&timer_id_val) {
                 let effective_delay = if info.delay == 0 { 1 } else { info.delay };
                 drop(metadata);
-                let _ = get_async_timer_manager().schedule_timeout(
+                if let Err(err) = get_async_timer_manager().try_schedule_timeout(
                     Duration::from_millis(effective_delay),
                     timer_id_val,
                     || {},
-                );
+                ) {
+                    throw_timer_schedule_error(scope, err);
+                    return;
+                }
             }
 
             retval.set(this.into());
@@ -435,11 +449,14 @@ fn create_timer_object<'a>(
                 if type_str != "Immediate" && new_delay > 0 {
                     // Reschedule with new delay
                     let effective_delay = if new_delay == 0 { 1 } else { new_delay };
-                    let _ = get_async_timer_manager().schedule_timeout(
+                    if let Err(err) = get_async_timer_manager().try_schedule_timeout(
                         Duration::from_millis(effective_delay),
                         timer_id_val,
                         || {},
-                    );
+                    ) {
+                        throw_timer_schedule_error(scope, err);
+                        return;
+                    }
                 }
 
                 // Return timer object for chaining
@@ -529,12 +546,14 @@ pub fn setup_timers_api(
 
             if delay == 0 {
                 get_async_timer_manager().mark_timer_fired(timer_id);
-            } else {
-                get_async_timer_manager().schedule_timeout(
-                    Duration::from_millis(delay),
-                    timer_id,
-                    || {},
-                );
+            } else if let Err(err) = get_async_timer_manager().try_schedule_timeout(
+                Duration::from_millis(delay),
+                timer_id,
+                || {},
+            ) {
+                cleanup_scheduled_timer_state(timer_id);
+                throw_timer_schedule_error(scope, err);
+                return;
             }
 
             // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
@@ -607,12 +626,16 @@ pub fn setup_timers_api(
                 store_timer_callback(timer_id, callback_global, args_global);
 
                 // Schedule with AsyncTimerManager
-                get_async_timer_manager().schedule_interval(
+                if let Err(err) = get_async_timer_manager().try_schedule_interval(
                     Duration::from_millis(delay),
                     0,
                     timer_id,
                     || {},
-                );
+                ) {
+                    cleanup_scheduled_timer_state(timer_id);
+                    throw_timer_schedule_error(scope, err);
+                    return;
+                }
             } else {
                 // Store metadata for delay = 0 (edge case - should execute immediately)
                 let mut metadata = TIMER_METADATA.lock().unwrap();

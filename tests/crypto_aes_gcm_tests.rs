@@ -451,3 +451,101 @@ fn test_aes_gcm_algorithm_name_case_insensitive() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
+
+#[test]
+#[serial]
+fn test_aes_gcm_encrypt_without_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            try {
+                await crypto.subtle.encrypt(
+                    { name: 'AES-GCM' },
+                    key,
+                    new Uint8Array([1, 2, 3])
+                );
+                return 'resolved';
+            } catch (error) {
+                return String(error && error.message || error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code).unwrap();
+
+    assert!(
+        result.to_lowercase().contains("iv"),
+        "AES-GCM encrypt without iv must fail closed, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn test_aes_gcm_encrypt_with_short_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            try {
+                await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: new Uint8Array(8) },
+                    key,
+                    new Uint8Array([1, 2, 3])
+                );
+                return 'resolved';
+            } catch (error) {
+                return String(error && error.message || error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code).unwrap();
+
+    assert!(
+        result.to_lowercase().contains("iv"),
+        "AES-GCM encrypt with short iv must fail closed, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn test_aes_gcm_decrypt_without_iv_fails_closed_even_for_zero_iv_ciphertext() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: new Uint8Array(12) },
+                key,
+                new Uint8Array([1, 2, 3])
+            );
+            try {
+                await crypto.subtle.decrypt(
+                    { name: 'AES-GCM' },
+                    key,
+                    ciphertext
+                );
+                return 'resolved';
+            } catch (error) {
+                return String(error && error.message || error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code).unwrap();
+
+    assert!(
+        result.to_lowercase().contains("iv"),
+        "AES-GCM decrypt without iv must fail closed, got: {result}"
+    );
+}

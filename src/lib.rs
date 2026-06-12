@@ -60,6 +60,7 @@ pub mod monitor;
 // pub mod runtime_lite;  // Temporarily disabled - compilation issues
 // pub mod runtime_core;  // Temporarily disabled - compilation issues
 pub mod event_loop;
+pub mod permissions;
 pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution // v0.2.0: 异步事件循环实现
                          // pub mod v8_context_pool;  // Temporarily disabled - compilation issues
                          // pub mod v8_engine;  // Temporarily disabled - compilation issues

@@ -194,15 +194,24 @@ fn test_process_next_tick_basic() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let executed = false;
-        process.nextTick(function() { executed = true; });
-        executed;
+        globalThis.__processNextTickExecuted = false;
+        process.nextTick(function() { globalThis.__processNextTickExecuted = true; });
+        globalThis.__processNextTickExecuted;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
         result.trim(),
+        "false",
+        "execute_code should return the main script completion before nextTick drain"
+    );
+
+    let observed = runtime
+        .execute_code("globalThis.__processNextTickExecuted;")
+        .expect("Execution failed");
+    assert_eq!(
+        observed.trim(),
         "true",
-        "process.nextTick callback should execute synchronously"
+        "process.nextTick callback should execute during post-script drain"
     );
 }
 
@@ -213,13 +222,22 @@ fn test_process_next_tick_with_args() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let result = null;
-        process.nextTick(function(a, b) { result = a + b; }, 10, 20);
-        result === 30;
+        globalThis.__processNextTickResult = null;
+        process.nextTick(function(a, b) { globalThis.__processNextTickResult = a + b; }, 10, 20);
+        globalThis.__processNextTickResult;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
         result.trim(),
+        "null",
+        "execute_code should not replay the result expression after nextTick drain"
+    );
+
+    let observed = runtime
+        .execute_code("globalThis.__processNextTickResult === 30;")
+        .expect("Execution failed");
+    assert_eq!(
+        observed.trim(),
         "true",
         "process.nextTick should pass arguments to callback"
     );

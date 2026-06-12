@@ -12,7 +12,7 @@ use rusty_v8 as v8;
 use serde_json;
 use std::collections::HashMap;
 use std::io::Write;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use url::Url;
 
@@ -89,6 +89,15 @@ static TIMER_REGISTRY: OnceLock<Mutex<HashMap<u64, TimerInfo>>> = OnceLock::new(
 /// V8 execution in this runtime still shares process-global API registries.
 /// Serialize entry until the public runtime has true multi-isolate isolation.
 static V8_EXECUTION_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+/// Legacy inline fs fallbacks predate the shared fs module and do not participate
+/// in the resource broker. Keep them disabled unless a test deliberately flips
+/// this private process flag inside the runtime.
+static LEGACY_FS_FALLBACK_ENABLED: AtomicBool = AtomicBool::new(false);
+
+fn legacy_fs_fallback_enabled() -> bool {
+    LEGACY_FS_FALLBACK_ENABLED.load(Ordering::Relaxed)
+}
 
 /// Get the timer registry, initializing it if needed
 fn get_timer_registry() -> &'static Mutex<HashMap<u64, TimerInfo>> {
@@ -2012,9 +2021,27 @@ pub struct MinimalRuntime {
     isolate: v8::OwnedIsolate,
     // v0.3.93: 存储 V8 Context 以支持跨 Context 共享数据
     context: Option<v8::Global<v8::Context>>,
+    process_argv: Vec<String>,
+    main_module_dir: String,
+    main_module_filename: String,
+    timer_drain_limit_ms: u64,
 }
 
 impl MinimalRuntime {
+    const DEFAULT_TIMER_DRAIN_LIMIT_MS: u64 = 75;
+
+    fn default_process_argv() -> Vec<String> {
+        vec!["bee".to_string(), "<program>".to_string()]
+    }
+
+    fn default_main_module_dir() -> String {
+        "/workspace".to_string()
+    }
+
+    fn default_main_module_filename() -> String {
+        "/workspace/script.js".to_string()
+    }
+
     /// Create a new minimal runtime with optimized settings
     /// v0.3.221: 增强 Isolate 配置以提升性能
     /// v0.3.231: 使用更小的初始堆以加快启动速度
@@ -2040,6 +2067,10 @@ impl MinimalRuntime {
         Ok(Self {
             isolate,
             context: None,
+            process_argv: Self::default_process_argv(),
+            main_module_dir: Self::default_main_module_dir(),
+            main_module_filename: Self::default_main_module_filename(),
+            timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
         })
     }
 
@@ -2062,6 +2093,10 @@ impl MinimalRuntime {
         Ok(Self {
             isolate,
             context: None,
+            process_argv: Self::default_process_argv(),
+            main_module_dir: Self::default_main_module_dir(),
+            main_module_filename: Self::default_main_module_filename(),
+            timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
         })
     }
 
@@ -2081,7 +2116,44 @@ impl MinimalRuntime {
         Ok(Self {
             isolate,
             context: None,
+            process_argv: Self::default_process_argv(),
+            main_module_dir: Self::default_main_module_dir(),
+            main_module_filename: Self::default_main_module_filename(),
+            timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
         })
+    }
+
+    pub fn set_process_argv(&mut self, argv: Vec<String>) {
+        let mut argv = argv;
+        if argv.is_empty() {
+            argv.push("bee".to_string());
+        }
+        if argv.len() == 1 {
+            argv.push("<program>".to_string());
+        }
+        self.process_argv = argv;
+    }
+
+    pub fn set_timer_drain_limit_ms(&mut self, limit_ms: u64) {
+        self.timer_drain_limit_ms = limit_ms;
+    }
+
+    pub fn set_main_module_path(&mut self, path: impl AsRef<std::path::Path>) {
+        let path = path.as_ref();
+        let absolute = path.canonicalize().unwrap_or_else(|_| {
+            if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                std::env::current_dir()
+                    .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                    .join(path)
+            }
+        });
+        self.main_module_filename = absolute.to_string_lossy().to_string();
+        self.main_module_dir = absolute
+            .parent()
+            .map(|parent| parent.to_string_lossy().to_string())
+            .unwrap_or_else(Self::default_main_module_dir);
     }
 
     /// v0.3.234: 预热内置对象以优化启动时间
@@ -3632,107 +3704,6 @@ impl MinimalRuntime {
             .is_match(code)
     }
 
-    fn should_re_evaluate_last_expression(expr: &str) -> bool {
-        let trimmed = expr.trim().trim_end_matches(';').trim();
-        if trimmed.is_empty() || trimmed.starts_with("console.") {
-            return false;
-        }
-
-        let has_assignment = trimmed.contains("=>")
-            || trimmed.contains("++")
-            || trimmed.contains("--")
-            || trimmed.contains("+=")
-            || trimmed.contains("-=")
-            || trimmed.contains("*=")
-            || trimmed.contains("/=")
-            || trimmed.contains("%=")
-            || trimmed.char_indices().any(|(idx, ch)| {
-                if ch != '=' {
-                    return false;
-                }
-                let bytes = trimmed.as_bytes();
-                let prev = idx.checked_sub(1).and_then(|prev_idx| bytes.get(prev_idx));
-                let next = bytes.get(idx + 1);
-                !matches!(prev, Some(b'=' | b'!' | b'<' | b'>'))
-                    && !matches!(next, Some(b'=' | b'>'))
-            });
-        if has_assignment {
-            return false;
-        }
-
-        if trimmed.starts_with("new ")
-            || trimmed.starts_with("throw ")
-            || trimmed.starts_with("return ")
-        {
-            return false;
-        }
-
-        let allowed_pure_call = trimmed.contains(".join(")
-            || trimmed.contains(".toString(")
-            || trimmed.contains(".trim(")
-            || trimmed.contains(".includes(")
-            || trimmed.starts_with("String(")
-            || trimmed.starts_with("Number(")
-            || trimmed.starts_with("Boolean(")
-            || trimmed.starts_with("JSON.stringify(")
-            || trimmed.starts_with("Array.isArray(");
-
-        if allowed_pure_call {
-            return true;
-        }
-
-        let looks_like_call = trimmed.find('(').is_some_and(|idx| {
-            if idx == 0 {
-                return false;
-            }
-            let before_call = trimmed[..idx].trim_end();
-            before_call.chars().last().is_some_and(|ch| {
-                ch.is_ascii_alphanumeric() || ch == '_' || ch == '$' || ch == ']' || ch == ')'
-            })
-        });
-
-        !looks_like_call
-    }
-
-    fn line_continues_expression(line: &str) -> bool {
-        let trimmed = line.trim_end();
-        trimmed.ends_with('+')
-            || trimmed.ends_with('-')
-            || trimmed.ends_with('*')
-            || trimmed.ends_with('/')
-            || trimmed.ends_with('%')
-            || trimmed.ends_with("&&")
-            || trimmed.ends_with("||")
-            || trimmed.ends_with('?')
-            || trimmed.ends_with(':')
-    }
-
-    fn continued_expression_start(code: &str, last_newline_pos: usize) -> usize {
-        let mut expression_start = last_newline_pos + 1;
-        let mut scan_end = last_newline_pos;
-
-        loop {
-            let line_start = code[..scan_end].rfind('\n').map(|pos| pos + 1).unwrap_or(0);
-            let previous_line = &code[line_start..scan_end];
-
-            if previous_line.trim().is_empty() {
-                break;
-            }
-
-            if Self::line_continues_expression(previous_line) {
-                expression_start = line_start;
-                if line_start == 0 {
-                    break;
-                }
-                scan_end = line_start - 1;
-            } else {
-                break;
-            }
-        }
-
-        expression_start
-    }
-
     /// Execute JavaScript or TypeScript code and return the result as a string
     /// v0.3.93: 修改为使用存储的 Context 以支持跨调用共享数据
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
@@ -3869,7 +3840,12 @@ impl MinimalRuntime {
             setup_net_api(scope, &context)?;
             Self::setup_string_decoder_api(scope, &context)?;
             setup_crypto_api(scope, &context)?;
-            Self::setup_module_system(scope, &context)?;
+            Self::setup_module_system(
+                scope,
+                &context,
+                &self.main_module_dir,
+                &self.main_module_filename,
+            )?;
             setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
             setup_performance_api(scope, &context)?; // v0.3.275: Performance API
             setup_streams_api(scope, &context)?; // v0.3.282: Web Streams API for AI workloads
@@ -3927,156 +3903,12 @@ impl MinimalRuntime {
             setup_clipboard_api(scope, &context)?;
         }
 
-        // v0.3.261: Store the original code for potential re-evaluation
-        // We'll run the code first, then re-evaluate the last expression after callbacks
+        Self::apply_process_argv(scope, &context, &self.process_argv)?;
+
+        // Compile and run the user's code exactly once. The returned value below
+        // is the V8 completion value from this script execution.
         let code = v8::String::new(scope, &js_code)
             .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
-
-        // v0.3.261: Extract the last expression for re-evaluation after callbacks
-        // We'll use this to get the final value after nextTick callbacks run
-        let last_expr = if js_code.contains("return ") {
-            // Code has explicit return, use the return expression
-            let return_pos = js_code.rfind("return ").unwrap();
-            js_code[return_pos + 7..]
-                .trim()
-                .trim_end_matches(';')
-                .to_string()
-        } else {
-            // No explicit return, the last statement is the expression to evaluate
-            // Find the position after the last statement terminator
-            // We search backwards from the end to find the last expression
-
-            // Strategy: Find the last NEWLINE that separates complete statements
-            // (not newlines inside function calls like setTimeout/setImmediate callbacks)
-            //
-            // We search backwards tracking depth. When we find a newline at depth 0,
-            // we check if there's a real statement after it (not just whitespace).
-            // If the statement after starts with setImmediate/setTimeout, we extract
-            // the arrow function body. Otherwise, we use the content after the newline.
-
-            // First, find the last newline in the code
-            // We'll store both the expression string and its position
-            let mut last_expr: Option<String> = None;
-
-            // Find all newline positions and work backwards
-            let mut newline_positions: Vec<usize> = js_code
-                .char_indices()
-                .filter(|(_, c)| *c == '\n')
-                .map(|(i, _)| i)
-                .collect();
-
-            // If the code ends with a newline, skip it (trailing whitespace/newline)
-            while let Some(&last_newline_pos) = newline_positions.last() {
-                if last_newline_pos == js_code.len().saturating_sub(1)
-                    || js_code[last_newline_pos..].trim().is_empty()
-                {
-                    newline_positions.pop();
-                } else {
-                    break;
-                }
-            }
-
-            if let Some(&last_newline_pos) = newline_positions.last() {
-                let last_line_content = js_code[last_newline_pos + 1..].trim();
-
-                // Check if last line is a setImmediate/setTimeout call
-                if last_line_content.starts_with("setImmediate")
-                    || last_line_content.starts_with("setTimeout")
-                {
-                    // Find the => in the ORIGINAL string, starting from last_newline_pos
-                    if let Some(arrow_global_pos) = js_code[last_newline_pos..].rfind("=>") {
-                        let arrow_pos_in_line = last_newline_pos + arrow_global_pos;
-
-                        // Get content after the arrow in the original string (NOT trimmed yet)
-                        let after_arrow_raw = &js_code[arrow_pos_in_line + 2..];
-
-                        // Find where this expression ends in the ORIGINAL string
-                        // (semicolon, or closing paren that closes the setImmediate/setTimeout call)
-                        let mut end_pos_in_raw = None;
-                        let mut paren_depth: i32 = 0;
-
-                        for (i, c) in after_arrow_raw.char_indices() {
-                            match c {
-                                '(' => paren_depth += 1,
-                                ')' => {
-                                    if paren_depth == 0 {
-                                        // This is the closing paren of setImmediate/setTimeout
-                                        end_pos_in_raw = Some(i);
-                                        break;
-                                    }
-                                    paren_depth = paren_depth.saturating_sub(1);
-                                }
-                                ';' => {
-                                    if paren_depth == 0 {
-                                        end_pos_in_raw = Some(i);
-                                        break;
-                                    }
-                                }
-                                '{' => paren_depth = paren_depth.saturating_sub(1), // entering block
-                                '}' => paren_depth += 1,                            // leaving block
-                                _ => {}
-                            }
-                        }
-
-                        let end_pos = end_pos_in_raw.unwrap_or(after_arrow_raw.len());
-                        let expr = after_arrow_raw[..end_pos]
-                            .trim()
-                            .trim_end_matches(';')
-                            .trim()
-                            .to_string();
-
-                        if !expr.is_empty() {
-                            // Store the extracted expression directly
-                            last_expr = Some(expr);
-                        }
-                    }
-                } else if !last_line_content.is_empty() {
-                    // Last line is not a setImmediate/setTimeout. If it is part of a
-                    // continued expression, include the preceding operator-terminated lines.
-                    let expression_start =
-                        Self::continued_expression_start(&js_code, last_newline_pos);
-                    let content_after_newline = js_code[expression_start..].trim().to_string();
-                    if !content_after_newline.is_empty() {
-                        last_expr = Some(content_after_newline);
-                    }
-                }
-            }
-
-            // If no expression found via newline, fall back to searching for top-level semicolon
-            if last_expr.is_none() {
-                // Search backwards for top-level semicolon
-                let mut brace_depth: i32 = 0;
-                let mut paren_depth: i32 = 0;
-
-                for i in (0..js_code.len()).rev() {
-                    let c = js_code.as_bytes()[i] as char;
-                    match c {
-                        '}' => brace_depth += 1,
-                        '{' => brace_depth = brace_depth.saturating_sub(1),
-                        ')' => paren_depth += 1,
-                        '(' => paren_depth = paren_depth.saturating_sub(1),
-                        ';' => {
-                            if brace_depth == 0 && paren_depth == 0 {
-                                let after = js_code[i + 1..].trim();
-                                if !after.is_empty()
-                                    && after != ";"
-                                    && !after.starts_with("setImmediate")
-                                    && !after.starts_with("setTimeout")
-                                {
-                                    last_expr = Some(after.to_string());
-                                    break;
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-
-            // If still no expression, use the whole code
-            let expr = last_expr.unwrap_or_else(|| js_code.trim().to_string());
-            expr
-        };
 
         // Use TryCatch for proper error handling
         let scope = &mut v8::TryCatch::new(scope);
@@ -4100,7 +3932,7 @@ impl MinimalRuntime {
             }
         };
 
-        // Run the script - we capture the result handle but will re-evaluate after callbacks
+        // Run the script once and keep its completion value for the final result.
         let result = match script.run(scope) {
             Some(result) => result,
             None => {
@@ -4194,7 +4026,7 @@ impl MinimalRuntime {
         // This loop continues until: no pending nextTicks, no fired timers
         // Note: setImmediate callbacks are processed AFTER this loop (in the "next iteration")
         //
-        const SHORT_TIMER_DRAIN_LIMIT_MS: u64 = 75;
+        let timer_drain_limit_ms = self.timer_drain_limit_ms;
 
         loop {
             // Fast path: after sync code, nextTick and microtasks may be the only
@@ -4214,7 +4046,7 @@ impl MinimalRuntime {
                     && crate::nodejs_core::timers::has_pending_zero_delay_timers();
                 let has_drainable_timers =
                     crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        SHORT_TIMER_DRAIN_LIMIT_MS,
+                        timer_drain_limit_ms,
                     );
                 let has_wait_until = crate::web_api::background_sync::has_pending_wait_until();
                 let has_wait_until_timers = has_scheduled_timers && has_wait_until;
@@ -4242,7 +4074,7 @@ impl MinimalRuntime {
                     has_scheduled && crate::nodejs_core::timers::has_pending_zero_delay_timers();
                 let has_drainable_timers =
                     crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        SHORT_TIMER_DRAIN_LIMIT_MS,
+                        timer_drain_limit_ms,
                     );
                 let has_wait_until = crate::web_api::background_sync::has_pending_wait_until();
                 let has_wait_until_timers = has_scheduled && has_wait_until;
@@ -4302,7 +4134,7 @@ impl MinimalRuntime {
                     && (crate::nodejs_core::timers::has_pending_zero_delay_timers()
                         || crate::web_api::background_sync::has_pending_wait_until()))
                     || crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        SHORT_TIMER_DRAIN_LIMIT_MS,
+                        timer_drain_limit_ms,
                     )
             };
             if timers_scheduled_in_microtasks {
@@ -4346,7 +4178,7 @@ impl MinimalRuntime {
                     && (crate::nodejs_core::timers::has_pending_zero_delay_timers()
                         || crate::web_api::background_sync::has_pending_wait_until()))
                     || crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        SHORT_TIMER_DRAIN_LIMIT_MS,
+                        timer_drain_limit_ms,
                     )
             };
             // v0.3.339: Don't include has_pending_work in break condition since it's a stored value
@@ -4393,39 +4225,11 @@ impl MinimalRuntime {
         execute_next_tick_callbacks(scope);
         scope.perform_microtask_checkpoint();
 
-        // v0.3.261: CRITICAL FIX - Capture result AFTER the full event loop
-        // This ensures that code like `order.join(',')` captures the final state after
-        // all callbacks (nextTick, timers, setImmediate) have executed.
-        // We evaluate the last expression here to get the final value
-        let final_result = {
-            if !Self::should_re_evaluate_last_expression(&last_expr) {
-                None
-            } else {
-                let eval_code = v8::String::new(scope, &last_expr)
-                    .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from eval code"))?;
-
-                let eval_scope = &mut v8::TryCatch::new(scope);
-                match v8::Script::compile(eval_scope, eval_code, None) {
-                    Some(script) => match script.run(eval_scope) {
-                        Some(res) => Some(value_to_string_after_microtasks(eval_scope, res)?),
-                        None => None,
-                    },
-                    None => None,
-                }
-            }
-        };
-
-        // Return the result captured after the full event loop
-        // This reflects the state after all callbacks have executed
+        // Return the original script completion value. Do not recompile or rerun
+        // any user expression while converting it to a string.
         crate::web_api::background_sync::reset_pending_wait_until();
-
-        if let Some(result_str) = final_result {
-            Ok(result_str)
-        } else {
-            // Fallback: convert original result if eval failed
-            let result_str = value_to_string_after_microtasks(scope, result)?;
-            Ok(result_str)
-        }
+        let result_str = value_to_string_after_microtasks(scope, result)?;
+        Ok(result_str)
     }
 
     /// Execute code multiple times and measure performance
@@ -5181,19 +4985,101 @@ impl MinimalRuntime {
                         "unknown".to_string()
                     };
 
+                    let mut method = "GET".to_string();
+                    let mut headers = HashMap::new();
+                    let mut body = None;
+
+                    if args.length() >= 2 {
+                        let init = args.get(1);
+                        if init.is_object() {
+                            if let Some(init_obj) = init.to_object(scope) {
+                                let method_key = v8::String::new(scope, "method").unwrap().into();
+                                if let Some(method_val) = init_obj.get(scope, method_key) {
+                                    if let Some(method_str) = method_val.to_string(scope) {
+                                        method = method_str.to_rust_string_lossy(scope);
+                                    }
+                                }
+
+                                let headers_key = v8::String::new(scope, "headers").unwrap().into();
+                                if let Some(headers_val) = init_obj.get(scope, headers_key) {
+                                    if headers_val.is_object() {
+                                        if let Some(headers_obj) = headers_val.to_object(scope) {
+                                            if let Some(keys) =
+                                                headers_obj.get_own_property_names(scope)
+                                            {
+                                                for index in 0..keys.length() {
+                                                    if let Some(key) = keys.get_index(scope, index)
+                                                    {
+                                                        if let Some(key_str) = key.to_string(scope)
+                                                        {
+                                                            if let Some(value) =
+                                                                headers_obj.get(scope, key)
+                                                            {
+                                                                if let Some(value_str) =
+                                                                    value.to_string(scope)
+                                                                {
+                                                                    headers.insert(
+                                                                        key_str
+                                                                            .to_rust_string_lossy(
+                                                                                scope,
+                                                                            ),
+                                                                        value_str
+                                                                            .to_rust_string_lossy(
+                                                                                scope,
+                                                                            ),
+                                                                    );
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                let body_key = v8::String::new(scope, "body").unwrap().into();
+                                if let Some(body_val) = init_obj.get(scope, body_key) {
+                                    if !body_val.is_null_or_undefined() {
+                                        if let Some(body_str) = body_val.to_string(scope) {
+                                            body = Some(body_str.to_rust_string_lossy(scope));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let method_clone = method.clone();
+                    let headers_clone = headers.clone();
+                    let body_clone = body.clone();
+
                     // v0.3.1: Make a real HTTP request with response body
-                    let (status, success, response_body) = match reqwest::blocking::get(&url_string)
-                    {
-                        Ok(response) => {
-                            let status = response.status().as_u16();
-                            let text = response.text().unwrap_or_default();
-                            (status, true, text)
-                        }
-                        Err(e) => {
-                            println!("⚠️ HTTP request failed for {}: {}", url_string, e);
-                            (404, false, String::new())
-                        }
-                    };
+                    let (status, success, response_body) =
+                        match (|| -> Result<reqwest::blocking::Response> {
+                            let client = reqwest::blocking::Client::new();
+                            let request_method =
+                                reqwest::Method::from_bytes(method_clone.as_bytes())
+                                    .map_err(|error| anyhow::anyhow!(error))?;
+                            let mut request = client.request(request_method, &url_string);
+                            for (name, value) in headers_clone {
+                                request = request.header(name, value);
+                            }
+                            if let Some(body) = body_clone {
+                                request = request.body(body);
+                            }
+                            Ok(request.send()?)
+                        })() {
+                            Ok(response) => {
+                                let status = response.status().as_u16();
+                                let text = response.text().unwrap_or_default();
+                                (status, true, text)
+                            }
+                            Err(e) => {
+                                println!("⚠️ HTTP request failed for {}: {}", url_string, e);
+                                (404, false, String::new())
+                            }
+                        };
 
                     // Create response object with internal field for body storage (v0.3.1)
                     let response_template = v8::ObjectTemplate::new(scope);
@@ -13921,6 +13807,8 @@ impl MinimalRuntime {
     fn setup_module_system(
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Context,
+        main_module_dir: &str,
+        main_module_filename: &str,
     ) -> Result<()> {
         let global = context.global(scope);
 
@@ -13931,9 +13819,7 @@ impl MinimalRuntime {
         module_obj.set(scope, module_id_key, module_id_val);
 
         let module_filename_key = v8::String::new(scope, "filename").unwrap().into();
-        let module_filename_val = v8::String::new(scope, "/workspace/script.js")
-            .unwrap()
-            .into();
+        let module_filename_val = v8::String::new(scope, main_module_filename).unwrap().into();
         module_obj.set(scope, module_filename_key, module_filename_val);
 
         let module_parent_key = v8::String::new(scope, "parent").unwrap().into();
@@ -14187,6 +14073,27 @@ impl MinimalRuntime {
                         result_obj.set(scope, sep_key, sep_val);
                     }
                     "fs" => {
+                        let ctx = scope.get_current_context();
+                        let global_obj = ctx.global(scope);
+                        let fs_key = v8::String::new(scope, "fs").unwrap();
+                        if let Some(fs_value) = global_obj.get(scope, fs_key.into()) {
+                            if !fs_value.is_undefined() && !fs_value.is_null() {
+                                retval.set(fs_value);
+                                return;
+                            }
+                        }
+
+                        if !legacy_fs_fallback_enabled() {
+                            let error = v8::String::new(
+                                scope,
+                                "Cannot load builtin module 'fs': global fs binding is unavailable",
+                            )
+                            .unwrap();
+                            let exception = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(exception);
+                            return;
+                        }
+
                         // Return fs module with file system methods (v0.3.5)
                         let fs_obj = v8::Object::new(scope);
 
@@ -14508,6 +14415,34 @@ impl MinimalRuntime {
                         return;
                     }
                     "fs/promises" => {
+                        let ctx = scope.get_current_context();
+                        let global_obj = ctx.global(scope);
+                        let fs_key = v8::String::new(scope, "fs").unwrap();
+                        if let Some(fs_value) = global_obj.get(scope, fs_key.into()) {
+                            if let Ok(fs_obj) = v8::Local::<v8::Object>::try_from(fs_value) {
+                                let promises_key = v8::String::new(scope, "promises").unwrap();
+                                if let Some(promises_value) =
+                                    fs_obj.get(scope, promises_key.into())
+                                {
+                                    if !promises_value.is_undefined() && !promises_value.is_null() {
+                                        retval.set(promises_value);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+
+                        if !legacy_fs_fallback_enabled() {
+                            let error = v8::String::new(
+                                scope,
+                                "Cannot load builtin module 'fs/promises': global fs.promises binding is unavailable",
+                            )
+                            .unwrap();
+                            let exception = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(exception);
+                            return;
+                        }
+
                         // Return fs/promises module with Promise-based API (v0.3.7)
                         let promises_obj = v8::Object::new(scope);
 
@@ -14917,23 +14852,44 @@ impl MinimalRuntime {
                             .map(|s| s.to_rust_string_lossy(scope))
                             .unwrap_or_else(|| String::from("."));
 
-                        // Resolve relative paths using __dirname as base
-                        let resolved_path = if module_id_str.starts_with("./") || module_id_str.starts_with("../") {
-                            let base_dir = std::path::Path::new(&current_dirname);
-                            let trimmed = module_id_str.trim_start_matches("./");
-                            base_dir.join(trimmed)
-                        } else {
-                            std::path::Path::new(&module_id_str).to_path_buf()
-                        };
+                        let module_path = match crate::nodejs_core::commonjs_resolver::resolve_commonjs_module(
+                            &module_id_str,
+                            std::path::Path::new(&current_dirname),
+                        ) {
+                            Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::File(path)) => path,
+                            Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::Builtin(name)) => {
+                                let error_msg = format!("Cannot load builtin module '{}' from file resolver", name);
+                                let error_str = v8::String::new(scope, &error_msg).unwrap();
+                                let error_obj = v8::Exception::error(scope, error_str);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                            Err(error) => {
+                                // v0.3.281: Handle readline module - return from global.readline
+                                if module_id_str == "readline" {
+                                    let readline_key = v8::String::new(scope, "readline").unwrap().into();
+                                    if let Some(readline_val) = global.get(scope, readline_key) {
+                                        if !readline_val.is_undefined() && !readline_val.is_null() {
+                                            // Set as 'default' property for CommonJS compatibility
+                                            let default_key = v8::String::new(scope, "default").unwrap().into();
+                                            result_obj.set(scope, default_key, readline_val);
+                                            retval.set(result_obj.into());
+                                            return;
+                                        }
+                                    }
+                                    // Fallback if readline not found
+                                    let error_msg = "Cannot find module 'readline' - readline API not available";
+                                    let error_str = v8::String::new(scope, error_msg).unwrap();
+                                    let error_obj = v8::Exception::error(scope, error_str);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
 
-                        // Resolve as an existing file first; only append .js when the raw path
-                        // does not exist. Temporary module files often have no extension.
-                        let module_path = if resolved_path.exists() {
-                            resolved_path
-                        } else if resolved_path.extension().is_none() {
-                            resolved_path.with_extension("js")
-                        } else {
-                            resolved_path
+                                let error_str = v8::String::new(scope, &error.to_string()).unwrap();
+                                let error_obj = v8::Exception::error(scope, error_str);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
                         };
 
                         // Try to resolve as file path
@@ -14960,6 +14916,18 @@ impl MinimalRuntime {
                             }
 
                             // Read and execute the module file
+                            if let Err(error) = crate::permissions::check_global_permission(
+                                crate::permissions::PermissionKind::FileSystem,
+                                crate::permissions::PermissionAction::Read,
+                                crate::permissions::ResourceId::Path(module_path.clone()),
+                            ) {
+                                let error_str =
+                                    v8::String::new(scope, &error.to_string()).unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error_str);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+
                             match std::fs::read_to_string(&module_path) {
                                 Ok(code) => {
                                     // Create new module and exports objects for this module
@@ -14975,10 +14943,42 @@ impl MinimalRuntime {
                                         .unwrap_or_else(|| "/".to_string());
                                     let module_filename = module_path.to_string_lossy().to_string();
 
-                                    // Create a wrapper function to execute the module code
+                                    // Create a wrapper function to execute the module code.
+                                    // The local require captures this module directory, so module
+                                    // code cannot break sibling resolution by mutating global
+                                    // __dirname before calling require("./sibling").
+                                    let module_dir_json =
+                                        serde_json::to_string(&module_dirname).unwrap();
                                     let wrapper_code = format!(
-                                        r#"(function(module, exports, __dirname, __filename) {{ {} }})"#,
-                                        code
+                                        r#"(function(module, exports, __dirname, __filename) {{
+const __beejsModuleDir = {module_dir_json};
+const __beejsGlobalRequire = globalThis.require;
+function require(specifier) {{
+  const __previousDirname = globalThis.__dirname;
+  const __previousFilename = globalThis.__filename;
+  globalThis.__dirname = __beejsModuleDir;
+  globalThis.__filename = __filename;
+  try {{
+    return __beejsGlobalRequire(specifier);
+  }} finally {{
+    globalThis.__dirname = __previousDirname;
+    globalThis.__filename = __previousFilename;
+  }}
+}}
+require.resolve = function(specifier) {{
+  const __previousDirname = globalThis.__dirname;
+  const __previousFilename = globalThis.__filename;
+  globalThis.__dirname = __beejsModuleDir;
+  globalThis.__filename = __filename;
+  try {{
+    return __beejsGlobalRequire.resolve(specifier);
+  }} finally {{
+    globalThis.__dirname = __previousDirname;
+    globalThis.__filename = __previousFilename;
+  }}
+}};
+{code}
+}})"#
                                     );
 
                                     // Compile and run the module code
@@ -14993,7 +14993,31 @@ impl MinimalRuntime {
                                     let undefined = v8::undefined(scope);
                                     let dirname_val = v8::String::new(scope, &module_dirname).unwrap().into();
                                     let filename_val = v8::String::new(scope, &module_filename).unwrap().into();
-                                    if wrapper_func.call(scope, undefined.into(), &[module_obj.clone().into(), exports_obj.clone().into(), dirname_val, filename_val]).is_none() {
+                                    let global_dirname_key = v8::String::new(scope, "__dirname").unwrap();
+                                    let global_filename_key = v8::String::new(scope, "__filename").unwrap();
+                                    let previous_dirname = global.get(scope, global_dirname_key.into());
+                                    let previous_filename = global.get(scope, global_filename_key.into());
+                                    let set_dirname_key =
+                                        v8::String::new(scope, "__dirname").unwrap().into();
+                                    global.set(scope, set_dirname_key, dirname_val);
+                                    let set_filename_key =
+                                        v8::String::new(scope, "__filename").unwrap().into();
+                                    global.set(scope, set_filename_key, filename_val);
+
+                                    let call_result = wrapper_func.call(scope, undefined.into(), &[module_obj.clone().into(), exports_obj.clone().into(), dirname_val, filename_val]);
+
+                                    if let Some(previous_dirname) = previous_dirname {
+                                        let restore_dirname_key =
+                                            v8::String::new(scope, "__dirname").unwrap().into();
+                                        global.set(scope, restore_dirname_key, previous_dirname);
+                                    }
+                                    if let Some(previous_filename) = previous_filename {
+                                        let restore_filename_key =
+                                            v8::String::new(scope, "__filename").unwrap().into();
+                                        global.set(scope, restore_filename_key, previous_filename);
+                                    }
+
+                                    if call_result.is_none() {
                                         return;
                                     }
 
@@ -15019,26 +15043,6 @@ impl MinimalRuntime {
                             }
                         }
 
-                        // v0.3.281: Handle readline module - return from global.readline
-                        if module_id_str == "readline" {
-                            let readline_key = v8::String::new(scope, "readline").unwrap().into();
-                            if let Some(readline_val) = global.get(scope, readline_key) {
-                                if !readline_val.is_undefined() && !readline_val.is_null() {
-                                    // Set as 'default' property for CommonJS compatibility
-                                    let default_key = v8::String::new(scope, "default").unwrap().into();
-                                    result_obj.set(scope, default_key, readline_val);
-                                    retval.set(result_obj.into());
-                                    return;
-                                }
-                            }
-                            // Fallback if readline not found
-                            let error_msg = "Cannot find module 'readline' - readline API not available";
-                            let error_str = v8::String::new(scope, error_msg).unwrap();
-                            let error_obj = v8::Exception::error(scope, error_str);
-                            scope.throw_exception(error_obj.into());
-                            return;
-                        }
-
                         // Throw error for unknown modules
                         let error_msg = format!("Cannot find module '{}'", module_id_str);
                         let error_str = v8::String::new(scope, &error_msg).unwrap();
@@ -15062,9 +15066,38 @@ impl MinimalRuntime {
                     let specifier = args.get(0);
                     if let Some(s) = specifier.to_string(scope) {
                         let specifier_str = s.to_rust_string_lossy(scope);
-                        // Basic path resolution - just return the specifier for now
-                        let resolved_str = v8::String::new(scope, &specifier_str).unwrap();
-                        retval.set(resolved_str.into());
+                        let context = scope.get_current_context();
+                        let global = context.global(scope);
+                        let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+                        let current_dirname = global
+                            .get(scope, dirname_key.into())
+                            .and_then(|value| value.to_string(scope))
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| String::from("."));
+
+                        match crate::nodejs_core::commonjs_resolver::resolve_commonjs_module(
+                            &specifier_str,
+                            std::path::Path::new(&current_dirname),
+                        ) {
+                            Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::Builtin(
+                                name,
+                            )) => {
+                                let resolved_str = v8::String::new(scope, &name).unwrap();
+                                retval.set(resolved_str.into());
+                            }
+                            Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::File(
+                                path,
+                            )) => {
+                                let resolved = path.to_string_lossy();
+                                let resolved_str = v8::String::new(scope, &resolved).unwrap();
+                                retval.set(resolved_str.into());
+                            }
+                            Err(error) => {
+                                let error_str = v8::String::new(scope, &error.to_string()).unwrap();
+                                let error_obj = v8::Exception::error(scope, error_str);
+                                scope.throw_exception(error_obj.into());
+                            }
+                        }
                         return;
                     }
                 }
@@ -15090,13 +15123,11 @@ impl MinimalRuntime {
         setup_buffer_module(scope);
 
         // Set __dirname and __filename globals
-        let dirname_val = v8::String::new(scope, "/workspace").unwrap().into();
+        let dirname_val = v8::String::new(scope, main_module_dir).unwrap().into();
         let dirname_key = v8::String::new(scope, "__dirname").unwrap().into();
         global.set(scope, dirname_key, dirname_val);
 
-        let filename_val = v8::String::new(scope, "/workspace/script.js")
-            .unwrap()
-            .into();
+        let filename_val = v8::String::new(scope, main_module_filename).unwrap().into();
         let filename_key = v8::String::new(scope, "__filename").unwrap().into();
         global.set(scope, filename_key, filename_val);
 
@@ -15151,6 +15182,36 @@ impl MinimalRuntime {
 
         global.set(scope, import_meta_key, import_meta_obj.into());
 
+        Ok(())
+    }
+
+    fn apply_process_argv(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+        argv: &[String],
+    ) -> Result<()> {
+        let global = context.global(scope);
+        let process_key = v8::String::new(scope, "process").unwrap();
+        let process_value = global
+            .get(scope, process_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        if !process_value.is_object() {
+            return Ok(());
+        }
+
+        let process_obj = process_value
+            .to_object(scope)
+            .ok_or_else(|| anyhow::anyhow!("process global is not an object"))?;
+        let argv_array = v8::Array::new(scope, argv.len() as i32);
+
+        for (index, value) in argv.iter().enumerate() {
+            let value = v8::String::new(scope, value).unwrap();
+            argv_array.set_index(scope, index as u32, value.into());
+        }
+
+        let argv_key = v8::String::new(scope, "argv").unwrap();
+        process_obj.set(scope, argv_key.into(), argv_array.into());
         Ok(())
     }
 
@@ -15542,6 +15603,16 @@ impl MinimalRuntime {
         // Create process.env object
         let env_obj = v8::Object::new(scope);
         for (key, value) in env::vars() {
+            if crate::permissions::check_global_permission(
+                crate::permissions::PermissionKind::Environment,
+                crate::permissions::PermissionAction::Read,
+                crate::permissions::ResourceId::Name(key.clone()),
+            )
+            .is_err()
+            {
+                continue;
+            }
+
             let k = v8::String::new(scope, &key).unwrap();
             let v = v8::String::new(scope, &value).unwrap();
             env_obj.set(scope, k.into(), v.into());

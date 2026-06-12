@@ -290,7 +290,12 @@ fn test_readfilesync_error_handling() {
 
     let code = r#"
         const fs = require('fs');
-        fs.readFileSync("/nonexistent/path/to/file.txt");
+        try {
+            fs.readFileSync("/nonexistent/path/to/file.txt");
+            "allowed";
+        } catch (error) {
+            String(error && error.message ? error.message : error);
+        }
     "#;
 
     let result = runtime.execute_code(code).expect("Execution failed");

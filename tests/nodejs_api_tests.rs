@@ -44,15 +44,19 @@ fn test_process_cwd() {
 fn test_process_next_tick() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
-        let executed = false;
+        globalThis.__nextTickExecuted = false;
         process.nextTick(function() {
-            executed = true;
+            globalThis.__nextTickExecuted = true;
         });
-        executed === true;
+        globalThis.__nextTickExecuted;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok(), "nextTick test failed: {:?}", result);
-    let result_str = result.unwrap();
+    assert_eq!(result.unwrap().trim(), "false");
+
+    let result_str = runtime
+        .execute_code("globalThis.__nextTickExecuted === true")
+        .unwrap();
     assert!(
         result_str.contains("true"),
         "nextTick callback should have executed, got: {}",
@@ -65,15 +69,19 @@ fn test_process_next_tick() {
 fn test_process_next_tick_with_args() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
-        let result = null;
+        globalThis.__nextTickResult = null;
         process.nextTick((a, b) => {
-            result = a + b;
+            globalThis.__nextTickResult = a + b;
         }, 5, 3);
-        result === 8;
+        globalThis.__nextTickResult;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    let result_str = result.unwrap();
+    assert_eq!(result.unwrap().trim(), "null");
+
+    let result_str = runtime
+        .execute_code("globalThis.__nextTickResult === 8")
+        .unwrap();
     assert!(
         result_str.contains("true"),
         "nextTick should pass arguments to callback, got: {}",

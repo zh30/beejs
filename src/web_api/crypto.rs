@@ -10,6 +10,7 @@ use ring::signature::{
     ECDSA_P256_SHA256_ASN1_SIGNING,
 };
 use rusty_v8 as v8;
+use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use untrusted;
 
@@ -60,8 +61,10 @@ fn get_algorithm_hash_name(
     algo_value: v8::Local<v8::Value>,
 ) -> String {
     if algo_value.is_string() {
-        // For string, assume it's "SHA-256"
-        return "SHA-256".to_string();
+        return algo_value
+            .to_string(scope)
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_default();
     }
 
     if algo_value.is_object() {
@@ -83,6 +86,14 @@ fn get_algorithm_hash_name(
                 }
             }
         }
+
+        let name_key = v8::String::new(scope, "name").unwrap();
+        if let Some(name_val) = algo_obj.get(scope, name_key.into()) {
+            if name_val.is_string() {
+                let name_str = name_val.to_string(scope).unwrap();
+                return name_str.to_rust_string_lossy(scope);
+            }
+        }
     }
 
     "SHA-256".to_string()
@@ -91,6 +102,11 @@ fn get_algorithm_hash_name(
 /// Compute SHA digest
 fn compute_sha_digest(data: &[u8], algorithm: &str) -> Result<Vec<u8>, String> {
     match algorithm {
+        "SHA-1" | "sha-1" => {
+            let mut hasher = Sha1::new();
+            hasher.update(data);
+            Ok(hasher.finalize().to_vec())
+        }
         "SHA-256" | "sha-256" => {
             let mut hasher = Sha256::new();
             hasher.update(data);
@@ -570,7 +586,7 @@ fn hmac_sign_callback(
 
     if algo_name == "ECDSA" || key_algorithm == "ECDSA" {
         // ECDSA signing - use ring::EcdsaKeyPair for real cryptographic signing
-        let curve_name = get_curve_name(scope, key_obj);
+        let _curve_name = get_curve_name(scope, key_obj);
 
         // Get PKCS#8 key data from the CryptoKey
         let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
@@ -580,32 +596,17 @@ fn hmac_sign_callback(
             match get_array_buffer_data(scope, kdv) {
                 Some(data) => data,
                 None => {
-                    // Fallback to deterministic signature if key data not available
-                    let signature = generate_ecdsa_signature(&data, &curve_name);
-                    let array_buffer = v8::ArrayBuffer::new(scope, signature.len());
-                    let backing_store = array_buffer.get_backing_store();
-                    for (i, &byte) in signature.iter().enumerate() {
-                        backing_store[i].set(byte);
-                    }
-                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                    resolver.resolve(scope, array_buffer.into());
-                    let promise = resolver.get_promise(scope);
-                    retval.set(promise.into());
+                    let error =
+                        v8::String::new(scope, "sign: ECDSA key data is unavailable").unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
                     return;
                 }
             }
         } else {
-            // Fallback to deterministic signature if key data not available
-            let signature = generate_ecdsa_signature(&data, &curve_name);
-            let array_buffer = v8::ArrayBuffer::new(scope, signature.len());
-            let backing_store = array_buffer.get_backing_store();
-            for (i, &byte) in signature.iter().enumerate() {
-                backing_store[i].set(byte);
-            }
-            let resolver = v8::PromiseResolver::new(scope).unwrap();
-            resolver.resolve(scope, array_buffer.into());
-            let promise = resolver.get_promise(scope);
-            retval.set(promise.into());
+            let error = v8::String::new(scope, "sign: ECDSA key data is unavailable").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
             return;
         };
 
@@ -615,17 +616,9 @@ fn hmac_sign_callback(
         let key_pair = match EcdsaKeyPair::from_pkcs8(signing_alg, &pkcs8_data, &rng) {
             Ok(kp) => kp,
             Err(_) => {
-                // Fallback to deterministic signature if key parsing fails
-                let signature = generate_ecdsa_signature(&data, &curve_name);
-                let array_buffer = v8::ArrayBuffer::new(scope, signature.len());
-                let backing_store = array_buffer.get_backing_store();
-                for (i, &byte) in signature.iter().enumerate() {
-                    backing_store[i].set(byte);
-                }
-                let resolver = v8::PromiseResolver::new(scope).unwrap();
-                resolver.resolve(scope, array_buffer.into());
-                let promise = resolver.get_promise(scope);
-                retval.set(promise.into());
+                let error = v8::String::new(scope, "sign: invalid ECDSA private key").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
                 return;
             }
         };
@@ -634,17 +627,9 @@ fn hmac_sign_callback(
         let signature = match key_pair.sign(&rng, &data) {
             Ok(sig) => sig.as_ref().to_vec(),
             Err(_) => {
-                // Fallback to deterministic signature if signing fails
-                let signature = generate_ecdsa_signature(&data, &curve_name);
-                let array_buffer = v8::ArrayBuffer::new(scope, signature.len());
-                let backing_store = array_buffer.get_backing_store();
-                for (i, &byte) in signature.iter().enumerate() {
-                    backing_store[i].set(byte);
-                }
-                let resolver = v8::PromiseResolver::new(scope).unwrap();
-                resolver.resolve(scope, array_buffer.into());
-                let promise = resolver.get_promise(scope);
-                retval.set(promise.into());
+                let error = v8::String::new(scope, "sign: ECDSA signing failed").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
                 return;
             }
         };
@@ -663,19 +648,9 @@ fn hmac_sign_callback(
         || algo_name.starts_with("RSA")
         || algo_name == "RSASSA-PKCS1-v1_5"
     {
-        // RSA signing - generate a signature placeholder
-        let sig_len = 256; // RSA-2048 signature length
-        let signature = generate_random_bytes(sig_len);
-        let array_buffer = v8::ArrayBuffer::new(scope, signature.len());
-        let backing_store = array_buffer.get_backing_store();
-        for (i, &byte) in signature.iter().enumerate() {
-            backing_store[i].set(byte);
-        }
-
-        let resolver = v8::PromiseResolver::new(scope).unwrap();
-        resolver.resolve(scope, array_buffer.into());
-        let promise = resolver.get_promise(scope);
-        retval.set(promise.into());
+        let error = v8::String::new(scope, "sign: RSA signing is not implemented").unwrap();
+        let error_obj = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
     } else {
         // HMAC signing
         let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
@@ -816,8 +791,8 @@ fn hmac_verify_callback(
         || algo_name.starts_with("RSA")
         || algo_name == "RSASSA-PKCS1-v1_5"
     {
-        // RSA verification - for now, just return true (placeholder)
-        v8::Boolean::new(scope, true)
+        // RSA verification is not implemented yet. Do not report fake success.
+        v8::Boolean::new(scope, false)
     } else {
         // HMAC verification
         let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
@@ -881,16 +856,47 @@ fn aes_encrypt_callback(
         None
     };
 
-    // Get IV from algorithm
-    let mut iv = vec![0u8; 12]; // Default IV for AES-GCM
-    if let Some(ref obj) = algo_obj {
-        let iv_key = v8::String::new(scope, "iv").unwrap();
-        if let Some(iv_val) = obj.get(scope, iv_key.into()) {
-            if let Some(iv_data) = get_array_buffer_data(scope, iv_val) {
-                iv = iv_data;
+    // Get IV from algorithm. Beejs' AES-GCM backend currently supports the
+    // standard 96-bit nonce only; never substitute an all-zero nonce.
+    let iv = match algo_obj.as_ref() {
+        Some(obj) => {
+            let iv_key = v8::String::new(scope, "iv").unwrap();
+            match obj.get(scope, iv_key.into()) {
+                Some(iv_val) => match get_array_buffer_data(scope, iv_val) {
+                    Some(iv_data) if iv_data.len() == 12 => iv_data,
+                    Some(_) => {
+                        let error =
+                            v8::String::new(scope, "encrypt: AES-GCM iv must be 12 bytes").unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                    None => {
+                        let error = v8::String::new(
+                            scope,
+                            "encrypt: AES-GCM iv must be an ArrayBuffer or TypedArray",
+                        )
+                        .unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                },
+                None => {
+                    let error = v8::String::new(scope, "encrypt: AES-GCM requires iv").unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
             }
         }
-    }
+        None => {
+            let error = v8::String::new(scope, "encrypt: AES-GCM requires iv").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return;
+        }
+    };
 
     // Get additional authenticated data (AAD) if present
     let aad = if let Some(ref obj) = algo_obj {
@@ -917,6 +923,17 @@ fn aes_encrypt_callback(
         }
     };
 
+    if !algo_name.eq_ignore_ascii_case("AES-GCM") {
+        let error = v8::String::new(
+            scope,
+            &format!("encrypt: algorithm '{}' is not implemented", algo_name),
+        )
+        .unwrap();
+        let error_obj = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
     // Get key data from CryptoKey
     let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
     let key_data_value = key_value
@@ -927,135 +944,77 @@ fn aes_encrypt_callback(
     match key_data_value {
         Some(kdv) => {
             if let Some(key_bytes) = get_array_buffer_data(scope, kdv) {
-                // Determine which algorithm to use
-                if algo_name == "AES-GCM" || algo_name == "aes-gcm" {
-                    // Use AES-GCM
-                    // Select algorithm based on key length
-                    let algorithm: &'static Algorithm = if key_bytes.len() == 32 {
-                        &AES_256_GCM
-                    } else if key_bytes.len() == 16 {
-                        &AES_128_GCM
-                    } else {
-                        let error = v8::String::new(
-                            scope,
-                            "encrypt: invalid key length for AES-GCM (must be 128 or 256 bits)",
-                        )
-                        .unwrap();
-                        let error_obj = v8::Exception::error(scope, error);
-                        scope.throw_exception(error_obj.into());
-                        return;
-                    };
+                let algorithm: &'static Algorithm = if key_bytes.len() == 32 {
+                    &AES_256_GCM
+                } else if key_bytes.len() == 16 {
+                    &AES_128_GCM
+                } else {
+                    let error = v8::String::new(
+                        scope,
+                        "encrypt: invalid key length for AES-GCM (must be 128 or 256 bits)",
+                    )
+                    .unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                };
 
-                    match UnboundKey::new(algorithm, &key_bytes) {
-                        Ok(unbound_key) => {
-                            let less_safe_key = LessSafeKey::new(unbound_key);
-                            let nonce =
-                                Nonce::assume_unique_for_key(iv.try_into().unwrap_or([0u8; 12]));
+                match UnboundKey::new(algorithm, &key_bytes) {
+                    Ok(unbound_key) => {
+                        let less_safe_key = LessSafeKey::new(unbound_key);
+                        let nonce = Nonce::assume_unique_for_key(iv.try_into().unwrap());
 
-                            // Encrypt with optional AAD
-                            let aad_ref = aad
-                                .as_ref()
-                                .map(|v| Aad::from(v.as_slice()))
-                                .unwrap_or_else(|| Aad::from(&[][..]));
-                            let mut plaintext = data.clone();
-                            let result = less_safe_key.seal_in_place_append_tag(
-                                nonce,
-                                aad_ref,
-                                &mut plaintext,
-                            );
+                        // Encrypt with optional AAD
+                        let aad_ref = aad
+                            .as_ref()
+                            .map(|v| Aad::from(v.as_slice()))
+                            .unwrap_or_else(|| Aad::from(&[][..]));
+                        let mut plaintext = data.clone();
+                        let result =
+                            less_safe_key.seal_in_place_append_tag(nonce, aad_ref, &mut plaintext);
 
-                            match result {
-                                Ok(()) => {
-                                    let array_buffer = v8::ArrayBuffer::new(scope, plaintext.len());
-                                    let backing_store = array_buffer.get_backing_store();
-                                    for (i, &byte) in plaintext.iter().enumerate() {
-                                        backing_store[i].set(byte);
-                                    }
-
-                                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                                    resolver.resolve(scope, array_buffer.into());
-                                    let promise = resolver.get_promise(scope);
-                                    retval.set(promise.into());
+                        match result {
+                            Ok(()) => {
+                                let array_buffer = v8::ArrayBuffer::new(scope, plaintext.len());
+                                let backing_store = array_buffer.get_backing_store();
+                                for (i, &byte) in plaintext.iter().enumerate() {
+                                    backing_store[i].set(byte);
                                 }
-                                Err(e) => {
-                                    let error = v8::String::new(
-                                        scope,
-                                        &format!("encrypt: encryption failed: {:?}", e),
-                                    )
-                                    .unwrap();
-                                    let error_obj = v8::Exception::error(scope, error);
-                                    scope.throw_exception(error_obj.into());
-                                }
+
+                                let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                resolver.resolve(scope, array_buffer.into());
+                                let promise = resolver.get_promise(scope);
+                                retval.set(promise.into());
+                            }
+                            Err(e) => {
+                                let error = v8::String::new(
+                                    scope,
+                                    &format!("encrypt: encryption failed: {:?}", e),
+                                )
+                                .unwrap();
+                                let error_obj = v8::Exception::error(scope, error);
+                                scope.throw_exception(error_obj.into());
                             }
                         }
-                        Err(e) => {
-                            let error =
-                                v8::String::new(scope, &format!("encrypt: invalid key: {:?}", e))
-                                    .unwrap();
-                            let error_obj = v8::Exception::error(scope, error);
-                            scope.throw_exception(error_obj.into());
-                        }
                     }
-                } else if algo_name == "AES-CBC" || algo_name == "aes-cbc" {
-                    // AES-CBC is not directly supported by ring's aead module
-                    // Fall back to just returning data prefixed with IV for now
-                    let mut result = iv;
-                    result.extend(data);
-                    let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-                    let backing_store = array_buffer.get_backing_store();
-                    for (i, &byte) in result.iter().enumerate() {
-                        backing_store[i].set(byte);
+                    Err(e) => {
+                        let error =
+                            v8::String::new(scope, &format!("encrypt: invalid key: {:?}", e))
+                                .unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
                     }
-
-                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                    resolver.resolve(scope, array_buffer.into());
-                    let promise = resolver.get_promise(scope);
-                    retval.set(promise.into());
-                } else {
-                    // Unknown algorithm, fall back to passthrough
-                    let mut result = iv;
-                    result.extend(data);
-                    let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-                    let backing_store = array_buffer.get_backing_store();
-                    for (i, &byte) in result.iter().enumerate() {
-                        backing_store[i].set(byte);
-                    }
-
-                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                    resolver.resolve(scope, array_buffer.into());
-                    let promise = resolver.get_promise(scope);
-                    retval.set(promise.into());
                 }
             } else {
-                // Fallback: just return data prefixed with IV
-                let mut result = iv;
-                result.extend(data);
-                let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-                let backing_store = array_buffer.get_backing_store();
-                for (i, &byte) in result.iter().enumerate() {
-                    backing_store[i].set(byte);
-                }
-
-                let resolver = v8::PromiseResolver::new(scope).unwrap();
-                resolver.resolve(scope, array_buffer.into());
-                let promise = resolver.get_promise(scope);
-                retval.set(promise.into());
+                let error = v8::String::new(scope, "encrypt: key data is unavailable").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
             }
         }
         None => {
-            // Fallback: just return data prefixed with IV
-            let mut result = iv;
-            result.extend(data);
-            let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-            let backing_store = array_buffer.get_backing_store();
-            for (i, &byte) in result.iter().enumerate() {
-                backing_store[i].set(byte);
-            }
-
-            let resolver = v8::PromiseResolver::new(scope).unwrap();
-            resolver.resolve(scope, array_buffer.into());
-            let promise = resolver.get_promise(scope);
-            retval.set(promise.into());
+            let error = v8::String::new(scope, "encrypt: key data is unavailable").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
         }
     }
 }
@@ -1093,16 +1052,47 @@ fn aes_decrypt_callback(
         None
     };
 
-    // Get IV from algorithm
-    let mut iv = vec![0u8; 12]; // Default IV for AES-GCM
-    if let Some(ref obj) = algo_obj {
-        let iv_key = v8::String::new(scope, "iv").unwrap();
-        if let Some(iv_val) = obj.get(scope, iv_key.into()) {
-            if let Some(iv_data) = get_array_buffer_data(scope, iv_val) {
-                iv = iv_data;
+    // Get IV from algorithm. Beejs' AES-GCM backend currently supports the
+    // standard 96-bit nonce only; never substitute an all-zero nonce.
+    let iv = match algo_obj.as_ref() {
+        Some(obj) => {
+            let iv_key = v8::String::new(scope, "iv").unwrap();
+            match obj.get(scope, iv_key.into()) {
+                Some(iv_val) => match get_array_buffer_data(scope, iv_val) {
+                    Some(iv_data) if iv_data.len() == 12 => iv_data,
+                    Some(_) => {
+                        let error =
+                            v8::String::new(scope, "decrypt: AES-GCM iv must be 12 bytes").unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                    None => {
+                        let error = v8::String::new(
+                            scope,
+                            "decrypt: AES-GCM iv must be an ArrayBuffer or TypedArray",
+                        )
+                        .unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                },
+                None => {
+                    let error = v8::String::new(scope, "decrypt: AES-GCM requires iv").unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
             }
         }
-    }
+        None => {
+            let error = v8::String::new(scope, "decrypt: AES-GCM requires iv").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return;
+        }
+    };
 
     // Get additional authenticated data (AAD) if present
     let aad = if let Some(ref obj) = algo_obj {
@@ -1128,6 +1118,17 @@ fn aes_decrypt_callback(
         }
     };
 
+    if !algo_name.eq_ignore_ascii_case("AES-GCM") {
+        let error = v8::String::new(
+            scope,
+            &format!("decrypt: algorithm '{}' is not implemented", algo_name),
+        )
+        .unwrap();
+        let error_obj = v8::Exception::error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
     // Get key data from CryptoKey
     let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
     let key_data_value = key_value
@@ -1138,144 +1139,72 @@ fn aes_decrypt_callback(
     match key_data_value {
         Some(kdv) => {
             if let Some(key_bytes) = get_array_buffer_data(scope, kdv) {
-                // Determine which algorithm to use
-                if algo_name == "AES-GCM" || algo_name == "aes-gcm" {
-                    // Use AES-GCM - ciphertext includes the authentication tag (16 bytes)
-                    // Select algorithm based on key length
-                    let algorithm: &'static Algorithm = if key_bytes.len() == 32 {
-                        &AES_256_GCM
-                    } else if key_bytes.len() == 16 {
-                        &AES_128_GCM
-                    } else {
-                        let error = v8::String::new(
-                            scope,
-                            "decrypt: invalid key length for AES-GCM (must be 128 or 256 bits)",
-                        )
-                        .unwrap();
-                        let error_obj = v8::Exception::error(scope, error);
-                        scope.throw_exception(error_obj.into());
-                        return;
-                    };
-
-                    match UnboundKey::new(algorithm, &key_bytes) {
-                        Ok(unbound_key) => {
-                            let less_safe_key = LessSafeKey::new(unbound_key);
-                            let nonce =
-                                Nonce::assume_unique_for_key(iv.try_into().unwrap_or([0u8; 12]));
-
-                            // Decrypt with optional AAD
-                            let aad_ref = aad
-                                .as_ref()
-                                .map(|v| Aad::from(v.as_slice()))
-                                .unwrap_or_else(|| Aad::from(&[][..]));
-                            let mut ciphertext = encrypted_data.clone();
-                            let result =
-                                less_safe_key.open_in_place(nonce, aad_ref, &mut ciphertext);
-
-                            match result {
-                                Ok(plaintext) => {
-                                    let array_buffer = v8::ArrayBuffer::new(scope, plaintext.len());
-                                    let backing_store = array_buffer.get_backing_store();
-                                    for (i, &byte) in plaintext.iter().enumerate() {
-                                        backing_store[i].set(byte);
-                                    }
-
-                                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                                    resolver.resolve(scope, array_buffer.into());
-                                    let promise = resolver.get_promise(scope);
-                                    retval.set(promise.into());
-                                }
-                                Err(e) => {
-                                    let error = v8::String::new(scope, &format!("decrypt: decryption failed (authentication failed or data corrupted): {:?}", e)).unwrap();
-                                    let error_obj = v8::Exception::error(scope, error);
-                                    scope.throw_exception(error_obj.into());
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            let error =
-                                v8::String::new(scope, &format!("decrypt: invalid key: {:?}", e))
-                                    .unwrap();
-                            let error_obj = v8::Exception::error(scope, error);
-                            scope.throw_exception(error_obj.into());
-                        }
-                    }
-                } else if algo_name == "AES-CBC" || algo_name == "aes-cbc" {
-                    // AES-CBC is not directly supported by ring's aead module
-                    // Fall back to passthrough
-                    let result = if encrypted_data.len() > iv.len() {
-                        encrypted_data[iv.len()..].to_vec()
-                    } else {
-                        encrypted_data
-                    };
-
-                    let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-                    let backing_store = array_buffer.get_backing_store();
-                    for (i, &byte) in result.iter().enumerate() {
-                        backing_store[i].set(byte);
-                    }
-
-                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                    resolver.resolve(scope, array_buffer.into());
-                    let promise = resolver.get_promise(scope);
-                    retval.set(promise.into());
+                let algorithm: &'static Algorithm = if key_bytes.len() == 32 {
+                    &AES_256_GCM
+                } else if key_bytes.len() == 16 {
+                    &AES_128_GCM
                 } else {
-                    // Unknown algorithm, fall back to passthrough
-                    let result = if encrypted_data.len() > iv.len() {
-                        encrypted_data[iv.len()..].to_vec()
-                    } else {
-                        encrypted_data
-                    };
-
-                    let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-                    let backing_store = array_buffer.get_backing_store();
-                    for (i, &byte) in result.iter().enumerate() {
-                        backing_store[i].set(byte);
-                    }
-
-                    let resolver = v8::PromiseResolver::new(scope).unwrap();
-                    resolver.resolve(scope, array_buffer.into());
-                    let promise = resolver.get_promise(scope);
-                    retval.set(promise.into());
-                }
-            } else {
-                // Fallback: just return data without IV prefix
-                let result = if encrypted_data.len() > iv.len() {
-                    encrypted_data[iv.len()..].to_vec()
-                } else {
-                    encrypted_data
+                    let error = v8::String::new(
+                        scope,
+                        "decrypt: invalid key length for AES-GCM (must be 128 or 256 bits)",
+                    )
+                    .unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
                 };
 
-                let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-                let backing_store = array_buffer.get_backing_store();
-                for (i, &byte) in result.iter().enumerate() {
-                    backing_store[i].set(byte);
-                }
+                match UnboundKey::new(algorithm, &key_bytes) {
+                    Ok(unbound_key) => {
+                        let less_safe_key = LessSafeKey::new(unbound_key);
+                        let nonce = Nonce::assume_unique_for_key(iv.try_into().unwrap());
 
-                let resolver = v8::PromiseResolver::new(scope).unwrap();
-                resolver.resolve(scope, array_buffer.into());
-                let promise = resolver.get_promise(scope);
-                retval.set(promise.into());
+                        // Decrypt with optional AAD
+                        let aad_ref = aad
+                            .as_ref()
+                            .map(|v| Aad::from(v.as_slice()))
+                            .unwrap_or_else(|| Aad::from(&[][..]));
+                        let mut ciphertext = encrypted_data.clone();
+                        let result = less_safe_key.open_in_place(nonce, aad_ref, &mut ciphertext);
+
+                        match result {
+                            Ok(plaintext) => {
+                                let array_buffer = v8::ArrayBuffer::new(scope, plaintext.len());
+                                let backing_store = array_buffer.get_backing_store();
+                                for (i, &byte) in plaintext.iter().enumerate() {
+                                    backing_store[i].set(byte);
+                                }
+
+                                let resolver = v8::PromiseResolver::new(scope).unwrap();
+                                resolver.resolve(scope, array_buffer.into());
+                                let promise = resolver.get_promise(scope);
+                                retval.set(promise.into());
+                            }
+                            Err(e) => {
+                                let error = v8::String::new(scope, &format!("decrypt: decryption failed (authentication failed or data corrupted): {:?}", e)).unwrap();
+                                let error_obj = v8::Exception::error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let error =
+                            v8::String::new(scope, &format!("decrypt: invalid key: {:?}", e))
+                                .unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                    }
+                }
+            } else {
+                let error = v8::String::new(scope, "decrypt: key data is unavailable").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
             }
         }
         None => {
-            // Fallback: just return data without IV prefix
-            let result = if encrypted_data.len() > iv.len() {
-                encrypted_data[iv.len()..].to_vec()
-            } else {
-                encrypted_data
-            };
-
-            let array_buffer = v8::ArrayBuffer::new(scope, result.len());
-            let backing_store = array_buffer.get_backing_store();
-            for (i, &byte) in result.iter().enumerate() {
-                backing_store[i].set(byte);
-            }
-
-            let resolver = v8::PromiseResolver::new(scope).unwrap();
-            resolver.resolve(scope, array_buffer.into());
-            let promise = resolver.get_promise(scope);
-            retval.set(promise.into());
+            let error = v8::String::new(scope, "decrypt: key data is unavailable").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
         }
     }
 }
@@ -1913,41 +1842,6 @@ fn generate_random_bytes(length: usize) -> Vec<u8> {
     data
 }
 
-/// Generate a deterministic ECDSA-like signature for testing purposes
-/// In a production implementation, this would use ring's ECDSA signing
-fn generate_ecdsa_signature(data: &[u8], curve_name: &str) -> Vec<u8> {
-    // Signature format: r || s (each component is half the signature length)
-    let sig_len = match curve_name {
-        "P-256" => 64,
-        "P-384" => 96,
-        "P-521" => 132,
-        _ => 64,
-    };
-
-    // Create a deterministic "signature" based on the data hash
-    // This is for testing purposes - real implementation uses ring's ECDSA
-    let mut signature = vec![0u8; sig_len];
-
-    // Simple hash-based deterministic signature generation
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    hasher.update(b"beejs-ecdsa-signature");
-    let hash_result = hasher.finalize();
-
-    // Fill r and s with hash-derived values (deterministic but unique per data)
-    let half_len = sig_len / 2;
-    for i in 0..half_len {
-        let hash_idx = i % hash_result.len();
-        signature[i] = hash_result[hash_idx];
-        signature[half_len + i] = hash_result[(hash_idx + 1) % hash_result.len()];
-    }
-
-    // Ensure signature components are less than the curve order
-    // For P-256, the order is near 2^256, so most values are valid
-    signature
-}
-
 /// Get algorithm length from algorithm object
 fn get_algorithm_length(
     scope: &mut v8::HandleScope,
@@ -2077,69 +1971,17 @@ fn generate_key_callback(
             retval.set(promise.into());
         }
         "RSA-OAEP" | "RSASSA-PKCS1-V1_5" => {
-            // Generate RSA key pair using ring
-            let modulus_bits = if algorithm_value.is_object() {
-                let algo_obj = algorithm_value.to_object(scope).unwrap();
-                let modulus_key = v8::String::new(scope, "modulusLength").unwrap();
-                if let Some(modulus_val) = algo_obj.get(scope, modulus_key.into()) {
-                    modulus_val.integer_value(scope).unwrap_or(2048) as usize
-                } else {
-                    2048
-                }
-            } else {
-                2048
-            };
-
-            // Generate RSA key pair
-            let private_key_data = generate_random_bytes(modulus_bits / 8);
-            let public_key_data = generate_random_bytes(modulus_bits / 8);
-
-            // Create CryptoKey objects
-            let private_key = create_crypto_key(
-                scope,
-                "private",
-                extractable,
-                &algorithm_name,
-                modulus_bits as i32,
-                usages.iter().map(|s| s.as_str()).collect(),
-            );
-
-            let public_key = create_crypto_key(
-                scope,
-                "public",
-                extractable,
-                &algorithm_name,
-                modulus_bits as i32,
-                vec!["encrypt", "verify"],
-            );
-
-            // Store key data
-            let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
-            let private_key_data_array = v8::ArrayBuffer::new(scope, private_key_data.len());
-            let private_backing_store = private_key_data_array.get_backing_store();
-            for (i, &byte) in private_key_data.iter().enumerate() {
-                private_backing_store[i].set(byte);
-            }
-            private_key.set(scope, key_data_key.into(), private_key_data_array.into());
-
-            let public_key_data_array = v8::ArrayBuffer::new(scope, public_key_data.len());
-            let public_backing_store = public_key_data_array.get_backing_store();
-            for (i, &byte) in public_key_data.iter().enumerate() {
-                public_backing_store[i].set(byte);
-            }
-            public_key.set(scope, key_data_key.into(), public_key_data_array.into());
-
-            // Return promise resolving to KeyPair object
             let resolver = v8::PromiseResolver::new(scope).unwrap();
-
-            // Create KeyPair object with publicKey and privateKey
-            let keypair_obj = v8::Object::new(scope);
-            let public_key_key = v8::String::new(scope, "publicKey").unwrap();
-            let private_key_key = v8::String::new(scope, "privateKey").unwrap();
-            keypair_obj.set(scope, public_key_key.into(), public_key.into());
-            keypair_obj.set(scope, private_key_key.into(), private_key.into());
-
-            resolver.resolve(scope, keypair_obj.into());
+            let error = v8::String::new(
+                scope,
+                &format!(
+                    "generateKey: {} key generation is not implemented",
+                    algorithm_name
+                ),
+            )
+            .unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            resolver.reject(scope, error_obj.into());
             let promise = resolver.get_promise(scope);
             retval.set(promise.into());
         }

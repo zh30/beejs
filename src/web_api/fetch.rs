@@ -338,7 +338,10 @@ fn fetch_callback(
     }
 
     // Add Content-Type header if body is set and header not already present
-    if !content_type.is_empty() && !headers.contains_key("content-type") {
+    let has_content_type_header = headers
+        .keys()
+        .any(|header| header.eq_ignore_ascii_case("content-type"));
+    if !content_type.is_empty() && !has_content_type_header {
         headers.insert("Content-Type".to_string(), content_type);
     }
 
@@ -533,6 +536,13 @@ async fn execute_fetch(
             return Err(anyhow::anyhow!("Too many redirects"));
         }
 
+        crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::Network,
+            crate::permissions::PermissionAction::Connect,
+            crate::permissions::ResourceId::Url(current_url.clone()),
+        )
+        .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+
         let client: _ = match reqwest::Client::builder()
             .user_agent("Beejs/0.1.0")
             .timeout(std::time::Duration::from_secs(30))
@@ -541,10 +551,10 @@ async fn execute_fetch(
         {
             Ok(client) => client,
             Err(error) => {
-                return Ok(fallback_fetch_response(
-                    &current_url,
-                    redirected,
-                    &error.to_string(),
+                return Err(anyhow::anyhow!(
+                    "failed to create fetch client for {}: {}",
+                    current_url,
+                    error
                 ));
             }
         };
@@ -578,10 +588,10 @@ async fn execute_fetch(
         let response = match req_builder.send().await {
             Ok(response) => response,
             Err(error) => {
-                return Ok(fallback_fetch_response(
-                    &current_url,
-                    redirected,
-                    &error.to_string(),
+                return Err(anyhow::anyhow!(
+                    "failed to fetch {}: {}",
+                    current_url,
+                    error
                 ));
             }
         };
@@ -623,10 +633,10 @@ async fn execute_fetch(
                     let body_vec: Vec<u8> = match response.bytes().await {
                         Ok(bytes) => bytes.to_vec(),
                         Err(error) => {
-                            return Ok(fallback_fetch_response(
-                                &current_url,
-                                redirected,
-                                &error.to_string(),
+                            return Err(anyhow::anyhow!(
+                                "failed to read fetch body from {}: {}",
+                                current_url,
+                                error
                             ));
                         }
                     };
@@ -670,10 +680,10 @@ async fn execute_fetch(
                         let body_vec: Vec<u8> = match response.bytes().await {
                             Ok(bytes) => bytes.to_vec(),
                             Err(error) => {
-                                return Ok(fallback_fetch_response(
-                                    &current_url,
-                                    redirected,
-                                    &error.to_string(),
+                                return Err(anyhow::anyhow!(
+                                    "failed to read fetch body from {}: {}",
+                                    current_url,
+                                    error
                                 ));
                             }
                         };
@@ -706,21 +716,13 @@ async fn execute_fetch(
         let body_vec: Vec<u8> = match response.bytes().await {
             Ok(bytes) => bytes.to_vec(),
             Err(error) => {
-                return Ok(fallback_fetch_response(
-                    &current_url,
-                    redirected,
-                    &error.to_string(),
+                return Err(anyhow::anyhow!(
+                    "failed to read fetch body from {}: {}",
+                    current_url,
+                    error
                 ));
             }
         };
-
-        if should_use_httpbin_fixture_fallback(&current_url, status) {
-            return Ok(fallback_fetch_response(
-                &current_url,
-                redirected,
-                &format!("upstream fixture returned status {}", status),
-            ));
-        }
 
         // Determine response type
         let response_type = if redirected {
@@ -743,178 +745,6 @@ async fn execute_fetch(
     }
 }
 
-fn should_use_httpbin_fixture_fallback(url: &str, status: u16) -> bool {
-    let is_httpbin_fixture =
-        url.starts_with("https://httpbin.org/") || url.starts_with("http://httpbin.org/");
-    is_httpbin_fixture && (status == 429 || status >= 500)
-}
-
-fn fallback_fetch_response(url: &str, redirected: bool, error: &str) -> FetchResponse {
-    let mut headers = HashMap::new();
-    headers.insert("content-type".to_string(), "application/json".to_string());
-    headers.insert("x-beejs-fetch-fallback".to_string(), "true".to_string());
-    headers.insert("x-beejs-fetch-error".to_string(), error.to_string());
-
-    let (final_url, final_redirected) = fallback_redirect_target(url)
-        .map(|target| (target, true))
-        .unwrap_or_else(|| (url.to_string(), redirected));
-
-    let invalid_url = url.trim() != url
-        || url.contains(' ')
-        || !(url.starts_with("http://") || url.starts_with("https://"));
-
-    let (status, status_text, body) = if invalid_url {
-        let body = format!(
-            "{{\"error\":\"offline fetch fallback\",\"url\":\"{}\"}}",
-            escape_json_string(url)
-        )
-        .into_bytes();
-        (404, "Not Found".to_string(), body)
-    } else if let Some(byte_count) = fallback_bytes_count(url) {
-        let mut headers = headers;
-        headers.insert(
-            "content-type".to_string(),
-            "application/octet-stream".to_string(),
-        );
-        return FetchResponse {
-            url: final_url,
-            status: 200,
-            status_text: "OK".to_string(),
-            ok: true,
-            headers,
-            body: Some(vec![0; byte_count]),
-            body_used: false,
-            redirected: final_redirected,
-            response_type: "default".to_string(),
-        };
-    } else if let Some(status) = fallback_status_code(url) {
-        let status_text = fallback_status_text(status).to_string();
-        let body = if status == 204 || status == 304 {
-            Vec::new()
-        } else {
-            format!(
-                "{{\"status\":{},\"url\":\"{}\"}}",
-                status,
-                escape_json_string(&final_url)
-            )
-            .into_bytes()
-        };
-        (status, status_text, body)
-    } else if url.contains("/headers") {
-        let body = format!(
-            "{{\"headers\":{{\"User-Agent\":\"Beejs/0.1.0\"}},\"url\":\"{}\"}}",
-            escape_json_string(&final_url)
-        )
-        .into_bytes();
-        (200, "OK".to_string(), body)
-    } else if url.contains("/post") || url.contains("/put") {
-        let body = format!(
-            "{{\"json\":null,\"url\":\"{}\",\"origin\":\"beejs-offline\"}}",
-            escape_json_string(&final_url)
-        )
-        .into_bytes();
-        (200, "OK".to_string(), body)
-    } else {
-        let body = format!(
-            "{{\"slideshow\":{{\"title\":\"Beejs offline httpbin fallback\",\"author\":\"Beejs\",\"slides\":[]}},\"url\":\"{}\"}}",
-            escape_json_string(&final_url)
-        )
-        .into_bytes();
-        (200, "OK".to_string(), body)
-    };
-
-    FetchResponse {
-        url: final_url,
-        status,
-        status_text,
-        ok: (200..300).contains(&status),
-        headers,
-        body: Some(body),
-        body_used: false,
-        redirected: final_redirected,
-        response_type: "default".to_string(),
-    }
-}
-
-fn fallback_redirect_target(url: &str) -> Option<String> {
-    if !url.contains("/redirect-to") {
-        return None;
-    }
-
-    let query = url.split_once('?')?.1;
-    query
-        .split('&')
-        .find_map(|param| param.strip_prefix("url="))
-        .map(percent_decode_fallback)
-}
-
-fn fallback_bytes_count(url: &str) -> Option<usize> {
-    let (_, tail) = url.split_once("/bytes/")?;
-    let digits: String = tail.chars().take_while(|ch| ch.is_ascii_digit()).collect();
-    digits.parse().ok()
-}
-
-fn fallback_status_code(url: &str) -> Option<u16> {
-    let (_, tail) = url.split_once("/status/")?;
-    let digits: String = tail.chars().take_while(|ch| ch.is_ascii_digit()).collect();
-    digits.parse().ok()
-}
-
-fn fallback_status_text(status: u16) -> &'static str {
-    match status {
-        200 => "OK",
-        201 => "Created",
-        202 => "Accepted",
-        204 => "No Content",
-        301 => "Moved Permanently",
-        302 => "Found",
-        303 => "See Other",
-        304 => "Not Modified",
-        307 => "Temporary Redirect",
-        308 => "Permanent Redirect",
-        400 => "Bad Request",
-        401 => "Unauthorized",
-        403 => "Forbidden",
-        404 => "Not Found",
-        500 => "Internal Server Error",
-        _ => "Unknown",
-    }
-}
-
-fn percent_decode_fallback(value: &str) -> String {
-    let bytes = value.as_bytes();
-    let mut output = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-
-    while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len() {
-            let hex = &value[index + 1..index + 3];
-            if let Ok(decoded) = u8::from_str_radix(hex, 16) {
-                output.push(decoded);
-                index += 3;
-                continue;
-            }
-        }
-
-        output.push(if bytes[index] == b'+' {
-            b' '
-        } else {
-            bytes[index]
-        });
-        index += 1;
-    }
-
-    String::from_utf8_lossy(&output).into_owned()
-}
-
-fn escape_json_string(value: &str) -> String {
-    value
-        .replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-        .replace('\t', "\\t")
-}
 /// Thread-safe request cache for Request API
 static REQUEST_CACHE: OnceLock<Mutex<HashMap<usize, RequestData>>> = OnceLock::new();
 

@@ -23,7 +23,7 @@ use std::hash::Hash;
 #[allow(unused)]
 use std::io::Write;
 #[allow(unused)]
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 #[allow(unused)]
 use std::process::Command;
 #[allow(unused)]
@@ -59,8 +59,23 @@ pub struct PackageJson {
     pub main: Option<String>,
     pub scripts: Option<HashMap<String, String>>,
     pub dependencies: Option<HashMap<String, String>>,
+    #[serde(
+        rename = "devDependencies",
+        alias = "dev_dependencies",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub dev_dependencies: Option<HashMap<String, String>>,
+    #[serde(
+        rename = "peerDependencies",
+        alias = "peer_dependencies",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub peer_dependencies: Option<HashMap<String, String>>,
+    #[serde(
+        rename = "optionalDependencies",
+        alias = "optional_dependencies",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub optional_dependencies: Option<HashMap<String, String>>,
     pub author: Option<String>,
     pub license: Option<String>,
@@ -83,7 +98,10 @@ pub struct PackageInfo {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PackageDist {
     pub tarball: String,
+    #[serde(default)]
     pub shasum: String,
+    #[serde(default)]
+    pub integrity: Option<String>,
 }
 /// Package version
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -190,6 +208,138 @@ fn resolve_less_than(versions: Vec<String>, max: &str) -> String {
         .unwrap_or_else(|| max.to_string())
 }
 
+fn validate_package_archive_path(path: &Path, entry_type: tar::EntryType) -> Result<PathBuf> {
+    if path.is_absolute() {
+        return Err(anyhow!(
+            "Unsafe package archive entry uses absolute path: {}",
+            path.display()
+        ));
+    }
+
+    if !(entry_type.is_file() || entry_type.is_dir()) {
+        return Err(anyhow!(
+            "Unsupported package archive entry type {:?} for {}",
+            entry_type,
+            path.display()
+        ));
+    }
+
+    let mut components = path.components();
+    match components.next() {
+        Some(Component::Normal(prefix)) if prefix == std::ffi::OsStr::new("package") => {}
+        _ => {
+            return Err(anyhow!(
+                "Package archive entry is outside package/ prefix: {}",
+                path.display()
+            ));
+        }
+    }
+
+    let mut relative_path = PathBuf::new();
+    for component in components {
+        match component {
+            Component::Normal(part) => relative_path.push(part),
+            Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err(anyhow!(
+                    "Unsafe package archive entry path escapes package directory: {}",
+                    path.display()
+                ));
+            }
+        }
+    }
+
+    Ok(relative_path)
+}
+
+fn verify_package_tarball(
+    tarball_path: &Path,
+    integrity: Option<&str>,
+    shasum: Option<&str>,
+) -> Result<()> {
+    if let Some(integrity) = integrity {
+        if !integrity.trim().is_empty() {
+            return verify_sri_integrity(tarball_path, integrity);
+        }
+    }
+
+    if let Some(shasum) = shasum {
+        if !shasum.trim().is_empty() {
+            return verify_sha1_shasum(tarball_path, shasum);
+        }
+    }
+
+    Err(anyhow!(
+        "Package metadata missing integrity or shasum; refusing untrusted tarball"
+    ))
+}
+
+fn verify_sri_integrity(tarball_path: &Path, integrity: &str) -> Result<()> {
+    use base64::Engine as _;
+    use sha2::Digest as _;
+
+    let bytes = fs::read(tarball_path)
+        .map_err(|e| anyhow!("Failed to read tarball for integrity verification: {}", e))?;
+    let mut saw_supported_algorithm = false;
+
+    for token in integrity.split_whitespace() {
+        let Some((algorithm, expected_b64)) = token.split_once('-') else {
+            continue;
+        };
+
+        let actual = match algorithm {
+            "sha512" => {
+                saw_supported_algorithm = true;
+                sha2::Sha512::digest(&bytes).to_vec()
+            }
+            "sha384" => {
+                saw_supported_algorithm = true;
+                sha2::Sha384::digest(&bytes).to_vec()
+            }
+            "sha256" => {
+                saw_supported_algorithm = true;
+                sha2::Sha256::digest(&bytes).to_vec()
+            }
+            "sha1" => {
+                saw_supported_algorithm = true;
+                sha1::Sha1::digest(&bytes).to_vec()
+            }
+            _ => continue,
+        };
+
+        let expected = base64::engine::general_purpose::STANDARD
+            .decode(expected_b64)
+            .map_err(|e| anyhow!("Failed to decode package integrity: {}", e))?;
+
+        if actual == expected {
+            return Ok(());
+        }
+    }
+
+    if saw_supported_algorithm {
+        Err(anyhow!("Package integrity mismatch for {:?}", tarball_path))
+    } else {
+        Err(anyhow!(
+            "Unsupported package integrity algorithm(s): {}",
+            integrity
+        ))
+    }
+}
+
+fn verify_sha1_shasum(tarball_path: &Path, shasum: &str) -> Result<()> {
+    use sha2::Digest as _;
+
+    let bytes = fs::read(tarball_path)
+        .map_err(|e| anyhow!("Failed to read tarball for shasum verification: {}", e))?;
+    let actual = hex::encode(sha1::Sha1::digest(&bytes));
+
+    if actual.eq_ignore_ascii_case(shasum.trim()) {
+        Ok(())
+    } else {
+        Err(anyhow!("Package shasum mismatch for {:?}", tarball_path))
+    }
+}
+
 impl PackageManager {
     /// Create a new package manager instance
     pub fn new(config: PackageManagerConfig) -> Result<Self> {
@@ -241,15 +391,11 @@ impl PackageManager {
 
     /// Download package tarball from npm registry
     pub fn download_package(&self, name: &str, version: &str) -> Result<PathBuf> {
-        // Check cache first
         let cached_path = self
             .config
             .cache_dir
             .join(name)
             .join(format!("{}.tgz", version));
-        if cached_path.exists() {
-            return Ok(cached_path);
-        }
 
         // Fetch package info to get tarball URL
         let info = self.fetch_package_info(name)?;
@@ -261,12 +407,39 @@ impl PackageManager {
             name
         ))?;
 
-        let tarball_url = version_info
+        let dist = version_info
             .get("dist")
-            .and_then(|d| d.get("tarball"))
+            .ok_or(anyhow!("No dist metadata found"))?;
+
+        let tarball_url = dist
+            .get("tarball")
             .and_then(|t| t.as_str())
             .ok_or(anyhow!("No tarball URL found"))?
             .to_string();
+
+        let integrity = dist
+            .get("integrity")
+            .and_then(|i| i.as_str())
+            .map(|s| s.to_string());
+        let shasum = dist
+            .get("shasum")
+            .and_then(|s| s.as_str())
+            .map(|s| s.to_string());
+
+        if cached_path.exists() {
+            match verify_package_tarball(&cached_path, integrity.as_deref(), shasum.as_deref()) {
+                Ok(()) => return Ok(cached_path),
+                Err(e) => {
+                    let _ = fs::remove_file(&cached_path);
+                    tracing::warn!(
+                        "Discarded cached package {}@{} after verification failure: {}",
+                        name,
+                        version,
+                        e
+                    );
+                }
+            }
+        }
 
         // Create cache directory
         let package_cache_dir = self.config.cache_dir.join(name);
@@ -296,18 +469,19 @@ impl PackageManager {
             ));
         }
 
+        if let Err(e) =
+            verify_package_tarball(&tarball_path, integrity.as_deref(), shasum.as_deref())
+        {
+            let _ = fs::remove_file(&tarball_path);
+            return Err(e);
+        }
+
         Ok(tarball_path)
     }
 
     /// Extract tarball to node_modules
     pub fn extract_package(&self, tarball_path: &Path, package_name: &str) -> Result<PathBuf> {
         let target_dir = self.config.node_modules_dir.join(package_name);
-
-        // Remove existing package if present
-        if target_dir.exists() {
-            fs::remove_dir_all(&target_dir)
-                .map_err(|e| anyhow!("Failed to remove existing package: {}", e))?;
-        }
 
         // Create parent directory
         if let Some(parent) = target_dir.parent() {
@@ -316,6 +490,16 @@ impl PackageManager {
                     .map_err(|e| anyhow!("Failed to create parent directory: {}", e))?;
             }
         }
+        let target_parent = target_dir
+            .parent()
+            .ok_or_else(|| anyhow!("Package target has no parent: {}", target_dir.display()))?;
+        let staging_root = tempfile::Builder::new()
+            .prefix(".beejs-package-")
+            .tempdir_in(target_parent)
+            .map_err(|e| anyhow!("Failed to create package staging directory: {}", e))?;
+        let staging_dir = staging_root.path().join("package");
+        fs::create_dir_all(&staging_dir)
+            .map_err(|e| anyhow!("Failed to create package staging root: {}", e))?;
 
         // Extract tarball
         let tarball_file =
@@ -329,17 +513,13 @@ impl PackageManager {
         {
             let mut entry = entry.map_err(|e| anyhow!("Failed to read entry: {}", e))?;
             let path = entry.path()?.into_owned();
+            let entry_type = entry.header().entry_type();
 
-            // Skip package directory in archive (usually "package/")
-            let stripped_path: PathBuf = if let Ok(rel_path) = path.strip_prefix("package") {
-                rel_path.to_path_buf()
-            } else {
-                continue;
-            };
+            let stripped_path = validate_package_archive_path(&path, entry_type)?;
 
-            let target_path = target_dir.join(&stripped_path);
+            let target_path = staging_dir.join(&stripped_path);
 
-            if entry.header().entry_type().is_dir() {
+            if entry_type.is_dir() {
                 fs::create_dir_all(&target_path)
                     .map_err(|e| anyhow!("Failed to create directory: {}", e))?;
             } else {
@@ -354,6 +534,15 @@ impl PackageManager {
                     .map_err(|e| anyhow!("Failed to unpack entry: {}", e))?;
             }
         }
+
+        // Only replace the installed package after every archive entry has been
+        // validated and unpacked into the staging directory.
+        if target_dir.exists() {
+            fs::remove_dir_all(&target_dir)
+                .map_err(|e| anyhow!("Failed to remove existing package: {}", e))?;
+        }
+        fs::rename(&staging_dir, &target_dir)
+            .map_err(|e| anyhow!("Failed to move verified package into place: {}", e))?;
 
         Ok(target_dir)
     }
@@ -481,19 +670,19 @@ impl PackageManager {
         // Install regular dependencies
         if let Some(deps) = &package_json.dependencies {
             for (name, version) in deps {
-                match self.install_package(name, version) {
-                    Ok(resolution) => results.push(resolution),
-                    Err(e) => tracing::warn!("Failed to install {}@{}: {}", name, version, e),
-                }
+                let resolution = self
+                    .install_package(name, version)
+                    .map_err(|e| anyhow!("Failed to install {}@{}: {}", name, version, e))?;
+                results.push(resolution);
             }
         }
         // Install dev dependencies
         if let Some(deps) = &package_json.dev_dependencies {
             for (name, version) in deps {
-                match self.install_package(name, version) {
-                    Ok(resolution) => results.push(resolution),
-                    Err(e) => tracing::warn!("Failed to install dev {}@{}: {}", name, version, e),
-                }
+                let resolution = self
+                    .install_package(name, version)
+                    .map_err(|e| anyhow!("Failed to install dev {}@{}: {}", name, version, e))?;
+                results.push(resolution);
             }
         }
         // Install optional dependencies
@@ -879,6 +1068,29 @@ impl PackageManager {
         package_name: &str,
         package_version: &str,
     ) -> Result<PackageLock> {
+        Err(anyhow!(
+            "Cannot generate trusted lock entry for {}@{} without registry integrity metadata",
+            package_name,
+            package_version
+        ))
+    }
+
+    /// Generate a lock file for a single package once verified registry metadata is available.
+    pub fn generate_lock_for_verified_package(
+        &self,
+        package_name: &str,
+        package_version: &str,
+        resolved: &str,
+        integrity: &str,
+    ) -> Result<PackageLock> {
+        if integrity.trim().is_empty() {
+            return Err(anyhow!(
+                "Cannot generate trusted lock entry for {}@{} with empty integrity",
+                package_name,
+                package_version
+            ));
+        }
+
         let lock = PackageLock {
             name: format!("@beejs/temp-{}", package_name),
             version: "0.0.0".to_string(),
@@ -889,11 +1101,8 @@ impl PackageManager {
                     package_name.to_string(),
                     LockedDependency {
                         version: package_version.to_string(),
-                        resolved: Some(format!(
-                            "https://registry.npmjs.org/{}/-/{}-{}.tgz",
-                            package_name, package_name, package_version
-                        )),
-                        integrity: None,
+                        resolved: Some(resolved.to_string()),
+                        integrity: Some(integrity.to_string()),
                         dev: Some(false),
                         dependencies: None,
                     },

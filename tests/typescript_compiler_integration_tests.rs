@@ -3,6 +3,147 @@ mod typescript_compiler_integration_tests {
     use beejs::typescript::compile_typescript;
 
     #[test]
+    fn test_source_map_uses_relative_source_line_deltas() {
+        let ts_code = "const first: number = 1\nconst second: number = 2\nconst third: number = 3";
+
+        let output = compile_typescript(ts_code, "line_map.ts").expect("TypeScript should compile");
+        let source_map = output.source_map.expect("source map should be generated");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&source_map).expect("source map should be valid JSON");
+        let mappings = parsed["mappings"]
+            .as_str()
+            .expect("source map should contain mappings");
+        let first_segments: Vec<Vec<i32>> = mappings
+            .split(';')
+            .map(decode_first_mapping_segment)
+            .collect::<Result<_, _>>()
+            .expect("source map mappings should decode");
+
+        assert_eq!(
+            first_segments.len(),
+            3,
+            "expected one first mapping per generated line, got mappings: {}",
+            mappings
+        );
+        assert_eq!(
+            first_segments[0],
+            vec![0, 0, 0, 0],
+            "first line should map from generated col 0 to source line delta 0"
+        );
+        assert_eq!(
+            first_segments[1],
+            vec![0, 0, 1, 0],
+            "second line should encode source line as a relative +1 delta"
+        );
+        assert_eq!(
+            first_segments[2],
+            vec![0, 0, 1, 0],
+            "third line should encode source line as another relative +1 delta, got mappings: {}",
+            mappings
+        );
+    }
+
+    fn decode_first_mapping_segment(line_mapping: &str) -> Result<Vec<i32>, String> {
+        let fields: Vec<&str> = line_mapping
+            .split(',')
+            .filter(|field| !field.is_empty())
+            .take(4)
+            .collect();
+
+        if fields.len() != 4 {
+            return Err(format!(
+                "expected 4 fields in first source-map segment, got {fields:?}"
+            ));
+        }
+
+        fields.into_iter().map(decode_vlq_field).collect()
+    }
+
+    fn decode_vlq_field(field: &str) -> Result<i32, String> {
+        const BASE64: &str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+        let mut value = 0i32;
+        for (idx, ch) in field.chars().enumerate() {
+            let digit = BASE64
+                .find(ch)
+                .ok_or_else(|| format!("invalid base64 VLQ char: {ch}"))?
+                as i32;
+            value |= (digit & 0x1f) << (idx * 5);
+        }
+        Ok(value)
+    }
+
+    #[test]
+    fn test_type_diagnostics_are_returned_to_caller() {
+        let ts_code = r#"
+function load() {
+    await fetch("/api/data");
+}
+"#;
+
+        let output = compile_typescript(ts_code, "diagnostics.ts")
+            .expect("diagnostic-producing TypeScript should still return output");
+
+        assert!(
+            output
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.message.contains("await expression")),
+            "caller should receive type diagnostics, got: {:?}",
+            output.diagnostics
+        );
+    }
+
+    #[test]
+    fn test_unsupported_tsx_returns_clear_error() {
+        let ts_code = r#"
+const element = <div className="greeting">Hello</div>;
+"#;
+
+        let error = compile_typescript(ts_code, "component.tsx")
+            .expect_err("unsupported TSX should not generate JavaScript");
+
+        assert!(
+            error.contains("TSX") && error.contains("unsupported"),
+            "unsupported TSX should return a clear diagnostic, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_self_closing_tsx_returns_clear_error() {
+        let ts_code = r#"
+const element = <Foo />;
+"#;
+
+        let error = compile_typescript(ts_code, "component.tsx")
+            .expect_err("self-closing TSX should fail fast before JavaScript generation");
+
+        assert!(
+            error.contains("TSX") && error.contains("unsupported"),
+            "unsupported self-closing TSX should return a clear diagnostic, got: {}",
+            error
+        );
+    }
+
+    #[test]
+    fn test_tsx_detection_ignores_string_literals() {
+        let ts_code = r#"
+const markup = "<div>";
+console.log(markup);
+"#;
+
+        let output = compile_typescript(ts_code, "string_literal.tsx")
+            .expect("string literals containing angle brackets are not JSX elements");
+
+        assert!(
+            output.js_code.contains("\"<div>\""),
+            "string literal should compile without TSX unsupported diagnostic, got: {}",
+            output.js_code
+        );
+    }
+
+    #[test]
     fn test_simple_typescript_transpilation() {
         let ts_code = r#"
 const x: number = 42;

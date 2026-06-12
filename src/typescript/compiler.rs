@@ -256,6 +256,10 @@ impl TypeScriptCompiler {
             diagnostics: Vec::new(),
         }
     }
+    /// 返回最近一次编译收集到的诊断信息
+    pub fn diagnostics(&self) -> &[TypeScriptError] {
+        &self.diagnostics
+    }
     /// 编译 TypeScript 文件
     pub fn compile_file(&mut self, file_path: &Path) -> Result<CompilationOutput> {
         let source: _ = std::fs::read_to_string(file_path)?;
@@ -265,6 +269,11 @@ impl TypeScriptCompiler {
     /// 编译 TypeScript 源代码
     pub fn compile_source(&mut self, source: &str, file_name: &str) -> Result<CompilationOutput> {
         self.diagnostics.clear();
+        if let Some(diagnostic) = self.detect_unsupported_tsx(source, file_name) {
+            let message = diagnostic.message.clone();
+            self.diagnostics.push(diagnostic);
+            bail!(message);
+        }
         // 第一步：词法分析
         let tokens: _ = self.lexical_analysis(source, file_name)?;
         // 第二步：语法分析
@@ -1373,14 +1382,14 @@ impl TypeScriptCompiler {
     }
 
     /// 类型检查
-    fn type_check(&self, ast: &ASTNode, _file_name: &str) -> Result<()> {
+    fn type_check(&mut self, ast: &ASTNode, _file_name: &str) -> Result<()> {
         let mut type_context = TypeContext::new();
         self.check_node(ast, &mut type_context)?;
         Ok(())
     }
 
     /// 检查 AST 节点
-    fn check_node(&self, node: &ASTNode, ctx: &mut TypeContext) -> Result<()> {
+    fn check_node(&mut self, node: &ASTNode, ctx: &mut TypeContext) -> Result<()> {
         match node {
             ASTNode::Program(statements) => {
                 for stmt in statements {
@@ -1554,7 +1563,7 @@ impl TypeScriptCompiler {
     }
 
     /// 检查语句
-    fn check_statement(&self, stmt: &ASTStatement, ctx: &mut TypeContext) -> Result<()> {
+    fn check_statement(&mut self, stmt: &ASTStatement, ctx: &mut TypeContext) -> Result<()> {
         match stmt {
             ASTStatement::Return(expr) => {
                 if let Some(ref return_expr) = expr {
@@ -1712,7 +1721,7 @@ impl TypeScriptCompiler {
     }
 
     /// 检查表达式
-    fn check_expression(&self, expr: &ASTExpression, _ctx: &mut TypeContext) -> Result<()> {
+    fn check_expression(&mut self, expr: &ASTExpression, _ctx: &mut TypeContext) -> Result<()> {
         match expr {
             ASTExpression::BinaryExpression { left, right, .. } => {
                 self.check_expression(left, _ctx)?;
@@ -2264,10 +2273,40 @@ impl TypeScriptCompiler {
     }
 
     /// 添加诊断信息
-    fn add_diagnostic(&self, message: String, _location: Option<(u32, u32)>) {
-        // 在实际实现中，这里会将诊断信息添加到 diagnostics 列表
-        // 目前仅打印到控制台
-        eprintln!("TypeScript Type Check: {}", message);
+    fn add_diagnostic(&mut self, message: String, location: Option<(u32, u32)>) {
+        let (line, column) = location
+            .map(|(line, column)| (Some(line), Some(column)))
+            .unwrap_or((None, None));
+
+        self.diagnostics.push(TypeScriptError {
+            code: 1000,
+            message,
+            file: None,
+            line,
+            column,
+            severity: ErrorSeverity::Error,
+        });
+    }
+
+    fn detect_unsupported_tsx(&self, source: &str, file_name: &str) -> Option<TypeScriptError> {
+        let is_tsx = file_name.ends_with(".tsx") || file_name.ends_with(".jsx");
+        if !is_tsx {
+            return None;
+        }
+
+        let jsx_start = find_unsupported_tsx_start(source)?;
+        let (line, column) = line_column_for_offset(source, jsx_start);
+        Some(TypeScriptError {
+            code: 2000,
+            message: format!(
+                "TSX/JSX element syntax is unsupported by the Beejs TypeScript compiler in {}",
+                file_name
+            ),
+            file: Some(file_name.to_string()),
+            line: Some(line),
+            column: Some(column),
+            severity: ErrorSeverity::Error,
+        })
     }
     /// 转译为 JavaScript
     fn transpile(&self, ast: &ASTNode) -> Result<String> {
@@ -2312,32 +2351,130 @@ fn build_line_positions(source: &str) -> Vec<usize> {
     positions
 }
 
+fn line_column_for_offset(source: &str, offset: usize) -> (u32, u32) {
+    let mut line = 0u32;
+    let mut column = 0u32;
+
+    for (idx, ch) in source.char_indices() {
+        if idx >= offset {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+            column = 0;
+        } else {
+            column += 1;
+        }
+    }
+
+    (line, column)
+}
+
+fn find_unsupported_tsx_start(source: &str) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let mut idx = 0;
+
+    while idx < bytes.len() {
+        match bytes[idx] {
+            b'\'' | b'"' | b'`' => {
+                let quote = bytes[idx];
+                idx += 1;
+                while idx < bytes.len() {
+                    if bytes[idx] == b'\\' {
+                        idx += 2;
+                        continue;
+                    }
+                    if bytes[idx] == quote {
+                        idx += 1;
+                        break;
+                    }
+                    idx += 1;
+                }
+                continue;
+            }
+            b'/' if idx + 1 < bytes.len() && bytes[idx + 1] == b'/' => {
+                idx += 2;
+                while idx < bytes.len() && bytes[idx] != b'\n' {
+                    idx += 1;
+                }
+                continue;
+            }
+            b'/' if idx + 1 < bytes.len() && bytes[idx + 1] == b'*' => {
+                idx += 2;
+                while idx + 1 < bytes.len() {
+                    if bytes[idx] == b'*' && bytes[idx + 1] == b'/' {
+                        idx += 2;
+                        break;
+                    }
+                    idx += 1;
+                }
+                continue;
+            }
+            _ => {}
+        }
+
+        if bytes[idx] == b'<' && idx + 1 < bytes.len() {
+            let next = bytes[idx + 1] as char;
+            if (next == '/' || next == '>' || next.is_ascii_alphabetic())
+                && previous_non_whitespace_byte(bytes, idx)
+                    .map(can_precede_jsx_start)
+                    .unwrap_or(true)
+            {
+                return Some(idx);
+            }
+        }
+        idx += 1;
+    }
+
+    None
+}
+
+fn previous_non_whitespace_byte(bytes: &[u8], idx: usize) -> Option<u8> {
+    bytes[..idx]
+        .iter()
+        .rev()
+        .copied()
+        .find(|byte| !byte.is_ascii_whitespace())
+}
+
+fn can_precede_jsx_start(byte: u8) -> bool {
+    matches!(
+        byte,
+        b'=' | b'(' | b'[' | b'{' | b',' | b':' | b';' | b'!' | b'?' | b'>'
+    )
+}
+
 /// Generate improved VLQ-encoded source map mappings (v0.3.139)
-fn generate_vlq_mappings_improved(js_code: &str, _line_positions: &[usize]) -> String {
+fn generate_vlq_mappings_improved(js_code: &str, line_positions: &[usize]) -> String {
     // Generate VLQ-encoded mappings with line number awareness
     let mut mappings = String::new();
     let lines: Vec<&str> = js_code.lines().collect();
+    let mut previous_source_line = 0i32;
 
     for (line_idx, line) in lines.iter().enumerate() {
         if line_idx > 0 {
             mappings.push(';');
         }
+        let mut previous_generated_column = 0i32;
 
         // For each non-empty line, add a mapping entry
         // The mapping includes: generated column, source line, source column
         if !line.trim().is_empty() {
             // Estimate source line (simplified: map to approximately same line)
             // In a full implementation, we would track exact positions during transpilation
-            let source_line = line_idx.min(0); // Placeholder for actual source line tracking
+            let max_source_line = line_positions.len().saturating_sub(1);
+            let source_line = line_idx.min(max_source_line) as i32;
+            let source_line_delta = source_line - previous_source_line;
 
             // Add first segment for this line: col=0 -> source line -> col=0
             mappings.push_str(&encode_vlq(0)); // generated column
             mappings.push_str(",");
             mappings.push_str(&encode_vlq(0)); // source file index
             mappings.push_str(",");
-            mappings.push_str(&encode_vlq(source_line as i32)); // source line
+            mappings.push_str(&encode_vlq(source_line_delta)); // source line
             mappings.push_str(",");
             mappings.push_str(&encode_vlq(0)); // source column
+            previous_source_line = source_line;
 
             // Add additional segments for key positions in the line
             // This is a simplified version - full implementation would track
@@ -2350,13 +2487,16 @@ fn generate_vlq_mappings_improved(js_code: &str, _line_positions: &[usize]) -> S
                     if col % 10 == 0 {
                         // Roughly every 10 characters
                         mappings.push_str(",");
-                        mappings.push_str(&encode_vlq(col as i32));
+                        let generated_column_delta = col - previous_generated_column;
+                        mappings.push_str(&encode_vlq(generated_column_delta));
                         mappings.push_str(",");
                         mappings.push_str(&encode_vlq(0));
                         mappings.push_str(",");
-                        mappings.push_str(&encode_vlq(source_line as i32));
+                        mappings.push_str(&encode_vlq(source_line - previous_source_line));
                         mappings.push_str(",");
                         mappings.push_str(&encode_vlq(0));
+                        previous_generated_column = col;
+                        previous_source_line = source_line;
                     }
                 }
             }

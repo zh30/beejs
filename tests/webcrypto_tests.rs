@@ -86,6 +86,68 @@ fn test_subtle_digest_sha384_no_error() {
 
 #[test]
 #[serial]
+fn test_subtle_digest_sha512_string_matches_known_vector() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const digest = await crypto.subtle.digest('SHA-512', new TextEncoder().encode('abc'));
+            return Array.from(new Uint8Array(digest))
+                .map((byte) => byte.toString(16).padStart(2, '0'))
+                .join('');
+        })();
+    "#;
+    let result = runtime.execute_code(code).unwrap();
+
+    assert_eq!(
+        result.trim(),
+        "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+    );
+}
+
+#[test]
+#[serial]
+fn test_subtle_digest_sha384_object_name_matches_known_vector() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const digest = await crypto.subtle.digest({ name: 'SHA-384' }, new TextEncoder().encode('abc'));
+            return Array.from(new Uint8Array(digest))
+                .map((byte) => byte.toString(16).padStart(2, '0'))
+                .join('');
+        })();
+    "#;
+    let result = runtime.execute_code(code).unwrap();
+
+    assert_eq!(
+        result.trim(),
+        "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7"
+    );
+}
+
+#[test]
+#[serial]
+fn test_subtle_digest_unknown_string_algorithm_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.digest('MD5', new TextEncoder().encode('abc'));
+                return 'resolved';
+            } catch (error) {
+                return String(error && error.message || error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code).unwrap();
+
+    assert!(
+        result.contains("Unsupported hash algorithm"),
+        "unknown digest algorithms must fail closed, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
 fn test_subtle_digest_sha1_no_error() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"

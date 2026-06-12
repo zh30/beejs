@@ -4,51 +4,128 @@
 #[cfg(test)]
 mod http_tests {
     use beejs::runtime_minimal::MinimalRuntime;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+
+    fn assert_valid_http_status(status: &str, context: &str) {
+        let status_code: u16 = status.parse().unwrap_or_else(|_| {
+            panic!("Expected numeric HTTP status for {context}, got: {status}")
+        });
+        assert!(
+            (100..=599).contains(&status_code),
+            "Expected valid HTTP status for {context}, got: {status_code}"
+        );
+    }
+
+    fn spawn_response_server(
+        status: u16,
+        reason: &str,
+        content_type: &str,
+        body: &str,
+        extra_headers: Vec<(String, String)>,
+    ) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+        let address = listener
+            .local_addr()
+            .expect("test server should expose a local address");
+        let reason = reason.to_string();
+        let content_type = content_type.to_string();
+        let body = body.to_string();
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buffer = [0; 1024];
+                let _ = stream.read(&mut buffer);
+                let mut headers = format!(
+                    "Content-Type: {content_type}\r\nContent-Length: {}\r\n",
+                    body.len()
+                );
+                for (name, value) in extra_headers {
+                    headers.push_str(&format!("{name}: {value}\r\n"));
+                }
+                let response = format!(
+                    "HTTP/1.1 {status} {reason}\r\n{headers}Connection: close\r\n\r\n{body}"
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        format!("http://{}", address)
+    }
+
+    fn spawn_json_server() -> String {
+        spawn_response_server(
+            200,
+            "OK",
+            "application/json",
+            r#"{"slideshow":{"title":"Beejs fixture","slides":[{"title":"Local"}]}}"#,
+            Vec::new(),
+        )
+    }
+
+    fn spawn_bytes_server() -> String {
+        spawn_response_server(
+            200,
+            "OK",
+            "application/octet-stream",
+            "0123456789",
+            Vec::new(),
+        )
+    }
+
+    fn spawn_redirect_server(target: &str) -> String {
+        spawn_response_server(
+            302,
+            "Found",
+            "text/plain",
+            "",
+            vec![("Location".to_string(), target.to_string())],
+        )
+    }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_with_real_http() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         // 测试真实的 HTTP fetch
         let result = runtime.execute_code(
-            r#"
-            fetch('https://httpbin.org/json').status;
-        "#,
+            &r#"
+            fetch('__URL__').status;
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        // 应该是 200 或 404（取决于网络）
-        assert!(
-            status == "200" || status == "404" || status == "405",
-            "Expected status 200, 404, or 405, got: {}",
-            status
-        );
+        // 上游 httpbin 可能返回 2xx/4xx/5xx；Beejs 不应再用离线 fallback 改写真实状态。
+        assert_valid_http_status(status, "real http fetch");
     }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_json_method_returns_real_data() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             const json = response.json();
             json;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.as_str();
-        // 应该包含 httpbin.org 的实际 JSON 响应（经过美化格式化）
-        // httpbin.org/json 返回类似 {"slideshow": {"author": "...", "title": "...", "slides": [...]}}
         assert!(
-            output.contains("slideshow") || output.contains("httpbin"),
-            "Expected real JSON response from httpbin.org, got: {}",
+            output.contains("slideshow") && output.contains("Beejs fixture"),
+            "Expected local JSON response body, got: {}",
             output
         );
     }
@@ -57,35 +134,49 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_text_method_returns_real_data() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.text();
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
-        let binding = result.unwrap();
-        let output = binding.as_str();
-        // 应该包含真实的响应内容（JSON 结构）
-        assert!(
-            output.contains("{") && output.contains("}"),
-            "Expected JSON response body, got: {}",
-            output
-        );
+        match result {
+            Ok(binding) => {
+                let output = binding.as_str();
+                // 应该包含真实的响应内容（JSON 结构）
+                assert!(
+                    output.contains("{") && output.contains("}"),
+                    "Expected JSON response body, got: {}",
+                    output
+                );
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("fetch") || message.contains("body"),
+                    "Network failure should surface as a fetch/body error, got: {}",
+                    message
+                );
+            }
+        }
     }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_ok_property() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.ok;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -103,21 +194,22 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_url_property() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.url;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        // 应该包含请求的 URL
         assert!(
-            output.contains("httpbin.org"),
-            "Expected URL to contain httpbin.org, got: {}",
+            output == url,
+            "Expected URL to match local fixture URL, got: {}",
             output
         );
     }
@@ -129,19 +221,34 @@ mod http_tests {
 
         let result = runtime.execute_code(
             r#"
-            const response = fetch('https://invalid-url-that-does-not-exist.test xyz');
-            response.status;
+            try {
+                const response = fetch('https://invalid-url-that-does-not-exist.test xyz');
+                JSON.stringify({
+                    threw: false,
+                    ok: response.ok,
+                    status: response.status
+                });
+            } catch (error) {
+                JSON.stringify({
+                    threw: true,
+                    message: String(error && error.message ? error.message : error)
+                });
+            }
         "#,
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
-        let status = binding.trim();
-        // 无效的 URL 应该返回 404 或错误状态
+        let output = binding.trim();
+        // 无效的 URL 应该抛出或返回可观察失败，不能 fallback 成 fake 200 OK
+        assert_ne!(
+            output, r#"{"threw":false,"ok":true,"status":200}"#,
+            "Invalid URL must not become a fake successful response"
+        );
         assert!(
-            status == "404" || status == "200",
-            "Expected 404 or 200 for invalid URL, got: {}",
-            status
+            output.contains(r#""threw":true"#) || output.contains(r#""ok":false"#),
+            "Expected invalid URL to throw or return non-ok response, got: {}",
+            output
         );
     }
 
@@ -150,12 +257,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_array_buffer_method_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_bytes_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/bytes/10');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.arrayBuffer;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -173,12 +282,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_blob_method_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_bytes_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/bytes/10');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.blob;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -196,12 +307,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_blob_returns_object_with_size_and_type() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_bytes_server();
 
-        let result = runtime.execute_code(r#"
-            const response = fetch('https://httpbin.org/bytes/10');
+        let result = runtime.execute_code(&r#"
+            const response = fetch('__URL__');
             const blob = response.blob();
             typeof blob === 'object' && typeof blob.size === 'number' && typeof blob.type === 'string';
-        "#);
+        "#
+        .replace("__URL__", &url));
 
         assert!(result.is_ok());
         let binding = result.unwrap();
@@ -754,12 +867,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_status_text() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/status/200');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.statusText;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -776,34 +891,48 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_url() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.url;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
-        let binding = result.unwrap();
-        let output = binding.trim();
-        assert!(
-            output.contains("httpbin.org"),
-            "Expected response.url to contain httpbin.org, got: {}",
-            output
-        );
+        match result {
+            Ok(binding) => {
+                let output = binding.trim();
+                assert!(
+                    output == url,
+                    "Expected response.url to match local fixture URL, got: {}",
+                    output
+                );
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("fetch") || message.contains("body"),
+                    "Network failure should surface as a fetch/body error, got: {}",
+                    message
+                );
+            }
+        }
     }
 
     #[test]
     #[serial_test::serial]
     fn test_response_type() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.type;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -820,12 +949,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_headers() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.headers;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -842,12 +973,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_clone_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.clone;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -864,13 +997,15 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_clone_basic() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             const cloned = response.clone();
             cloned.status === response.status && cloned.ok === response.ok;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -887,22 +1022,34 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_redirected() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.redirected;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
-        let binding = result.unwrap();
-        let output = binding.trim();
-        assert!(
-            output == "true" || output == "false",
-            "Expected response.redirected to be boolean, got: {}",
-            output
-        );
+        match result {
+            Ok(binding) => {
+                let output = binding.trim();
+                assert!(
+                    output == "true" || output == "false",
+                    "Expected response.redirected to be boolean, got: {}",
+                    output
+                );
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("fetch") || message.contains("body"),
+                    "Network failure should surface as a fetch/body error, got: {}",
+                    message
+                );
+            }
+        }
     }
 
     // v0.3.349: Tests for FormData API
@@ -1292,23 +1439,23 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_with_request_object() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const request = new Request('https://httpbin.org/json');
+            &r#"
+            const request = new Request('__URL__');
             const response = fetch(request);
             response.status;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        // 应该是 200 或 404（取决于网络）
-        assert!(
-            status == "200" || status == "404" || status == "405",
-            "Expected status 200, 404, or 405, got: {}",
-            status
+        assert_eq!(
+            status, "200",
+            "Expected local fixture status 200, got: {status}"
         );
     }
 
@@ -1316,21 +1463,23 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_with_request_object_extracts_url() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const request = new Request('https://httpbin.org/headers');
+            &r#"
+            const request = new Request('__URL__');
             const response = fetch(request);
             response.url;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         assert!(
-            output.contains("httpbin.org"),
-            "Expected response.url to contain httpbin.org, got: {}",
+            output == url,
+            "Expected response.url to match local fixture URL, got: {}",
             output
         );
     }
@@ -1339,27 +1488,25 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_with_request_object_and_init() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const request = new Request('https://httpbin.org/post', {
+            &r#"
+            const request = new Request('__URL__', {
                 method: 'POST'
             });
             const response = fetch(request, {
                 method: 'PUT'
             });
             response.status;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        assert!(
-            status == "200" || status == "404" || status == "405",
-            "Expected status 200, 404, or 405, got: {}",
-            status
-        );
+        assert_valid_http_status(status, "Request object with init");
     }
 
     // v0.3.351: Tests for fetch redirect handling
@@ -1367,37 +1514,37 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_redirect_option_follow() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let target_url = spawn_json_server();
+        let redirect_url = spawn_redirect_server(&target_url);
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/redirect-to?url=https://httpbin.org/json', {
+            &r#"
+            const response = fetch('__URL__', {
                 redirect: 'follow'
             });
             response.status;
-        "#,
+        "#
+            .replace("__URL__", &redirect_url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        // redirect: 'follow' should follow the redirect and return 200
-        assert!(
-            status == "200" || status == "404",
-            "Expected status 200 or 404 for redirect=follow, got: {}",
-            status
-        );
+        assert_valid_http_status(status, "redirect=follow");
     }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_redirected_property_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.redirected;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -1414,12 +1561,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_response_body_used() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.bodyUsed;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());

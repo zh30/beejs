@@ -2,7 +2,7 @@
 //! Built with Rust and V8
 
 use anyhow::{anyhow, Result};
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -20,10 +20,25 @@ struct Cli {
     command: Option<Command>,
 }
 
+#[derive(Args, Clone, Debug, Default)]
+struct PermissionCliOptions {
+    /// Deny JavaScript file-system reads and writes unless explicitly allowed
+    #[arg(long = "deny-fs")]
+    deny_fs: bool,
+    /// Allow JavaScript file-system reads for an exact path (repeatable)
+    #[arg(long = "allow-read", value_name = "PATH")]
+    allow_read: Vec<PathBuf>,
+    /// Allow JavaScript file-system writes for an exact path (repeatable)
+    #[arg(long = "allow-write", value_name = "PATH")]
+    allow_write: Vec<PathBuf>,
+}
+
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Run a script file
     Run {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Script file to execute
         file: PathBuf,
         /// Arguments to pass to the script
@@ -46,6 +61,8 @@ enum Command {
     },
     /// Evaluate JavaScript code
     Eval {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// JavaScript code to execute
         code: String,
     },
@@ -53,6 +70,8 @@ enum Command {
     Repl,
     /// Run tests
     Test {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Test file to run (optional)
         file: Option<PathBuf>,
         /// Filter tests by name pattern (regex)
@@ -71,8 +90,8 @@ enum Command {
         #[arg(long = "parallel")]
         parallel: bool,
         /// Test timeout in seconds
-        #[arg(long = "timeout", default_value = "30")]
-        timeout: u64,
+        #[arg(long = "timeout")]
+        timeout: Option<u64>,
         /// Verbose output
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
@@ -149,11 +168,11 @@ enum Command {
     Prune,
     /// Create new project
     Create {
+        /// Project name
+        name: String,
         /// Template type (js/ts)
         #[arg(default_value = "js")]
         template: String,
-        /// Project name
-        name: String,
     },
     /// Run a package without installing it (like bunx/npm exec)
     Bunx {
@@ -208,6 +227,322 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
         // Return JavaScript as-is
         Ok(source)
     }
+}
+
+fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
+    use beejs::permissions::{
+        global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+    };
+
+    let mut broker = global_resource_broker()
+        .write()
+        .map_err(|_| anyhow!("resource broker lock poisoned"))?;
+    *broker = ResourceBroker::default();
+
+    if options.deny_fs {
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Any,
+        );
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Any,
+        );
+    }
+
+    for path in &options.allow_read {
+        broker.allow(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(path.clone()),
+        );
+    }
+
+    for path in &options.allow_write {
+        broker.allow(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(path.clone()),
+        );
+    }
+
+    Ok(())
+}
+
+fn build_process_argv(file: &Path, args: &[String]) -> Vec<String> {
+    let mut argv = vec!["bee".to_string(), file.to_string_lossy().into_owned()];
+    argv.extend(args.iter().cloned());
+    argv
+}
+
+fn execute_test_file(test_file: &Path, options: &TestFileOptions) -> Result<String> {
+    let code = read_and_compile_source(test_file)?;
+    let code = wrap_test_source(&code, options);
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    runtime.set_process_argv(build_process_argv(test_file, &[]));
+    runtime.set_main_module_path(test_file);
+    runtime.set_timer_drain_limit_ms(options.timeout_seconds.unwrap_or(0).saturating_mul(1000));
+
+    let result = runtime.execute_code(&code)?;
+    if result.trim() == "[object Promise]" {
+        return Err(anyhow!(
+            "test run did not settle before the configured timeout"
+        ));
+    }
+
+    Ok(result)
+}
+
+#[derive(Clone, Debug)]
+struct TestFileOptions {
+    include_pattern: Option<String>,
+    skip_pattern: Option<String>,
+    bail: bool,
+    timeout_seconds: Option<u64>,
+}
+
+fn wrap_test_source(source: &str, options: &TestFileOptions) -> String {
+    let config = serde_json::json!({
+        "includePattern": options.include_pattern.as_deref().unwrap_or(""),
+        "skipPattern": options.skip_pattern.as_deref().unwrap_or(""),
+        "bail": options.bail,
+        "timeoutSeconds": options.timeout_seconds.unwrap_or(0),
+    });
+
+    let mut wrapped = format!("let __beejsTestConfig = {};\n", config);
+    wrapped.push_str(
+        r#"
+let __beejsTestPassed = 0;
+let __beejsTestFailed = 0;
+let __beejsTestSkipped = 0;
+let __beejsTestErrors = [];
+let __beejsTestQueue = [];
+let __beejsDescribeStack = [];
+
+function __beejsFormatValue(value) {
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  try {
+    const json = JSON.stringify(value);
+    return json === undefined ? String(value) : json;
+  } catch (_) {
+    return String(value);
+  }
+}
+
+function __beejsRecordFailure(name, error) {
+  __beejsTestFailed++;
+  const message = error && error.message ? error.message : String(error);
+  const line = `${name}: ${message}`;
+  __beejsTestErrors.push(line);
+  console.error(`FAIL ${line}`);
+}
+
+function __beejsPatternMatches(pattern, name, suite) {
+  if (pattern === "") {
+    return true;
+  }
+  return String(name).includes(String(pattern)) || String(suite || "").includes(String(pattern));
+}
+
+function __beejsQueueTest(name, callback, options) {
+  const suite = __beejsDescribeStack.join(" ");
+  __beejsTestQueue.push({
+    name: String(name),
+    suite,
+    callback,
+    skip: Boolean(options && options.skip),
+    only: Boolean(options && options.only)
+  });
+}
+
+function test(name, callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("test callback must be a function"));
+    return;
+  }
+  __beejsQueueTest(name, callback, {});
+}
+
+test.skip = function testSkip(name, callback) {
+  __beejsQueueTest(name || "skipped test", callback, { skip: true });
+};
+test.only = function testOnly(name, callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("test callback must be a function"));
+    return;
+  }
+  __beejsQueueTest(name, callback, { only: true });
+};
+
+const it = test;
+it.skip = test.skip;
+it.only = test.only;
+
+function describe(name, callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("describe callback must be a function"));
+    return;
+  }
+
+  try {
+    __beejsDescribeStack.push(String(name));
+    callback();
+  } catch (error) {
+    __beejsRecordFailure(name, error);
+  } finally {
+    __beejsDescribeStack.pop();
+  }
+}
+
+function expect(actual) {
+  return {
+    toBe(expected) {
+      if (!Object.is(actual, expected)) {
+        throw new Error(`Expected ${__beejsFormatValue(actual)} to be ${__beejsFormatValue(expected)}`);
+      }
+    },
+    toEqual(expected) {
+      const actualJson = JSON.stringify(actual);
+      const expectedJson = JSON.stringify(expected);
+      if (actualJson !== expectedJson) {
+        throw new Error(`Expected ${__beejsFormatValue(actual)} to equal ${__beejsFormatValue(expected)}`);
+      }
+    },
+    toBeTruthy() {
+      if (!actual) {
+        throw new Error(`Expected ${__beejsFormatValue(actual)} to be truthy`);
+      }
+    },
+    toBeFalsy() {
+      if (actual) {
+        throw new Error(`Expected ${__beejsFormatValue(actual)} to be falsy`);
+      }
+    },
+    toThrow() {
+      if (typeof actual !== "function") {
+        throw new Error("Expected value to be a function");
+      }
+      let didThrow = false;
+      try {
+        actual();
+      } catch (_) {
+        didThrow = true;
+      }
+      if (!didThrow) {
+        throw new Error("Expected function to throw");
+      }
+    }
+  };
+}
+
+function __beejsShouldSkip(testCase, hasOnlyTests) {
+  if (testCase.skip) {
+    return true;
+  }
+  if (hasOnlyTests && !testCase.only) {
+    return true;
+  }
+  if (__beejsTestConfig.includePattern &&
+      !__beejsPatternMatches(__beejsTestConfig.includePattern, testCase.name, testCase.suite)) {
+    return true;
+  }
+  if (__beejsTestConfig.skipPattern &&
+      __beejsPatternMatches(__beejsTestConfig.skipPattern, testCase.name, testCase.suite)) {
+    return true;
+  }
+  return false;
+}
+
+function __beejsTimeoutError() {
+  return new Error(`timed out after ${__beejsTestConfig.timeoutSeconds}s`);
+}
+
+function __beejsAwaitTestResult(result) {
+  if (!result || typeof result.then !== "function") {
+    return Promise.resolve();
+  }
+
+  const timeoutMs = Number(__beejsTestConfig.timeoutSeconds) <= 0
+    ? 0
+    : Number(__beejsTestConfig.timeoutSeconds) * 1000;
+
+  return new Promise((resolve, reject) => {
+    let timeoutId = setTimeout(() => {
+      reject(__beejsTimeoutError());
+    }, timeoutMs);
+
+    Promise.resolve(result).then(
+      () => {
+        clearTimeout(timeoutId);
+        resolve();
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+function __beejsRunOneTest(testCase) {
+  if (__beejsTestConfig.bail && __beejsTestFailed > 0) {
+    __beejsTestSkipped++;
+    return Promise.resolve();
+  }
+
+  try {
+    return __beejsAwaitTestResult(testCase.callback()).then(
+      () => {
+        __beejsTestPassed++;
+      },
+      (error) => {
+        __beejsRecordFailure(testCase.name, error);
+      }
+    );
+  } catch (error) {
+    __beejsRecordFailure(testCase.name, error);
+    return Promise.resolve();
+  }
+}
+
+function __beejsRunTests() {
+  const hasOnlyTests = __beejsTestQueue.some((testCase) => testCase.only);
+  let chain = Promise.resolve();
+
+  for (const testCase of __beejsTestQueue) {
+    chain = chain.then(() => {
+      if (__beejsShouldSkip(testCase, hasOnlyTests)) {
+        __beejsTestSkipped++;
+        return undefined;
+      }
+      return __beejsRunOneTest(testCase);
+    });
+  }
+
+  return chain.then(() => {
+    if (__beejsTestFailed > 0) {
+      throw new Error(__beejsTestErrors.join("\n"));
+    }
+
+    return `${__beejsTestPassed} passed, ${__beejsTestFailed} failed, ${__beejsTestSkipped} skipped`;
+  });
+}
+
+"#,
+    );
+    wrapped.push_str(source);
+    wrapped.push_str(
+        r#"
+
+__beejsRunTests();
+"#,
+    );
+    wrapped
 }
 
 #[tokio::main]
@@ -271,6 +606,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Run {
+            permissions,
             file,
             args,
             watch,
@@ -279,6 +615,8 @@ async fn main() -> Result<()> {
             preloads,
             require,
         }) => {
+            apply_permission_cli_options(&permissions)?;
+
             // Combine preloads and require (they are equivalent)
             let all_preloads: Vec<String> =
                 preloads.iter().chain(require.iter()).cloned().collect();
@@ -335,6 +673,8 @@ async fn main() -> Result<()> {
 
                     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                         .expect("Failed to create runtime");
+                    runtime.set_process_argv(build_process_argv(file, &args));
+                    runtime.set_main_module_path(file);
 
                     match runtime.execute_code(&code) {
                         Ok(result) => {
@@ -403,6 +743,8 @@ async fn main() -> Result<()> {
                 // Normal execution mode
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                     .expect("Failed to create runtime");
+                runtime.set_process_argv(build_process_argv(&file, &args));
+                runtime.set_main_module_path(&file);
 
                 // Execute preload modules first
                 for preload in &all_preloads {
@@ -442,7 +784,9 @@ async fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Eval { code }) => {
+        Some(Command::Eval { permissions, code }) => {
+            apply_permission_cli_options(&permissions)?;
+
             if verbose {
                 println!("Evaluating JavaScript code");
             }
@@ -472,6 +816,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Test {
+            permissions,
             file,
             test_name_pattern,
             test_only,
@@ -481,6 +826,8 @@ async fn main() -> Result<()> {
             timeout,
             verbose,
         }) => {
+            apply_permission_cli_options(&permissions)?;
+
             println!("🐝 Running tests...");
 
             // Build test filter from CLI options
@@ -513,25 +860,29 @@ async fn main() -> Result<()> {
                 }
             }
 
-            let mut runtime =
-                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+            let test_file_options = TestFileOptions {
+                include_pattern: test_only.or(test_name_pattern),
+                skip_pattern: test_skip,
+                bail,
+                timeout_seconds: timeout,
+            };
 
             if let Some(test_file) = file {
                 // Run specific test file
                 println!("Running test file: {}", test_file.display());
+                if parallel {
+                    eprintln!("⚠️  --parallel is not supported for single-file test mode; running serially");
+                }
                 if verbose {
-                    if parallel {
-                        println!("  Mode: parallel execution");
-                    }
                     if bail {
                         println!("  Mode: bail on first failure");
                     }
-                    println!("  Timeout: {}s", timeout);
+                    if let Some(timeout) = timeout {
+                        println!("  Timeout: {}s", timeout);
+                    }
                 }
-                let code = std::fs::read_to_string(&test_file)
-                    .map_err(|e| anyhow::anyhow!("Failed to read test file: {}", e))?;
 
-                match runtime.execute_code(&code) {
+                match execute_test_file(&test_file, &test_file_options) {
                     Ok(result) => {
                         println!("Test result: {}", result);
                         println!("✅ Tests passed!");
@@ -542,6 +893,63 @@ async fn main() -> Result<()> {
                     }
                 }
             } else {
+                use beejs::testing::test_discoverer::{TestDiscoverer, TestDiscovererConfig};
+
+                let mut discoverer_config = TestDiscovererConfig::default();
+                discoverer_config.root_path = std::env::current_dir()?;
+                discoverer_config.exclude_patterns.extend([
+                    ".git".to_string(),
+                    "target".to_string(),
+                    "dist".to_string(),
+                ]);
+                let discovery = TestDiscoverer::new(discoverer_config).discover()?;
+
+                if !discovery.test_files.is_empty() {
+                    if parallel {
+                        eprintln!(
+                            "⚠️  --parallel is not supported for discovered test mode; running serially"
+                        );
+                    }
+                    if verbose {
+                        println!("  Discovered {} test file(s)", discovery.test_files.len());
+                        if bail {
+                            println!("  Mode: bail on first failure");
+                        }
+                        if let Some(timeout) = timeout {
+                            println!("  Timeout: {}s", timeout);
+                        }
+                    }
+
+                    let mut passed_files = 0;
+                    let mut failed_files = 0;
+                    for test_file in discovery.test_files {
+                        println!("Running test file: {}", test_file.display());
+                        match execute_test_file(&test_file, &test_file_options) {
+                            Ok(result) => {
+                                println!("Test result: {}", result);
+                                passed_files += 1;
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Test failed in {}: {}", test_file.display(), e);
+                                failed_files += 1;
+                                if bail {
+                                    eprintln!("🛑 Stopping on first failure");
+                                    std::process::exit(1);
+                                }
+                            }
+                        }
+                    }
+
+                    println!(
+                        "\n📊 Test File Summary: {} passed, {} failed",
+                        passed_files, failed_files
+                    );
+                    if failed_files > 0 {
+                        std::process::exit(1);
+                    }
+                    return Ok(());
+                }
+
                 // Run built-in test suite with filtering
                 let test_cases = [
                     ("1 + 1", "2"),
@@ -557,6 +965,8 @@ async fn main() -> Result<()> {
                 let mut passed = 0;
                 let mut failed = 0;
                 let mut skipped = 0;
+                let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                    .expect("Failed to create runtime");
 
                 for (i, (input, expected)) in test_cases.iter().enumerate() {
                     let test_name = format!("test_{}", i);
