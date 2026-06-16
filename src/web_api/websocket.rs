@@ -307,6 +307,16 @@ fn websocket_constructor_callback(
         scope.throw_exception(error_obj.into());
         return;
     }
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Network,
+        crate::permissions::PermissionAction::Connect,
+        crate::permissions::ResourceId::Url(url.clone()),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
     // Create real WebSocket connection
     let ws_id: _ = match WS_MANAGER.connect(url.clone()) {
         Ok(id) => id,

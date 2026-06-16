@@ -205,6 +205,57 @@ fn process_env_filters_denied_environment_variables() {
 
 #[test]
 #[serial]
+fn process_env_rechecks_permission_after_runtime_initialization() {
+    const SECRET_NAME: &str = "BEEJS_PERMISSION_DYNAMIC_SECRET";
+
+    std::env::set_var(SECRET_NAME, "classified-value");
+    reset_global_broker();
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let before_deny = runtime
+        .execute_code(&format!("process.env.{SECRET_NAME};"))
+        .unwrap();
+    assert_eq!(
+        before_deny.trim(),
+        "classified-value",
+        "test setup should expose the env var before broker deny"
+    );
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        broker.deny(
+            PermissionKind::Environment,
+            PermissionAction::Read,
+            ResourceId::Name(SECRET_NAME.into()),
+        );
+    }
+
+    let result = runtime
+        .execute_code(&format!(
+            r#"
+            [
+                process.env.{SECRET_NAME} === undefined,
+                !Object.prototype.hasOwnProperty.call(process.env, "{SECRET_NAME}"),
+                !Object.keys(process.env).includes("{SECRET_NAME}")
+            ].every(Boolean);
+            "#
+        ))
+        .unwrap();
+
+    reset_global_broker();
+    std::env::remove_var(SECRET_NAME);
+
+    assert_eq!(
+        result.trim(),
+        "true",
+        "process.env must re-check environment broker after runtime initialization"
+    );
+}
+
+#[test]
+#[serial]
 fn require_fs_read_file_sync_uses_global_permission_broker() {
     let temp = tempfile::tempdir().unwrap();
     let secret_path = temp.path().join("secret.txt");
@@ -733,6 +784,210 @@ fn fetch_uses_global_network_permission_broker() {
     assert!(
         result.contains("permission denied"),
         "fetch must fail before network I/O when Network/Connect is denied, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn websocket_uses_global_network_permission_broker() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            try {
+                new WebSocket("ws://127.0.0.1:9/permission-test");
+                "allowed";
+            } catch (error) {
+                String(error && error.message ? error.message : error);
+            }
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert!(
+        result.contains("permission denied"),
+        "WebSocket must fail before network I/O when Network/Connect is denied, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn net_connect_uses_global_network_permission_broker() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            try {
+                net.connect({ host: "127.0.0.1", port: 9 });
+                "allowed";
+            } catch (error) {
+                String(error && error.message ? error.message : error);
+            }
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert!(
+        result.contains("permission denied"),
+        "net.connect must fail before network I/O when Network/Connect is denied, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn dns_lookup_uses_global_network_permission_broker() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            dns.lookup("localhost");
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert!(
+        result.contains("permission denied"),
+        "dns.lookup must fail before resolver I/O when Network/Connect is denied, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn child_process_uses_global_process_permission_broker() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            const childProcess = require("child_process");
+            function capture(callback) {
+                try {
+                    callback();
+                    return "allowed";
+                } catch (error) {
+                    return String(error && error.message ? error.message : error);
+                }
+            }
+            [
+                capture(() => childProcess.exec("echo beejs")),
+                capture(() => childProcess.spawn("echo", ["beejs"])),
+                capture(() => childProcess.execFile("echo", ["beejs"])),
+            ].join("\n");
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert!(
+        !result.contains("allowed"),
+        "child_process must not allow denied process execution, got: {result}"
+    );
+    assert_eq!(
+        result.matches("permission denied").count(),
+        3,
+        "child_process exec/spawn/execFile must all use broker, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn process_chdir_uses_global_process_permission_broker() {
+    let original_cwd = std::env::current_dir().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = format!(
+        r#"
+        try {{
+            process.chdir("{}");
+            "allowed";
+        }} catch (error) {{
+            String(error && error.message ? error.message : error);
+        }}
+        "#,
+        path_for_js(temp.path())
+    );
+    let result = runtime.execute_code(&code).unwrap();
+    let cwd_after_chdir = std::env::current_dir().unwrap();
+    if cwd_after_chdir != original_cwd {
+        std::env::set_current_dir(&original_cwd).unwrap();
+    }
+
+    reset_global_broker();
+
+    assert!(
+        result.contains("permission denied"),
+        "process.chdir must use Process/Execute broker, got: {result}"
+    );
+    assert_eq!(
+        cwd_after_chdir, original_cwd,
+        "denied process.chdir must not change the host cwd"
     );
 }
 

@@ -3,7 +3,8 @@ use std::fs;
 use std::path::Component;
 use std::path::{Path, PathBuf};
 
-const JS_EXTENSIONS: &[&str] = &["js", "json"];
+const JS_EXTENSIONS: &[&str] = &["js", "json", "ts"];
+const COMMONJS_EXPORT_CONDITIONS: &[&str] = &["require", "node", "default"];
 const BUILTIN_MODULES: &[&str] = &[
     "buffer",
     "child_process",
@@ -11,6 +12,7 @@ const BUILTIN_MODULES: &[&str] = &[
     "dns",
     "events",
     "fs",
+    "fs/promises",
     "http",
     "net",
     "os",
@@ -65,6 +67,19 @@ impl CommonJsResolveError {
             reason: Some(reason.into()),
         }
     }
+
+    fn package_path_not_exported(package_root: &Path, export_key: &str) -> Self {
+        let package_json_path = package_root.join("package.json");
+        Self::with_reason(
+            export_key,
+            package_root,
+            format!(
+                "ERR_PACKAGE_PATH_NOT_EXPORTED: Package subpath '{}' is not defined by \"exports\" in {}",
+                export_key,
+                package_json_path.display()
+            ),
+        )
+    }
 }
 
 impl fmt::Display for CommonJsResolveError {
@@ -85,15 +100,19 @@ impl fmt::Display for CommonJsResolveError {
 impl std::error::Error for CommonJsResolveError {}
 
 pub fn is_builtin_module(specifier: &str) -> bool {
-    BUILTIN_MODULES.contains(&specifier)
+    normalize_builtin_specifier(specifier).is_some()
 }
 
 pub fn resolve_commonjs_module(
     specifier: &str,
     parent_dir: &Path,
 ) -> Result<ResolvedModule, CommonJsResolveError> {
-    if is_builtin_module(specifier) {
-        return Ok(ResolvedModule::Builtin(specifier.to_string()));
+    if let Some(builtin_name) = normalize_builtin_specifier(specifier) {
+        return Ok(ResolvedModule::Builtin(builtin_name.to_string()));
+    }
+
+    if specifier.starts_with("node:") {
+        return Err(CommonJsResolveError::new(specifier, parent_dir));
     }
 
     if specifier == "."
@@ -115,6 +134,15 @@ pub fn resolve_commonjs_module(
     resolve_node_modules(specifier, parent_dir)?
         .map(ResolvedModule::File)
         .ok_or_else(|| CommonJsResolveError::new(specifier, parent_dir))
+}
+
+fn normalize_builtin_specifier(specifier: &str) -> Option<&str> {
+    let builtin_name = specifier.strip_prefix("node:").unwrap_or(specifier);
+    if BUILTIN_MODULES.contains(&builtin_name) {
+        Some(builtin_name)
+    } else {
+        None
+    }
 }
 
 fn resolve_node_modules(
@@ -233,16 +261,25 @@ fn resolve_package_subpath(
     let Some(exports) = package_json.get("exports") else {
         return resolve_path_candidate(&package_root.join(subpath));
     };
-    let Some(exports_obj) = exports.as_object() else {
-        return Ok(None);
-    };
-
     let export_key = format!("./{}", subpath.trim_start_matches('/'));
-    let Some(target) = exports_obj.get(&export_key) else {
-        return Ok(None);
+    let Some(exports_obj) = exports.as_object() else {
+        return Err(CommonJsResolveError::package_path_not_exported(
+            package_root,
+            &export_key,
+        ));
     };
 
-    resolve_package_export_value(package_root, target)
+    if let Some(target) = exports_obj.get(&export_key) {
+        return resolve_package_export_value(package_root, target);
+    }
+
+    match resolve_package_pattern_export(package_root, exports_obj, &export_key)? {
+        Some(resolved) => Ok(Some(resolved)),
+        None => Err(CommonJsResolveError::package_path_not_exported(
+            package_root,
+            &export_key,
+        )),
+    }
 }
 
 fn read_package_json(
@@ -300,11 +337,91 @@ fn resolve_package_export_value(
     package_root: &Path,
     target: &serde_json::Value,
 ) -> Result<Option<PathBuf>, CommonJsResolveError> {
-    let Some(target) = target.as_str() else {
-        return Ok(None);
-    };
+    resolve_package_export_value_with_pattern(package_root, target, None)
+}
 
-    resolve_package_string_target(package_root, target)
+fn resolve_package_export_value_with_pattern(
+    package_root: &Path,
+    target: &serde_json::Value,
+    pattern_capture: Option<&str>,
+) -> Result<Option<PathBuf>, CommonJsResolveError> {
+    if let Some(target) = target.as_str() {
+        let target = if let Some(pattern_capture) = pattern_capture {
+            target.replace('*', pattern_capture)
+        } else {
+            target.to_string()
+        };
+        return resolve_package_string_target(package_root, &target);
+    }
+
+    if let Some(target_obj) = target.as_object() {
+        for condition in COMMONJS_EXPORT_CONDITIONS {
+            if let Some(condition_target) = target_obj.get(*condition) {
+                if let Some(resolved) = resolve_package_export_value_with_pattern(
+                    package_root,
+                    condition_target,
+                    pattern_capture,
+                )? {
+                    return Ok(Some(resolved));
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+fn resolve_package_pattern_export(
+    package_root: &Path,
+    exports_obj: &serde_json::Map<String, serde_json::Value>,
+    export_key: &str,
+) -> Result<Option<PathBuf>, CommonJsResolveError> {
+    let mut best_match: Option<(&serde_json::Value, String, usize)> = None;
+
+    for (pattern_key, target) in exports_obj {
+        if let Some((capture, score)) = match_package_export_pattern(pattern_key, export_key) {
+            if best_match
+                .as_ref()
+                .map(|(_, _, best_score)| score > *best_score)
+                .unwrap_or(true)
+            {
+                best_match = Some((target, capture, score));
+            }
+        }
+    }
+
+    if let Some((target, capture, _score)) = best_match {
+        if let Some(resolved) =
+            resolve_package_export_value_with_pattern(package_root, target, Some(&capture))?
+        {
+            return Ok(Some(resolved));
+        }
+    }
+
+    Ok(None)
+}
+
+fn match_package_export_pattern(pattern_key: &str, export_key: &str) -> Option<(String, usize)> {
+    if pattern_key.matches('*').count() != 1 {
+        return None;
+    }
+
+    let (prefix, suffix) = pattern_key.split_once('*')?;
+    if !prefix.starts_with("./") || !export_key.starts_with(prefix) || !export_key.ends_with(suffix)
+    {
+        return None;
+    }
+
+    let capture_start = prefix.len();
+    let capture_end = export_key.len().checked_sub(suffix.len())?;
+    if capture_end < capture_start {
+        return None;
+    }
+
+    Some((
+        export_key[capture_start..capture_end].to_string(),
+        prefix.len() + suffix.len(),
+    ))
 }
 
 fn resolve_package_string_target(

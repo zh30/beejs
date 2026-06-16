@@ -442,27 +442,30 @@ try {
 
 #[test]
 #[serial]
-fn test_ecdh_compute_secret_no_key() {
+fn test_ecdh_compute_secret_rejects_missing_or_invalid_peer_key() {
     let code = r#"
 const alice = crypto.createECDH('prime256v1');
-// Test with empty/undefined peer key - should not panic, handle gracefully
-try {
-    const result1 = alice.computeSecret();
-    // Should return a valid result (not crash)
-    console.log(typeof result1 === 'object' && result1 !== null ? 'PASS' : 'FAIL');
 
-    // Test with invalid format - should not crash
-    const result2 = alice.computeSecret('invalid');
-    console.log(typeof result2 === 'object' && result2 !== null ? 'PASS' : 'FAIL');
+try {
+    alice.computeSecret();
+    console.log('FAIL');
 } catch (e) {
-    console.log('FAIL - should not throw:', e.message);
+    const msg = String(e && e.message ? e.message : e).toLowerCase();
+    console.log(msg.includes('public key') ? 'PASS' : 'FAIL');
+}
+
+try {
+    alice.computeSecret('invalid');
+    console.log('FAIL');
+} catch (e) {
+    const msg = String(e && e.message ? e.message : e).toLowerCase();
+    console.log(msg.includes('public key') ? 'PASS' : 'FAIL');
 }
 "#;
     let output = run_js_test(code);
-    // Should handle gracefully without panicking
     assert!(
         output.contains("PASS"),
-        "Expected computeSecret to handle missing peer key gracefully: {}",
+        "Expected computeSecret to reject missing or invalid peer key: {}",
         output
     );
 }

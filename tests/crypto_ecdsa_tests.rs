@@ -233,6 +233,124 @@ fn test_ecdsa_signature_length_p384() {
 
 #[test]
 #[serial]
+fn test_ecdsa_p384_public_key_is_uncompressed_point() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: 'ECDSA', namedCurve: 'P-384' },
+                    true,
+                    ['sign', 'verify']
+                );
+                const publicBytes = new Uint8Array(keyPair.publicKey.__beejs_key_data__);
+                return publicBytes.length === 97 && publicBytes[0] === 4;
+            } catch (error) {
+                return String(error && error.message ? error.message : error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok(), "Execution failed: {:?}", result);
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_ecdsa_p521_public_key_is_uncompressed_point() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: 'ECDSA', namedCurve: 'P-521' },
+                    true,
+                    ['sign', 'verify']
+                );
+                const publicBytes = new Uint8Array(keyPair.publicKey.__beejs_key_data__);
+                return publicBytes.length === 133 && publicBytes[0] === 4;
+            } catch (error) {
+                return String(error && error.message ? error.message : error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok(), "Execution failed: {:?}", result);
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_ecdsa_p384_sign_verify_awaited() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: 'ECDSA', namedCurve: 'P-384' },
+                    true,
+                    ['sign', 'verify']
+                );
+                const data = new TextEncoder().encode('p384 real signature');
+                const signature = await crypto.subtle.sign(
+                    { name: 'ECDSA', hash: { name: 'SHA-384' } },
+                    keyPair.privateKey,
+                    data
+                );
+                const verified = await crypto.subtle.verify(
+                    { name: 'ECDSA', hash: { name: 'SHA-384' } },
+                    keyPair.publicKey,
+                    signature,
+                    data
+                );
+                return verified === true && signature.byteLength === 96;
+            } catch (error) {
+                return String(error && error.message ? error.message : error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok(), "Execution failed: {:?}", result);
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_ecdsa_p521_sign_verify_awaited() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: 'ECDSA', namedCurve: 'P-521' },
+                    true,
+                    ['sign', 'verify']
+                );
+                const data = new TextEncoder().encode('p521 real signature');
+                const signature = await crypto.subtle.sign(
+                    { name: 'ECDSA', hash: { name: 'SHA-512' } },
+                    keyPair.privateKey,
+                    data
+                );
+                const verified = await crypto.subtle.verify(
+                    { name: 'ECDSA', hash: { name: 'SHA-512' } },
+                    keyPair.publicKey,
+                    signature,
+                    data
+                );
+                return verified === true && signature.byteLength === 132;
+            } catch (error) {
+                return String(error && error.message ? error.message : error);
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok(), "Execution failed: {:?}", result);
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
 fn test_ecdsa_different_data_signing() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"

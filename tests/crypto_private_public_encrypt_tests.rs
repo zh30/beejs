@@ -27,10 +27,9 @@ fn test_crypto_public_decrypt_exists() {
 fn test_private_encrypt_returns_buffer() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRndVLkklx3Lf/
-test-private-key-placeholder
------END PRIVATE KEY-----`;
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const encrypted = crypto.privateEncrypt(privateKey, Buffer.from('test message'));
         Buffer.isBuffer(encrypted);
     "#;
@@ -44,11 +43,11 @@ test-private-key-placeholder
 fn test_public_decrypt_returns_buffer() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const publicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygW
-test-public-key-placeholder
------END PUBLIC KEY-----`;
-        const decrypted = crypto.publicDecrypt(publicKey, Buffer.from('encrypted_data', 'hex'));
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const encrypted = crypto.privateEncrypt(privateKey, Buffer.from('encrypted_data'));
+        const decrypted = crypto.publicDecrypt(publicKey, encrypted);
         Buffer.isBuffer(decrypted);
     "#;
     let result = runtime.execute_code(code);
@@ -61,10 +60,9 @@ test-public-key-placeholder
 fn test_private_encrypt_with_encoding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRndVLkklx3Lf/
-test-private-key-placeholder
------END PRIVATE KEY-----`;
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const encrypted = crypto.privateEncrypt({
             key: privateKey,
             padding: crypto.constants.RSA_PKCS1_PADDING
@@ -81,12 +79,15 @@ test-private-key-placeholder
 fn test_public_decrypt_with_encoding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const publicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygW
-test-public-key-placeholder
------END PUBLIC KEY-----`;
-        const decrypted = crypto.publicDecrypt(publicKey, 'a1b2c3d4e5', 'hex');
-        Buffer.isBuffer(decrypted);
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const encryptedHex = crypto.privateEncrypt(
+            privateKey,
+            Buffer.from('test')
+        ).toString('hex');
+        const decrypted = crypto.publicDecrypt(publicKey, encryptedHex, 'hex');
+        decrypted.toString('utf8') === 'test';
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
@@ -98,11 +99,13 @@ test-public-key-placeholder
 fn test_private_encrypt_with_rsa_padding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRndVLkklx3Lf/
-test-private-key-placeholder
------END PRIVATE KEY-----`;
-        const encrypted = crypto.privateEncrypt(privateKey, Buffer.from('test data'));
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const encrypted = crypto.privateEncrypt({
+            key: privateKey,
+            padding: crypto.constants.RSA_PKCS1_PADDING
+        }, Buffer.from('test data'));
         encrypted.length > 0;
     "#;
     let result = runtime.execute_code(code);
@@ -149,23 +152,17 @@ fn test_public_decrypt_invalid_key() {
 fn test_private_public_decrypt_roundtrip() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const publicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygW
-test-public-key-placeholder
------END PUBLIC KEY-----`;
-        const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRndVLkklx3Lf/
-test-private-key-placeholder
------END PRIVATE KEY-----`;
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const message = 'Secret message signed with private key';
         const encrypted = crypto.privateEncrypt(privateKey, Buffer.from(message));
         const decrypted = crypto.publicDecrypt(publicKey, encrypted);
-        decrypted.toString('utf8');
+        decrypted.toString('utf8') === message;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    let output = result.unwrap();
-    assert!(output.contains("Secret") || output.contains("message") || output.contains("signed"));
+    assert_eq!(result.unwrap().trim(), "true");
 }
 
 #[test]
@@ -173,10 +170,9 @@ test-private-key-placeholder
 fn test_private_encrypt_empty_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRndVLkklx3Lf/
-test-private-key-placeholder
------END PRIVATE KEY-----`;
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const encrypted = crypto.privateEncrypt(privateKey, Buffer.from(''));
         encrypted.length > 0;
     "#;
@@ -190,11 +186,11 @@ test-private-key-placeholder
 fn test_public_decrypt_empty_data() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const publicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygW
-test-public-key-placeholder
------END PUBLIC KEY-----`;
-        const decrypted = crypto.publicDecrypt(publicKey, Buffer.from(''));
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const encrypted = crypto.privateEncrypt(privateKey, Buffer.from(''));
+        const decrypted = crypto.publicDecrypt(publicKey, encrypted);
         decrypted.length === 0;
     "#;
     let result = runtime.execute_code(code);
@@ -204,16 +200,15 @@ test-public-key-placeholder
 
 #[test]
 #[serial]
-fn test_private_encrypt_oaep_padding() {
+fn test_private_encrypt_pkcs1_padding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const privateKey = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRndVLkklx3Lf/
-test-private-key-placeholder
------END PRIVATE KEY-----`;
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const encrypted = crypto.privateEncrypt({
             key: privateKey,
-            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
+            padding: crypto.constants.RSA_PKCS1_PADDING
         }, Buffer.from('test data'));
         encrypted.length > 0;
     "#;
@@ -224,19 +219,21 @@ test-private-key-placeholder
 
 #[test]
 #[serial]
-fn test_public_decrypt_oaep_padding() {
+fn test_public_decrypt_pkcs1_padding() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        const publicKey = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygW
-test-public-key-placeholder
------END PUBLIC KEY-----`;
-        // OAEP padding is typically used with both encrypt and decrypt
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const encrypted = crypto.privateEncrypt({
+            key: privateKey,
+            padding: crypto.constants.RSA_PKCS1_PADDING
+        }, Buffer.from('test data'));
         const decrypted = crypto.publicDecrypt({
             key: publicKey,
-            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
-        }, Buffer.from('encrypted_data', 'hex'));
-        Buffer.isBuffer(decrypted);
+            padding: crypto.constants.RSA_PKCS1_PADDING
+        }, encrypted);
+        decrypted.toString('utf8') === 'test data';
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());

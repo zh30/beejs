@@ -1,6 +1,10 @@
 use beejs::package_manager::{PackageJson, PackageManager, PackageManagerConfig};
+use beejs::permissions::{
+    global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+};
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
@@ -15,6 +19,12 @@ fn package_manager(temp_dir: &TempDir) -> PackageManager {
         ..Default::default()
     })
     .unwrap()
+}
+
+fn reset_global_broker() {
+    *global_resource_broker()
+        .write()
+        .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
 }
 
 fn finish_archive(builder: Builder<GzEncoder<fs::File>>) {
@@ -83,6 +93,283 @@ where
 
 fn file_url(path: &Path) -> String {
     format!("file://{}", path.display())
+}
+
+#[test]
+#[serial]
+fn package_manager_new_respects_cache_and_node_modules_write_permissions() {
+    let temp_dir = TempDir::new().unwrap();
+    let cache_dir = temp_dir.path().join("cache");
+    let node_modules_dir = temp_dir.path().join("node_modules");
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(cache_dir.clone()),
+        );
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(node_modules_dir.clone()),
+        );
+    }
+
+    let result = PackageManager::new(PackageManagerConfig {
+        cache_dir: cache_dir.clone(),
+        node_modules_dir: node_modules_dir.clone(),
+        ..Default::default()
+    });
+
+    reset_global_broker();
+
+    let error = match result {
+        Ok(_) => panic!("denied package manager dirs must fail construction"),
+        Err(error) => error,
+    };
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !cache_dir.exists(),
+        "denied cache dir creation must not write {}",
+        cache_dir.display()
+    );
+    assert!(
+        !node_modules_dir.exists(),
+        "denied node_modules dir creation must not write {}",
+        node_modules_dir.display()
+    );
+}
+
+#[test]
+#[serial]
+fn fetch_package_info_respects_network_connect_permission() {
+    let temp_dir = TempDir::new().unwrap();
+    let registry_dir = temp_dir.path().join("registry");
+    fs::create_dir_all(&registry_dir).unwrap();
+    fs::write(registry_dir.join("pkg"), r#"{"versions":{}}"#).unwrap();
+    let registry_url = file_url(&registry_dir);
+    let package_url = format!("{}/pkg", registry_url.trim_end_matches('/'));
+    let pm = PackageManager::new(PackageManagerConfig {
+        registry_url,
+        cache_dir: temp_dir.path().join("cache"),
+        node_modules_dir: temp_dir.path().join("node_modules"),
+        ..Default::default()
+    })
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Url(package_url),
+        );
+    }
+
+    let result = pm.fetch_package_info("pkg");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied network fetch must fail before curl");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+}
+
+#[test]
+#[serial]
+fn fetch_package_info_respects_process_execute_permission_for_curl() {
+    let temp_dir = TempDir::new().unwrap();
+    let registry_dir = temp_dir.path().join("registry");
+    fs::create_dir_all(&registry_dir).unwrap();
+    fs::write(registry_dir.join("pkg"), r#"{"versions":{}}"#).unwrap();
+    let pm = PackageManager::new(PackageManagerConfig {
+        registry_url: file_url(&registry_dir),
+        cache_dir: temp_dir.path().join("cache"),
+        node_modules_dir: temp_dir.path().join("node_modules"),
+        ..Default::default()
+    })
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Name("curl".to_string()),
+        );
+    }
+
+    let result = pm.fetch_package_info("pkg");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied curl execution must fail before spawning curl");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+}
+
+#[test]
+#[serial]
+fn parse_package_json_uses_global_file_read_broker() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let package_json_path = temp_dir.path().join("package.json");
+    fs::write(
+        &package_json_path,
+        r#"{"name":"blocked-read","version":"1.0.0"}"#,
+    )
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(package_json_path.clone()),
+        );
+    }
+
+    let result = pm.parse_package_json(&package_json_path);
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied package.json read must fail");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+}
+
+#[test]
+#[serial]
+fn extract_package_uses_global_file_write_broker() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let archive_path = temp_dir.path().join("safe.tgz");
+    let package_dir = temp_dir.path().join("node_modules").join("blocked");
+    create_tgz(&archive_path, |builder| {
+        append_file(builder, "package/index.js", b"module.exports = 1;\n");
+    });
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(package_dir.clone()),
+        );
+    }
+
+    let result = pm.extract_package(&archive_path, "blocked");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied package extraction write must fail");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !package_dir.exists(),
+        "denied extraction must not create {}",
+        package_dir.display()
+    );
+}
+
+#[test]
+#[serial]
+fn read_package_lock_uses_global_file_read_broker() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let lock_path = temp_dir
+        .path()
+        .join("node_modules")
+        .join("package-lock.json");
+    fs::write(
+        &lock_path,
+        r#"{"name":"blocked","version":"1.0.0","lockfileVersion":3}"#,
+    )
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(lock_path.clone()),
+        );
+    }
+
+    let result = pm.read_package_lock();
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied package-lock read must fail");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+}
+
+#[test]
+#[serial]
+fn generate_package_lock_uses_global_file_write_broker() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let lock_path = temp_dir.path().join("package-lock.json");
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(lock_path.clone()),
+        );
+    }
+
+    let result = pm.generate_package_lock(&lock_path, "blocked", "1.0.0");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied package-lock write must fail");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !lock_path.exists(),
+        "denied package-lock generation must not create {}",
+        lock_path.display()
+    );
 }
 
 #[test]
@@ -274,6 +561,7 @@ fn extract_package_rejects_special_file_entries() {
 }
 
 #[test]
+#[serial]
 fn download_package_rejects_integrity_mismatch_and_does_not_keep_cache_file() {
     let temp_dir = TempDir::new().unwrap();
     let registry_dir = temp_dir.path().join("registry");
@@ -324,6 +612,7 @@ fn download_package_rejects_integrity_mismatch_and_does_not_keep_cache_file() {
 }
 
 #[test]
+#[serial]
 fn download_package_rejects_registry_entry_without_integrity_or_shasum() {
     let temp_dir = TempDir::new().unwrap();
     let registry_dir = temp_dir.path().join("registry");
@@ -380,6 +669,7 @@ fn generate_lock_for_package_refuses_missing_integrity_material() {
 }
 
 #[test]
+#[serial]
 fn install_dependencies_propagates_required_dependency_failure() {
     let temp_dir = TempDir::new().unwrap();
     let pm = PackageManager::new(PackageManagerConfig {

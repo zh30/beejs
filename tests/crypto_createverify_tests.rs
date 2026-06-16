@@ -92,9 +92,15 @@ fn test_verify_unsupported_algorithm() {
 fn test_verify_returns_boolean() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('test data');
+        const signature = sign.sign(privateKey, 'hex');
         const verify = crypto.createVerify('RSA-SHA256');
         verify.update('test data');
-        const result = verify.verify('somesignature', 'hex');
+        const result = verify.verify(publicKey, signature, 'hex');
         typeof result;
     "#;
     let result = runtime.execute_code(code);
@@ -107,9 +113,15 @@ fn test_verify_returns_boolean() {
 fn test_verify_with_hex_signature() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('hello world');
+        const signature = sign.sign(privateKey, 'hex');
         const verify = crypto.createVerify('RSA-SHA256');
         verify.update('hello world');
-        const result = verify.verify('a1b2c3d4e5f6789012345678901234567890abcd', 'hex');
+        const result = verify.verify(publicKey, signature, 'hex');
         typeof result;
     "#;
     let result = runtime.execute_code(code);
@@ -122,9 +134,15 @@ fn test_verify_with_hex_signature() {
 fn test_verify_with_base64_signature() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('test message');
+        const signature = sign.sign(privateKey, 'base64');
         const verify = crypto.createVerify('RSA-SHA256');
         verify.update('test message');
-        const result = verify.verify('dGVzdHNpZ25hdHVyZQ==', 'base64');
+        const result = verify.verify(publicKey, signature, 'base64');
         typeof result;
     "#;
     let result = runtime.execute_code(code);
@@ -137,11 +155,19 @@ fn test_verify_with_base64_signature() {
 fn test_verify_multiple_updates() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('part1');
+        sign.update('part2');
+        sign.update('part3');
+        const signature = sign.sign(privateKey, 'hex');
         const verify = crypto.createVerify('RSA-SHA256');
         verify.update('part1');
         verify.update('part2');
         verify.update('part3');
-        const result = verify.verify('signature', 'hex');
+        const result = verify.verify(publicKey, signature, 'hex');
         typeof result;
     "#;
     let result = runtime.execute_code(code);
@@ -154,8 +180,13 @@ fn test_verify_multiple_updates() {
 fn test_verify_digest_without_update() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        const signature = sign.sign(privateKey, 'hex');
         const verify = crypto.createVerify('RSA-SHA256');
-        const result = verify.verify('signature', 'hex');
+        const result = verify.verify(publicKey, signature, 'hex');
         typeof result;
     "#;
     let result = runtime.execute_code(code);
@@ -193,16 +224,17 @@ fn test_verify_algorithm_property() {
 #[serial]
 fn test_sign_and_verify_workflow() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    // Test that sign and verify can be used together
     let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const sign = crypto.createSign('RSA-SHA256');
         sign.update('message to sign');
-        const signature = sign.sign('hex');
+        const signature = sign.sign(privateKey, 'hex');
 
         const verify = crypto.createVerify('RSA-SHA256');
         verify.update('message to sign');
-        const result = verify.verify(signature, 'hex');
-        result === true || result === false;
+        verify.verify(publicKey, signature, 'hex') === true;
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());

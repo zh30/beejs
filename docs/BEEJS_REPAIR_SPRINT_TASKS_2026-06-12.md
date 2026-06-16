@@ -204,14 +204,36 @@
 - CommonJS resolver `package.json` 读取接入 broker：解析 package entry 前会检查 `FileSystem/Read`，permission denied 会传播到 `require()`，不再被吞成 fallback 或继续加载 `main`。
 - WebCrypto digest 字符串算法修复：`crypto.subtle.digest("SHA-512" | "SHA-384" | "SHA-1", ...)` 和 `{ name: "SHA-384" }` 不再默认 SHA-256；SHA-1/SHA-384/SHA-512 有真实实现，未知字符串算法 fail closed。
 - Fetch 网络权限竖切片：`fetch()` 在每次请求当前 URL 前检查 `Network/Connect` broker，包含 redirect 后的新 URL；deny 时在发起 reqwest 请求前 fail closed。
+- WebSocket/net/DNS 网络权限竖切片：`MinimalRuntime` 内联 `WebSocket` 构造器、真实 `web_api::websocket` 构造器、`net.connect/createConnection`、`dns.lookup/resolve/resolve4/resolve6/reverse` 均在触达连接或解析器前检查 `Network/Connect` broker；deny 时不再继续创建连接或执行 resolver I/O。
+- child_process 进程权限竖切片：`child_process.exec/spawn/execFile` 在返回 ChildProcess 对象前检查 `Process/Execute` broker；deny 时抛出 `permission denied`，不再返回看似执行成功的占位对象。
+- `process.chdir` 进程状态权限：`process.chdir(path)` 在调用 `set_current_dir` 前检查 `Process/Execute/Path(path)`，deny 时抛出 `permission denied` 且不改变宿主 cwd。
+- PackageManager 权限竖切片：cache/node_modules 创建前检查 `FileSystem/Write`；`package.json` 读写检查 `FileSystem/Read|Write`；registry metadata 和 tarball 下载前检查 `Network/Connect` 与 `Process/Execute/Name("curl")`；tarball 读取、cache/package/extract 目标写入均接入 broker。
+- PackageManager lockfile 权限竖切片：`read_package_lock`、`generate_package_lock`、`update_package_lock` 的 lockfile 读写接入 `FileSystem/Read|Write`；生成 lock 时扫描 `node_modules` 和已安装包 `package.json` 前也会检查读取权限。
 - CommonJS subpath exports 最小闭环：支持 `exports` object 中的字符串子路径映射，例如 `pkg/feature` 和 `@scope/pkg/feature` 解析到 `exports["./feature"]` 指向的文件；未导出 subpath 不再深层 fallback。
+- CommonJS conditional exports 最小闭环：`exports` 条件对象按 `require`、`node`、`default` 顺序解析，package root 和 subpath exports 均覆盖 `require("pkg")` 的运行时路径。
+- CommonJS pattern exports 最小闭环：支持单星号 subpath pattern，例如 `exports["./features/*"] = "./dist/features/*.js"`，exact key 优先，pattern target 会复用现有包根逃逸校验；runtime `require("pkg/features/button")` 复用 resolver 路径。
+- CommonJS 未导出 subpath 错误语义：package 存在 `exports` 时，未声明的 `pkg/private` 不再降级成普通 module-not-found；resolver 和 runtime 均返回 `ERR_PACKAGE_PATH_NOT_EXPORTED`，即使磁盘上存在对应私有文件也不会绕过 exports。
+- CommonJS TypeScript 模块加载：resolver 支持 `.ts` 扩展；runtime `require("./typed")` 会读取 `typed.ts` 并用现有轻量 TypeScript 转译器生成 JS，再进入 CommonJS wrapper 执行。
+- CommonJS `node:` builtin 前缀：resolver 与 runtime `require()` 支持 `node:path` 等内建模块前缀，并规范化为对应 builtin；未知 `node:` specifier 不会落入用户包解析。
+- CommonJS JSON module 语义：`.json` 文件不再被当作 JS wrapper 执行；runtime 会解析 JSON、递归转换成 V8 对象/数组并写入 CommonJS module cache，避免 JSON 文件触发编译 panic 或返回空 exports。
 - WebCrypto AES-GCM IV fail-closed：`crypto.subtle.encrypt/decrypt` 不再在缺失或错误长度 IV 时退到全零 nonce；当前真实后端明确要求 12-byte IV。
+- WebCrypto wrapKey IV fail-closed：`crypto.subtle.wrapKey(..., { name: "AES-GCM" })` 与短 IV 不再退到全零 nonce；`crypto.getRandomValues()` 也修正为返回传入的 TypedArray，避免调用方拿到 `crypto` 对象而掩盖 IV 读取错误。
+- WebCrypto 算法名 fail-closed：`importKey`、`generateKey`、`sign`、`verify` 不再在算法对象缺失 `name` 时默认成 HMAC；畸形算法会明确抛出 `algorithm.name is required`。
+- WebCrypto key usages 与 key algorithm 校验：`importKey`/`generateKey` 会拒绝算法不允许的 usage；`sign`/`verify`/`encrypt`/`decrypt` 会校验 key usage 和 `key.algorithm.name`，不再允许 AES key 走 HMAC 或 AES-CBC key 走 AES-GCM。
+- WebCrypto unwrapKey 标准 IV 语义：`unwrapKey` 不再忽略 `unwrapAlgorithm.iv` 或从 wrapped blob 前缀偷取 IV；缺失、短 IV、错误 IV 和 unsupported format 均 fail closed，`wrapKey` 返回值改为标准 ciphertext/tag。
+- WebCrypto ECDSA/HMAC 假成功收口：ECDSA verify 缺 key data 不再按签名长度返回 true；HMAC sign/verify 缺 key data 不再使用全零 key fallback。
+- Node crypto createSign/createVerify 真实 RSA 竖切片：`crypto.generateKeyPairSync('rsa')` 和 `generateKeyPair('rsa')` 生成 OpenSSL RSA PEM；`createSign().sign(privateKey, encoding)` 和 `createVerify().verify(publicKey, signature, encoding)` 使用 OpenSSL signer/verifier，缺失或无效 PEM 会抛错，不再产生或接受 `RSA-SIG-*` mock。
+- Node crypto RSA encrypt/decrypt 真实 OpenSSL 竖切片：`publicEncrypt/privateDecrypt/privateEncrypt/publicDecrypt` 使用 OpenSSL RSA PEM 解析和真实 PKCS#1/OAEP padding；占位 PEM fail closed，不再按 PEM marker 返回“前 11 字节伪填充”密文；旧正向测试已迁移到 `generateKeyPairSync('rsa')` 生成的真实 key pair。
+- Node crypto createECDH 真实 OpenSSL 竖切片：`createECDH('prime256v1'|'secp256r1'|'secp384r1'|'secp521r1')` 使用 OpenSSL EC key generation 和 `Deriver` 计算 shared secret；P-256 public key 为标准 65-byte uncompressed point；无效 peer public key fail closed；`setPrivateKey` 会按曲线重新推导 public key，不再保留 XOR/旋转 placeholder。
+- WebCrypto ECDH 真实 OpenSSL 竖切片：`crypto.subtle.generateKey({ name: 'ECDH', namedCurve })` 生成真实 EC private scalar 与 uncompressed public point；`deriveBits/deriveKey` 使用 OpenSSL `Deriver` 计算 shared secret；伪造或短 public key fail closed，不再使用 deterministic XOR/position formula。
+- WebCrypto ECDSA P-384/P-521 真实 OpenSSL 竖切片：`crypto.subtle.generateKey({ name: 'ECDSA', namedCurve })` 生成对应曲线的 private scalar 与 uncompressed public point；`sign/verify` 按调用 hash 生成/验证 WebCrypto raw `r||s` 签名；P-384/P-521 不再复用 P-256 signing backend。
+- `process.env` 动态权限重检：`process.env` 从初始化快照改为 accessor，每次访问都会按当前 `Environment/Read/Name(key)` broker 状态重新构造可见环境对象。
 
 ### 第二波仍未完成
 
-- PermissionState/ResourceBroker 仍需要配置文件策略，以及 process/WebSocket/net/dns/package manager 等更多资源入口接入；`process.env` 目前是初始化时过滤，动态访问控制仍需 Proxy/accessor 化。
-- CommonJS resolver 仍需要覆盖 conditional/pattern `exports`、未导出 subpath 的错误类型、TypeScript 扩展加载、`node:` 前缀、JSON module 语义，以及是否支持非 Node 标准的 `module` 字段。
-- WebCrypto 仍需要后续清点更广的算法覆盖和真实实现边界：已知 P0 包括畸形算法默认 HMAC、wrapKey/unwrapKey AES-GCM IV 默认值、ECDH XOR placeholder、ECDSA 曲线/验签假成功边界，以及 key algorithm/usages 校验。
+- PermissionState/ResourceBroker 仍需要配置文件策略、更完整的 CLI allow/deny 表达，以及对 watcher、debug/inspector、benchmark runner、安装清理/缓存遍历/prune 等剩余 I/O 入口的清点；网络权限目前覆盖 runtime deny 竖切片，仍需补充 host/URL exact allow 的 CLI/配置表达。
+- CommonJS resolver 仍需要明确是否支持非 Node 标准的 `module` 字段，并继续评估完整 Node `exports` 算法边界，例如 array fallback、`null` blocking、条件优先级、self-reference、`.mjs/.cjs` 语义和 TSX/JSX 加载策略。
+- WebCrypto/Node crypto 仍需要后续清点更广的算法覆盖和真实实现边界：已知 P0 还包括 Node EC `generateKeyPair*` mock，以及更完整的 key import/export、RSA signing 和非 AES-GCM cipher 覆盖。
 - `bee test` 仍不是完整 Jest runner；本轮只修复 single-file 可见 flag、timeout、无文件发现和若干假阳性，matcher、hook、mock、snapshot、watch、并发语义仍有限。
 
 ### 最新验证快照
@@ -231,3 +253,55 @@
 - `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test webcrypto_tests -- --nocapture`
 - `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test fetch_fail_closed_tests -- --nocapture`
 - `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_aes_gcm_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test permission_state_tests uses_global_network_permission_broker -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test permission_state_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests node_prefix -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests runtime_require_loads_json_module_as_object -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test permission_state_tests child_process_uses_global_process_permission_broker -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_create_verify_rejects_unrecognized_mock_signature -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_createverify_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test permission_state_tests process_chdir_uses_global_process_permission_broker -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test permission_state_tests process_env_rechecks_permission_after_runtime_initialization -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test permission_state_tests --test package_manager_security_tests --test commonjs_resolver_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test process_tests --test process_module_tests --test process_event_handler_tests --test module_system_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests resolves_package_json_subpath_exports_pattern -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests package_subpath_exports_pattern -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_wrap_key_tests test_wrap_key_without_iv_fails_closed -- --nocapture`
+- `cargo test --test crypto_ecdsa_tests`
+- `cargo test --test crypto_ecdh_derive_tests`
+- `cargo test --test webcrypto_tests`
+- `cargo test --test crypto_fail_closed_tests`
+- `cargo test --test crypto_wrap_key_tests`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_wrap_key_tests test_wrap_key_with_short_iv_fails_closed -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test webcrypto_tests test_get_random_values_returns_input_typed_array -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_wrap_key_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_aes_gcm_tests --test crypto_fail_closed_tests --test webcrypto_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test package_manager_security_tests read_package_lock_uses_global_file_read_broker -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test package_manager_security_tests generate_package_lock_uses_global_file_write_broker -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests package_json_exports_blocks_unexported_subpath_with_specific_error -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests runtime_require_reports_unexported_package_subpath -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests resolves_relative_typescript_module_extension -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test commonjs_resolver_tests runtime_require_loads_typescript_module -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_subtle_import_key_missing_algorithm_name_rejects -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_generate_key_rejects_usage_not_allowed_for_algorithm -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_wrap_key_tests test_unwrap_key_without_iv_fails_closed -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_wrap_key_tests test_unwrap_key_with_wrong_iv_fails_closed -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_generated_rsa_key_pair_sign_verify_round_trip -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_createsign_tests --test crypto_createverify_tests --test crypto_generatekeypair_tests --test crypto_generatekeypairsync_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_public_encrypt_rejects_placeholder_public_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_private_encrypt_rejects_placeholder_private_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_public_private_rsa_encrypt_decrypt_round_trip_uses_real_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_private_public_rsa_encrypt_decrypt_round_trip_uses_real_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_rsa_encrypt_outputs_modulus_sized_ciphertext -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_publicencrypt_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_private_public_encrypt_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_create_ecdh_generates_uncompressed_p256_public_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_create_ecdh_compute_secret_rejects_invalid_peer_public_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_fail_closed_tests test_create_ecdh_set_private_key_recomputes_public_key -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_createecdh_tests -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_ecdh_derive_tests test_ecdh_generatekey_p256_public_key_is_uncompressed_point -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_ecdh_derive_tests test_ecdh_derivebits_awaited_symmetric_shared_secret -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_ecdh_derive_tests test_ecdh_derivebits_rejects_invalid_peer_public_key_material -- --nocapture`
+- `CARGO_TARGET_DIR=/tmp/beejs-main-target cargo test --test crypto_ecdh_derive_tests -- --nocapture`

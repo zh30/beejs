@@ -89,11 +89,21 @@ fn test_unwrap_key_returns_promise() {
             ['wrapKey', 'unwrapKey']
         );
         let wrappingKeyRef;
+        let ivRef;
         Promise.all([keyPromise, wrappingKeyPromise]).then(([key, wrappingKey]) => {
             wrappingKeyRef = wrappingKey;
-            return crypto.subtle.wrapKey('raw', key, wrappingKey, { name: 'AES-GCM', iv: new Uint8Array(12) });
+            ivRef = crypto.getRandomValues(new Uint8Array(12));
+            return crypto.subtle.wrapKey('raw', key, wrappingKey, { name: 'AES-GCM', iv: ivRef });
         }).then(wrapped => {
-            const result = crypto.subtle.unwrapKey('raw', wrapped, wrappingKeyRef, { name: 'AES-GCM' }, ['encrypt', 'decrypt'], true);
+            const result = crypto.subtle.unwrapKey(
+                'raw',
+                wrapped,
+                wrappingKeyRef,
+                { name: 'AES-GCM', iv: ivRef },
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
             return result && result.constructor && result.constructor.name === 'Promise';
         });
     "#;
@@ -136,9 +146,10 @@ fn test_wrap_unwrap_aes_key_round_trip() {
                 'raw',
                 wrapped,
                 wrappingKey,
-                { name: 'AES-GCM' },
-                ['encrypt', 'decrypt'],
-                true
+                { name: 'AES-GCM', iv },
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
             );
 
             // Verify the unwrapped key works
@@ -198,9 +209,10 @@ fn test_wrap_key_with_hmac() {
                 'jwk',
                 wrapped,
                 wrappingKey,
-                { name: 'AES-GCM' },
-                ['sign', 'verify'],
-                true
+                { name: 'AES-GCM', iv },
+                { name: 'HMAC', hash: 'SHA-256', length: 256 },
+                true,
+                ['sign', 'verify']
             );
 
             // Verify the unwrapped key works
@@ -260,4 +272,291 @@ fn test_wrap_key_invalid_wrapping_key() {
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_wrap_key_without_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            try {
+                await crypto.subtle.wrapKey(
+                    'raw',
+                    keyToWrap,
+                    wrappingKey,
+                    { name: 'AES-GCM' }
+                );
+                return 'resolved';
+            } catch (error) {
+                return String(error && error.message || error).toLowerCase().includes('iv');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "wrapKey must fail closed when AES-GCM iv is missing"
+    );
+}
+
+#[test]
+#[serial]
+fn test_wrap_key_with_short_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            try {
+                await crypto.subtle.wrapKey(
+                    'raw',
+                    keyToWrap,
+                    wrappingKey,
+                    { name: 'AES-GCM', iv: new Uint8Array(8) }
+                );
+                return 'resolved';
+            } catch (error) {
+                return String(error && error.message || error).toLowerCase().includes('iv');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "wrapKey must fail closed when AES-GCM iv is not 12 bytes"
+    );
+}
+
+#[test]
+#[serial]
+fn test_unwrap_key_without_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const wrapped = await crypto.subtle.wrapKey(
+                'raw',
+                keyToWrap,
+                wrappingKey,
+                { name: 'AES-GCM', iv }
+            );
+
+            try {
+                await crypto.subtle.unwrapKey(
+                    'raw',
+                    wrapped,
+                    wrappingKey,
+                    { name: 'AES-GCM' },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message || error).toLowerCase().includes('iv');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "unwrapKey must fail closed when AES-GCM iv is missing"
+    );
+}
+
+#[test]
+#[serial]
+fn test_unwrap_key_with_short_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const wrapped = await crypto.subtle.wrapKey(
+                'raw',
+                keyToWrap,
+                wrappingKey,
+                { name: 'AES-GCM', iv }
+            );
+
+            try {
+                await crypto.subtle.unwrapKey(
+                    'raw',
+                    wrapped,
+                    wrappingKey,
+                    { name: 'AES-GCM', iv: new Uint8Array(8) },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message || error).toLowerCase().includes('iv');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "unwrapKey must fail closed when AES-GCM iv is not 12 bytes"
+    );
+}
+
+#[test]
+#[serial]
+fn test_unwrap_key_with_wrong_iv_fails_closed() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const wrapped = await crypto.subtle.wrapKey(
+                'raw',
+                keyToWrap,
+                wrappingKey,
+                { name: 'AES-GCM', iv }
+            );
+
+            const wrongIv = new Uint8Array(12);
+            wrongIv[0] = iv[0] ^ 0xff;
+
+            try {
+                await crypto.subtle.unwrapKey(
+                    'raw',
+                    wrapped,
+                    wrappingKey,
+                    { name: 'AES-GCM', iv: wrongIv },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (_) {
+                return true;
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "unwrapKey must authenticate with the caller-provided AES-GCM iv"
+    );
+}
+
+#[test]
+#[serial]
+fn test_unwrap_key_rejects_invalid_format() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const wrapped = await crypto.subtle.wrapKey(
+                'raw',
+                keyToWrap,
+                wrappingKey,
+                { name: 'AES-GCM', iv }
+            );
+
+            try {
+                await crypto.subtle.unwrapKey(
+                    'beejs-internal',
+                    wrapped,
+                    wrappingKey,
+                    { name: 'AES-GCM', iv },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message || error).toLowerCase().includes('format');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "unwrapKey must reject unsupported key formats"
+    );
 }

@@ -3,16 +3,16 @@
 // Supports crypto.subtle for hashing, encryption, and key operations
 
 use anyhow::Result;
+use openssl::bn::{BigNum, BigNumContext};
+use openssl::derive::Deriver;
+use openssl::ec::{EcGroup, EcGroupRef, EcKey, EcPoint, PointConversionForm};
+use openssl::ecdsa::EcdsaSig;
+use openssl::nid::Nid;
+use openssl::pkey::{PKey, Private, Public};
 use ring::aead::{Aad, Algorithm, LessSafeKey, Nonce, UnboundKey, AES_128_GCM, AES_256_GCM};
-use ring::rand::SystemRandom;
-use ring::signature::{
-    EcdsaKeyPair, EcdsaSigningAlgorithm, VerificationAlgorithm, ECDSA_P256_SHA256_ASN1,
-    ECDSA_P256_SHA256_ASN1_SIGNING,
-};
 use rusty_v8 as v8;
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha384, Sha512};
-use untrusted;
 
 /// Get bytes from an ArrayBuffer or TypedArray.
 fn get_array_buffer_data(
@@ -132,8 +132,6 @@ fn get_random_values_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let this_obj = args.this();
-
     if args.length() < 1 || !args.get(0).is_typed_array() {
         let error =
             v8::String::new(scope, "getRandomValues requires a TypedArray argument").unwrap();
@@ -200,16 +198,20 @@ fn get_random_values_callback(
         backing_store[i].set(byte);
     }
 
-    retval.set(this_obj.into());
+    retval.set(typed_array_arg);
 }
 
-/// Parse algorithm name from algorithm object
-fn get_algorithm_name(scope: &mut v8::HandleScope, algo_value: v8::Local<v8::Value>) -> String {
+/// Parse algorithm name from algorithm object.
+fn get_algorithm_name_option(
+    scope: &mut v8::HandleScope,
+    algo_value: v8::Local<v8::Value>,
+) -> Option<String> {
     if algo_value.is_string() {
-        return algo_value
+        let name = algo_value
             .to_string(scope)
             .unwrap()
             .to_rust_string_lossy(scope);
+        return (!name.is_empty()).then_some(name);
     }
 
     if algo_value.is_object() {
@@ -217,15 +219,27 @@ fn get_algorithm_name(scope: &mut v8::HandleScope, algo_value: v8::Local<v8::Val
         let name_key = v8::String::new(scope, "name").unwrap();
         if let Some(name_val) = algo_obj.get(scope, name_key.into()) {
             if name_val.is_string() {
-                return name_val
+                let name = name_val
                     .to_string(scope)
                     .unwrap()
                     .to_rust_string_lossy(scope);
+                return (!name.is_empty()).then_some(name);
             }
         }
     }
 
-    "HMAC".to_string()
+    None
+}
+
+fn get_algorithm_name(scope: &mut v8::HandleScope, algo_value: v8::Local<v8::Value>) -> String {
+    get_algorithm_name_option(scope, algo_value).unwrap_or_default()
+}
+
+fn throw_missing_algorithm_name(scope: &mut v8::HandleScope, operation: &str) {
+    let error =
+        v8::String::new(scope, &format!("{}: algorithm.name is required", operation)).unwrap();
+    let error_obj = v8::Exception::type_error(scope, error);
+    scope.throw_exception(error_obj.into());
 }
 
 /// Create a CryptoKey object with proper structure
@@ -385,7 +399,13 @@ fn import_key_callback(
     };
 
     // Parse algorithm
-    let algorithm_name = get_algorithm_name(scope, algorithm_value);
+    let algorithm_name = match get_algorithm_name_option(scope, algorithm_value) {
+        Some(name) => name,
+        None => {
+            throw_missing_algorithm_name(scope, "importKey");
+            return;
+        }
+    };
 
     // Validate algorithm and get length
     let (key_type, length) = match algorithm_name.to_uppercase().as_str() {
@@ -429,6 +449,9 @@ fn import_key_callback(
 
     // Parse usages
     let usages = get_key_usages(scope, usages_value);
+    if !validate_key_usages(scope, "importKey", &algorithm_name, &usages) {
+        return;
+    }
 
     // Create CryptoKey object
     let crypto_key = create_crypto_key(
@@ -508,6 +531,267 @@ fn get_key_data(scope: &mut v8::HandleScope, crypto_key: v8::Local<v8::Object>) 
     }
 }
 
+fn set_key_data(scope: &mut v8::HandleScope, crypto_key: v8::Local<v8::Object>, key_data: &[u8]) {
+    let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
+    let key_data_array = v8::ArrayBuffer::new(scope, key_data.len());
+    let backing_store = key_data_array.get_backing_store();
+    for (i, &byte) in key_data.iter().enumerate() {
+        backing_store[i].set(byte);
+    }
+    crypto_key.set(scope, key_data_key.into(), key_data_array.into());
+}
+
+fn ecdh_curve_nid(curve: &str) -> Result<Nid, String> {
+    match curve {
+        "P-256" | "prime256v1" | "secp256r1" => Ok(Nid::X9_62_PRIME256V1),
+        "P-384" | "secp384r1" => Ok(Nid::SECP384R1),
+        "P-521" | "secp521r1" => Ok(Nid::SECP521R1),
+        _ => Err(format!(
+            "ECDH: unsupported curve '{}'. Supported: P-256, P-384, P-521",
+            curve
+        )),
+    }
+}
+
+fn ecdh_group(curve: &str) -> Result<EcGroup, String> {
+    let nid = ecdh_curve_nid(curve)?;
+    EcGroup::from_curve_name(nid).map_err(|error| format!("ECDH: curve setup failed: {}", error))
+}
+
+fn ecdh_private_key_size(group: &EcGroupRef) -> usize {
+    group.degree().div_ceil(8) as usize
+}
+
+fn left_pad_private_key(mut private_key: Vec<u8>, target_len: usize) -> Vec<u8> {
+    if private_key.len() >= target_len {
+        return private_key;
+    }
+
+    let mut padded = vec![0u8; target_len - private_key.len()];
+    padded.append(&mut private_key);
+    padded
+}
+
+fn ecdh_private_key_bytes(key: &EcKey<Private>) -> Vec<u8> {
+    left_pad_private_key(
+        key.private_key().to_vec(),
+        ecdh_private_key_size(key.group()),
+    )
+}
+
+fn ecdh_public_key_bytes(key: &EcKey<Private>) -> Result<Vec<u8>, String> {
+    let mut ctx =
+        BigNumContext::new().map_err(|error| format!("ECDH: BigNum context failed: {}", error))?;
+    key.public_key()
+        .to_bytes(key.group(), PointConversionForm::UNCOMPRESSED, &mut ctx)
+        .map_err(|error| format!("ECDH: public key export failed: {}", error))
+}
+
+fn ecdh_key_from_private_bytes(curve: &str, private_key: &[u8]) -> Result<EcKey<Private>, String> {
+    if private_key.is_empty() {
+        return Err("ECDH: private key is empty".to_string());
+    }
+
+    let group = ecdh_group(curve)?;
+    let private_number = BigNum::from_slice(private_key)
+        .map_err(|error| format!("ECDH: invalid private key: {}", error))?;
+    let ctx =
+        BigNumContext::new().map_err(|error| format!("ECDH: BigNum context failed: {}", error))?;
+    let mut public_key = EcPoint::new(&group)
+        .map_err(|error| format!("ECDH: public key allocation failed: {}", error))?;
+    public_key
+        .mul_generator(&group, &private_number, &ctx)
+        .map_err(|error| format!("ECDH: public key derivation failed: {}", error))?;
+
+    let key = EcKey::from_private_components(&group, &private_number, &public_key)
+        .map_err(|error| format!("ECDH: private key setup failed: {}", error))?;
+    key.check_key()
+        .map_err(|error| format!("ECDH: invalid private key: {}", error))?;
+    Ok(key)
+}
+
+fn ecdh_generate_key_pair(curve: &str) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let group = ecdh_group(curve)?;
+    let key = EcKey::generate(&group)
+        .map_err(|error| format!("ECDH: key generation failed: {}", error))?;
+    let private_key = ecdh_private_key_bytes(&key);
+    let public_key = ecdh_public_key_bytes(&key)?;
+    Ok((private_key, public_key))
+}
+
+fn derive_ecdh_bits_result(
+    curve: &str,
+    private_key: &[u8],
+    public_key: &[u8],
+    length_bits: usize,
+) -> Result<Vec<u8>, String> {
+    if private_key.is_empty() || public_key.is_empty() {
+        return Err("ECDH: valid key material is required".to_string());
+    }
+
+    let private_key = ecdh_key_from_private_bytes(curve, private_key)?;
+    let group = private_key.group();
+    let mut ctx =
+        BigNumContext::new().map_err(|error| format!("ECDH: BigNum context failed: {}", error))?;
+    let peer_point = EcPoint::from_bytes(group, public_key, &mut ctx)
+        .map_err(|error| format!("ECDH: invalid public key: {}", error))?;
+    if peer_point.is_infinity(group) {
+        return Err("ECDH: invalid public key".to_string());
+    }
+    if !peer_point
+        .is_on_curve(group, &mut ctx)
+        .map_err(|error| format!("ECDH: public key validation failed: {}", error))?
+    {
+        return Err("ECDH: invalid public key".to_string());
+    }
+
+    let peer_key = EcKey::from_public_key(group, &peer_point)
+        .map_err(|error| format!("ECDH: invalid public key: {}", error))?;
+    peer_key
+        .check_key()
+        .map_err(|error| format!("ECDH: invalid public key: {}", error))?;
+
+    let private_pkey = PKey::from_ec_key(private_key)
+        .map_err(|error| format!("ECDH: private key failed: {}", error))?;
+    let peer_pkey =
+        PKey::from_ec_key(peer_key).map_err(|error| format!("ECDH: peer key failed: {}", error))?;
+    let mut deriver =
+        Deriver::new(&private_pkey).map_err(|error| format!("ECDH: deriver failed: {}", error))?;
+    deriver
+        .set_peer(&peer_pkey)
+        .map_err(|error| format!("ECDH: peer setup failed: {}", error))?;
+    let mut shared = deriver
+        .derive_to_vec()
+        .map_err(|error| format!("ECDH: derivation failed: {}", error))?;
+
+    let output_len = length_bits.div_ceil(8);
+    if output_len > shared.len() {
+        return Err(format!(
+            "ECDH: requested {} bits exceeds shared secret length",
+            length_bits
+        ));
+    }
+    shared.truncate(output_len);
+    if length_bits % 8 != 0 && !shared.is_empty() {
+        let keep_bits = (length_bits % 8) as u8;
+        let mask = 0xFFu8 << (8 - keep_bits);
+        if let Some(last) = shared.last_mut() {
+            *last &= mask;
+        }
+    }
+    Ok(shared)
+}
+
+fn ecdsa_group(curve: &str) -> Result<EcGroup, String> {
+    ecdh_group(curve).map_err(|error| error.replacen("ECDH", "ECDSA", 1))
+}
+
+fn ecdsa_key_from_private_bytes(curve: &str, private_key: &[u8]) -> Result<EcKey<Private>, String> {
+    ecdh_key_from_private_bytes(curve, private_key)
+        .map_err(|error| error.replacen("ECDH", "ECDSA", 1))
+}
+
+fn ecdsa_generate_key_pair(curve: &str) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let group = ecdsa_group(curve)?;
+    let key = EcKey::generate(&group)
+        .map_err(|error| format!("ECDSA: key generation failed: {}", error))?;
+    let private_key = ecdh_private_key_bytes(&key);
+    let public_key =
+        ecdh_public_key_bytes(&key).map_err(|error| error.replacen("ECDH", "ECDSA", 1))?;
+    Ok((private_key, public_key))
+}
+
+fn ecdsa_public_key_from_bytes(curve: &str, public_key: &[u8]) -> Result<EcKey<Public>, String> {
+    if public_key.is_empty() {
+        return Err("ECDSA: public key is empty".to_string());
+    }
+
+    let group = ecdsa_group(curve)?;
+    let mut ctx =
+        BigNumContext::new().map_err(|error| format!("ECDSA: BigNum context failed: {}", error))?;
+    let public_point = EcPoint::from_bytes(&group, public_key, &mut ctx)
+        .map_err(|error| format!("ECDSA: invalid public key: {}", error))?;
+    if public_point.is_infinity(&group) {
+        return Err("ECDSA: invalid public key".to_string());
+    }
+    if !public_point
+        .is_on_curve(&group, &mut ctx)
+        .map_err(|error| format!("ECDSA: public key validation failed: {}", error))?
+    {
+        return Err("ECDSA: invalid public key".to_string());
+    }
+
+    let key = EcKey::from_public_key(&group, &public_point)
+        .map_err(|error| format!("ECDSA: public key setup failed: {}", error))?;
+    key.check_key()
+        .map_err(|error| format!("ECDSA: invalid public key: {}", error))?;
+    Ok(key)
+}
+
+fn ecdsa_signature_to_raw(signature: &EcdsaSig, component_size: usize) -> Result<Vec<u8>, String> {
+    let component_size_i32 = i32::try_from(component_size)
+        .map_err(|_| "ECDSA: signature component size is too large".to_string())?;
+    let mut raw = signature
+        .r()
+        .to_vec_padded(component_size_i32)
+        .map_err(|error| format!("ECDSA: signature encoding failed: {}", error))?;
+    let mut s = signature
+        .s()
+        .to_vec_padded(component_size_i32)
+        .map_err(|error| format!("ECDSA: signature encoding failed: {}", error))?;
+    raw.append(&mut s);
+    Ok(raw)
+}
+
+fn ecdsa_signature_from_raw(
+    signature: &[u8],
+    component_size: usize,
+) -> Result<Option<EcdsaSig>, String> {
+    if signature.len() != component_size * 2 {
+        return Ok(None);
+    }
+
+    let r = BigNum::from_slice(&signature[..component_size])
+        .map_err(|error| format!("ECDSA: invalid signature: {}", error))?;
+    let s = BigNum::from_slice(&signature[component_size..])
+        .map_err(|error| format!("ECDSA: invalid signature: {}", error))?;
+    let signature = EcdsaSig::from_private_components(r, s)
+        .map_err(|error| format!("ECDSA: invalid signature: {}", error))?;
+    Ok(Some(signature))
+}
+
+fn ecdsa_sign_result(
+    curve: &str,
+    private_key: &[u8],
+    hash_name: &str,
+    data: &[u8],
+) -> Result<Vec<u8>, String> {
+    let key = ecdsa_key_from_private_bytes(curve, private_key)?;
+    let digest = compute_sha_digest(data, hash_name)?;
+    let signature = EcdsaSig::sign(&digest, &key)
+        .map_err(|error| format!("ECDSA: signing failed: {}", error))?;
+    ecdsa_signature_to_raw(&signature, ecdh_private_key_size(key.group()))
+}
+
+fn ecdsa_verify_result(
+    curve: &str,
+    public_key: &[u8],
+    hash_name: &str,
+    signature: &[u8],
+    data: &[u8],
+) -> Result<bool, String> {
+    let key = ecdsa_public_key_from_bytes(curve, public_key)?;
+    let digest = compute_sha_digest(data, hash_name)?;
+    let component_size = ecdh_private_key_size(key.group());
+    let Some(signature) = ecdsa_signature_from_raw(signature, component_size)? else {
+        return Ok(false);
+    };
+
+    signature
+        .verify(&digest, &key)
+        .map_err(|error| format!("ECDSA: verification failed: {}", error))
+}
+
 fn crypto_key_has_usage(
     scope: &mut v8::HandleScope,
     crypto_key: v8::Local<v8::Object>,
@@ -531,6 +815,89 @@ fn crypto_key_has_usage(
         }
     }
 
+    false
+}
+
+fn is_key_usage_allowed_for_algorithm(algorithm_name: &str, usage: &str) -> bool {
+    match algorithm_name.to_uppercase().as_str() {
+        "HMAC" | "HS256" | "HS384" | "HS512" => matches!(usage, "sign" | "verify"),
+        "AES-GCM" | "AES-CBC" | "AES-CTR" => {
+            matches!(usage, "encrypt" | "decrypt" | "wrapKey" | "unwrapKey")
+        }
+        "AES-KW" => matches!(usage, "wrapKey" | "unwrapKey"),
+        "PBKDF2" | "ECDH" => matches!(usage, "deriveKey" | "deriveBits"),
+        "ECDSA" | "RSASSA-PKCS1-V1_5" => matches!(usage, "sign" | "verify"),
+        "RSA-OAEP" => matches!(usage, "encrypt" | "decrypt" | "wrapKey" | "unwrapKey"),
+        _ => false,
+    }
+}
+
+fn validate_key_usages(
+    scope: &mut v8::HandleScope,
+    operation: &str,
+    algorithm_name: &str,
+    usages: &[String],
+) -> bool {
+    for usage in usages {
+        if !is_key_usage_allowed_for_algorithm(algorithm_name, usage) {
+            let error = v8::String::new(
+                scope,
+                &format!(
+                    "{}: usage '{}' is not allowed for algorithm '{}'",
+                    operation, usage, algorithm_name
+                ),
+            )
+            .unwrap();
+            let error_obj = v8::Exception::type_error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return false;
+        }
+    }
+
+    true
+}
+
+fn ensure_key_algorithm_matches(
+    scope: &mut v8::HandleScope,
+    operation: &str,
+    requested_algorithm: &str,
+    crypto_key: v8::Local<v8::Object>,
+) -> bool {
+    let key_algorithm = get_key_algorithm_name(scope, crypto_key);
+    if key_algorithm.eq_ignore_ascii_case(requested_algorithm) {
+        return true;
+    }
+
+    let error = v8::String::new(
+        scope,
+        &format!(
+            "{}: key algorithm '{}' does not match requested algorithm '{}'",
+            operation, key_algorithm, requested_algorithm
+        ),
+    )
+    .unwrap();
+    let error_obj = v8::Exception::type_error(scope, error);
+    scope.throw_exception(error_obj.into());
+    false
+}
+
+fn ensure_crypto_key_usage(
+    scope: &mut v8::HandleScope,
+    operation: &str,
+    crypto_key: v8::Local<v8::Object>,
+    usage: &str,
+) -> bool {
+    if crypto_key_has_usage(scope, crypto_key, usage) {
+        return true;
+    }
+
+    let error = v8::String::new(
+        scope,
+        &format!("{}: key usage '{}' is not allowed", operation, usage),
+    )
+    .unwrap();
+    let error_obj = v8::Exception::type_error(scope, error);
+    scope.throw_exception(error_obj.into());
     false
 }
 
@@ -573,61 +940,39 @@ fn hmac_sign_callback(
     // Get key type to determine algorithm
     let key_obj = key_value.to_object(scope).unwrap();
     let key_type = get_key_type(scope, key_obj);
-    let algo_name = get_algorithm_name(scope, algo_value);
-
-    // Get key algorithm from algorithm object
-    let algo_key = v8::String::new(scope, "algorithm").unwrap();
-    let algo_val = key_obj.get(scope, algo_key.into());
-    let key_algorithm = if let Some(av) = algo_val {
-        get_algorithm_name(scope, av)
-    } else {
-        String::new()
+    let algo_name = match get_algorithm_name_option(scope, algo_value) {
+        Some(name) => name,
+        None => {
+            throw_missing_algorithm_name(scope, "sign");
+            return;
+        }
     };
 
+    // Get key algorithm from algorithm object
+    let key_algorithm = get_key_algorithm_name(scope, key_obj);
+    if !ensure_key_algorithm_matches(scope, "sign", &algo_name, key_obj) {
+        return;
+    }
+    if !ensure_crypto_key_usage(scope, "sign", key_obj, "sign") {
+        return;
+    }
+
     if algo_name == "ECDSA" || key_algorithm == "ECDSA" {
-        // ECDSA signing - use ring::EcdsaKeyPair for real cryptographic signing
-        let _curve_name = get_curve_name(scope, key_obj);
-
-        // Get PKCS#8 key data from the CryptoKey
-        let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
-        let key_data_value = key_obj.get(scope, key_data_key.into());
-
-        let pkcs8_data = if let Some(kdv) = key_data_value {
-            match get_array_buffer_data(scope, kdv) {
-                Some(data) => data,
-                None => {
-                    let error =
-                        v8::String::new(scope, "sign: ECDSA key data is unavailable").unwrap();
-                    let error_obj = v8::Exception::error(scope, error);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-            }
-        } else {
-            let error = v8::String::new(scope, "sign: ECDSA key data is unavailable").unwrap();
-            let error_obj = v8::Exception::error(scope, error);
-            scope.throw_exception(error_obj.into());
-            return;
-        };
-
-        // Parse the PKCS#8 key and create EcdsaKeyPair for signing
-        let rng = SystemRandom::new();
-        let signing_alg: &'static EcdsaSigningAlgorithm = &ECDSA_P256_SHA256_ASN1_SIGNING;
-        let key_pair = match EcdsaKeyPair::from_pkcs8(signing_alg, &pkcs8_data, &rng) {
-            Ok(kp) => kp,
-            Err(_) => {
-                let error = v8::String::new(scope, "sign: invalid ECDSA private key").unwrap();
+        let curve_name = get_curve_name(scope, key_obj);
+        let hash_name = get_algorithm_hash_name(scope, algo_value);
+        let private_key_data = match get_key_data(scope, key_obj) {
+            Some(data) => data,
+            None => {
+                let error = v8::String::new(scope, "sign: ECDSA key data is unavailable").unwrap();
                 let error_obj = v8::Exception::error(scope, error);
                 scope.throw_exception(error_obj.into());
                 return;
             }
         };
-
-        // Sign using ring's ECDSA
-        let signature = match key_pair.sign(&rng, &data) {
-            Ok(sig) => sig.as_ref().to_vec(),
-            Err(_) => {
-                let error = v8::String::new(scope, "sign: ECDSA signing failed").unwrap();
+        let signature = match ecdsa_sign_result(&curve_name, &private_key_data, &hash_name, &data) {
+            Ok(signature) => signature,
+            Err(error_message) => {
+                let error = v8::String::new(scope, &format!("sign: {}", error_message)).unwrap();
                 let error_obj = v8::Exception::error(scope, error);
                 scope.throw_exception(error_obj.into());
                 return;
@@ -659,10 +1004,19 @@ fn hmac_sign_callback(
         let key_data = if let Some(kdv) = key_data_value {
             match get_array_buffer_data(scope, kdv) {
                 Some(data) => data,
-                None => vec![0u8; 32],
+                None => {
+                    let error =
+                        v8::String::new(scope, "sign: HMAC key data is unavailable").unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
             }
         } else {
-            vec![0u8; 32]
+            let error = v8::String::new(scope, "sign: HMAC key data is unavailable").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return;
         };
 
         // Simple HMAC-like signature (for testing purposes)
@@ -713,7 +1067,7 @@ fn hmac_verify_callback(
         return;
     }
 
-    let _signature = match get_array_buffer_data(scope, signature_value) {
+    let signature = match get_array_buffer_data(scope, signature_value) {
         Some(s) => s,
         None => {
             let error = v8::String::new(
@@ -727,7 +1081,7 @@ fn hmac_verify_callback(
         }
     };
 
-    let _data = match get_array_buffer_data(scope, data_value) {
+    let data = match get_array_buffer_data(scope, data_value) {
         Some(d) => d,
         None => {
             let error = v8::String::new(scope, "verify: data must be an ArrayBuffer or TypedArray")
@@ -741,52 +1095,49 @@ fn hmac_verify_callback(
     // Get key type to determine algorithm
     let key_obj = key_value.to_object(scope).unwrap();
     let key_type = get_key_type(scope, key_obj);
-    let algo_name = get_algorithm_name(scope, algo_value);
-
-    // Get key algorithm from algorithm object
-    let algo_key = v8::String::new(scope, "algorithm").unwrap();
-    let algo_val = key_obj.get(scope, algo_key.into());
-    let key_algorithm = if let Some(av) = algo_val {
-        get_algorithm_name(scope, av)
-    } else {
-        String::new()
+    let algo_name = match get_algorithm_name_option(scope, algo_value) {
+        Some(name) => name,
+        None => {
+            throw_missing_algorithm_name(scope, "verify");
+            return;
+        }
     };
 
+    // Get key algorithm from algorithm object
+    let key_algorithm = get_key_algorithm_name(scope, key_obj);
+    if !ensure_key_algorithm_matches(scope, "verify", &algo_name, key_obj) {
+        return;
+    }
+    if !ensure_crypto_key_usage(scope, "verify", key_obj, "verify") {
+        return;
+    }
+
     let result_bool = if algo_name == "ECDSA" || key_algorithm == "ECDSA" {
-        // ECDSA verification - use ring's ECDSA verification
         let curve_name = get_curve_name(scope, key_obj);
-
-        // Get public key data from the CryptoKey
-        let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
-        let key_data_value = key_obj.get(scope, key_data_key.into());
-
-        // Fallback validation for when key data is not available
-        let expected_sig_len = match curve_name.as_str() {
-            "P-256" => 64,
-            "P-384" => 96,
-            "P-521" => 132,
-            _ => 64,
-        };
-
-        // Use ring's ECDSA verification if we have key data
-        if let Some(kdv) = key_data_value {
-            if let Some(public_key_data) = get_array_buffer_data(scope, kdv) {
-                let verify_result = ECDSA_P256_SHA256_ASN1.verify(
-                    untrusted::Input::from(&public_key_data),
-                    untrusted::Input::from(&_data),
-                    untrusted::Input::from(&_signature),
-                );
-
-                match verify_result {
-                    Ok(()) => v8::Boolean::new(scope, true),
-                    Err(_) => v8::Boolean::new(scope, false),
-                }
-            } else {
-                v8::Boolean::new(scope, _signature.len() == expected_sig_len)
+        let hash_name = get_algorithm_hash_name(scope, algo_value);
+        let public_key_data = match get_key_data(scope, key_obj) {
+            Some(data) => data,
+            None => {
+                let error =
+                    v8::String::new(scope, "verify: ECDSA key data is unavailable").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
             }
-        } else {
-            v8::Boolean::new(scope, _signature.len() == expected_sig_len)
-        }
+        };
+        let verified =
+            match ecdsa_verify_result(&curve_name, &public_key_data, &hash_name, &signature, &data)
+            {
+                Ok(verified) => verified,
+                Err(error_message) => {
+                    let error =
+                        v8::String::new(scope, &format!("verify: {}", error_message)).unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+            };
+        v8::Boolean::new(scope, verified)
     } else if key_type == "public"
         || algo_name.starts_with("RSA")
         || algo_name == "RSASSA-PKCS1-v1_5"
@@ -801,19 +1152,27 @@ fn hmac_verify_callback(
         let key_data = if let Some(kdv) = key_data_value {
             match get_array_buffer_data(scope, kdv) {
                 Some(data) => data,
-                None => vec![0u8; 32],
+                None => {
+                    let error =
+                        v8::String::new(scope, "verify: HMAC key data is unavailable").unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
             }
         } else {
-            vec![0u8; 32]
+            let error = v8::String::new(scope, "verify: HMAC key data is unavailable").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+            return;
         };
 
         use ring::hmac;
         let sign_key = hmac::Key::new(hmac::HMAC_SHA256, &key_data);
-        let tag = hmac::sign(&sign_key, &_data);
+        let tag = hmac::sign(&sign_key, &data);
 
         #[allow(deprecated)]
-        let result =
-            ring::constant_time::verify_slices_are_equal(tag.as_ref(), &_signature).is_ok();
+        let result = ring::constant_time::verify_slices_are_equal(tag.as_ref(), &signature).is_ok();
         v8::Boolean::new(scope, result)
     };
 
@@ -934,12 +1293,17 @@ fn aes_encrypt_callback(
         return;
     }
 
+    let key_obj = key_value.to_object(scope).unwrap();
+    if !ensure_key_algorithm_matches(scope, "encrypt", &algo_name, key_obj) {
+        return;
+    }
+    if !ensure_crypto_key_usage(scope, "encrypt", key_obj, "encrypt") {
+        return;
+    }
+
     // Get key data from CryptoKey
     let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
-    let key_data_value = key_value
-        .to_object(scope)
-        .unwrap()
-        .get(scope, key_data_key.into());
+    let key_data_value = key_obj.get(scope, key_data_key.into());
 
     match key_data_value {
         Some(kdv) => {
@@ -1129,12 +1493,17 @@ fn aes_decrypt_callback(
         return;
     }
 
+    let key_obj = key_value.to_object(scope).unwrap();
+    if !ensure_key_algorithm_matches(scope, "decrypt", &algo_name, key_obj) {
+        return;
+    }
+    if !ensure_crypto_key_usage(scope, "decrypt", key_obj, "decrypt") {
+        return;
+    }
+
     // Get key data from CryptoKey
     let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
-    let key_data_value = key_value
-        .to_object(scope)
-        .unwrap()
-        .get(scope, key_data_key.into());
+    let key_data_value = key_obj.get(scope, key_data_key.into());
 
     match key_data_value {
         Some(kdv) => {
@@ -1232,7 +1601,7 @@ fn wrap_key_callback(
     let algo_value = args.get(3);
 
     // Get format
-    let _format_str = if format_value.is_string() {
+    let format_str = if format_value.is_string() {
         format_value
             .to_string(scope)
             .unwrap()
@@ -1243,6 +1612,16 @@ fn wrap_key_callback(
         scope.throw_exception(error_obj.into());
         return;
     };
+    if format_str != "raw" && format_str != "jwk" {
+        let error = v8::String::new(
+            scope,
+            &format!("wrapKey: unsupported format '{}'", format_str),
+        )
+        .unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
 
     // Get algorithm name and IV
     let algo_obj = if algo_value.is_object() {
@@ -1253,16 +1632,50 @@ fn wrap_key_callback(
 
     let algo_name = get_algorithm_name(scope, algo_value);
 
-    // Get IV from algorithm
-    let mut iv = vec![0u8; 12];
-    if let Some(ref obj) = algo_obj {
-        let iv_key = v8::String::new(scope, "iv").unwrap();
-        if let Some(iv_val) = obj.get(scope, iv_key.into()) {
-            if let Some(iv_data) = get_array_buffer_data(scope, iv_val) {
-                iv = iv_data;
+    let iv = if algo_name.eq_ignore_ascii_case("AES-GCM") {
+        match algo_obj.as_ref() {
+            Some(obj) => {
+                let iv_key = v8::String::new(scope, "iv").unwrap();
+                match obj.get(scope, iv_key.into()) {
+                    Some(iv_val) => match get_array_buffer_data(scope, iv_val) {
+                        Some(iv_data) if iv_data.len() == 12 => iv_data,
+                        Some(_) => {
+                            let error =
+                                v8::String::new(scope, "wrapKey: AES-GCM iv must be 12 bytes")
+                                    .unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                        None => {
+                            let error = v8::String::new(
+                                scope,
+                                "wrapKey: AES-GCM iv must be an ArrayBuffer or TypedArray",
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    },
+                    None => {
+                        let error = v8::String::new(scope, "wrapKey: AES-GCM requires iv").unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                }
+            }
+            None => {
+                let error = v8::String::new(scope, "wrapKey: AES-GCM requires iv").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
             }
         }
-    }
+    } else {
+        vec![0u8; 12]
+    };
 
     // Export key to wrap
     let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
@@ -1313,7 +1726,9 @@ fn wrap_key_callback(
                                     Ok(unbound_key) => {
                                         let less_safe_key = LessSafeKey::new(unbound_key);
                                         let nonce = Nonce::assume_unique_for_key(
-                                            iv.clone().try_into().unwrap_or([0u8; 12]),
+                                            iv.clone()
+                                                .try_into()
+                                                .expect("validated AES-GCM iv length"),
                                         );
 
                                         let mut plaintext = key_bytes.clone();
@@ -1325,16 +1740,11 @@ fn wrap_key_callback(
 
                                         match result {
                                             Ok(_) => {
-                                                // plaintext now contains encrypted data + tag
-                                                // Return IV + encrypted data with tag
-                                                let mut result_data = iv;
-                                                result_data.extend_from_slice(&plaintext);
-
                                                 let array_buffer =
-                                                    v8::ArrayBuffer::new(scope, result_data.len());
+                                                    v8::ArrayBuffer::new(scope, plaintext.len());
                                                 let backing_store =
                                                     array_buffer.get_backing_store();
-                                                for (i, &byte) in result_data.iter().enumerate() {
+                                                for (i, &byte) in plaintext.iter().enumerate() {
                                                     backing_store[i].set(byte);
                                                 }
 
@@ -1427,7 +1837,7 @@ fn unwrap_key_callback(
     let usages_value = args.get(6);
 
     // Get format
-    let _format_str = if format_value.is_string() {
+    let format_str = if format_value.is_string() {
         format_value
             .to_string(scope)
             .unwrap()
@@ -1438,12 +1848,76 @@ fn unwrap_key_callback(
         scope.throw_exception(error_obj.into());
         return;
     };
+    if format_str != "raw" && format_str != "jwk" {
+        let error = v8::String::new(
+            scope,
+            &format!("unwrapKey: unsupported format '{}'", format_str),
+        )
+        .unwrap();
+        let error_obj = v8::Exception::type_error(scope, error);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
 
     // Get unwrap algorithm name and IV
-    let unwrap_algo_name = get_algorithm_name(scope, unwrap_algo_value);
+    let unwrap_algo_name = match get_algorithm_name_option(scope, unwrap_algo_value) {
+        Some(name) => name,
+        None => {
+            throw_missing_algorithm_name(scope, "unwrapKey");
+            return;
+        }
+    };
+    let unwrap_algo_obj = if unwrap_algo_value.is_object() {
+        Some(unwrap_algo_value.to_object(scope).unwrap())
+    } else {
+        None
+    };
 
-    // Note: IV is extracted from the wrapped key data itself (first 12 bytes)
-    // The algorithm's IV parameter is ignored for unwrapKey
+    let unwrap_iv = if unwrap_algo_name.eq_ignore_ascii_case("AES-GCM") {
+        match unwrap_algo_obj.as_ref() {
+            Some(obj) => {
+                let iv_key = v8::String::new(scope, "iv").unwrap();
+                match obj.get(scope, iv_key.into()) {
+                    Some(iv_val) => match get_array_buffer_data(scope, iv_val) {
+                        Some(iv_data) if iv_data.len() == 12 => iv_data,
+                        Some(_) => {
+                            let error =
+                                v8::String::new(scope, "unwrapKey: AES-GCM iv must be 12 bytes")
+                                    .unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                        None => {
+                            let error = v8::String::new(
+                                scope,
+                                "unwrapKey: AES-GCM iv must be an ArrayBuffer or TypedArray",
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    },
+                    None => {
+                        let error =
+                            v8::String::new(scope, "unwrapKey: AES-GCM requires iv").unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                }
+            }
+            None => {
+                let error = v8::String::new(scope, "unwrapKey: AES-GCM requires iv").unwrap();
+                let error_obj = v8::Exception::error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+        }
+    } else {
+        Vec::new()
+    };
 
     // Get wrapped key data
     let wrapped_key_data = match get_array_buffer_data(scope, wrapped_key_value) {
@@ -1460,16 +1934,12 @@ fn unwrap_key_callback(
         }
     };
 
-    // Extract IV and encrypted data from wrapped key
-    if wrapped_key_data.len() < 12 + 16 {
+    if wrapped_key_data.len() < 16 {
         let error = v8::String::new(scope, "unwrapKey: wrapped key data is too short").unwrap();
         let error_obj = v8::Exception::error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
     }
-
-    let wrapped_iv = &wrapped_key_data[..12];
-    let encrypted_with_tag = &wrapped_key_data[12..];
 
     // Get unwrapping key data
     let unwrapping_key_obj = unwrapping_key_value.to_object(scope).unwrap();
@@ -1511,10 +1981,12 @@ fn unwrap_key_callback(
                         Ok(unbound_key) => {
                             let less_safe_key = LessSafeKey::new(unbound_key);
                             let nonce = Nonce::assume_unique_for_key(
-                                wrapped_iv.try_into().unwrap_or([0u8; 12]),
+                                unwrap_iv
+                                    .try_into()
+                                    .expect("validated AES-GCM unwrap iv length"),
                             );
 
-                            let mut encrypted_data = encrypted_with_tag.to_vec();
+                            let mut encrypted_data = wrapped_key_data.clone();
                             let result = less_safe_key.open_in_place(
                                 nonce,
                                 Aad::from(&[][..]),
@@ -1884,13 +2356,22 @@ fn generate_key_callback(
     let usages_value = args.get(2);
 
     // Parse algorithm name
-    let algorithm_name = get_algorithm_name(scope, algorithm_value);
+    let algorithm_name = match get_algorithm_name_option(scope, algorithm_value) {
+        Some(name) => name,
+        None => {
+            throw_missing_algorithm_name(scope, "generateKey");
+            return;
+        }
+    };
 
     // Parse extractable
     let extractable = get_bool_value(scope, extractable_value);
 
     // Parse usages
     let usages = get_key_usages(scope, usages_value);
+    if !validate_key_usages(scope, "generateKey", &algorithm_name, &usages) {
+        return;
+    }
 
     // Generate key based on algorithm
     match algorithm_name.to_uppercase().as_str() {
@@ -1986,7 +2467,6 @@ fn generate_key_callback(
             retval.set(promise.into());
         }
         "ECDSA" | "ECDH" => {
-            // EC key generation using ring
             let curve_name = if algorithm_value.is_object() {
                 let algo_obj = algorithm_value.to_object(scope).unwrap();
                 let curve_key = v8::String::new(scope, "namedCurve").unwrap();
@@ -1999,56 +2479,97 @@ fn generate_key_callback(
                 "P-256".to_string()
             };
 
-            // Map curve name to ring's ECDSA algorithm
-            let private_key_size = match curve_name.as_str() {
-                "P-256" => 32,
-                "P-384" => 48,
-                "P-521" => 66,
-                _ => {
-                    let error = v8::String::new(
-                        scope,
-                        "ECDSA: unsupported curve. Supported: P-256, P-384, P-521",
-                    )
-                    .unwrap();
+            if algorithm_name == "ECDH" {
+                let (private_key_data, public_key_data) = match ecdh_generate_key_pair(&curve_name)
+                {
+                    Ok(pair) => pair,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+                let private_key_size = (private_key_data.len() * 8) as i32;
+
+                let private_key = create_crypto_key(
+                    scope,
+                    "private",
+                    extractable,
+                    &algorithm_name,
+                    private_key_size,
+                    usages.iter().map(|s| s.as_str()).collect(),
+                );
+                let public_key = create_crypto_key(
+                    scope,
+                    "public",
+                    extractable,
+                    &algorithm_name,
+                    private_key_size,
+                    Vec::new(),
+                );
+
+                let algo_key = v8::String::new(scope, "algorithm").unwrap();
+                if let Some(pub_algo) = public_key.get(scope, algo_key.into()) {
+                    if let Some(pub_algo_obj) = pub_algo.to_object(scope) {
+                        let curve_key = v8::String::new(scope, "namedCurve").unwrap();
+                        let curve_val = v8::String::new(scope, &curve_name).unwrap();
+                        pub_algo_obj.set(scope, curve_key.into(), curve_val.into());
+                    }
+                }
+                if let Some(priv_algo) = private_key.get(scope, algo_key.into()) {
+                    if let Some(priv_algo_obj) = priv_algo.to_object(scope) {
+                        let curve_key = v8::String::new(scope, "namedCurve").unwrap();
+                        let curve_val = v8::String::new(scope, &curve_name).unwrap();
+                        priv_algo_obj.set(scope, curve_key.into(), curve_val.into());
+                    }
+                }
+
+                set_key_data(scope, private_key, &private_key_data);
+                set_key_data(scope, public_key, &public_key_data);
+
+                let curve_name_key = v8::String::new(scope, "__beejs_curve__").unwrap();
+                let curve_name_val = v8::String::new(scope, &curve_name).unwrap();
+                private_key.set(scope, curve_name_key.into(), curve_name_val.into());
+                public_key.set(scope, curve_name_key.into(), curve_name_val.into());
+
+                let resolver = v8::PromiseResolver::new(scope).unwrap();
+                let keypair_obj = v8::Object::new(scope);
+                let public_key_key = v8::String::new(scope, "publicKey").unwrap();
+                let private_key_key = v8::String::new(scope, "privateKey").unwrap();
+                keypair_obj.set(scope, public_key_key.into(), public_key.into());
+                keypair_obj.set(scope, private_key_key.into(), private_key.into());
+
+                resolver.resolve(scope, keypair_obj.into());
+                let promise = resolver.get_promise(scope);
+                retval.set(promise.into());
+                return;
+            }
+
+            let (private_key_data, public_key_data) = match ecdsa_generate_key_pair(&curve_name) {
+                Ok(pair) => pair,
+                Err(error_message) => {
+                    let error = v8::String::new(scope, &error_message).unwrap();
                     let error_obj = v8::Exception::error(scope, error);
                     scope.throw_exception(error_obj.into());
                     return;
                 }
             };
-
-            // Get the signing algorithm as a static reference
-            let signing_alg: &'static EcdsaSigningAlgorithm = &ECDSA_P256_SHA256_ASN1_SIGNING;
-
-            // Generate real ECDSA key pair using ring
-            let rng = SystemRandom::new();
-            let pkcs8 = match EcdsaKeyPair::generate_pkcs8(signing_alg, &rng) {
-                Ok(doc) => doc,
-                Err(e) => {
-                    let error =
-                        v8::String::new(scope, &format!("Failed to generate ECDSA key: {:?}", e))
-                            .unwrap();
-                    let error_obj = v8::Exception::error(scope, error);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-            };
-
-            // Extract public key from PKCS#8 (after the private key)
-            // PKCS#8 format: [prefix][private_key][public_key]
-            let pkcs8_bytes = pkcs8.as_ref();
-            // For ring, the public key is at the end of the PKCS#8 document
-            // The structure is: SEQUENCE { version, algorithmIdentifier, privateKey, publicKey }
-            let _private_key_data = pkcs8_bytes[pkcs8_bytes.len() - private_key_size * 2 - 1
-                ..pkcs8_bytes.len() - private_key_size - 1]
-                .to_vec();
-            let public_key_data = pkcs8_bytes[pkcs8_bytes.len() - private_key_size..].to_vec();
-
-            // Create usages based on algorithm
-            let key_usages = if algorithm_name == "ECDH" {
-                vec!["deriveKey", "deriveBits"]
-            } else {
-                vec!["sign", "verify"]
-            };
+            let private_key_size = (private_key_data.len() * 8) as i32;
+            let private_usages: Vec<&str> = usages
+                .iter()
+                .filter_map(|usage| match usage.as_str() {
+                    "sign" => Some("sign"),
+                    _ => None,
+                })
+                .collect();
+            let public_usages: Vec<&str> = usages
+                .iter()
+                .filter_map(|usage| match usage.as_str() {
+                    "verify" => Some("verify"),
+                    _ => None,
+                })
+                .collect();
 
             // Create private key CryptoKey
             let private_key = create_crypto_key(
@@ -2056,8 +2577,8 @@ fn generate_key_callback(
                 "private",
                 extractable,
                 &algorithm_name,
-                (private_key_size * 8) as i32,
-                key_usages.iter().map(|s| *s).collect(),
+                private_key_size,
+                private_usages,
             );
 
             // Create public key CryptoKey
@@ -2066,8 +2587,8 @@ fn generate_key_callback(
                 "public",
                 extractable,
                 &algorithm_name,
-                (private_key_size * 8) as i32,
-                key_usages,
+                private_key_size,
+                public_usages,
             );
 
             // Store curve information in algorithm object
@@ -2087,21 +2608,8 @@ fn generate_key_callback(
                 }
             }
 
-            // Store PKCS#8 key data for sign/verify operations
-            let key_data_key = v8::String::new(scope, "__beejs_key_data__").unwrap();
-            let private_key_data_array = v8::ArrayBuffer::new(scope, pkcs8_bytes.len());
-            let private_backing_store = private_key_data_array.get_backing_store();
-            for (i, &byte) in pkcs8_bytes.iter().enumerate() {
-                private_backing_store[i].set(byte);
-            }
-            private_key.set(scope, key_data_key.into(), private_key_data_array.into());
-
-            let public_key_data_array = v8::ArrayBuffer::new(scope, public_key_data.len());
-            let public_backing_store = public_key_data_array.get_backing_store();
-            for (i, &byte) in public_key_data.iter().enumerate() {
-                public_backing_store[i].set(byte);
-            }
-            public_key.set(scope, key_data_key.into(), public_key_data_array.into());
+            set_key_data(scope, private_key, &private_key_data);
+            set_key_data(scope, public_key, &public_key_data);
 
             // Store curve name for sign/verify
             let curve_name_key = v8::String::new(scope, "__beejs_curve__").unwrap();
@@ -2191,37 +2699,6 @@ fn derive_pbkdf2_bits(
     pbkdf2::derive(pbkdf2_algo, iterations_nz, salt, password, &mut output);
 
     Ok(output)
-}
-
-/// Derive bits using ECDH (Elliptic Curve Diffie-Hellman)
-/// This is a deterministic implementation for testing purposes
-/// In production, this would use ring::agreement for real ECDH
-fn derive_ecdh_bits(private_key: &[u8], public_key: &[u8], length_bits: usize) -> Vec<u8> {
-    // Calculate output length in bytes
-    let output_len = (length_bits + 7) / 8;
-    let mut output = vec![0u8; output_len];
-
-    if private_key.is_empty() || public_key.is_empty() {
-        return output;
-    }
-
-    // Simple deterministic derivation for testing
-    // Uses a combination of private key, public key, and length
-    // This produces consistent results for the same inputs
-    let key_len = std::cmp::min(private_key.len(), public_key.len());
-
-    for i in 0..output_len {
-        let mut byte: u8 = 0;
-        for j in 0..key_len {
-            let idx = (i + j) % key_len;
-            byte ^= private_key[idx] ^ public_key[idx];
-        }
-        // Add some variation based on position and length
-        byte ^= (i as u8) ^ ((length_bits >> (i % 4)) as u8 & 0xFF);
-        output[i] = byte;
-    }
-
-    output
 }
 
 /// deriveKey callback - derives a cryptographic key from a base key
@@ -2370,6 +2847,7 @@ fn derive_key_callback(
 
             // Get the public key data
             let public_key_obj = public_key_value.to_object(scope).unwrap();
+            let public_key_curve = get_curve_name(scope, public_key_obj);
             let public_key_data = match get_key_data(scope, public_key_obj) {
                 Some(data) => data,
                 None => {
@@ -2386,11 +2864,19 @@ fn derive_key_callback(
             // Check if base key is an ECDH private key
             let base_key_obj = base_key_value.to_object(scope).unwrap();
             let base_key_algo = get_key_algorithm_name(scope, base_key_obj);
+            let base_key_curve = get_curve_name(scope, base_key_obj);
 
             if base_key_algo != "ECDH" {
                 let error =
                     v8::String::new(scope, "deriveKey: baseKey must be an ECDH private key")
                         .unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+            if base_key_curve != public_key_curve {
+                let error =
+                    v8::String::new(scope, "deriveKey: ECDH key curves must match").unwrap();
                 let error_obj = v8::Exception::type_error(scope, error);
                 scope.throw_exception(error_obj.into());
                 return;
@@ -2422,9 +2908,21 @@ fn derive_key_callback(
             let derived_algo_name = get_algorithm_name(scope, derived_algorithm_value);
             let key_length = get_algorithm_length(scope, derived_algorithm_value, 256);
 
-            // Derive ECDH shared secret (deterministic for testing)
-            let derived_key_data =
-                derive_ecdh_bits(&private_key_data, &public_key_data, key_length as usize);
+            let derived_key_data = match derive_ecdh_bits_result(
+                &base_key_curve,
+                &private_key_data,
+                &public_key_data,
+                key_length as usize,
+            ) {
+                Ok(bits) => bits,
+                Err(error_message) => {
+                    let error =
+                        v8::String::new(scope, &format!("deriveKey: {}", error_message)).unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+            };
 
             // Parse extractable
             let extractable = get_bool_value(scope, extractable_value);
@@ -2597,6 +3095,7 @@ fn derive_bits_callback(
 
             // Get the public key data
             let public_key_obj = public_key_value.to_object(scope).unwrap();
+            let public_key_curve = get_curve_name(scope, public_key_obj);
             let public_key_data = match get_key_data(scope, public_key_obj) {
                 Some(data) => data,
                 None => {
@@ -2613,11 +3112,19 @@ fn derive_bits_callback(
             // Check if base key is an ECDH private key
             let base_key_obj = base_key_value.to_object(scope).unwrap();
             let base_key_algo = get_key_algorithm_name(scope, base_key_obj);
+            let base_key_curve = get_curve_name(scope, base_key_obj);
 
             if base_key_algo != "ECDH" {
                 let error =
                     v8::String::new(scope, "deriveBits: baseKey must be an ECDH private key")
                         .unwrap();
+                let error_obj = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
+            if base_key_curve != public_key_curve {
+                let error =
+                    v8::String::new(scope, "deriveBits: ECDH key curves must match").unwrap();
                 let error_obj = v8::Exception::type_error(scope, error);
                 scope.throw_exception(error_obj.into());
                 return;
@@ -2645,8 +3152,21 @@ fn derive_bits_callback(
                 return;
             }
 
-            // Derive ECDH shared secret
-            let bits = derive_ecdh_bits(&private_key_data, &public_key_data, length_bits);
+            let bits = match derive_ecdh_bits_result(
+                &base_key_curve,
+                &private_key_data,
+                &public_key_data,
+                length_bits,
+            ) {
+                Ok(bits) => bits,
+                Err(error_message) => {
+                    let error =
+                        v8::String::new(scope, &format!("deriveBits: {}", error_message)).unwrap();
+                    let error_obj = v8::Exception::error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+            };
 
             // Create ArrayBuffer with the derived bits
             let array_buffer = v8::ArrayBuffer::new(scope, bits.len());

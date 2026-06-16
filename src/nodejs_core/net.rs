@@ -88,6 +88,17 @@ fn net_connect_callback(
     let local_address = extract_string_option(scope, &options, "localAddress", "0.0.0.0");
     let connect_timeout = extract_integer_option(scope, &options, "connectTimeout", 0);
 
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Network,
+        crate::permissions::PermissionAction::Connect,
+        crate::permissions::ResourceId::Url(format!("tcp://{}:{}", host, port)),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
     // 创建真实的 TCP 连接
     let tcp_handle = TCP_MANAGER.create_connection();
     let handle_id = tcp_handle.id;

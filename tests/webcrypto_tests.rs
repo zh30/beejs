@@ -13,6 +13,26 @@ fn test_subtle_exists() {
 
 #[test]
 #[serial]
+fn test_get_random_values_returns_input_typed_array() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        const input = new Uint8Array(12);
+        const output = crypto.getRandomValues(input);
+        output === input &&
+          output instanceof Uint8Array &&
+          output.byteLength === 12;
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "crypto.getRandomValues must return the input TypedArray"
+    );
+}
+
+#[test]
+#[serial]
 fn test_subtle_digest_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.subtle.digest");
@@ -364,8 +384,8 @@ fn test_subtle_export_key_returns_promise() {
             'raw',
             new Uint8Array(32).fill(1),
             { name: 'HMAC', hash: 'SHA-256' },
-            false,
-            ['exportKey']
+            true,
+            ['sign']
         );
         const result = key.then(k => crypto.subtle.exportKey('raw', k));
         result && result.constructor && result.constructor.name === 'Promise';

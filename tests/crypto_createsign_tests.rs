@@ -93,15 +93,17 @@ fn test_sign_unsupported_algorithm() {
 fn test_sign_with_hex_key() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        // Test with a mock signing operation
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const sign = crypto.createSign('RSA-SHA256');
         sign.update('hello');
-        const signature = sign.sign('hex');
-        typeof signature;
+        const signature = sign.sign(privateKey, 'hex');
+        typeof signature === 'string' && /^[0-9a-f]+$/.test(signature);
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "string");
+    assert_eq!(result.unwrap().trim(), "true");
 }
 
 #[test]
@@ -109,10 +111,12 @@ fn test_sign_with_hex_key() {
 fn test_sign_signature_length() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        // Test that signature has reasonable length
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const sign = crypto.createSign('RSA-SHA256');
         sign.update('test message');
-        const signature = sign.sign('base64');
+        const signature = sign.sign(privateKey, 'base64');
         signature.length > 0;
     "#;
     let result = runtime.execute_code(code);
@@ -125,12 +129,14 @@ fn test_sign_signature_length() {
 fn test_sign_multiple_updates() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        // Test that multiple updates work
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const sign = crypto.createSign('RSA-SHA256');
         sign.update('part1');
         sign.update('part2');
         sign.update('part3');
-        const signature = sign.sign('hex');
+        const signature = sign.sign(privateKey, 'hex');
         typeof signature;
     "#;
     let result = runtime.execute_code(code);
@@ -143,9 +149,11 @@ fn test_sign_multiple_updates() {
 fn test_sign_digest_without_update() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
-        // Test sign without prior update (should work with empty data)
+        const { privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
         const sign = crypto.createSign('RSA-SHA256');
-        const signature = sign.sign('hex');
+        const signature = sign.sign(privateKey, 'hex');
         typeof signature;
     "#;
     let result = runtime.execute_code(code);

@@ -6,6 +6,14 @@ use anyhow::Result;
 use base64::Engine;
 use chrono::Datelike;
 use once_cell::sync::Lazy;
+use openssl::bn::{BigNum, BigNumContext};
+use openssl::derive::Deriver;
+use openssl::ec::{EcGroup, EcGroupRef, EcKey, EcPoint, PointConversionForm};
+use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
+use openssl::pkey::{PKey, Private};
+use openssl::rsa::{Padding, Rsa};
+use openssl::sign::{Signer, Verifier};
 use rand::Rng;
 use reqwest;
 use rusty_v8 as v8;
@@ -97,6 +105,61 @@ static LEGACY_FS_FALLBACK_ENABLED: AtomicBool = AtomicBool::new(false);
 
 fn legacy_fs_fallback_enabled() -> bool {
     LEGACY_FS_FALLBACK_ENABLED.load(Ordering::Relaxed)
+}
+
+fn serde_json_value_to_v8<'scope>(
+    scope: &mut v8::HandleScope<'scope>,
+    value: &serde_json::Value,
+) -> v8::Local<'scope, v8::Value> {
+    match value {
+        serde_json::Value::Null => v8::null(scope).into(),
+        serde_json::Value::Bool(value) => v8::Boolean::new(scope, *value).into(),
+        serde_json::Value::Number(value) => {
+            v8::Number::new(scope, value.as_f64().unwrap_or(0.0)).into()
+        }
+        serde_json::Value::String(value) => v8::String::new(scope, value).unwrap().into(),
+        serde_json::Value::Array(values) => {
+            let array = v8::Array::new(scope, values.len() as i32);
+            for (index, item) in values.iter().enumerate() {
+                let item_value = serde_json_value_to_v8(scope, item);
+                array.set_index(scope, index as u32, item_value);
+            }
+            array.into()
+        }
+        serde_json::Value::Object(values) => {
+            let object = v8::Object::new(scope);
+            for (key, value) in values {
+                let key_value = v8::String::new(scope, key).unwrap();
+                let item_value = serde_json_value_to_v8(scope, value);
+                object.set(scope, key_value.into(), item_value);
+            }
+            object.into()
+        }
+    }
+}
+
+fn create_process_env_object<'scope>(
+    scope: &mut v8::HandleScope<'scope>,
+) -> v8::Local<'scope, v8::Object> {
+    let env_obj = v8::Object::new(scope);
+
+    for (key, value) in std::env::vars() {
+        if crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::Environment,
+            crate::permissions::PermissionAction::Read,
+            crate::permissions::ResourceId::Name(key.clone()),
+        )
+        .is_err()
+        {
+            continue;
+        }
+
+        let key_value = v8::String::new(scope, &key).unwrap();
+        let env_value = v8::String::new(scope, &value).unwrap();
+        env_obj.set(scope, key_value.into(), env_value.into());
+    }
+
+    env_obj
 }
 
 /// Get the timer registry, initializing it if needed
@@ -1462,41 +1525,443 @@ fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
 
 /// Generate RSA key pair (v0.3.23)
 /// Returns (public_key_pem, private_key_pem)
-fn generate_rsa_key_pair(modulus_length: usize) -> (String, String) {
-    // Generate a mock RSA key pair for demonstration
-    // In production, this would use actual RSA key generation (e.g., openssl or ring)
-    let modulus_bits = modulus_length.to_string();
+fn generate_rsa_key_pair(modulus_length: usize) -> Result<(String, String), String> {
+    let rsa = Rsa::generate(modulus_length as u32)
+        .map_err(|error| format!("generateKeyPair: RSA key generation failed: {}", error))?;
+    let public_key_pem = String::from_utf8(
+        rsa.public_key_to_pem()
+            .map_err(|error| format!("generateKeyPair: public key export failed: {}", error))?,
+    )
+    .map_err(|error| {
+        format!(
+            "generateKeyPair: public key PEM is invalid UTF-8: {}",
+            error
+        )
+    })?;
+    let private_key_pem = String::from_utf8(
+        rsa.private_key_to_pem()
+            .map_err(|error| format!("generateKeyPair: private key export failed: {}", error))?,
+    )
+    .map_err(|error| {
+        format!(
+            "generateKeyPair: private key PEM is invalid UTF-8: {}",
+            error
+        )
+    })?;
 
-    // Generate random components for realistic-looking keys
-    let n_hex = generate_hex_string(modulus_length / 8);
-    let e_hex = "010001";
-    let d_hex = generate_hex_string(modulus_length / 8);
-    let p_hex = generate_hex_string(modulus_length / 16);
-    let q_hex = generate_hex_string(modulus_length / 16);
+    Ok((public_key_pem, private_key_pem))
+}
 
-    // RSA public key (SPKI format - simplified)
-    let public_key_pem = format!(
-        "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA{} {} {} {} {}\n-----END PUBLIC KEY-----",
-        &n_hex[..32.min(n_hex.len())],
-        &n_hex[32.min(n_hex.len())..64.min(n_hex.len())],
-        &n_hex[64.min(n_hex.len())..96.min(n_hex.len())],
-        e_hex,
-        n_hex
+fn rsa_message_digest(algorithm: &str) -> Option<MessageDigest> {
+    match algorithm {
+        "RSA-SHA256" => Some(MessageDigest::sha256()),
+        "RSA-SHA512" => Some(MessageDigest::sha512()),
+        "RSA-SHA1" => Some(MessageDigest::sha1()),
+        "RSA-MD5" => Some(MessageDigest::md5()),
+        _ => None,
+    }
+}
+
+fn sign_rsa_pem(algorithm: &str, private_key_pem: &str, data: &[u8]) -> Result<Vec<u8>, String> {
+    let digest = rsa_message_digest(algorithm)
+        .ok_or_else(|| format!("sign: unsupported algorithm '{}'", algorithm))?;
+    let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("sign: invalid private key: {}", error))?;
+    let mut signer = Signer::new(digest, &key)
+        .map_err(|error| format!("sign: signer setup failed: {}", error))?;
+    signer
+        .update(data)
+        .map_err(|error| format!("sign: signer update failed: {}", error))?;
+    signer
+        .sign_to_vec()
+        .map_err(|error| format!("sign: signing failed: {}", error))
+}
+
+fn verify_rsa_pem(
+    algorithm: &str,
+    public_key_pem: &str,
+    data: &[u8],
+    signature: &[u8],
+) -> Result<bool, String> {
+    let digest = rsa_message_digest(algorithm)
+        .ok_or_else(|| format!("verify: unsupported algorithm '{}'", algorithm))?;
+    let key = PKey::public_key_from_pem(public_key_pem.as_bytes())
+        .map_err(|error| format!("verify: invalid public key: {}", error))?;
+    let mut verifier = Verifier::new(digest, &key)
+        .map_err(|error| format!("verify: verifier setup failed: {}", error))?;
+    verifier
+        .update(data)
+        .map_err(|error| format!("verify: verifier update failed: {}", error))?;
+    verifier
+        .verify(signature)
+        .map_err(|error| format!("verify: verification failed: {}", error))
+}
+
+fn rsa_padding_from_node_constant(value: Option<i64>, default_padding: Padding) -> Padding {
+    match value {
+        Some(1) => Padding::PKCS1,
+        Some(3) => Padding::NONE,
+        Some(4) => Padding::PKCS1_OAEP,
+        _ => default_padding,
+    }
+}
+
+fn get_rsa_key_and_padding(
+    scope: &mut v8::HandleScope,
+    key_value: v8::Local<v8::Value>,
+    default_padding: Padding,
+) -> Result<(String, Padding), String> {
+    if key_value.is_string() {
+        let key = key_value
+            .to_string(scope)
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        return Ok((key, default_padding));
+    }
+
+    if !key_value.is_object() {
+        return Err("key must be a PEM string or an object with a key property".to_string());
+    }
+
+    let key_obj = key_value
+        .to_object(scope)
+        .ok_or_else(|| "key must be an object".to_string())?;
+    let key_prop = v8::String::new(scope, "key").unwrap();
+    let key = key_obj
+        .get(scope, key_prop.into())
+        .and_then(|value| value.to_string(scope))
+        .map(|value| value.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let padding_prop = v8::String::new(scope, "padding").unwrap();
+    let padding = key_obj.get(scope, padding_prop.into()).and_then(|value| {
+        if value.is_number() {
+            value.integer_value(scope)
+        } else {
+            None
+        }
+    });
+
+    Ok((
+        key,
+        rsa_padding_from_node_constant(padding, default_padding),
+    ))
+}
+
+fn array_buffer_bytes(
+    value: v8::Local<v8::ArrayBuffer>,
+    offset: usize,
+    length: usize,
+) -> Result<Vec<u8>, String> {
+    if length == 0 {
+        return Ok(Vec::new());
+    }
+
+    let backing_store = value.get_backing_store();
+    let ptr = backing_store.data() as *const u8;
+    if ptr.is_null() {
+        return Err("buffer data is unavailable".to_string());
+    }
+
+    Ok(unsafe { std::slice::from_raw_parts(ptr.add(offset), length).to_vec() })
+}
+
+fn get_bytes_from_value(
+    scope: &mut v8::HandleScope,
+    value: v8::Local<v8::Value>,
+    string_encoding: Option<&str>,
+) -> Result<Vec<u8>, String> {
+    if value.is_string() {
+        let text = value
+            .to_string(scope)
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        return match string_encoding.unwrap_or("utf8") {
+            "hex" => hex::decode(&text).map_err(|error| format!("invalid hex data: {}", error)),
+            "base64" => base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &text)
+                .map_err(|error| format!("invalid base64 data: {}", error)),
+            _ => Ok(text.into_bytes()),
+        };
+    }
+
+    if value.is_array_buffer() {
+        let buffer = v8::Local::<v8::ArrayBuffer>::try_from(value)
+            .map_err(|_| "data must be an ArrayBuffer".to_string())?;
+        return array_buffer_bytes(buffer, 0, buffer.byte_length());
+    }
+
+    if value.is_typed_array() {
+        let typed_array = v8::Local::<v8::TypedArray>::try_from(value)
+            .map_err(|_| "data must be a TypedArray".to_string())?;
+        let buffer = typed_array
+            .buffer(scope)
+            .ok_or_else(|| "typed array buffer is unavailable".to_string())?;
+        return array_buffer_bytes(buffer, typed_array.byte_offset(), typed_array.byte_length());
+    }
+
+    if value.is_object() {
+        let object = v8::Local::<v8::Object>::try_from(value)
+            .map_err(|_| "data object is invalid".to_string())?;
+        let buffer_key = v8::String::new(scope, "buffer").unwrap();
+        if let Some(buffer_value) = object.get(scope, buffer_key.into()) {
+            if buffer_value.is_array_buffer() {
+                let buffer = v8::Local::<v8::ArrayBuffer>::try_from(buffer_value)
+                    .map_err(|_| "object buffer is invalid".to_string())?;
+                return array_buffer_bytes(buffer, 0, buffer.byte_length());
+            }
+        }
+    }
+
+    Err("data must be a string, Buffer, ArrayBuffer, or TypedArray".to_string())
+}
+
+fn rsa_public_encrypt_pem(
+    public_key_pem: &str,
+    data: &[u8],
+    padding: Padding,
+) -> Result<Vec<u8>, String> {
+    let rsa = Rsa::public_key_from_pem(public_key_pem.as_bytes())
+        .map_err(|error| format!("publicEncrypt: invalid public key: {}", error))?;
+    let mut encrypted = vec![0u8; rsa.size() as usize];
+    let len = rsa
+        .public_encrypt(data, &mut encrypted, padding)
+        .map_err(|error| format!("publicEncrypt: encryption failed: {}", error))?;
+    encrypted.truncate(len);
+    Ok(encrypted)
+}
+
+fn rsa_private_decrypt_pem(
+    private_key_pem: &str,
+    encrypted: &[u8],
+    padding: Padding,
+) -> Result<Vec<u8>, String> {
+    let rsa = Rsa::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("privateDecrypt: invalid private key: {}", error))?;
+    let mut decrypted = vec![0u8; rsa.size() as usize];
+    let len = rsa
+        .private_decrypt(encrypted, &mut decrypted, padding)
+        .map_err(|error| format!("privateDecrypt: decryption failed: {}", error))?;
+    decrypted.truncate(len);
+    Ok(decrypted)
+}
+
+fn rsa_private_encrypt_pem(
+    private_key_pem: &str,
+    data: &[u8],
+    padding: Padding,
+) -> Result<Vec<u8>, String> {
+    let rsa = Rsa::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("privateEncrypt: invalid private key: {}", error))?;
+    let mut encrypted = vec![0u8; rsa.size() as usize];
+    let len = rsa
+        .private_encrypt(data, &mut encrypted, padding)
+        .map_err(|error| format!("privateEncrypt: encryption failed: {}", error))?;
+    encrypted.truncate(len);
+    Ok(encrypted)
+}
+
+fn rsa_public_decrypt_pem(
+    public_key_pem: &str,
+    encrypted: &[u8],
+    padding: Padding,
+) -> Result<Vec<u8>, String> {
+    let rsa = Rsa::public_key_from_pem(public_key_pem.as_bytes())
+        .map_err(|error| format!("publicDecrypt: invalid public key: {}", error))?;
+    let mut decrypted = vec![0u8; rsa.size() as usize];
+    let len = rsa
+        .public_decrypt(encrypted, &mut decrypted, padding)
+        .map_err(|error| format!("publicDecrypt: decryption failed: {}", error))?;
+    decrypted.truncate(len);
+    Ok(decrypted)
+}
+
+fn ecdh_curve_nid(curve: &str) -> Result<Nid, String> {
+    match curve {
+        "prime256v1" | "secp256r1" => Ok(Nid::X9_62_PRIME256V1),
+        "secp384r1" => Ok(Nid::SECP384R1),
+        "secp521r1" => Ok(Nid::SECP521R1),
+        _ => Err(format!(
+            "createECDH: unsupported curve '{}'. Supported: prime256v1, secp256r1, secp384r1, secp521r1",
+            curve
+        )),
+    }
+}
+
+fn ecdh_group(curve: &str) -> Result<EcGroup, String> {
+    let nid = ecdh_curve_nid(curve)?;
+    EcGroup::from_curve_name(nid)
+        .map_err(|error| format!("createECDH: curve setup failed: {}", error))
+}
+
+fn ecdh_private_key_size(group: &EcGroupRef) -> usize {
+    group.degree().div_ceil(8) as usize
+}
+
+fn left_pad_private_key(mut private_key: Vec<u8>, target_len: usize) -> Vec<u8> {
+    if private_key.len() >= target_len {
+        return private_key;
+    }
+
+    let mut padded = vec![0u8; target_len - private_key.len()];
+    padded.append(&mut private_key);
+    padded
+}
+
+fn ecdh_private_key_hex(key: &EcKey<Private>) -> String {
+    let private_key = left_pad_private_key(
+        key.private_key().to_vec(),
+        ecdh_private_key_size(key.group()),
     );
+    hex::encode(private_key)
+}
 
-    // RSA private key (PKCS8 format - simplified)
-    let private_key_pem = format!(
-        "-----BEGIN PRIVATE KEY-----\n{} {} {} {} {} {} {}\n-----END PRIVATE KEY-----",
-        &d_hex[..32.min(d_hex.len())],
-        d_hex,
-        p_hex,
-        q_hex,
-        e_hex,
-        n_hex,
-        modulus_bits
-    );
+fn ecdh_public_key_hex(key: &EcKey<Private>) -> Result<String, String> {
+    let mut ctx = BigNumContext::new()
+        .map_err(|error| format!("createECDH: BigNum context failed: {}", error))?;
+    let public_key = key
+        .public_key()
+        .to_bytes(key.group(), PointConversionForm::UNCOMPRESSED, &mut ctx)
+        .map_err(|error| format!("createECDH: public key export failed: {}", error))?;
+    Ok(hex::encode(public_key))
+}
 
-    (public_key_pem, private_key_pem)
+fn ecdh_key_from_private_hex(curve: &str, private_key_hex: &str) -> Result<EcKey<Private>, String> {
+    let group = ecdh_group(curve)?;
+    let private_key_bytes = hex::decode(private_key_hex)
+        .map_err(|error| format!("createECDH: invalid private key hex: {}", error))?;
+    if private_key_bytes.is_empty() {
+        return Err("createECDH: private key is empty".to_string());
+    }
+
+    let private_number = BigNum::from_slice(&private_key_bytes)
+        .map_err(|error| format!("createECDH: invalid private key: {}", error))?;
+    let ctx = BigNumContext::new()
+        .map_err(|error| format!("createECDH: BigNum context failed: {}", error))?;
+    let mut public_key = EcPoint::new(&group)
+        .map_err(|error| format!("createECDH: public key allocation failed: {}", error))?;
+    public_key
+        .mul_generator(&group, &private_number, &ctx)
+        .map_err(|error| format!("createECDH: public key derivation failed: {}", error))?;
+
+    let key = EcKey::from_private_components(&group, &private_number, &public_key)
+        .map_err(|error| format!("createECDH: private key setup failed: {}", error))?;
+    key.check_key()
+        .map_err(|error| format!("createECDH: invalid private key: {}", error))?;
+    Ok(key)
+}
+
+fn ecdh_generate_key_pair_hex(curve: &str) -> Result<(String, String), String> {
+    let group = ecdh_group(curve)?;
+    let key = EcKey::generate(&group)
+        .map_err(|error| format!("createECDH: key generation failed: {}", error))?;
+    let private_key = ecdh_private_key_hex(&key);
+    let public_key = ecdh_public_key_hex(&key)?;
+    Ok((private_key, public_key))
+}
+
+fn ecdh_public_key_from_private_hex(curve: &str, private_key_hex: &str) -> Result<String, String> {
+    let key = ecdh_key_from_private_hex(curve, private_key_hex)?;
+    ecdh_public_key_hex(&key)
+}
+
+fn ecdh_validate_public_key(curve: &str, public_key: &[u8]) -> Result<(), String> {
+    if public_key.is_empty() {
+        return Err("createECDH: public key is empty".to_string());
+    }
+
+    let group = ecdh_group(curve)?;
+    let mut ctx = BigNumContext::new()
+        .map_err(|error| format!("createECDH: BigNum context failed: {}", error))?;
+    let point = EcPoint::from_bytes(&group, public_key, &mut ctx)
+        .map_err(|error| format!("createECDH: invalid public key: {}", error))?;
+    if point.is_infinity(&group) {
+        return Err("createECDH: invalid public key".to_string());
+    }
+    if !point
+        .is_on_curve(&group, &mut ctx)
+        .map_err(|error| format!("createECDH: public key validation failed: {}", error))?
+    {
+        return Err("createECDH: invalid public key".to_string());
+    }
+    Ok(())
+}
+
+fn get_ecdh_public_key_bytes(
+    scope: &mut v8::HandleScope,
+    value: v8::Local<v8::Value>,
+) -> Result<Vec<u8>, String> {
+    if value.is_string() {
+        let public_key_hex = value
+            .to_string(scope)
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        return hex::decode(&public_key_hex)
+            .map_err(|error| format!("computeSecret: invalid peer public key: {}", error));
+    }
+
+    if value.is_object() {
+        let object = v8::Local::<v8::Object>::try_from(value)
+            .map_err(|_| "computeSecret: peer public key object is invalid".to_string())?;
+        let public_key_key = v8::String::new(scope, "publicKey").unwrap();
+        if let Some(public_key_value) = object.get(scope, public_key_key.into()) {
+            if public_key_value.is_string() {
+                let public_key_hex = public_key_value
+                    .to_string(scope)
+                    .map(|value| value.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                return hex::decode(&public_key_hex)
+                    .map_err(|error| format!("computeSecret: invalid peer public key: {}", error));
+            }
+        }
+    }
+
+    get_bytes_from_value(scope, value, None)
+        .map_err(|error| format!("computeSecret: invalid peer public key: {}", error))
+}
+
+fn ecdh_compute_secret(
+    curve: &str,
+    private_key_hex: &str,
+    peer_public_key: &[u8],
+) -> Result<Vec<u8>, String> {
+    if peer_public_key.is_empty() {
+        return Err("computeSecret: peer public key is empty".to_string());
+    }
+
+    let private_key = ecdh_key_from_private_hex(curve, private_key_hex)?;
+    let group = private_key.group();
+    let mut ctx = BigNumContext::new()
+        .map_err(|error| format!("computeSecret: BigNum context failed: {}", error))?;
+    let peer_point = EcPoint::from_bytes(group, peer_public_key, &mut ctx)
+        .map_err(|error| format!("computeSecret: invalid peer public key: {}", error))?;
+    if peer_point.is_infinity(group) {
+        return Err("computeSecret: invalid peer public key".to_string());
+    }
+    if !peer_point
+        .is_on_curve(group, &mut ctx)
+        .map_err(|error| format!("computeSecret: public key validation failed: {}", error))?
+    {
+        return Err("computeSecret: invalid peer public key".to_string());
+    }
+
+    let peer_key = EcKey::from_public_key(group, &peer_point)
+        .map_err(|error| format!("computeSecret: invalid peer public key: {}", error))?;
+    peer_key
+        .check_key()
+        .map_err(|error| format!("computeSecret: invalid peer public key: {}", error))?;
+
+    let private_pkey = PKey::from_ec_key(private_key)
+        .map_err(|error| format!("computeSecret: private key setup failed: {}", error))?;
+    let peer_pkey = PKey::from_ec_key(peer_key)
+        .map_err(|error| format!("computeSecret: peer public key setup failed: {}", error))?;
+    let mut deriver = Deriver::new(&private_pkey)
+        .map_err(|error| format!("computeSecret: deriver setup failed: {}", error))?;
+    deriver
+        .set_peer(&peer_pkey)
+        .map_err(|error| format!("computeSecret: peer setup failed: {}", error))?;
+    deriver
+        .derive_to_vec()
+        .map_err(|error| format!("computeSecret: derivation failed: {}", error))
 }
 
 /// Generate EC key pair (v0.3.23)
@@ -7862,11 +8327,27 @@ impl MinimalRuntime {
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
                         let this = args.this();
-                        let encoding = args
+                        if args.length() < 1 {
+                            let error =
+                                v8::String::new(scope, "sign: private key is required").unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+
+                        let private_key = args
                             .get(0)
                             .to_string(scope)
                             .map(|s| s.to_rust_string_lossy(scope))
-                            .unwrap_or_else(|| "hex".to_string());
+                            .unwrap_or_default();
+                        let encoding = if args.length() >= 2 {
+                            args.get(1)
+                                .to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "hex".to_string())
+                        } else {
+                            "hex".to_string()
+                        };
 
                         // Get algorithm
                         let algo_key = v8::String::new(scope, "_algorithm").unwrap();
@@ -7892,40 +8373,49 @@ impl MinimalRuntime {
                             }
                         }
 
-                        // Generate signature (using hash of data as mock signature for demo)
-                        // In production, this would use actual RSA signing with the private key
-                        let digest = md5::compute(combined_data.as_bytes());
-                        let digest_hex = hex::encode(&digest.0);
-                        let signature_data = format!("RSA-SIG-{}-{}", algorithm, digest_hex);
+                        let signature_data = match sign_rsa_pem(
+                            &algorithm,
+                            &private_key,
+                            combined_data.as_bytes(),
+                        ) {
+                            Ok(signature) => signature,
+                            Err(error_message) => {
+                                let error = v8::String::new(scope, &error_message).unwrap();
+                                let error_obj = v8::Exception::error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
 
                         match encoding.as_str() {
                             "hex" => {
-                                let sig = v8::String::new(scope, &signature_data).unwrap();
+                                let sig =
+                                    v8::String::new(scope, &hex::encode(&signature_data)).unwrap();
                                 retval.set(sig.into());
                             }
                             "base64" => {
                                 let sig = base64::Engine::encode(
                                     &base64::engine::general_purpose::STANDARD,
-                                    signature_data.as_bytes(),
+                                    &signature_data,
                                 );
                                 let sig_str = v8::String::new(scope, &sig).unwrap();
                                 retval.set(sig_str.into());
                             }
                             "buffer" => {
-                                let sig_bytes = signature_data.as_bytes();
-                                let ab = v8::ArrayBuffer::new(scope, sig_bytes.len());
+                                let ab = v8::ArrayBuffer::new(scope, signature_data.len());
                                 let backing_store = ab.get_backing_store();
-                                for (i, byte) in sig_bytes.iter().enumerate() {
+                                for (i, byte) in signature_data.iter().enumerate() {
                                     backing_store[i].set(*byte);
                                 }
                                 if let Some(uint8_array) =
-                                    v8::Uint8Array::new(scope, ab, 0, sig_bytes.len())
+                                    v8::Uint8Array::new(scope, ab, 0, signature_data.len())
                                 {
                                     retval.set(uint8_array.into());
                                 }
                             }
                             _ => {
-                                let sig = v8::String::new(scope, &signature_data).unwrap();
+                                let sig =
+                                    v8::String::new(scope, &hex::encode(&signature_data)).unwrap();
                                 retval.set(sig.into());
                             }
                         }
@@ -8029,17 +8519,42 @@ impl MinimalRuntime {
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
                         let this = args.this();
-                        let signature = args
+                        if args.length() < 2 {
+                            let error = v8::String::new(
+                                scope,
+                                "verify: public key and signature are required",
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+
+                        let public_key = args
                             .get(0)
                             .to_string(scope)
                             .map(|s| s.to_rust_string_lossy(scope))
                             .unwrap_or_default();
-
-                        let encoding = args
+                        let signature = args
                             .get(1)
                             .to_string(scope)
                             .map(|s| s.to_rust_string_lossy(scope))
-                            .unwrap_or_else(|| "hex".to_string());
+                            .unwrap_or_default();
+
+                        let encoding = if args.length() >= 3 {
+                            args.get(2)
+                                .to_string(scope)
+                                .map(|s| s.to_rust_string_lossy(scope))
+                                .unwrap_or_else(|| "hex".to_string())
+                        } else {
+                            "hex".to_string()
+                        };
+
+                        let algo_key = v8::String::new(scope, "_algorithm").unwrap();
+                        let algorithm = this
+                            .get(scope, algo_key.into())
+                            .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
+                            .unwrap_or_default();
 
                         // Get data
                         let data_key = v8::String::new(scope, "_data").unwrap();
@@ -8060,35 +8575,48 @@ impl MinimalRuntime {
 
                         // Decode signature based on encoding
                         let signature_data = match encoding.as_str() {
-                            "hex" => {
-                                // For demo, verify signature format matches expected pattern
-                                // In production, this would use actual RSA verification with public key
-                                signature
-                            }
-                            "base64" => {
-                                // Decode base64 to get the signature data
-                                let decoded = base64::Engine::decode(
-                                    &base64::engine::general_purpose::STANDARD,
-                                    &signature,
-                                )
-                                .unwrap_or_default();
-                                String::from_utf8_lossy(&decoded).to_string()
-                            }
-                            "buffer" => {
-                                // For buffer input, convert to string representation
-                                format!("{:?}", signature)
-                            }
-                            _ => signature,
+                            "hex" => match hex::decode(&signature) {
+                                Ok(bytes) => bytes,
+                                Err(error) => {
+                                    let error_message =
+                                        format!("verify: invalid hex signature: {}", error);
+                                    let error = v8::String::new(scope, &error_message).unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+                            },
+                            "base64" => match base64::Engine::decode(
+                                &base64::engine::general_purpose::STANDARD,
+                                &signature,
+                            ) {
+                                Ok(bytes) => bytes,
+                                Err(error) => {
+                                    let error_message =
+                                        format!("verify: invalid base64 signature: {}", error);
+                                    let error = v8::String::new(scope, &error_message).unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+                            },
+                            _ => signature.as_bytes().to_vec(),
                         };
 
-                        // Verify signature format (mock verification for demo)
-                        // In production, this would:
-                        // 1. Decode the signature using the public key
-                        // 2. Compute hash of combined_data
-                        // 3. Verify signature matches expected value
-                        let is_valid = signature_data.starts_with("RSA-SIG-")
-                            || !signature_data.is_empty()
-                            || combined_data.is_empty();
+                        let is_valid = match verify_rsa_pem(
+                            &algorithm,
+                            &public_key,
+                            combined_data.as_bytes(),
+                            &signature_data,
+                        ) {
+                            Ok(result) => result,
+                            Err(error_message) => {
+                                let error = v8::String::new(scope, &error_message).unwrap();
+                                let error_obj = v8::Exception::error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
 
                         // Return boolean result
                         let result = v8::Boolean::new(scope, is_valid);
@@ -10370,94 +10898,45 @@ impl MinimalRuntime {
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                // Get key parameter (can be string or object with key property)
-                let key = args.get(0);
-                let mut key_str = String::new();
-
-                if key.is_string() {
-                    if let Some(s) = key.to_string(scope) {
-                        key_str = s.to_rust_string_lossy(scope);
-                    }
-                } else if key.is_object() {
-                    // Handle { key: '...', padding: ... } format
-                    let key_obj = v8::Local::<v8::Object>::try_from(key)
-                        .unwrap_or_else(|_| v8::Object::new(scope));
-                    let key_prop_key = v8::String::new(scope, "key").unwrap().into();
-                    if let Some(key_val) = key_obj.get(scope, key_prop_key) {
-                        if let Some(s) = key_val.to_string(scope) {
-                            key_str = s.to_rust_string_lossy(scope);
+                let (key_str, padding) =
+                    match get_rsa_key_and_padding(scope, args.get(0), Padding::PKCS1_OAEP) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("publicEncrypt: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
                         }
-                    }
-                }
-
-                let has_public_key_marker = key_str.contains("-----BEGIN PUBLIC KEY-----")
-                    || key_str.contains("-----BEGIN RSA PUBLIC KEY-----");
-
-                if !has_public_key_marker {
-                    let error_msg =
-                        "publicEncrypt: invalid key - must be a valid PEM formatted public key";
-                    let error = v8::String::new(scope, error_msg).unwrap();
-                    let error_obj = v8::Exception::type_error(scope, error);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-
-                // Get data parameter
-                let data = args.get(1);
-                let mut data_bytes: Vec<u8> = Vec::new();
-
-                if data.is_typed_array() {
-                    if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(data) {
-                        let len = ta.byte_length() as usize;
-                        if len > 0 {
-                            let ab = ta.buffer(scope).unwrap();
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            data_bytes = unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if data.is_array_buffer() {
-                    if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(data) {
-                        let len = ab.byte_length() as usize;
-                        if len > 0 {
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            data_bytes = unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if data.is_object() {
-                    if let Ok(obj) = v8::Local::<v8::Object>::try_from(data) {
-                        let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
-                        if let Some(buffer_val) = obj.get(scope, buffer_key) {
-                            if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buffer_val) {
-                                let len = ab.byte_length() as usize;
-                                if len > 0 {
-                                    let store = ab.get_backing_store();
-                                    let ptr = store.as_ref().as_ptr() as *const u8;
-                                    data_bytes =
-                                        unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Create encrypted buffer (simplified - returns mock encrypted data)
-                // In production, this would use actual RSA encryption with the public key
-                let encrypted_len = data_bytes.len() + 11;
-                let ab = v8::ArrayBuffer::new(scope, encrypted_len);
-                let backing_store = ab.get_backing_store();
-                for i in 0..encrypted_len {
-                    let value = if i < 11 {
-                        ((i * 7 + 13) % 256) as u8
-                    } else {
-                        data_bytes[i - 11]
                     };
-                    backing_store[i].set(value);
-                }
-                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, encrypted_len) {
-                    retval.set(uint8_array.into());
-                }
+
+                let data_bytes = match get_bytes_from_value(scope, args.get(1), None) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error =
+                            v8::String::new(scope, &format!("publicEncrypt: {}", error_message))
+                                .unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let encrypted = match rsa_public_encrypt_pem(&key_str, &data_bytes, padding) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let buffer = create_buffer_wrapper(scope, &encrypted);
+                retval.set(buffer.into());
             },
         );
         let public_encrypt_fn = match public_encrypt_fn_opt {
@@ -10473,108 +10952,54 @@ impl MinimalRuntime {
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                // Get key parameter (can be string or object with key property)
-                let key = args.get(0);
-                let mut key_str = String::new();
-
-                if key.is_string() {
-                    if let Some(s) = key.to_string(scope) {
-                        key_str = s.to_rust_string_lossy(scope);
-                    }
-                } else if key.is_object() {
-                    // Handle { key: '...', padding: ... } format
-                    let key_obj = v8::Local::<v8::Object>::try_from(key)
-                        .unwrap_or_else(|_| v8::Object::new(scope));
-                    let key_prop_key = v8::String::new(scope, "key").unwrap().into();
-                    if let Some(key_val) = key_obj.get(scope, key_prop_key) {
-                        if let Some(s) = key_val.to_string(scope) {
-                            key_str = s.to_rust_string_lossy(scope);
+                let (key_str, padding) =
+                    match get_rsa_key_and_padding(scope, args.get(0), Padding::PKCS1_OAEP) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("privateDecrypt: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
                         }
-                    }
-                }
+                    };
 
-                // Validate key (check for PEM format markers)
-                let has_private_key_marker = key_str.contains("-----BEGIN PRIVATE KEY-----")
-                    || key_str.contains("-----BEGIN RSA PRIVATE KEY-----");
-                let has_public_key_marker = key_str.contains("-----BEGIN PUBLIC KEY-----")
-                    || key_str.contains("-----BEGIN RSA PUBLIC KEY-----");
-
-                if !has_private_key_marker && !has_public_key_marker {
-                    let error_msg = "privateDecrypt: invalid key - must be a valid PEM formatted private or public key";
-                    let error = v8::String::new(scope, error_msg).unwrap();
-                    let error_obj = v8::Exception::type_error(scope, error);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-
-                // Get encrypted data
-                let encrypted = args.get(1);
-                let mut encrypted_data: Vec<u8> = Vec::new();
-
-                if encrypted.is_string() {
-                    if let Some(s) = encrypted.to_string(scope) {
-                        let hex_str = s.to_rust_string_lossy(scope);
-                        // Try to parse as hex
-                        let hex_bytes: Result<Vec<u8>, _> = (0..hex_str.len())
-                            .step_by(2)
-                            .map(|i| {
-                                let byte_str = &hex_str[i..std::cmp::min(i + 2, hex_str.len())];
-                                u8::from_str_radix(byte_str, 16)
-                            })
-                            .collect();
-                        encrypted_data = hex_bytes.unwrap_or_else(|_| hex_str.into_bytes());
-                    }
-                } else if encrypted.is_typed_array() {
-                    // Read from typed array using backing store
-                    if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(encrypted) {
-                        let len = ta.byte_length();
-                        if len > 0 {
-                            let ab = ta.buffer(scope).unwrap();
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            encrypted_data =
-                                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if encrypted.is_array_buffer() {
-                    if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(encrypted) {
-                        let len = ab.byte_length();
-                        if len > 0 {
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            encrypted_data =
-                                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if encrypted.is_object() {
-                    if let Ok(obj) = v8::Local::<v8::Object>::try_from(encrypted) {
-                        let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
-                        if let Some(buffer_val) = obj.get(scope, buffer_key) {
-                            if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buffer_val) {
-                                let len = ab.byte_length();
-                                if len > 0 {
-                                    let store = ab.get_backing_store();
-                                    let ptr = store.as_ref().as_ptr() as *const u8;
-                                    encrypted_data =
-                                        unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Create decrypted buffer (simplified - returns mock decrypted data)
-                // In production, this would use actual RSA decryption with the private key
-                let decrypted_len = if encrypted_data.len() > 11 {
-                    encrypted_data.len() - 11
+                let encoding = if args.length() >= 3 && args.get(2).is_string() {
+                    args.get(2)
+                        .to_string(scope)
+                        .map(|value| value.to_rust_string_lossy(scope))
                 } else {
-                    0
+                    None
                 };
-                let decrypted = if decrypted_len > 0 {
-                    encrypted_data[11..].to_vec()
-                } else {
-                    Vec::new()
+
+                let encrypted_data =
+                    match get_bytes_from_value(scope, args.get(1), encoding.as_deref()) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("privateDecrypt: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    };
+
+                let decrypted = match rsa_private_decrypt_pem(&key_str, &encrypted_data, padding) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
                 };
+
                 let buffer = create_buffer_wrapper(scope, &decrypted);
                 retval.set(buffer.into());
             },
@@ -10592,99 +11017,45 @@ impl MinimalRuntime {
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                // Get key parameter (can be string or object with key property)
-                let key = args.get(0);
-                let mut key_str = String::new();
-
-                if key.is_string() {
-                    if let Some(s) = key.to_string(scope) {
-                        key_str = s.to_rust_string_lossy(scope);
-                    }
-                } else if key.is_object() {
-                    // Handle { key: '...', padding: ... } format
-                    let key_obj = v8::Local::<v8::Object>::try_from(key)
-                        .unwrap_or_else(|_| v8::Object::new(scope));
-                    let key_prop_key = v8::String::new(scope, "key").unwrap().into();
-                    if let Some(key_val) = key_obj.get(scope, key_prop_key) {
-                        if let Some(s) = key_val.to_string(scope) {
-                            key_str = s.to_rust_string_lossy(scope);
+                let (key_str, padding) =
+                    match get_rsa_key_and_padding(scope, args.get(0), Padding::PKCS1) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("privateEncrypt: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
                         }
-                    }
-                }
-
-                // Validate key (check for PEM format markers)
-                let has_private_key_marker = key_str.contains("-----BEGIN PRIVATE KEY-----")
-                    || key_str.contains("-----BEGIN RSA PRIVATE KEY-----");
-
-                if !has_private_key_marker {
-                    let error_msg =
-                        "privateEncrypt: invalid key - must be a valid PEM formatted private key";
-                    let error = v8::String::new(scope, error_msg).unwrap();
-                    let error_obj = v8::Exception::type_error(scope, error);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-
-                // Get data parameter
-                let data = args.get(1);
-                let mut data_bytes: Vec<u8> = Vec::new();
-
-                if data.is_typed_array() {
-                    if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(data) {
-                        let len = ta.byte_length() as usize;
-                        if len > 0 {
-                            let ab = ta.buffer(scope).unwrap();
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            data_bytes = unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if data.is_array_buffer() {
-                    if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(data) {
-                        let len = ab.byte_length() as usize;
-                        if len > 0 {
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            data_bytes = unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if data.is_string() {
-                    if let Some(s) = data.to_string(scope) {
-                        data_bytes = s.to_rust_string_lossy(scope).into_bytes();
-                    }
-                } else if data.is_object() {
-                    if let Ok(obj) = v8::Local::<v8::Object>::try_from(data) {
-                        let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
-                        if let Some(buffer_val) = obj.get(scope, buffer_key) {
-                            if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buffer_val) {
-                                let len = ab.byte_length() as usize;
-                                if len > 0 {
-                                    let store = ab.get_backing_store();
-                                    let ptr = store.as_ref().as_ptr() as *const u8;
-                                    data_bytes =
-                                        unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Create encrypted buffer (simplified - returns mock encrypted data)
-                // In production, this would use actual RSA encryption with the private key
-                let encrypted_len = data_bytes.len() + 11;
-                let ab = v8::ArrayBuffer::new(scope, encrypted_len);
-                let backing_store = ab.get_backing_store();
-                for i in 0..encrypted_len {
-                    let value = if i < 11 {
-                        ((i * 7 + 17) % 256) as u8
-                    } else {
-                        data_bytes[i - 11]
                     };
-                    backing_store[i].set(value);
-                }
-                if let Some(uint8_array) = v8::Uint8Array::new(scope, ab, 0, encrypted_len) {
-                    retval.set(uint8_array.into());
-                }
+
+                let data_bytes = match get_bytes_from_value(scope, args.get(1), None) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error =
+                            v8::String::new(scope, &format!("privateEncrypt: {}", error_message))
+                                .unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let encrypted = match rsa_private_encrypt_pem(&key_str, &data_bytes, padding) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let buffer = create_buffer_wrapper(scope, &encrypted);
+                retval.set(buffer.into());
             },
         );
         let private_encrypt_fn = match private_encrypt_fn_opt {
@@ -10700,107 +11071,54 @@ impl MinimalRuntime {
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                // Get key parameter (can be string or object with key property)
-                let key = args.get(0);
-                let mut key_str = String::new();
-
-                if key.is_string() {
-                    if let Some(s) = key.to_string(scope) {
-                        key_str = s.to_rust_string_lossy(scope);
-                    }
-                } else if key.is_object() {
-                    // Handle { key: '...', padding: ... } format
-                    let key_obj = v8::Local::<v8::Object>::try_from(key)
-                        .unwrap_or_else(|_| v8::Object::new(scope));
-                    let key_prop_key = v8::String::new(scope, "key").unwrap().into();
-                    if let Some(key_val) = key_obj.get(scope, key_prop_key) {
-                        if let Some(s) = key_val.to_string(scope) {
-                            key_str = s.to_rust_string_lossy(scope);
+                let (key_str, padding) =
+                    match get_rsa_key_and_padding(scope, args.get(0), Padding::PKCS1) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("publicDecrypt: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
                         }
-                    }
-                }
+                    };
 
-                // Validate key (check for PEM format markers)
-                let has_public_key_marker = key_str.contains("-----BEGIN PUBLIC KEY-----")
-                    || key_str.contains("-----BEGIN RSA PUBLIC KEY-----");
-
-                if !has_public_key_marker {
-                    let error_msg =
-                        "publicDecrypt: invalid key - must be a valid PEM formatted public key";
-                    let error = v8::String::new(scope, error_msg).unwrap();
-                    let error_obj = v8::Exception::type_error(scope, error);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-
-                // Get encrypted data
-                let encrypted = args.get(1);
-                let mut encrypted_data: Vec<u8> = Vec::new();
-
-                if encrypted.is_string() {
-                    if let Some(s) = encrypted.to_string(scope) {
-                        let hex_str = s.to_rust_string_lossy(scope);
-                        // Try to parse as hex
-                        let hex_bytes: Result<Vec<u8>, _> = (0..hex_str.len())
-                            .step_by(2)
-                            .map(|i| {
-                                let byte_str = &hex_str[i..std::cmp::min(i + 2, hex_str.len())];
-                                u8::from_str_radix(byte_str, 16)
-                            })
-                            .collect();
-                        encrypted_data = hex_bytes.unwrap_or_else(|_| hex_str.into_bytes());
-                    }
-                } else if encrypted.is_typed_array() {
-                    // Read from typed array using backing store
-                    if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(encrypted) {
-                        let len = ta.byte_length();
-                        if len > 0 {
-                            let ab = ta.buffer(scope).unwrap();
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            encrypted_data =
-                                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if encrypted.is_array_buffer() {
-                    if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(encrypted) {
-                        let len = ab.byte_length();
-                        if len > 0 {
-                            let store = ab.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *const u8;
-                            encrypted_data =
-                                unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                        }
-                    }
-                } else if encrypted.is_object() {
-                    if let Ok(obj) = v8::Local::<v8::Object>::try_from(encrypted) {
-                        let buffer_key = v8::String::new(scope, "buffer").unwrap().into();
-                        if let Some(buffer_val) = obj.get(scope, buffer_key) {
-                            if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buffer_val) {
-                                let len = ab.byte_length();
-                                if len > 0 {
-                                    let store = ab.get_backing_store();
-                                    let ptr = store.as_ref().as_ptr() as *const u8;
-                                    encrypted_data =
-                                        unsafe { std::slice::from_raw_parts(ptr, len).to_vec() };
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Create decrypted buffer (simplified - returns mock decrypted data)
-                // In production, this would use actual RSA decryption with the public key
-                let decrypted_len = if encrypted_data.len() > 11 {
-                    encrypted_data.len() - 11
+                let encoding = if args.length() >= 3 && args.get(2).is_string() {
+                    args.get(2)
+                        .to_string(scope)
+                        .map(|value| value.to_rust_string_lossy(scope))
                 } else {
-                    0
+                    None
                 };
-                let decrypted = if decrypted_len > 0 {
-                    encrypted_data[11..].to_vec()
-                } else {
-                    Vec::new()
+
+                let encrypted_data =
+                    match get_bytes_from_value(scope, args.get(1), encoding.as_deref()) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("publicDecrypt: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    };
+
+                let decrypted = match rsa_public_decrypt_pem(&key_str, &encrypted_data, padding) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
                 };
+
                 let buffer = create_buffer_wrapper(scope, &decrypted);
                 retval.set(buffer.into());
             },
@@ -10840,9 +11158,13 @@ impl MinimalRuntime {
                 let modulus_length_key = v8::String::new(scope, "modulusLength").unwrap();
                 let modulus_length = if let Some(obj) = options.to_object(scope) {
                     if let Some(ml) = obj.get(scope, modulus_length_key.into()) {
-                        ml.to_integer(scope)
-                            .map(|i| i.value() as usize)
-                            .unwrap_or(2048)
+                        if ml.is_number() {
+                            ml.to_integer(scope)
+                                .map(|i| i.value() as usize)
+                                .unwrap_or(2048)
+                        } else {
+                            2048
+                        }
                     } else {
                         2048
                     }
@@ -10868,7 +11190,15 @@ impl MinimalRuntime {
 
                 // Generate key pair based on type
                 let (public_key_pem, private_key_pem) = match key_type.to_lowercase().as_str() {
-                    "rsa" => generate_rsa_key_pair(modulus_length),
+                    "rsa" => match generate_rsa_key_pair(modulus_length) {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    },
                     "ec" => generate_ec_key_pair(&named_curve),
                     _ => {
                         // Unsupported key type - return error
@@ -10936,9 +11266,13 @@ impl MinimalRuntime {
                 let modulus_length_key = v8::String::new(scope, "modulusLength").unwrap();
                 let modulus_length = if let Some(obj) = options.to_object(scope) {
                     if let Some(ml) = obj.get(scope, modulus_length_key.into()) {
-                        ml.to_integer(scope)
-                            .map(|i| i.value() as usize)
-                            .unwrap_or(2048)
+                        if ml.is_number() {
+                            ml.to_integer(scope)
+                                .map(|i| i.value() as usize)
+                                .unwrap_or(2048)
+                        } else {
+                            2048
+                        }
                     } else {
                         2048
                     }
@@ -11028,7 +11362,23 @@ impl MinimalRuntime {
 
                 // Generate key pair synchronously (simulated async)
                 let (public_key_pem, private_key_pem) = if key_type_lower == "rsa" {
-                    generate_rsa_key_pair(modulus_length)
+                    match generate_rsa_key_pair(modulus_length) {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let global = scope.get_current_context().global(scope);
+                            let error_msg = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error_msg);
+                            let callback_func =
+                                v8::Local::<v8::Function>::try_from(callback).unwrap();
+                            let null_val = v8::null(scope).into();
+                            let _ = callback_func.call(
+                                scope,
+                                global.into(),
+                                &[error_obj, null_val, null_val],
+                            );
+                            return;
+                        }
+                    }
                 } else {
                     generate_ec_key_pair(&named_curve)
                 };
@@ -11609,43 +11959,12 @@ impl MinimalRuntime {
         // Elliptic Curve Diffie-Hellman key exchange protocol for secure key agreement
         // Uses elliptic curve cryptography for more efficient key exchange than traditional DH
 
-        // Map curve names to key sizes (bytes)
-        fn get_curve_key_size(curve: &str) -> usize {
-            match curve {
-                "prime256v1" | "secp256r1" => 32, // 256-bit / 32 bytes
-                "secp384r1" => 48,                // 384-bit / 48 bytes
-                "secp521r1" => 66,                // 521-bit / 66 bytes (rounded up)
-                _ => 32,                          // Default to 256-bit
-            }
-        }
-
-        // Helper to convert hex string to bytes
-        fn hex_to_bytes_owned(hex: &str) -> Vec<u8> {
-            if hex.starts_with("0x") {
-                (2..hex.len())
-                    .step_by(2)
-                    .filter_map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
-                    .collect()
-            } else {
-                (0..hex.len())
-                    .step_by(2)
-                    .filter_map(|i| u8::from_str_radix(&hex[i..i + 2], 16).ok())
-                    .collect()
-            }
-        }
-
-        // Helper to convert bytes to hex string
-        fn bytes_to_hex_owned(bytes: &[u8]) -> String {
-            bytes.iter().map(|b| format!("{:02x}", b)).collect()
-        }
-
         // Create ECDH constructor function
         let create_ecdh_fn = v8::Function::new(
             scope,
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                // Parse curve argument
                 let curve_name = if args.length() >= 1 {
                     if let Some(s) = args.get(0).to_string(scope) {
                         s.to_rust_string_lossy(scope)
@@ -11656,46 +11975,22 @@ impl MinimalRuntime {
                     String::from("prime256v1")
                 };
 
-                // Validate curve name
-                let valid_curves = ["prime256v1", "secp256r1", "secp384r1", "secp521r1"];
-                if !valid_curves.contains(&curve_name.as_str()) {
-                    let error_msg = format!(
-                        "createECDH: unsupported curve '{}'. Supported: {}",
-                        curve_name,
-                        valid_curves.join(", ")
-                    );
-                    let error = v8::String::new(scope, &error_msg).unwrap();
-                    scope.throw_exception(error.into());
-                    return;
-                }
+                let (private_key_hex, public_key_hex) =
+                    match ecdh_generate_key_pair_hex(&curve_name) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    };
 
-                // Create ECDH instance object
                 let ecdh_obj = v8::Object::new(scope);
 
-                // Store curve name
                 let curve_key = v8::String::new(scope, "curve").unwrap();
                 let curve_val = v8::String::new(scope, &curve_name).unwrap().into();
                 ecdh_obj.set(scope, curve_key.into(), curve_val);
-
-                // Generate key size based on curve
-                let key_size = get_curve_key_size(&curve_name);
-
-                // Generate random private key (key_size bytes)
-                let private_key: Vec<u8> = (0..key_size).map(|_| rand::random::<u8>()).collect();
-                // Derive public key from private key using a simple deterministic transformation
-                // In real ECDH: publicKey = privateKey * G (scalar multiplication on curve)
-                // Our simulation: public[i] = private[i] ^ ((i*7) % 256) ^ 0x42
-                let mut public_key = private_key
-                    .iter()
-                    .enumerate()
-                    .map(|(i, &b)| b ^ (((i * 7) % 256) as u8) ^ 0x42)
-                    .collect::<Vec<u8>>();
-                // Prepend 0x04 as uncompressed point prefix
-                public_key.insert(0, 0x04);
-
-                // Store keys as hex strings
-                let private_key_hex = bytes_to_hex_owned(&private_key);
-                let public_key_hex = bytes_to_hex_owned(&public_key);
 
                 let private_key_key = v8::String::new(scope, "privateKey").unwrap();
                 let private_key_val = v8::String::new(scope, &private_key_hex).unwrap().into();
@@ -11711,152 +12006,55 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
-                        // Get our private key from the ECDH object (this)
                         let this = args.this();
-                        let private_key_str_key = v8::String::new(scope, "privateKey").unwrap();
-                        let private_key_v8_val = this
-                            .get(scope, private_key_str_key.into())
-                            .unwrap_or(v8::Object::new(scope).into());
-                        let private_key_hex = if let Some(s) = private_key_v8_val.to_string(scope) {
-                            s.to_rust_string_lossy(scope)
-                        } else {
-                            String::new()
-                        };
-                        let our_private_key_bytes = hex_to_bytes_owned(&private_key_hex);
+                        let curve_key = v8::String::new(scope, "curve").unwrap();
+                        let curve_name = this
+                            .get(scope, curve_key.into())
+                            .and_then(|value| value.to_string(scope))
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| String::from("prime256v1"));
 
-                        // Get our public key from the ECDH object
-                        let public_key_str_key = v8::String::new(scope, "publicKey").unwrap();
-                        let public_key_v8_val = this
-                            .get(scope, public_key_str_key.into())
-                            .unwrap_or(v8::Object::new(scope).into());
-                        let our_public_key_hex = if let Some(s) = public_key_v8_val.to_string(scope)
+                        let private_key_key = v8::String::new(scope, "privateKey").unwrap();
+                        let private_key_hex = match this
+                            .get(scope, private_key_key.into())
+                            .and_then(|value| value.to_string(scope))
+                            .map(|value| value.to_rust_string_lossy(scope))
                         {
-                            s.to_rust_string_lossy(scope)
-                        } else {
-                            String::new()
-                        };
-                        let our_public_key_bytes = hex_to_bytes_owned(&our_public_key_hex);
-
-                        // Parse public key input (peer)
-                        let public_key_input = if args.length() >= 1 {
-                            args.get(0)
-                        } else {
-                            v8::Object::new(scope).into()
+                            Some(value) if !value.is_empty() => value,
+                            _ => {
+                                let error =
+                                    v8::String::new(scope, "computeSecret: private key is missing")
+                                        .unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
                         };
 
-                        let mut public_key_hex = String::new();
-                        if public_key_input.is_string() {
-                            public_key_hex = public_key_input
-                                .to_string(scope)
-                                .unwrap()
-                                .to_rust_string_lossy(scope);
-                        } else if public_key_input.is_object() {
-                            // Try to get publicKey property from object (e.g., { publicKey: "..." })
-                            let obj = public_key_input.to_object(scope).unwrap();
-                            let pk_key = v8::String::new(scope, "publicKey").unwrap();
-                            if let Some(pk_val) = obj.get(scope, pk_key.into()) {
-                                if pk_val.is_string() {
-                                    public_key_hex = pk_val
-                                        .to_string(scope)
-                                        .unwrap()
-                                        .to_rust_string_lossy(scope);
-                                }
+                        let peer_public_key = match get_ecdh_public_key_bytes(scope, args.get(0)) {
+                            Ok(value) => value,
+                            Err(error_message) => {
+                                let error = v8::String::new(scope, &error_message).unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
                             }
-                        } else if public_key_input.is_array_buffer()
-                            || public_key_input.is_typed_array()
-                        {
-                            // Handle ArrayBuffer or Uint8Array/TypedArray input
-                            let array_buffer = if public_key_input.is_typed_array() {
-                                // For TypedArray, get its underlying ArrayBuffer
-                                if let Ok(ua) =
-                                    v8::Local::<v8::Uint8Array>::try_from(public_key_input)
-                                {
-                                    ua.buffer(scope)
-                                } else {
-                                    None
-                                }
-                            } else {
-                                // Direct ArrayBuffer
-                                v8::Local::<v8::ArrayBuffer>::try_from(public_key_input).ok()
-                            };
+                        };
 
-                            if let Some(ab) = array_buffer {
-                                let backing = ab.get_backing_store();
-                                let len = std::cmp::min(backing.len(), 128);
-                                let mut hex = String::new();
-                                for i in 0..len {
-                                    hex.push_str(&format!("{:02x}", backing[i].get()));
-                                }
-                                public_key_hex = hex;
+                        let shared_secret = match ecdh_compute_secret(
+                            &curve_name,
+                            &private_key_hex,
+                            &peer_public_key,
+                        ) {
+                            Ok(value) => value,
+                            Err(error_message) => {
+                                let error = v8::String::new(scope, &error_message).unwrap();
+                                let error_obj = v8::Exception::error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
                             }
-                        }
+                        };
 
-                        // Parse hex public key (peer)
-                        let peer_public_key_bytes = hex_to_bytes_owned(&public_key_hex);
-
-                        // Compute shared secret using ECDH-like formula
-                        // In real ECDH: shared = peerPublic * ourPrivate = (peerPrivate * G) * ourPrivate
-                        // Our simulation: derive public from private, then compute shared as:
-                        // shared[i] = ourPrivate[i] ^ peerPublic[i] ^ ourPublic[i] ^ (peerPrivate derived from peerPublic)
-                        // Simplified: shared[i] = ourPrivate[i] ^ peerPublic[i] ^ ourPublic[i] ^ (peerPublic[i] ^ offset)
-                        let shared_secret_len = std::cmp::min(
-                            our_private_key_bytes.len(),
-                            peer_public_key_bytes.len().saturating_sub(1),
-                        );
-                        let mut shared_secret = Vec::with_capacity(shared_secret_len);
-
-                        // Remove prefix byte (0x04) from peer public key if present
-                        let peer_pub_key_no_prefix: Vec<u8> =
-                            if peer_public_key_bytes.first() == Some(&0x04) {
-                                peer_public_key_bytes.iter().skip(1).copied().collect()
-                            } else {
-                                peer_public_key_bytes.clone()
-                            };
-
-                        // Remove prefix byte from our public key if present
-                        let our_pub_key_no_prefix: Vec<u8> =
-                            if our_public_key_bytes.first() == Some(&0x04) {
-                                our_public_key_bytes.iter().skip(1).copied().collect()
-                            } else {
-                                our_public_key_bytes
-                            };
-
-                        // Compute shared secret using the same formula for both parties
-                        // This ensures both parties get the same result
-                        for i in 0..shared_secret_len {
-                            let our_priv = our_private_key_bytes.get(i).copied().unwrap_or(0);
-                            let peer_pub = peer_pub_key_no_prefix.get(i).copied().unwrap_or(0);
-                            let our_pub = our_pub_key_no_prefix.get(i).copied().unwrap_or(0);
-                            let peer_priv_derived = peer_pub ^ (((i * 7) % 256) as u8) ^ 0x42; // Inverse of derivation
-
-                            // ECDH formula: shared = peerPublic * ourPrivate
-                            // Our simulation: shared = ourPrivate ^ peerPublic ^ ourPublic ^ peerPrivate
-                            let shared = our_priv ^ peer_pub ^ our_pub ^ peer_priv_derived;
-                            shared_secret.push(shared);
-                        }
-
-                        // If we got no peer key bytes, generate deterministic mock
-                        if peer_public_key_bytes.is_empty() || peer_pub_key_no_prefix.is_empty() {
-                            let this_curve_key = v8::String::new(scope, "curve").unwrap();
-                            let curve_v8_val = this
-                                .get(scope, this_curve_key.into())
-                                .unwrap_or(v8::Object::new(scope).into());
-                            let curve_name_str = if let Some(s) = curve_v8_val.to_string(scope) {
-                                s.to_rust_string_lossy(scope)
-                            } else {
-                                String::from("prime256v1")
-                            };
-                            let ks = get_curve_key_size(&curve_name_str);
-                            shared_secret = (0..ks)
-                                .map(|i| {
-                                    let priv_byte =
-                                        our_private_key_bytes.get(i).copied().unwrap_or(0);
-                                    priv_byte ^ 0xFF ^ (((i * 31) % 256) as u8)
-                                })
-                                .collect();
-                        }
-
-                        // Check output encoding
                         let output_encoding = if args.length() >= 2 {
                             args.get(1)
                                 .to_string(scope)
@@ -11868,12 +12066,12 @@ impl MinimalRuntime {
 
                         match output_encoding.as_str() {
                             "hex" => {
-                                let shared_hex = bytes_to_hex_owned(&shared_secret);
+                                let shared_hex = hex::encode(&shared_secret);
                                 retval.set(v8::String::new(scope, &shared_hex).unwrap().into());
                             }
                             "base64" => {
-                                use base64::{engine::general_purpose::STANDARD, Engine as _};
-                                let shared_b64 = STANDARD.encode(&shared_secret);
+                                let shared_b64 = base64::engine::general_purpose::STANDARD
+                                    .encode(&shared_secret);
                                 retval.set(v8::String::new(scope, &shared_b64).unwrap().into());
                             }
                             _ => {
@@ -11904,43 +12102,42 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      _args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
-                        // Get curve name to determine key size
                         let this = _args.this();
                         let curve_key = v8::String::new(scope, "curve").unwrap();
-                        let curve_v8_val = this
+                        let curve_name = this
                             .get(scope, curve_key.into())
-                            .unwrap_or(v8::Object::new(scope).into());
-                        let curve_name_str = if let Some(s) = curve_v8_val.to_string(scope) {
-                            s.to_rust_string_lossy(scope)
-                        } else {
-                            String::from("prime256v1")
-                        };
-                        let ks = get_curve_key_size(&curve_name_str);
+                            .and_then(|value| value.to_string(scope))
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| String::from("prime256v1"));
 
-                        // Generate random private key
-                        let new_private: Vec<u8> = (0..ks).map(|_| rand::random::<u8>()).collect();
-                        // Derive public key using the same formula as initialization
-                        let mut new_public: Vec<u8> = new_private
-                            .iter()
-                            .enumerate()
-                            .map(|(i, &b)| b ^ (((i * 7) % 256) as u8) ^ 0x42)
-                            .collect();
-                        // Prepend 0x04 as uncompressed point prefix
-                        new_public.insert(0, 0x04);
+                        let (private_key_hex, public_key_hex) =
+                            match ecdh_generate_key_pair_hex(&curve_name) {
+                                Ok(value) => value,
+                                Err(error_message) => {
+                                    let error = v8::String::new(scope, &error_message).unwrap();
+                                    let error_obj = v8::Exception::error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+                            };
+
+                        let this_private_key = v8::String::new(scope, "privateKey").unwrap();
+                        let private_value = v8::String::new(scope, &private_key_hex).unwrap();
+                        this.set(scope, this_private_key.into(), private_value.into());
+
+                        let this_public_key = v8::String::new(scope, "publicKey").unwrap();
+                        let public_value = v8::String::new(scope, &public_key_hex).unwrap();
+                        this.set(scope, this_public_key.into(), public_value.into());
 
                         let result_obj = v8::Object::new(scope);
                         let private_key_key = v8::String::new(scope, "privateKey").unwrap();
                         let private_key_val =
-                            v8::String::new(scope, &bytes_to_hex_owned(&new_private))
-                                .unwrap()
-                                .into();
+                            v8::String::new(scope, &private_key_hex).unwrap().into();
                         result_obj.set(scope, private_key_key.into(), private_key_val);
 
                         let public_key_key = v8::String::new(scope, "publicKey").unwrap();
                         let public_key_val =
-                            v8::String::new(scope, &bytes_to_hex_owned(&new_public))
-                                .unwrap()
-                                .into();
+                            v8::String::new(scope, &public_key_hex).unwrap().into();
                         result_obj.set(scope, public_key_key.into(), public_key_val);
 
                         retval.set(result_obj.into());
@@ -12001,18 +12198,38 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut _retval: v8::ReturnValue| {
-                        if args.length() >= 1 {
-                            if let Some(key_str) = args.get(0).to_string(scope) {
-                                let new_pub_key_hex = key_str.to_rust_string_lossy(scope);
+                        let this = args.this();
+                        let curve_key = v8::String::new(scope, "curve").unwrap();
+                        let curve_name = this
+                            .get(scope, curve_key.into())
+                            .and_then(|value| value.to_string(scope))
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| String::from("prime256v1"));
 
-                                // Update the publicKey property on this ECDH object
-                                let this = args.this();
-                                let public_key_key = v8::String::new(scope, "publicKey").unwrap();
-                                let public_key_val =
-                                    v8::String::new(scope, &new_pub_key_hex).unwrap().into();
-                                this.set(scope, public_key_key.into(), public_key_val);
+                        let public_key_bytes = match get_ecdh_public_key_bytes(scope, args.get(0)) {
+                            Ok(value) => value,
+                            Err(error_message) => {
+                                let error = v8::String::new(scope, &error_message).unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
                             }
+                        };
+
+                        if let Err(error_message) =
+                            ecdh_validate_public_key(&curve_name, &public_key_bytes)
+                        {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
                         }
+
+                        let new_pub_key_hex = hex::encode(public_key_bytes);
+                        let public_key_key = v8::String::new(scope, "publicKey").unwrap();
+                        let public_key_val =
+                            v8::String::new(scope, &new_pub_key_hex).unwrap().into();
+                        this.set(scope, public_key_key.into(), public_key_val);
                     },
                 );
                 let set_public_key_fn = match set_public_key_fn {
@@ -12028,18 +12245,57 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut _retval: v8::ReturnValue| {
-                        if args.length() >= 1 {
-                            if let Some(key_str) = args.get(0).to_string(scope) {
-                                let new_priv_key_hex = key_str.to_rust_string_lossy(scope);
+                        let this = args.this();
+                        let curve_key = v8::String::new(scope, "curve").unwrap();
+                        let curve_name = this
+                            .get(scope, curve_key.into())
+                            .and_then(|value| value.to_string(scope))
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| String::from("prime256v1"));
 
-                                // Update the privateKey property on this ECDH object
-                                let this = args.this();
-                                let private_key_key = v8::String::new(scope, "privateKey").unwrap();
-                                let private_key_val =
-                                    v8::String::new(scope, &new_priv_key_hex).unwrap().into();
-                                this.set(scope, private_key_key.into(), private_key_val);
+                        let new_priv_key_hex = if args.get(0).is_string() {
+                            args.get(0)
+                                .to_string(scope)
+                                .map(|value| value.to_rust_string_lossy(scope))
+                                .unwrap_or_default()
+                        } else {
+                            match get_bytes_from_value(scope, args.get(0), None) {
+                                Ok(bytes) => hex::encode(bytes),
+                                Err(error_message) => {
+                                    let error = v8::String::new(
+                                        scope,
+                                        &format!("setPrivateKey: {}", error_message),
+                                    )
+                                    .unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
                             }
-                        }
+                        };
+
+                        let new_public_key_hex = match ecdh_public_key_from_private_hex(
+                            &curve_name,
+                            &new_priv_key_hex,
+                        ) {
+                            Ok(value) => value,
+                            Err(error_message) => {
+                                let error = v8::String::new(scope, &error_message).unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj.into());
+                                return;
+                            }
+                        };
+
+                        let private_key_key = v8::String::new(scope, "privateKey").unwrap();
+                        let private_key_val =
+                            v8::String::new(scope, &new_priv_key_hex).unwrap().into();
+                        this.set(scope, private_key_key.into(), private_key_val);
+
+                        let public_key_key = v8::String::new(scope, "publicKey").unwrap();
+                        let public_key_val =
+                            v8::String::new(scope, &new_public_key_hex).unwrap().into();
+                        this.set(scope, public_key_key.into(), public_key_val);
                     },
                 );
                 let set_private_key_fn = match set_private_key_fn {
@@ -12911,6 +13167,17 @@ impl MinimalRuntime {
                     } else {
                         "ws://localhost".to_string()
                     };
+
+                    if let Err(error) = crate::permissions::check_global_permission(
+                        crate::permissions::PermissionKind::Network,
+                        crate::permissions::PermissionAction::Connect,
+                        crate::permissions::ResourceId::Url(url_string.clone()),
+                    ) {
+                        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                        let error_obj = v8::Exception::error(scope, error_message);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
 
                     // Create WebSocket instance object
                     let ws_obj = v8::Object::new(scope);
@@ -13841,10 +14108,25 @@ impl MinimalRuntime {
         let require_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let module_id = args.get(0);
-                let module_id_str = if let Some(s) = module_id.to_string(scope) {
+                let requested_module_id_str = if let Some(s) = module_id.to_string(scope) {
                     s.to_rust_string_lossy(scope)
                 } else {
                     "unknown".to_string()
+                };
+                let module_id_str = if let Some(builtin_name) =
+                    requested_module_id_str.strip_prefix("node:")
+                {
+                    if crate::nodejs_core::commonjs_resolver::is_builtin_module(builtin_name) {
+                        builtin_name.to_string()
+                    } else {
+                        let error_msg = format!("Cannot find module '{}'", requested_module_id_str);
+                        let error_str = v8::String::new(scope, &error_msg).unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                } else {
+                    requested_module_id_str
                 };
 
                 // Return appropriate module object based on module id
@@ -14930,6 +15212,49 @@ impl MinimalRuntime {
 
                             match std::fs::read_to_string(&module_path) {
                                 Ok(code) => {
+                                    if module_path.extension().and_then(|ext| ext.to_str()) == Some("json") {
+                                        let json_value = match serde_json::from_str::<serde_json::Value>(&code) {
+                                            Ok(value) => value,
+                                            Err(error) => {
+                                                let error_msg = format!(
+                                                    "Error parsing JSON module '{}': {}",
+                                                    module_path.display(),
+                                                    error
+                                                );
+                                                let error_str =
+                                                    v8::String::new(scope, &error_msg).unwrap();
+                                                let error_obj = v8::Exception::syntax_error(scope, error_str);
+                                                scope.throw_exception(error_obj.into());
+                                                return;
+                                            }
+                                        };
+                                        let json_exports = serde_json_value_to_v8(scope, &json_value);
+                                        cache_obj.set(scope, cache_key.into(), json_exports);
+                                        retval.set(json_exports);
+                                        return;
+                                    }
+
+                                    let code = if module_path.extension().and_then(|ext| ext.to_str()) == Some("ts") {
+                                        match Self::transpile_typescript_to_js(&code) {
+                                            Ok(js_code) => js_code,
+                                            Err(error) => {
+                                                let error_msg = format!(
+                                                    "Error compiling TypeScript module '{}': {}",
+                                                    module_path.display(),
+                                                    error
+                                                );
+                                                let error_str =
+                                                    v8::String::new(scope, &error_msg).unwrap();
+                                                let error_obj =
+                                                    v8::Exception::syntax_error(scope, error_str);
+                                                scope.throw_exception(error_obj.into());
+                                                return;
+                                            }
+                                        }
+                                    } else {
+                                        code
+                                    };
+
                                     // Create new module and exports objects for this module
                                     let module_obj = v8::Object::new(scope);
                                     let exports_obj = v8::Object::new(scope);
@@ -15338,6 +15663,16 @@ require.resolve = function(specifier) {{
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
                     .unwrap_or_default();
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Process,
+                    crate::permissions::PermissionAction::Execute,
+                    crate::permissions::ResourceId::Path(std::path::PathBuf::from(&directory)),
+                ) {
+                    let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_message);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
                 match env::set_current_dir(&directory) {
                     Ok(()) => {
                         let undefined = v8::undefined(scope);
@@ -15600,24 +15935,6 @@ require.resolve = function(specifier) {{
         let exit_func = exit_fn.get_function(scope).unwrap();
         let next_tick_func = next_tick_fn.get_function(scope).unwrap();
 
-        // Create process.env object
-        let env_obj = v8::Object::new(scope);
-        for (key, value) in env::vars() {
-            if crate::permissions::check_global_permission(
-                crate::permissions::PermissionKind::Environment,
-                crate::permissions::PermissionAction::Read,
-                crate::permissions::ResourceId::Name(key.clone()),
-            )
-            .is_err()
-            {
-                continue;
-            }
-
-            let k = v8::String::new(scope, &key).unwrap();
-            let v = v8::String::new(scope, &value).unwrap();
-            env_obj.set(scope, k.into(), v.into());
-        }
-
         // Create argv array
         let argv_array = v8::Array::new(scope, 2);
         argv_array.set_index(scope, 0, argv0_val.into());
@@ -15686,7 +16003,17 @@ require.resolve = function(specifier) {{
         // v0.3.40: Add process.ppid - parent process ID
         process_obj.set(scope, ppid_key.into(), ppid_value.into());
         process_obj.set(scope, title_key.into(), title_value.into());
-        process_obj.set(scope, env_key.into(), env_obj.into());
+        process_obj.set_accessor(
+            scope,
+            env_key.into(),
+            |scope: &mut v8::HandleScope,
+             _name: v8::Local<v8::Name>,
+             _args: v8::PropertyCallbackArguments,
+             mut retval: v8::ReturnValue| {
+                let env_obj = create_process_env_object(scope);
+                retval.set(env_obj.into());
+            },
+        );
         process_obj.set(scope, argv_key.into(), argv_array.into());
         process_obj.set(scope, exec_argv_key.into(), exec_argv_array.into());
         process_obj.set(scope, exec_path_key.into(), exec_path_val.into());
@@ -16303,6 +16630,16 @@ require.resolve = function(specifier) {{
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
                     .unwrap_or_default();
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Process,
+                    crate::permissions::PermissionAction::Execute,
+                    crate::permissions::ResourceId::Name(_command.clone()),
+                ) {
+                    let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_message);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
                 let child_obj = v8::Object::new(scope);
 
                 // Set properties - pre-create null value first to avoid borrow conflicts
@@ -16341,8 +16678,23 @@ require.resolve = function(specifier) {{
         let spawn_fn_template = v8::FunctionTemplate::new(
             scope,
             |scope: &mut v8::HandleScope,
-             _args: v8::FunctionCallbackArguments,
+             args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
+                let command = args
+                    .get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Process,
+                    crate::permissions::PermissionAction::Execute,
+                    crate::permissions::ResourceId::Name(command),
+                ) {
+                    let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_message);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
                 let child_obj = v8::Object::new(scope);
 
                 let null_local = v8::null(scope);
@@ -16379,6 +16731,16 @@ require.resolve = function(specifier) {{
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
                     .unwrap_or_default();
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Process,
+                    crate::permissions::PermissionAction::Execute,
+                    crate::permissions::ResourceId::Name(_file.clone()),
+                ) {
+                    let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_message);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
                 let child_obj = v8::Object::new(scope);
 
                 let stdout_key = v8::String::new(scope, "stdout").unwrap();
@@ -19658,6 +20020,14 @@ require.resolve = function(specifier) {{
                     );
                     return;
                 }
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Network,
+                    crate::permissions::PermissionAction::Connect,
+                    crate::permissions::ResourceId::Name(hostname.clone()),
+                ) {
+                    retval.set(v8::String::new(_scope, &error.to_string()).unwrap().into());
+                    return;
+                }
 
                 // Use standard library for DNS lookup
                 // Try different formats to handle localhost and regular hostnames
@@ -19726,6 +20096,14 @@ require.resolve = function(specifier) {{
                     );
                     return;
                 }
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Network,
+                    crate::permissions::PermissionAction::Connect,
+                    crate::permissions::ResourceId::Name(hostname.clone()),
+                ) {
+                    retval.set(v8::String::new(_scope, &error.to_string()).unwrap().into());
+                    return;
+                }
 
                 // Perform DNS lookup based on record type
                 // Note: Full DNS resolution with different record types requires a DNS crate
@@ -19779,6 +20157,14 @@ require.resolve = function(specifier) {{
                     );
                     return;
                 }
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Network,
+                    crate::permissions::PermissionAction::Connect,
+                    crate::permissions::ResourceId::Name(hostname.clone()),
+                ) {
+                    retval.set(v8::String::new(_scope, &error.to_string()).unwrap().into());
+                    return;
+                }
 
                 let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname).or_else(|_| {
                     std::net::ToSocketAddrs::to_socket_addrs(&format!("{}:0", hostname))
@@ -19830,6 +20216,14 @@ require.resolve = function(specifier) {{
                     );
                     return;
                 }
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Network,
+                    crate::permissions::PermissionAction::Connect,
+                    crate::permissions::ResourceId::Name(hostname.clone()),
+                ) {
+                    retval.set(v8::String::new(_scope, &error.to_string()).unwrap().into());
+                    return;
+                }
 
                 let result = std::net::ToSocketAddrs::to_socket_addrs(&hostname).or_else(|_| {
                     std::net::ToSocketAddrs::to_socket_addrs(&format!("{}:0", hostname))
@@ -19879,6 +20273,14 @@ require.resolve = function(specifier) {{
                             .unwrap()
                             .into(),
                     );
+                    return;
+                }
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Network,
+                    crate::permissions::PermissionAction::Connect,
+                    crate::permissions::ResourceId::Name(ip.clone()),
+                ) {
+                    retval.set(v8::String::new(_scope, &error.to_string()).unwrap().into());
                     return;
                 }
 

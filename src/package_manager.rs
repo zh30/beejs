@@ -340,9 +340,48 @@ fn verify_sha1_shasum(tarball_path: &Path, shasum: &str) -> Result<()> {
     }
 }
 
+fn check_fs_read_permission(path: &Path) -> Result<()> {
+    crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::FileSystem,
+        crate::permissions::PermissionAction::Read,
+        crate::permissions::ResourceId::Path(path.to_path_buf()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_fs_write_permission(path: &Path) -> Result<()> {
+    crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::FileSystem,
+        crate::permissions::PermissionAction::Write,
+        crate::permissions::ResourceId::Path(path.to_path_buf()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_network_connect_permission(url: &str) -> Result<()> {
+    crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Network,
+        crate::permissions::PermissionAction::Connect,
+        crate::permissions::ResourceId::Url(url.to_string()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_process_execute_permission(command: &str) -> Result<()> {
+    crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Process,
+        crate::permissions::PermissionAction::Execute,
+        crate::permissions::ResourceId::Name(command.to_string()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
 impl PackageManager {
     /// Create a new package manager instance
     pub fn new(config: PackageManagerConfig) -> Result<Self> {
+        check_fs_write_permission(&config.cache_dir)?;
+        check_fs_write_permission(&config.node_modules_dir)?;
+
         // Create cache directory if it doesn't exist
         if !config.cache_dir.exists() {
             fs::create_dir_all(&config.cache_dir)
@@ -363,6 +402,8 @@ impl PackageManager {
             self.config.registry_url.trim_end_matches('/'),
             name
         );
+        check_network_connect_permission(&url)?;
+        check_process_execute_permission("curl")?;
 
         // Use curl to fetch package info
         let output = Command::new("curl")
@@ -416,6 +457,8 @@ impl PackageManager {
             .and_then(|t| t.as_str())
             .ok_or(anyhow!("No tarball URL found"))?
             .to_string();
+        check_network_connect_permission(&tarball_url)?;
+        check_process_execute_permission("curl")?;
 
         let integrity = dist
             .get("integrity")
@@ -443,6 +486,7 @@ impl PackageManager {
 
         // Create cache directory
         let package_cache_dir = self.config.cache_dir.join(name);
+        check_fs_write_permission(&package_cache_dir)?;
         if !package_cache_dir.exists() {
             fs::create_dir_all(&package_cache_dir)
                 .map_err(|e| anyhow!("Failed to create cache directory: {}", e))?;
@@ -450,6 +494,7 @@ impl PackageManager {
 
         // Download tarball
         let tarball_path = package_cache_dir.join(format!("{}.tgz", version));
+        check_fs_write_permission(&tarball_path)?;
         let output = Command::new("curl")
             .args(&[
                 "-sL",
@@ -481,10 +526,13 @@ impl PackageManager {
 
     /// Extract tarball to node_modules
     pub fn extract_package(&self, tarball_path: &Path, package_name: &str) -> Result<PathBuf> {
+        check_fs_read_permission(tarball_path)?;
         let target_dir = self.config.node_modules_dir.join(package_name);
+        check_fs_write_permission(&target_dir)?;
 
         // Create parent directory
         if let Some(parent) = target_dir.parent() {
+            check_fs_write_permission(parent)?;
             if !parent.exists() {
                 fs::create_dir_all(parent)
                     .map_err(|e| anyhow!("Failed to create parent directory: {}", e))?;
@@ -632,6 +680,7 @@ impl PackageManager {
     }
     /// Parse package.json file
     pub fn parse_package_json(&self, path: &Path) -> Result<PackageJson> {
+        check_fs_read_permission(path)?;
         let content =
             fs::read_to_string(path).map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
         let package: PackageJson = serde_json::from_str(&content)
@@ -656,6 +705,7 @@ impl PackageManager {
         };
         // Write package.json
         let path: _ = PathBuf::from("package.json");
+        check_fs_write_permission(&path)?;
         let content: _ = serde_json::to_string_pretty(&package)
             .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
         fs::write(&path, content).map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
@@ -837,6 +887,7 @@ impl PackageManager {
             return Err(anyhow!("package-lock.json not found at {:?}", lock_path));
         }
 
+        check_fs_read_permission(&lock_path)?;
         let content = fs::read_to_string(&lock_path)
             .map_err(|e| anyhow!("Failed to read package-lock.json: {}", e))?;
 
@@ -862,9 +913,11 @@ impl PackageManager {
         project_version: &str,
     ) -> Result<()> {
         let mut dependencies = HashMap::new();
+        check_fs_write_permission(lock_path)?;
 
         // Scan installed packages
         if self.config.node_modules_dir.exists() {
+            check_fs_read_permission(&self.config.node_modules_dir)?;
             for entry in fs::read_dir(&self.config.node_modules_dir)
                 .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
             {
@@ -938,6 +991,7 @@ impl PackageManager {
         updated_deps: Vec<(String, LockedDependency)>,
     ) -> Result<()> {
         let mut lock = if lock_path.exists() {
+            check_fs_read_permission(lock_path)?;
             let content = fs::read_to_string(lock_path)
                 .map_err(|e| anyhow!("Failed to read package-lock.json: {}", e))?;
             serde_json::from_str(&content)
@@ -965,6 +1019,7 @@ impl PackageManager {
         let content = serde_json::to_string_pretty(&lock)
             .map_err(|e| anyhow!("Failed to serialize package-lock.json: {}", e))?;
 
+        check_fs_write_permission(lock_path)?;
         fs::write(lock_path, content)
             .map_err(|e| anyhow!("Failed to write package-lock.json: {}", e))?;
 
@@ -978,6 +1033,7 @@ impl PackageManager {
             return Ok(None);
         }
 
+        check_fs_read_permission(&package_json_path)?;
         let content = fs::read_to_string(&package_json_path)
             .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
 

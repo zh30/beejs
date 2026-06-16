@@ -39,6 +39,16 @@ fn cp_exec_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Process,
+        crate::permissions::PermissionAction::Execute,
+        crate::permissions::ResourceId::Name(_command.clone()),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
     let _options: _ = args.get(1);
     let _callback: _ = args.get(2);
     let child_obj: _ = v8::Object::new(scope);
@@ -71,6 +81,16 @@ fn cp_spawn_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Process,
+        crate::permissions::PermissionAction::Execute,
+        crate::permissions::ResourceId::Name(_command.clone()),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
     let _args_list: v8::Local<v8::Value> = args.get(1);
     let _options: v8::Local<v8::Value> = args.get(2);
     let child_obj: _ = v8::Object::new(scope);
@@ -93,6 +113,16 @@ fn cp_exec_file_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Process,
+        crate::permissions::PermissionAction::Execute,
+        crate::permissions::ResourceId::Name(_file.clone()),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
     let _args_list: v8::Local<v8::Value> = args.get(1);
     let _options: v8::Local<v8::Value> = args.get(2);
     let _callback: v8::Local<v8::Value> = args.get(3);
