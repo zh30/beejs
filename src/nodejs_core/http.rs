@@ -1541,7 +1541,94 @@ pub fn http_res_set_header_callback(
     retval.set(this.into());
 }
 
-/// response.writeHead() 回调 - v0.3.64
+/// response.hasHeader() 回调 - 不区分大小写检查响应头存在性
+pub fn http_res_has_header_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this = args.this();
+    let name = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default()
+        .to_lowercase();
+
+    let mut found = false;
+    let headers_key = v8::String::new(scope, "headers").unwrap();
+    if let Some(headers_val) = this.get(scope, headers_key.into()) {
+        if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
+            let props = headers_obj
+                .get_property_names(scope)
+                .unwrap_or(v8::Array::new(scope, 0));
+            for i in 0..props.length() {
+                if let Some(key_val) = props.get_index(scope, i) {
+                    if let Some(key_str) = key_val.to_string(scope) {
+                        if key_str.to_rust_string_lossy(scope).to_lowercase() == name {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    retval.set(v8::Boolean::new(scope, found).into());
+}
+
+/// response.write() 回调 - 支持字符串和 Uint8Array/Buffer 流式数据追加
+pub fn http_res_write_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this = args.this();
+    let data = args.get(0);
+
+    if !data.is_undefined() && !data.is_null() {
+        let body_key = v8::String::new(scope, "_body").unwrap();
+        let existing_body = this
+            .get(scope, body_key.into())
+            .unwrap_or(v8::undefined(scope).into());
+
+        let existing_rust = if existing_body.is_string() {
+            existing_body
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+
+        let chunk_rust = if data.is_string() {
+            data.to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default()
+        } else if data.is_array_buffer_view() || data.is_uint8_array() {
+            if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(data) {
+                let mut buffer = vec![0u8; view.byte_length()];
+                let _ = view.copy_contents(buffer.as_mut_slice());
+                String::from_utf8_lossy(&buffer).to_string()
+            } else {
+                String::new()
+            }
+        } else {
+            data.to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default()
+        };
+
+        let combined_rust = format!("{}{}", existing_rust, chunk_rust);
+        let combined_v8 = v8::String::new(scope, &combined_rust).unwrap();
+        this.set(scope, body_key.into(), combined_v8.into());
+    }
+
+    retval.set(v8::Boolean::new(scope, true).into());
+}
+
+/// response.writeHead() 回调 - 支持二参数 status/headers 与三参数重载
 pub fn http_res_write_head_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -1553,29 +1640,54 @@ pub fn http_res_write_head_callback(
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 200))
         .value() as i32;
-    let status_message: String = args
-        .get(1)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_else(|| "OK".to_string());
-    let headers: _ = args.get(2);
 
-    // 创建值再设置，避免 borrow checker 问题
+    let arg1 = args.get(1);
+    let (status_message, headers) = if arg1.is_string() {
+        let msg = arg1
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_else(|| "OK".to_string());
+        (msg, args.get(2))
+    } else if arg1.is_object() {
+        ("OK".to_string(), arg1)
+    } else {
+        ("OK".to_string(), args.get(2))
+    };
+
     let status_code_val = v8::Integer::new(scope, status_code);
     let status_msg_val = v8::String::new(scope, &status_message).unwrap();
 
-    // 设置 statusCode
     let status_code_key: _ = v8::String::new(scope, "statusCode").unwrap();
     this.set(scope, status_code_key.into(), status_code_val.into());
 
-    // 设置 statusMessage
     let status_msg_key: _ = v8::String::new(scope, "statusMessage").unwrap();
     this.set(scope, status_msg_key.into(), status_msg_val.into());
 
-    // 设置 headers
     if !headers.is_undefined() && headers.is_object() {
         let headers_key: _ = v8::String::new(scope, "headers").unwrap();
-        this.set(scope, headers_key.into(), headers);
+        let existing_headers = if let Some(h) = this.get(scope, headers_key.into()) {
+            if let Ok(obj) = v8::Local::<v8::Object>::try_from(h) {
+                obj
+            } else {
+                v8::Object::new(scope)
+            }
+        } else {
+            v8::Object::new(scope)
+        };
+
+        if let Ok(new_headers_obj) = v8::Local::<v8::Object>::try_from(headers) {
+            let props = new_headers_obj
+                .get_property_names(scope)
+                .unwrap_or(v8::Array::new(scope, 0));
+            for i in 0..props.length() {
+                if let Some(k) = props.get_index(scope, i) {
+                    if let Some(v) = new_headers_obj.get(scope, k) {
+                        existing_headers.set(scope, k, v);
+                    }
+                }
+            }
+        }
+        this.set(scope, headers_key.into(), existing_headers.into());
     }
 
     retval.set(this.into());
@@ -2370,6 +2482,18 @@ pub fn process_http_request_in_v8(
         remove_header_key.into(),
         remove_header_instance.into(),
     );
+
+    // 设置 hasHeader 方法
+    let has_header_fn = v8::FunctionTemplate::new(scope, http_res_has_header_callback);
+    let has_header_instance = has_header_fn.get_function(scope).unwrap();
+    let has_header_key = v8::String::new(scope, "hasHeader").unwrap();
+    res_obj.set(scope, has_header_key.into(), has_header_instance.into());
+
+    // 设置 write 方法
+    let write_fn = v8::FunctionTemplate::new(scope, http_res_write_callback);
+    let write_instance = write_fn.get_function(scope).unwrap();
+    let write_key = v8::String::new(scope, "write").unwrap();
+    res_obj.set(scope, write_key.into(), write_instance.into());
 
     // 调用 request handler: handler(req, res)
     let this_val = v8::undefined(scope).into();
