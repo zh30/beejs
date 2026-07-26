@@ -1,6 +1,7 @@
 // Stage 43.0: 完整Node.js核心API兼容层
 pub mod buffer;
 pub mod child_process;
+pub mod commonjs_resolver;
 pub mod crypto;
 pub mod dns; // v0.3.67: DNS lookup and resolve API
 pub mod events;

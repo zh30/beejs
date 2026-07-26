@@ -14,7 +14,9 @@ async fn test_async_set_timeout_scheduling() {
 
     // 创建一个延迟 10ms 的定时器
     let id = 1;
-    manager.schedule_timeout(Duration::from_millis(10), id, || {});
+    manager
+        .schedule_timeout(Duration::from_millis(10), id, || {})
+        .unwrap();
 
     assert!(id > 0, "Timer ID should be positive");
 
@@ -33,7 +35,9 @@ async fn test_async_set_interval_scheduling() {
     let manager = AsyncTimerManager::new();
 
     let id = 2;
-    manager.schedule_interval(Duration::from_millis(10), 3, id, || {});
+    manager
+        .schedule_interval(Duration::from_millis(10), 3, id, || {})
+        .unwrap();
 
     assert!(id > 0, "Timer ID should be positive");
 
@@ -56,7 +60,9 @@ async fn test_clear_timeout_cancels() {
 
     // 创建一个延迟 100ms 的定时器
     let id = 3;
-    manager.schedule_timeout(Duration::from_millis(100), id, || {});
+    manager
+        .schedule_timeout(Duration::from_millis(100), id, || {})
+        .unwrap();
 
     // 等待定时器注册完成
     sleep(Duration::from_millis(5)).await;
@@ -76,9 +82,15 @@ async fn test_multiple_timers_scheduling() {
     let id1 = 11;
     let id2 = 12;
     let id3 = 13;
-    manager.schedule_timeout(Duration::from_millis(50), id1, || {});
-    manager.schedule_timeout(Duration::from_millis(10), id2, || {});
-    manager.schedule_timeout(Duration::from_millis(30), id3, || {});
+    manager
+        .schedule_timeout(Duration::from_millis(50), id1, || {})
+        .unwrap();
+    manager
+        .schedule_timeout(Duration::from_millis(10), id2, || {})
+        .unwrap();
+    manager
+        .schedule_timeout(Duration::from_millis(30), id3, || {})
+        .unwrap();
 
     // 验证 ID 递增
     assert!(id1 < id2, "Later timer should have larger ID");
@@ -102,9 +114,15 @@ async fn test_clear_all_timers() {
     let _id1 = 21;
     let _id2 = 22;
     let _id3 = 23;
-    manager.schedule_timeout(Duration::from_millis(50), _id1, || {});
-    manager.schedule_timeout(Duration::from_millis(100), _id2, || {});
-    manager.schedule_interval(Duration::from_millis(25), 5, _id3, || {});
+    manager
+        .schedule_timeout(Duration::from_millis(50), _id1, || {})
+        .unwrap();
+    manager
+        .schedule_timeout(Duration::from_millis(100), _id2, || {})
+        .unwrap();
+    manager
+        .schedule_interval(Duration::from_millis(25), 5, _id3, || {})
+        .unwrap();
 
     // 等待注册完成
     sleep(Duration::from_millis(5)).await;

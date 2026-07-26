@@ -57,12 +57,33 @@ impl TestDiscoverer {
     }
     /// Discover test files in the configured root path
     pub fn discover(&self) -> std::io::Result<DiscoveryResult> {
+        self.discover_with_read_permission(|_| Ok(()))
+    }
+
+    /// Discover test files while checking read access before each directory scan.
+    pub fn discover_with_read_permission<F>(
+        &self,
+        mut check_read: F,
+    ) -> std::io::Result<DiscoveryResult>
+    where
+        F: FnMut(&Path) -> std::io::Result<()>,
+    {
         let mut result = DiscoveryResult::new();
-        self.discover_recursive(&self.config.root_path, &mut result)?;
+        self.discover_recursive(&self.config.root_path, &mut result, &mut check_read)?;
         Ok(result)
     }
+
     /// Recursively discover test files
-    fn discover_recursive(&self, path: &Path, result: &mut DiscoveryResult) -> std::io::Result<()> {
+    fn discover_recursive<F>(
+        &self,
+        path: &Path,
+        result: &mut DiscoveryResult,
+        check_read: &mut F,
+    ) -> std::io::Result<()>
+    where
+        F: FnMut(&Path) -> std::io::Result<()>,
+    {
+        check_read(path)?;
         let entries: _ = fs::read_dir(path)?;
         for entry in entries {
             let entry: _ = entry?;
@@ -73,7 +94,7 @@ impl TestDiscoverer {
             }
             if path.is_dir() {
                 // Recursively search directories (except excluded ones)
-                self.discover_recursive(&path, result)?;
+                self.discover_recursive(&path, result, check_read)?;
             } else if path.is_file() {
                 // Check if file matches test patterns
                 if self.is_test_file(&path) {

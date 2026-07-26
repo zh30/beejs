@@ -57,17 +57,21 @@ fn test_set_timeout_returns_timer_id() {
 fn test_set_timeout_basic_execution() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
-    // For synchronous execution, callback should be called
+    // setTimeout(0) executes in the timer phase after synchronous code.
     let code = r#"
-        let executed = false;
-        setTimeout(function() { executed = true; }, 0);
-        executed;
+        new Promise((resolve) => {
+            let executed = false;
+            setTimeout(function() {
+                executed = true;
+                resolve(executed);
+            }, 0);
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
         result.trim(),
         "true",
-        "setTimeout callback should execute synchronously with delay 0"
+        "setTimeout callback should execute with delay 0"
     );
     cleanup_timers();
 }
@@ -96,14 +100,16 @@ fn test_set_timeout_with_arguments() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let result = null;
-        setTimeout(function(a, b, c) { result = a + b + c; }, 0, 1, 2, 3);
-        result === 6;
+        new Promise((resolve) => {
+            setTimeout(function(a, b, c) {
+                resolve(a + b + c);
+            }, 0, 1, 2, 3);
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
         result.trim(),
-        "true",
+        "6",
         "setTimeout should pass arguments to callback"
     );
     cleanup_timers();
@@ -285,15 +291,19 @@ fn test_timer_zero_delay() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let executed = false;
-        setTimeout(function() { executed = true; }, 0);
-        executed;
+        new Promise((resolve) => {
+            let executed = false;
+            setTimeout(function() {
+                executed = true;
+                resolve(executed);
+            }, 0);
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
         result.trim(),
         "true",
-        "Timer with 0ms delay should execute synchronously"
+        "Timer with 0ms delay should execute in the timer phase"
     );
     cleanup_timers();
 }

@@ -3,6 +3,7 @@
 
 #[cfg(test)]
 mod performance_api_tests {
+    use serial_test::serial;
     use std::path::PathBuf;
     use std::process::Command;
 
@@ -48,6 +49,36 @@ mod performance_api_tests {
         assert!(
             stdout.contains("true"),
             "performance.now should be monotonic"
+        );
+    }
+
+    #[test]
+    fn test_performance_now_is_relative_to_time_origin() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const origin = performance.timeOrigin;
+                const first = performance.now();
+                const second = performance.now();
+                const wallClockDelta = Math.abs(Date.now() - (origin + second));
+                console.log(
+                    origin > 1700000000000,
+                    first >= 0,
+                    first < 10000,
+                    second >= first,
+                    wallClockDelta < 10000
+                );
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stdout.contains("true true true true true"),
+            "performance.now should be timeOrigin-relative; stdout: {stdout}; stderr: {stderr}"
         );
     }
 
@@ -198,14 +229,14 @@ mod performance_api_tests {
     #[test]
     fn test_performance_measure_without_marks() {
         let output = Command::new(beejs_path())
-            .args(["eval", "performance.measure('test'); const entries = performance.getEntriesByName('test'); console.log(entries.length, entries[0]?.startTime > 0)"])
+            .args(["eval", "performance.measure('test'); const entries = performance.getEntriesByName('test'); console.log(entries.length, entries[0]?.startTime === 0, entries[0]?.duration >= 0)"])
             .output()
             .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
-            stdout.contains("1 true"),
-            "measure should work without explicit marks (uses timeOrigin)"
+            stdout.contains("1 true true"),
+            "measure should work without explicit marks from the performance timeline origin"
         );
     }
 
@@ -246,5 +277,35 @@ mod performance_api_tests {
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("ms"), "Should measure AI workload timing");
+    }
+
+    #[test]
+    #[serial]
+    fn test_web_api_init_uses_real_performance_timeline() {
+        beejs::initialize_v8().expect("V8 should initialize");
+
+        let mut isolate = rusty_v8::Isolate::new(Default::default());
+        let scope = &mut rusty_v8::HandleScope::new(&mut isolate);
+        let context = rusty_v8::Context::new(scope);
+        let scope = &mut rusty_v8::ContextScope::new(scope, context);
+
+        beejs::web_api::init_web_api(scope, &context).expect("web APIs should initialize");
+
+        let source = rusty_v8::String::new(
+            scope,
+            r#"
+            performance.mark('web-init-mark');
+            const entries = performance.getEntriesByName('web-init-mark');
+            `${entries.length}:${entries[0]?.entryType}:${entries[0]?.duration}`;
+        "#,
+        )
+        .unwrap();
+        let script = rusty_v8::Script::compile(scope, source, None).unwrap();
+        let result = script.run(scope).unwrap().to_rust_string_lossy(scope);
+
+        assert_eq!(
+            result, "1:mark:0",
+            "web_api::init_web_api should not install the old empty performance timeline"
+        );
     }
 }

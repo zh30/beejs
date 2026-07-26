@@ -222,6 +222,111 @@ mod message_channel_tests {
     }
 
     #[test]
+    fn test_message_port_object_payload_is_structured_cloned() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const ch = new MessageChannel();
+                const payload = {
+                    nested: { value: 1 },
+                    list: ['sender'],
+                    bytes: new Uint8Array([3, 4, 5])
+                };
+                let received = null;
+                ch.port2.onmessage = function(e) {
+                    received = e.data;
+                    received.nested.value = 99;
+                    received.list.push('receiver');
+                    received.bytes[0] = 42;
+                };
+                ch.port2.start();
+                ch.port1.postMessage(payload);
+                console.log(
+                    received !== null &&
+                    received !== payload &&
+                    received.nested !== payload.nested &&
+                    received.list !== payload.list &&
+                    received.bytes !== payload.bytes &&
+                    payload.nested.value === 1 &&
+                    payload.list.length === 1 &&
+                    payload.bytes[0] === 3
+                );
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "MessagePort should deliver structured-cloned payloads. Got: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_message_port_uncloneable_payload_throws_without_dispatch() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const ch = new MessageChannel();
+                let delivered = false;
+                let threwDataCloneError = false;
+                ch.port2.onmessage = function() {
+                    delivered = true;
+                };
+                ch.port2.start();
+                try {
+                    ch.port1.postMessage({ fn: function nope() {} });
+                } catch (error) {
+                    threwDataCloneError = error.name === 'DataCloneError' ||
+                        String(error.message).includes('Function cannot be cloned');
+                }
+                console.log(threwDataCloneError && delivered === false);
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "Uncloneable MessagePort payloads should throw before dispatch. Got: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_close_receiving_port_prevents_delivery_from_peer() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const ch = new MessageChannel();
+                let received = false;
+                ch.port1.onmessage = function() {
+                    received = true;
+                };
+                ch.port1.start();
+                ch.port1.close();
+                ch.port2.postMessage('after receiver close');
+                console.log(received === false && ch.port1._pendingMessages === 0);
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "Closing a receiving MessagePort should prevent peer delivery. Got: {}",
+            stdout
+        );
+    }
+
+    #[test]
     fn test_message_event_properties() {
         let output = Command::new(beejs_path())
             .args([
@@ -274,6 +379,35 @@ mod message_channel_tests {
         assert!(
             stdout.contains("2:first,second"),
             "Queued messages should be delivered after start()"
+        );
+    }
+
+    #[test]
+    fn test_start_is_idempotent_after_immediate_delivery() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const ch = new MessageChannel();
+                const received = [];
+                ch.port2.onmessage = function(e) {
+                    received.push(e.data);
+                };
+                ch.port2.start();
+                ch.port1.postMessage('once');
+                ch.port2.start();
+                console.log(received.join(',') + ':' + ch.port2._pendingMessages);
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert_eq!(
+            stdout.trim(),
+            "once:0",
+            "Calling start() again should not redeliver already dispatched messages. Got: {}",
+            stdout
         );
     }
 }

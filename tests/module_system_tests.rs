@@ -2,6 +2,7 @@
 // v0.3.0: require(), module, exports implementation
 
 use serial_test::serial;
+use tempfile::tempdir;
 
 #[test]
 #[serial]
@@ -81,6 +82,29 @@ fn test_module_filename() {
 
 #[test]
 #[serial]
+fn test_require_main_equals_module_in_entry_script() {
+    let dir = tempdir().expect("failed to create tempdir");
+    let entry = dir.path().join("entry.js");
+    std::fs::write(&entry, "").expect("failed to write entry");
+
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    runtime.set_main_module_path(&entry);
+    let code = r#"
+        require.main === module &&
+          typeof require.main.filename === "string" &&
+          require.main.filename.endsWith("entry.js");
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(
+        result.trim(),
+        "true",
+        "require.main should point at the entry module"
+    );
+}
+
+#[test]
+#[serial]
 fn test_module_parent() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
@@ -126,6 +150,33 @@ fn test_require_builtin_module_process() {
         result.trim(),
         "object",
         "require('process') should return an object"
+    );
+}
+
+#[test]
+#[serial]
+fn test_require_process_returns_global_process_object() {
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const bare = require('process');
+        const prefixed = require('node:process');
+        [
+            bare === process,
+            prefixed === process,
+            bare === prefixed,
+            typeof bare.cwd,
+            typeof bare.nextTick,
+            typeof bare.memoryUsage,
+            typeof bare.env,
+            bare.version === process.version
+        ].join(':');
+    "#;
+    let result = runtime.execute_code(code).expect("Execution failed");
+    assert_eq!(
+        result.trim(),
+        "true:true:true:function:function:function:object:true",
+        "require('process') and require('node:process') should expose the global process object"
     );
 }
 

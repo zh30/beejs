@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::event_loop::get_async_timer_manager;
+use crate::event_loop::{get_async_timer_manager, TimerScheduleError};
 
 /// Timer type enumeration
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -236,12 +236,32 @@ pub fn remove_timer_metadata(timer_id: u64) {
     metadata.remove(&timer_id);
 }
 
+fn throw_timer_schedule_error(scope: &mut v8::HandleScope, err: TimerScheduleError) {
+    let message = v8::String::new(scope, &format!("timer scheduling failed: {}", err)).unwrap();
+    let error = v8::Exception::error(scope, message);
+    scope.throw_exception(error.into());
+}
+
+fn cleanup_scheduled_timer_state(timer_id: u64) {
+    remove_timer_metadata(timer_id);
+    let _ = remove_timer_callback(timer_id);
+}
+
 /// Remove timer callback from registry
 pub fn remove_timer_callback(
     timer_id: u64,
 ) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
     let mut storage = TIMER_CALLBACKS.lock().unwrap();
     storage.remove(timer_id)
+}
+
+fn clone_timer_callback(
+    timer_id: u64,
+) -> Option<(v8::Global<v8::Function>, Vec<v8::Global<v8::Value>>)> {
+    let storage = TIMER_CALLBACKS.lock().unwrap();
+    let callback = storage.callbacks.get(&timer_id)?.clone();
+    let args = storage.args.get(&timer_id).cloned().unwrap_or_default();
+    Some((callback, args))
 }
 
 /// v0.3.271: Create a Timer object with ref/unref/refresh methods
@@ -335,11 +355,14 @@ fn create_timer_object<'a>(
             if let Some(info) = metadata.get_mut(&timer_id_val) {
                 let effective_delay = if info.delay == 0 { 1 } else { info.delay };
                 drop(metadata);
-                let _ = get_async_timer_manager().schedule_timeout(
+                if let Err(err) = get_async_timer_manager().try_schedule_timeout(
                     Duration::from_millis(effective_delay),
                     timer_id_val,
                     || {},
-                );
+                ) {
+                    throw_timer_schedule_error(scope, err);
+                    return;
+                }
             }
 
             retval.set(this.into());
@@ -435,11 +458,14 @@ fn create_timer_object<'a>(
                 if type_str != "Immediate" && new_delay > 0 {
                     // Reschedule with new delay
                     let effective_delay = if new_delay == 0 { 1 } else { new_delay };
-                    let _ = get_async_timer_manager().schedule_timeout(
+                    if let Err(err) = get_async_timer_manager().try_schedule_timeout(
                         Duration::from_millis(effective_delay),
                         timer_id_val,
                         || {},
-                    );
+                    ) {
+                        throw_timer_schedule_error(scope, err);
+                        return;
+                    }
                 }
 
                 // Return timer object for chaining
@@ -529,12 +555,14 @@ pub fn setup_timers_api(
 
             if delay == 0 {
                 get_async_timer_manager().mark_timer_fired(timer_id);
-            } else {
-                get_async_timer_manager().schedule_timeout(
-                    Duration::from_millis(delay),
-                    timer_id,
-                    || {},
-                );
+            } else if let Err(err) = get_async_timer_manager().try_schedule_timeout(
+                Duration::from_millis(delay),
+                timer_id,
+                || {},
+            ) {
+                cleanup_scheduled_timer_state(timer_id);
+                throw_timer_schedule_error(scope, err);
+                return;
             }
 
             // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
@@ -572,59 +600,50 @@ pub fn setup_timers_api(
                 .to_integer(scope)
                 .map(|i| i.value().max(0) as u64)
                 .unwrap_or(0);
+            let effective_delay = delay.max(1);
 
             // Get timer ID
             let timer_id = get_next_timer_id();
 
-            // v0.3.249: For delay > 0, store callback in global registry
-            if delay > 0 {
-                // Collect arguments for the callback
-                let callback_args: Vec<v8::Local<v8::Value>> =
-                    (2..args.length()).map(|i| args.get(i)).collect();
+            // Collect arguments for the callback
+            let callback_args: Vec<v8::Local<v8::Value>> =
+                (2..args.length()).map(|i| args.get(i)).collect();
 
-                // Convert callback to Global<Function> and store with arguments
-                let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
-                let callback_global = v8::Global::new(scope, callback_fn);
-                let args_global: Vec<v8::Global<v8::Value>> = callback_args
-                    .iter()
-                    .map(|v| v8::Global::new(scope, v.clone()))
-                    .collect();
+            // Convert callback to Global<Function> and store with arguments
+            let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+            let callback_global = v8::Global::new(scope, callback_fn);
+            let args_global: Vec<v8::Global<v8::Value>> = callback_args
+                .iter()
+                .map(|v| v8::Global::new(scope, v.clone()))
+                .collect();
 
-                // Store metadata
-                let mut metadata = TIMER_METADATA.lock().unwrap();
-                metadata.insert(
-                    timer_id,
-                    TimerMetadata {
-                        timer_type: TimerType::Interval,
-                        delay,
-                        is_unrefed: false,
-                        epoch: get_timer_epoch(),
-                    },
-                );
-                drop(metadata);
+            // Store metadata. 0ms intervals use a 1ms effective delay so the
+            // event-loop drain limit can still bound un-cleared intervals.
+            let mut metadata = TIMER_METADATA.lock().unwrap();
+            metadata.insert(
+                timer_id,
+                TimerMetadata {
+                    timer_type: TimerType::Interval,
+                    delay: effective_delay,
+                    is_unrefed: false,
+                    epoch: get_timer_epoch(),
+                },
+            );
+            drop(metadata);
 
-                // Store callback and args in global registry
-                store_timer_callback(timer_id, callback_global, args_global);
+            // Store callback and args in global registry
+            store_timer_callback(timer_id, callback_global, args_global);
 
-                // Schedule with AsyncTimerManager
-                get_async_timer_manager().schedule_interval(
-                    Duration::from_millis(delay),
-                    0,
-                    timer_id,
-                    || {},
-                );
-            } else {
-                // Store metadata for delay = 0 (edge case - should execute immediately)
-                let mut metadata = TIMER_METADATA.lock().unwrap();
-                metadata.insert(
-                    timer_id,
-                    TimerMetadata {
-                        timer_type: TimerType::Interval,
-                        delay,
-                        is_unrefed: false,
-                        epoch: get_timer_epoch(),
-                    },
-                );
+            // Schedule with AsyncTimerManager
+            if let Err(err) = get_async_timer_manager().try_schedule_interval(
+                Duration::from_millis(effective_delay),
+                0,
+                timer_id,
+                || {},
+            ) {
+                cleanup_scheduled_timer_state(timer_id);
+                throw_timer_schedule_error(scope, err);
+                return;
             }
 
             // v0.3.271: Return Timer object instead of timer ID for Node.js compatibility
@@ -734,6 +753,9 @@ pub fn setup_timers_api(
 
                 // Cancel in AsyncTimerManager
                 let _ = get_async_timer_manager().cancel(timer_id);
+
+                // Remove stored timeout/interval callback so fired-but-cleared IDs cannot run.
+                let _ = remove_timer_callback(timer_id);
 
                 // v0.3.250: Also remove from immediate callbacks if it's a setImmediate
                 let _ = remove_immediate_callback(timer_id);
@@ -938,7 +960,18 @@ pub fn take_timer_callback(
 /// v0.3.249: Execute a fired timer callback
 /// Must be called from V8 main thread with valid isolate scope
 pub fn execute_timer_callback(scope: &mut v8::HandleScope, timer_id: u64) -> bool {
-    if let Some((callback, args)) = take_timer_callback(timer_id) {
+    let timer_type = {
+        let metadata = TIMER_METADATA.lock().unwrap();
+        metadata.get(&timer_id).map(|meta| meta.timer_type)
+    };
+
+    let callback_entry = if matches!(timer_type, Some(TimerType::Interval)) {
+        clone_timer_callback(timer_id)
+    } else {
+        take_timer_callback(timer_id)
+    };
+
+    if let Some((callback, args)) = callback_entry {
         let callback = v8::Local::<v8::Function>::new(scope, callback);
 
         // Convert stored args back to Local
@@ -973,6 +1006,15 @@ pub fn execute_fired_timers(scope: &mut v8::HandleScope) {
     let fired_timers = timer_manager.poll_fired_timers();
 
     for timer_id in fired_timers {
+        let timer_is_active = {
+            let metadata = TIMER_METADATA.lock().unwrap();
+            metadata.contains_key(&timer_id)
+        };
+        if !timer_is_active {
+            let _ = remove_timer_callback(timer_id);
+            continue;
+        }
+
         // Skip if timer callback doesn't exist (was already executed or cleared)
         let callback_exists = {
             let storage = TIMER_CALLBACKS.lock().unwrap();
@@ -1043,6 +1085,18 @@ pub fn has_pending_drainable_timeout_timers(max_delay_ms: u64) -> bool {
             && !meta.is_unrefed
             && meta.delay <= max_delay_ms
             && matches!(meta.timer_type, TimerType::Timeout)
+    })
+}
+
+/// Check if any short, ref'ed timeout or interval should keep the current eval alive.
+pub fn has_pending_drainable_timers(max_delay_ms: u64) -> bool {
+    let current_epoch = get_timer_epoch();
+    let metadata = TIMER_METADATA.lock().unwrap();
+    metadata.values().any(|meta| {
+        meta.epoch == current_epoch
+            && !meta.is_unrefed
+            && meta.delay <= max_delay_ms
+            && matches!(meta.timer_type, TimerType::Timeout | TimerType::Interval)
     })
 }
 

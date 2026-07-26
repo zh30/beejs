@@ -52,23 +52,14 @@ pub fn setup_notification_api(
     // Notification.permission (static property)
     let permission_key = v8::String::new(scope, "permission").unwrap();
     let permission_val = v8::String::new(scope, "default").unwrap();
-    global.set(scope, permission_key.into(), permission_val.into());
+    notification_constructor.set(scope, permission_key.into(), permission_val.into());
 
     // Notification.requestPermission (static method)
     let request_perm_fn =
         v8::FunctionTemplate::new(scope, notification_request_permission_callback);
     let request_perm_key = v8::String::new(scope, "requestPermission").unwrap();
     let request_perm_func = request_perm_fn.get_function(scope).unwrap();
-    global.set(scope, request_perm_key.into(), request_perm_func.into());
-
-    // Notification.permission property on constructor
-    let constructor_permission_key = v8::String::new(scope, "permission").unwrap();
-    let constructor_permission = v8::String::new(scope, "default").unwrap();
-    global.set(
-        scope,
-        constructor_permission_key.into(),
-        constructor_permission.into(),
-    );
+    notification_constructor.set(scope, request_perm_key.into(), request_perm_func.into());
 
     Ok(())
 }
@@ -76,149 +67,12 @@ pub fn setup_notification_api(
 /// Notification constructor callback
 fn notification_constructor_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    // Get title from first argument
-    let title = if args.length() > 0 {
-        args.get(0)
-            .to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "").unwrap())
-            .to_rust_string_lossy(scope)
-    } else {
-        "Notification".to_string()
-    };
-
-    // Get options from second argument
-    let mut body = String::new();
-    let mut icon = None;
-    let mut tag = None;
-    let mut data = None;
-
-    if args.length() > 1 {
-        let options = args.get(1);
-        if let Some(options_obj) = options.to_object(scope) {
-            // body
-            let body_key = v8::String::new(scope, "body").unwrap();
-            if let Some(body_val) = options_obj
-                .get(scope, body_key.into())
-                .and_then(|v| v.to_string(scope))
-            {
-                body = body_val.to_rust_string_lossy(scope);
-            }
-
-            // icon - store the string directly
-            let icon_key = v8::String::new(scope, "icon").unwrap();
-            if let Some(icon_val) = options_obj
-                .get(scope, icon_key.into())
-                .and_then(|v| v.to_string(scope))
-            {
-                icon = Some(icon_val.to_rust_string_lossy(scope));
-            }
-
-            // tag - store the string directly
-            let tag_key = v8::String::new(scope, "tag").unwrap();
-            if let Some(tag_val) = options_obj
-                .get(scope, tag_key.into())
-                .and_then(|v| v.to_string(scope))
-            {
-                tag = Some(tag_val.to_rust_string_lossy(scope));
-            }
-
-            // data - store the string directly
-            let data_key = v8::String::new(scope, "data").unwrap();
-            if let Some(data_val) = options_obj
-                .get(scope, data_key.into())
-                .and_then(|v| v.to_string(scope))
-            {
-                data = Some(data_val.to_rust_string_lossy(scope));
-            }
-        }
-    }
-
-    // Create notification object
-    let notification_obj = v8::Object::new(scope);
-
-    // Store undefined in a local to avoid multiple mutable borrows
-    let undefined_val: v8::Local<v8::Value> = v8::undefined(scope).into();
-
-    // title property (read-only)
-    let title_key = v8::String::new(scope, "title").unwrap();
-    let title_val = v8::String::new(scope, &title).unwrap();
-    notification_obj.set(scope, title_key.into(), title_val.into());
-
-    // body property
-    let body_key = v8::String::new(scope, "body").unwrap();
-    let body_val = v8::String::new(scope, &body).unwrap();
-    notification_obj.set(scope, body_key.into(), body_val.into());
-
-    // icon property
-    let icon_key = v8::String::new(scope, "icon").unwrap();
-    if let Some(icon_str) = &icon {
-        let icon_val = v8::String::new(scope, icon_str).unwrap();
-        notification_obj.set(scope, icon_key.into(), icon_val.into());
-    } else {
-        notification_obj.set(scope, icon_key.into(), undefined_val);
-    }
-
-    // tag property
-    let tag_key = v8::String::new(scope, "tag").unwrap();
-    if let Some(tag_str) = &tag {
-        let tag_val = v8::String::new(scope, tag_str).unwrap();
-        notification_obj.set(scope, tag_key.into(), tag_val.into());
-    } else {
-        notification_obj.set(scope, tag_key.into(), undefined_val);
-    }
-
-    // data property
-    let data_key = v8::String::new(scope, "data").unwrap();
-    if let Some(data_str) = &data {
-        let data_val = v8::String::new(scope, data_str).unwrap();
-        notification_obj.set(scope, data_key.into(), data_val.into());
-    } else {
-        notification_obj.set(scope, data_key.into(), undefined_val);
-    }
-
-    // onclick event handler property
-    let onclick_key = v8::String::new(scope, "onclick").unwrap();
-    notification_obj.set(scope, onclick_key.into(), undefined_val);
-
-    // onshow event handler property
-    let onshow_key = v8::String::new(scope, "onshow").unwrap();
-    notification_obj.set(scope, onshow_key.into(), undefined_val);
-
-    // onclose event handler property
-    let onclose_key = v8::String::new(scope, "onclose").unwrap();
-    notification_obj.set(scope, onclose_key.into(), undefined_val);
-
-    // onerror event handler property
-    let onerror_key = v8::String::new(scope, "onerror").unwrap();
-    notification_obj.set(scope, onerror_key.into(), undefined_val);
-
-    // close() method
-    let close_fn = v8::FunctionTemplate::new(scope, notification_close_callback);
-    let close_key = v8::String::new(scope, "close").unwrap();
-    let close_func = close_fn.get_function(scope).unwrap();
-    notification_obj.set(scope, close_key.into(), close_func.into());
-
-    // Return the basic object
-    rv.set(notification_obj.into());
-
-    // Log for debugging
-    eprintln!(
-        "[Notification] Created: title='{}', body='{}', icon={:?}, tag={:?}",
-        title, body, icon, tag
-    );
-}
-
-/// Notification.close() callback
-fn notification_close_callback(
-    scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    // Close the notification
-    eprintln!("[Notification.close] Notification closed");
+    let message = v8::String::new(scope, "Notification permission is not granted").unwrap();
+    let error = v8::Exception::type_error(scope, message);
+    scope.throw_exception(error);
     rv.set(v8::undefined(scope).into());
 }
 
@@ -240,23 +94,9 @@ fn notification_request_permission_callback(
     let promise = resolver.get_promise(scope);
     rv.set(promise.into());
 
-    // Update permission to "granted" (for demo purposes)
-    let permission = "granted";
-
-    // Get context and global from scope
-    let context = scope.get_current_context();
-    let global = context.global(scope);
-
-    // Update global permission property
-    let permission_key = v8::String::new(scope, "permission").unwrap();
-    let permission_val = v8::String::new(scope, permission).unwrap();
-    global.set(scope, permission_key.into(), permission_val.into());
-
-    // Resolve the promise
+    let permission = "default";
     let permission_str = v8::String::new(scope, permission).unwrap();
     resolver.resolve(scope, permission_str.into());
-
-    eprintln!("[Notification.requestPermission] Permission granted");
 }
 
 #[cfg(test)]

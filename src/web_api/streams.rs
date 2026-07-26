@@ -9,6 +9,34 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 
+fn get_bool_property(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    name: &str,
+) -> bool {
+    let key = v8::String::new(scope, name).unwrap();
+    object
+        .get(scope, key.into())
+        .is_some_and(|value| value.is_true())
+}
+
+fn set_bool_property(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    name: &str,
+    value: bool,
+) {
+    let key = v8::String::new(scope, name).unwrap();
+    let bool_value: v8::Local<v8::Value> = v8::Boolean::new(scope, value).into();
+    object.set(scope, key.into(), bool_value);
+}
+
+fn throw_type_error(scope: &mut v8::HandleScope, message: &str) {
+    let message = v8::String::new(scope, message).unwrap();
+    let error = v8::Exception::type_error(scope, message);
+    scope.throw_exception(error);
+}
+
 // ============================================================
 // ReadableStream Implementation
 // ============================================================
@@ -147,12 +175,19 @@ fn readable_stream_constructor(
         |_scope: &mut v8::HandleScope,
          args: v8::FunctionCallbackArguments,
          mut retval: v8::ReturnValue| {
+            let stream_this = args.this();
+            if get_bool_property(_scope, stream_this, "locked") {
+                throw_type_error(_scope, "ReadableStream is locked");
+                return;
+            }
+            set_bool_property(_scope, stream_this, "locked", true);
+
             let reader: v8::Local<v8::Object> = v8::Object::new(_scope);
 
             // Store stream reference on reader object
-            let stream_this = args.this();
             let stream_key = v8::String::new(_scope, "_stream").unwrap();
             reader.set(_scope, stream_key.into(), stream_this.into());
+            set_bool_property(_scope, reader, "_released", false);
 
             // v0.3.294: Setup read() method - returns Promise<{done, value}>
             // Supports BYOB (Bring Your Own Buffer) when a TypedArray view is passed
@@ -404,19 +439,21 @@ fn readable_stream_constructor(
                 |_scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  _r: v8::ReturnValue| {
-                    // Release lock - reset read index
                     let reader_this = args.this();
+                    if get_bool_property(_scope, reader_this, "_released") {
+                        return;
+                    }
+
                     let stream_key = v8::String::new(_scope, "_stream").unwrap();
-                    let idx_key = v8::String::new(_scope, "_readIndex").unwrap();
-                    let zero_val: v8::Local<v8::Value> = v8::Integer::new(_scope, 0).into();
                     if let Some(stream_val) = reader_this
                         .get(_scope, stream_key.into())
                         .filter(|s| s.is_object())
                     {
                         if let Ok(stream) = v8::Local::<v8::Object>::try_from(stream_val) {
-                            stream.set(_scope, idx_key.into(), zero_val);
+                            set_bool_property(_scope, stream, "locked", false);
                         }
                     }
+                    set_bool_property(_scope, reader_this, "_released", true);
                 },
             )
             .unwrap();
@@ -817,12 +854,19 @@ fn writable_stream_constructor(
         |_scope: &mut v8::HandleScope,
          _args: v8::FunctionCallbackArguments,
          mut retval: v8::ReturnValue| {
+            let writable_this = _args.this();
+            if get_bool_property(_scope, writable_this, "locked") {
+                throw_type_error(_scope, "WritableStream is locked");
+                return;
+            }
+            set_bool_property(_scope, writable_this, "locked", true);
+
             let writer: v8::Local<v8::Object> = v8::Object::new(_scope);
 
             // Store reference to writable stream on writer
-            let writable_this = _args.this();
             let writable_key = v8::String::new(_scope, "_writable").unwrap();
             writer.set(_scope, writable_key.into(), writable_this.into());
+            set_bool_property(_scope, writer, "_released", false);
 
             // v0.3.292: Setup write() method - adds chunk to queue and calls write callback
             let write_fn = v8::FunctionTemplate::new(
@@ -1063,16 +1107,42 @@ fn writable_stream_constructor(
             let abort_key: v8::Local<v8::String> = v8::String::new(_scope, "abort").unwrap();
             let ready_key: v8::Local<v8::String> = v8::String::new(_scope, "ready").unwrap();
             let closed_key: v8::Local<v8::String> = v8::String::new(_scope, "closed").unwrap();
+            let release_key: v8::Local<v8::String> =
+                v8::String::new(_scope, "releaseLock").unwrap();
 
             let write_func: v8::Local<v8::Function> = write_fn.get_function(_scope).unwrap();
             let close_func: v8::Local<v8::Function> = close_fn.get_function(_scope).unwrap();
             let abort_func: v8::Local<v8::Function> = abort_fn.get_function(_scope).unwrap();
+            let release_func = v8::Function::new(
+                _scope,
+                |_scope: &mut v8::HandleScope,
+                 args: v8::FunctionCallbackArguments,
+                 _rv: v8::ReturnValue| {
+                    let writer_this = args.this();
+                    if get_bool_property(_scope, writer_this, "_released") {
+                        return;
+                    }
+
+                    let writable_key = v8::String::new(_scope, "_writable").unwrap();
+                    if let Some(writable_val) = writer_this
+                        .get(_scope, writable_key.into())
+                        .filter(|s| s.is_object())
+                    {
+                        if let Ok(writable) = v8::Local::<v8::Object>::try_from(writable_val) {
+                            set_bool_property(_scope, writable, "locked", false);
+                        }
+                    }
+                    set_bool_property(_scope, writer_this, "_released", true);
+                },
+            )
+            .unwrap();
 
             writer.set(_scope, write_key.into(), write_func.into());
             writer.set(_scope, close_key.into(), close_func.into());
             writer.set(_scope, abort_key.into(), abort_func.into());
             writer.set(_scope, ready_key.into(), ready_promise_val);
             writer.set(_scope, closed_key.into(), closed_promise_val);
+            writer.set(_scope, release_key.into(), release_func.into());
 
             // Add desiredSize property
             let desired_size_key: v8::Local<v8::String> =

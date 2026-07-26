@@ -67,8 +67,6 @@ mod web_streams_api_tests {
 
     #[test]
     fn test_readable_stream_locked_after_get_reader() {
-        // Note: locked property remains false in basic scaffold implementation
-        // Full implementation would update locked state on getReader() call
         let output = Command::new(beejs_path())
             .args([
                 "eval",
@@ -78,10 +76,73 @@ mod web_streams_api_tests {
             .expect("Failed to run bee");
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        // Basic implementation: locked stays false
+        assert!(stdout.contains("true"), "Stream should be locked");
+    }
+
+    #[test]
+    fn test_readable_stream_rejects_second_reader_until_release() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const s = new ReadableStream();
+                const reader1 = s.getReader();
+                let threwWhileLocked = false;
+                try {
+                    s.getReader();
+                } catch (error) {
+                    threwWhileLocked = error instanceof TypeError &&
+                        String(error.message).includes('locked');
+                }
+                reader1.releaseLock();
+                const unlockedAfterRelease = s.locked === false;
+                const reader2 = s.getReader();
+                console.log(threwWhileLocked && unlockedAfterRelease && s.locked === true && typeof reader2.read === 'function');
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
-            stdout.contains("false"),
-            "Stream locked state (basic implementation)"
+            stdout.contains("true"),
+            "ReadableStream should reject a second reader until releaseLock. Got: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_readable_stream_release_lock_does_not_rewind_queue() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue('one');
+                        controller.enqueue('two');
+                        controller.close();
+                    }
+                });
+                const seen = [];
+                const reader1 = stream.getReader();
+                reader1.read();
+                const afterFirstRead = stream._readIndex;
+                reader1.releaseLock();
+                const afterRelease = stream._readIndex;
+                const reader2 = stream.getReader();
+                reader2.read();
+                console.log(afterFirstRead === 1 && afterRelease === 1 && stream._readIndex === 2);
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "releaseLock should not rewind the stream queue. Got: {}",
+            stdout
         );
     }
 
@@ -138,6 +199,38 @@ mod web_streams_api_tests {
         assert!(
             stdout.contains("false"),
             "New WritableStream should be unlocked"
+        );
+    }
+
+    #[test]
+    fn test_writable_stream_rejects_second_writer_until_release() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const s = new WritableStream();
+                const writer1 = s.getWriter();
+                let threwWhileLocked = false;
+                try {
+                    s.getWriter();
+                } catch (error) {
+                    threwWhileLocked = error instanceof TypeError &&
+                        String(error.message).includes('locked');
+                }
+                writer1.releaseLock();
+                const unlockedAfterRelease = s.locked === false;
+                const writer2 = s.getWriter();
+                console.log(threwWhileLocked && unlockedAfterRelease && s.locked === true && typeof writer2.write === 'function');
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "WritableStream should reject a second writer until releaseLock. Got: {}",
+            stdout
         );
     }
 
@@ -226,8 +319,8 @@ mod web_streams_api_tests {
                     }
                 });
                 const reader = stream.getReader();
-                reader.read().then(r => { received = r.value; });
-                received
+                reader.read();
+                stream._queue.length === 2 && stream._queue[0] === 'hello' && stream._queue[1] === 'world' && stream._readIndex === 1
             "#,
             ])
             .output()
@@ -235,8 +328,9 @@ mod web_streams_api_tests {
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
-            stdout.contains("hello") || stdout.contains("world"),
-            "Should receive enqueued data"
+            stdout.contains("true"),
+            "Should enqueue data and advance read index once. Got: {}",
+            stdout
         );
     }
 

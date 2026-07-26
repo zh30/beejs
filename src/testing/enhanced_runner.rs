@@ -61,6 +61,14 @@ impl TestFilter {
         self.exclude_patterns.push(pattern);
         self
     }
+
+    fn pattern_matches(pattern: &str, test_name: &str, suite_name: &str) -> bool {
+        match regex::Regex::new(pattern) {
+            Ok(regex) => regex.is_match(test_name) || regex.is_match(suite_name),
+            Err(_) => test_name.contains(pattern) || suite_name.contains(pattern),
+        }
+    }
+
     /// Check if a test matches this filter
     pub fn matches(&self, test_name: &str, suite_name: &str) -> bool {
         // If only_tests is set, only run tests that match include_patterns
@@ -68,28 +76,28 @@ impl TestFilter {
             return self
                 .include_patterns
                 .iter()
-                .any(|p| test_name.contains(p) || suite_name.contains(p));
+                .any(|p| Self::pattern_matches(p, test_name, suite_name));
         }
         // If skip_tests is set, exclude tests that match exclude_patterns
         if self.skip_tests && !self.exclude_patterns.is_empty() {
             return !self
                 .exclude_patterns
                 .iter()
-                .any(|p| test_name.contains(p) || suite_name.contains(p));
+                .any(|p| Self::pattern_matches(p, test_name, suite_name));
         }
         // If include_patterns is set, only run tests that match
         if !self.include_patterns.is_empty() {
             return self
                 .include_patterns
                 .iter()
-                .any(|p| test_name.contains(p) || suite_name.contains(p));
+                .any(|p| Self::pattern_matches(p, test_name, suite_name));
         }
         // If exclude_patterns is set, exclude matching tests
         if !self.exclude_patterns.is_empty() {
             return !self
                 .exclude_patterns
                 .iter()
-                .any(|p| test_name.contains(p) || suite_name.contains(p));
+                .any(|p| Self::pattern_matches(p, test_name, suite_name));
         }
         true
     }
@@ -339,18 +347,16 @@ impl EnhancedRunner {
         } else {
             self.config.timeout_config.default_timeout
         };
-        // Execute test with timeout
-        match self.timeout_handler.run_async_with_timeout(timeout, || {
-            // TODO: Execute actual test using V8
-            // For now, simulate test execution
-        }) {
-            Ok(_) => {
-                result.passed = true;
-            }
-            Err(err) => {
-                result.passed = false;
-                result.error = Some(err.to_string());
-            }
+        let timeout_result = self.timeout_handler.run_async_with_timeout(timeout, || {});
+        if let Err(err) = timeout_result {
+            result.passed = false;
+            result.error = Some(err.to_string());
+        } else {
+            result.passed = false;
+            result.error = Some(
+                "enhanced V8 test execution is not implemented; refusing to report an unexecuted test as passed"
+                    .to_string(),
+            );
         }
         let duration: _ = start.elapsed();
         result.duration = duration;

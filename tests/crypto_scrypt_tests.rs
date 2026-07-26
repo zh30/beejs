@@ -67,6 +67,23 @@ console.log(result.length === 32 ? 'PASS' : 'FAIL');
 
 #[test]
 #[serial]
+fn test_scrypt_sync_known_rfc7914_vector() {
+    let code = r#"
+const expected = '77d6576238657b203b19ca42c18a0497f16b4844e3074ae8dfdffa3fede21442fcd0069ded0948f8326a753a0fc81f17e8d3e0fb2e0d3628cf35e20c38d18906';
+const result = crypto.scryptSync('', '', 64, { N: 16, r: 1, p: 1 });
+const hex = Array.from(result, b => b.toString(16).padStart(2, '0')).join('');
+console.log(hex === expected ? 'PASS' : hex);
+"#;
+    let output = run_js_test(code);
+    assert!(
+        output.contains("PASS"),
+        "Expected scryptSync to match RFC 7914 vector: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
 fn test_scrypt_sync_custom_keylen() {
     let code = r#"
 const result16 = crypto.scryptSync('password', 'salt', 16);
@@ -245,6 +262,25 @@ crypto.scrypt('password', 'salt', 32).then(result => {
     assert!(
         output.contains("PASS"),
         "Expected async scrypt to resolve: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_scrypt_async_known_rfc7914_vector() {
+    let code = r#"
+(async () => {
+    const expected = '77d6576238657b203b19ca42c18a0497f16b4844e3074ae8dfdffa3fede21442fcd0069ded0948f8326a753a0fc81f17e8d3e0fb2e0d3628cf35e20c38d18906';
+    const result = await crypto.scrypt('', '', 64, { N: 16, r: 1, p: 1 });
+    const hex = Array.from(result, b => b.toString(16).padStart(2, '0')).join('');
+    console.log(hex === expected ? 'PASS' : hex);
+})();
+"#;
+    let output = run_js_test(code);
+    assert!(
+        output.contains("PASS"),
+        "Expected async scrypt to match RFC 7914 vector: {}",
         output
     );
 }

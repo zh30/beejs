@@ -5,12 +5,7 @@
 // v0.3.342: Initial implementation of Clipboard API
 
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use rusty_v8 as v8;
-use std::sync::Mutex;
-
-/// Global clipboard state (in-memory storage for non-browser environment)
-static CLIPBOARD_CONTENT: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
 /// Set up Clipboard API in the V8 context
 pub fn setup_clipboard_api(
@@ -75,26 +70,16 @@ pub fn setup_clipboard_api(
 /// writeText callback - writes text to clipboard
 fn write_text_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let text_arg = args.get(0);
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    let promise = resolver.get_promise(scope);
+    retval.set(promise.into());
 
-    let text = if text_arg.is_string() {
-        text_arg
-            .to_string(scope)
-            .map(|s| s.to_rust_string_lossy(scope))
-            .unwrap_or_default()
-    } else {
-        String::new()
-    };
-
-    // Store in global clipboard state
-    let mut clip_content = CLIPBOARD_CONTENT.lock().unwrap();
-    *clip_content = Some(text);
-
-    // Return undefined (Promise resolves to undefined)
-    retval.set(v8::undefined(scope).into());
+    let message = v8::String::new(scope, "Clipboard API is not supported yet").unwrap();
+    let error = v8::Exception::error(scope, message);
+    resolver.reject(scope, error).unwrap();
 }
 
 /// readText callback - reads text from clipboard
@@ -103,13 +88,13 @@ fn read_text_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // Get clipboard content
-    let clip_content = CLIPBOARD_CONTENT.lock().unwrap();
-    let text = clip_content.as_ref().cloned().unwrap_or_default();
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    let promise = resolver.get_promise(scope);
+    retval.set(promise.into());
 
-    // Return the text
-    let text_val = v8::String::new(scope, &text).unwrap();
-    retval.set(text_val.into());
+    let message = v8::String::new(scope, "Clipboard API is not supported yet").unwrap();
+    let error = v8::Exception::error(scope, message);
+    resolver.reject(scope, error).unwrap();
 }
 
 /// read callback - modern read API (returns ClipboardItem array)
@@ -118,9 +103,13 @@ fn read_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // For now, return empty array (simplified implementation)
-    let empty_array: v8::Local<v8::Array> = v8::Array::new(scope, 0);
-    retval.set(empty_array.into());
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    let promise = resolver.get_promise(scope);
+    retval.set(promise.into());
+
+    let message = v8::String::new(scope, "Clipboard API is not supported yet").unwrap();
+    let error = v8::Exception::error(scope, message);
+    resolver.reject(scope, error).unwrap();
 }
 
 /// write callback - modern write API (takes ClipboardItem array)
@@ -129,45 +118,11 @@ fn write_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // For now, just return undefined (simplified implementation)
-    // In full implementation, would parse ClipboardItem objects
-    retval.set(v8::undefined(scope).into());
-}
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    let promise = resolver.get_promise(scope);
+    retval.set(promise.into());
 
-/// Helper function to get clipboard content (for testing)
-pub fn get_clipboard_content() -> Option<String> {
-    CLIPBOARD_CONTENT.lock().unwrap().clone()
-}
-
-/// Helper function to set clipboard content (for testing)
-pub fn set_clipboard_content(content: &str) {
-    let mut clip = CLIPBOARD_CONTENT.lock().unwrap();
-    *clip = Some(content.to_string());
-}
-
-/// Clear clipboard content (for testing)
-pub fn clear_clipboard() {
-    let mut clip = CLIPBOARD_CONTENT.lock().unwrap();
-    *clip = None;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_clipboard_set_get() {
-        set_clipboard_content("test content");
-        assert_eq!(get_clipboard_content(), Some("test content".to_string()));
-
-        clear_clipboard();
-        assert_eq!(get_clipboard_content(), None);
-    }
-
-    #[test]
-    fn test_clipboard_empty() {
-        clear_clipboard();
-        set_clipboard_content("");
-        assert_eq!(get_clipboard_content(), Some("".to_string()));
-    }
+    let message = v8::String::new(scope, "Clipboard API is not supported yet").unwrap();
+    let error = v8::Exception::error(scope, message);
+    resolver.reject(scope, error).unwrap();
 }

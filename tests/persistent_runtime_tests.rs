@@ -158,6 +158,57 @@ multiply(7, 8);
         fs::remove_file(&test_file).ok();
     }
 
+    /// 测试 execute_file 会把当前文件路径传给底层 runtime，用于相对 dynamic import
+    #[test]
+    fn test_execute_file_dynamic_import_resolves_relative_to_file() {
+        use std::fs;
+
+        let temp = tempfile::tempdir().expect("Failed to create temp dir");
+        let app_dir = temp.path().join("app");
+        fs::create_dir_all(&app_dir).expect("Failed to create app dir");
+        let main_path = app_dir.join("main.js");
+        fs::write(
+            app_dir.join("dep.mjs"),
+            r#"
+globalThis.__runtimeExecuteFileDynamicImportLoads =
+    (globalThis.__runtimeExecuteFileDynamicImportLoads || 0) + 1;
+export const answer = 42;
+export const loadCount = globalThis.__runtimeExecuteFileDynamicImportLoads;
+"#,
+        )
+        .expect("Failed to write dependency");
+        fs::write(
+            &main_path,
+            r#"
+globalThis.__runtimeExecuteFileDynamicImportDone = false;
+import('./dep.mjs').then((mod) => {
+    globalThis.__runtimeExecuteFileDynamicImportResult =
+        `${mod.answer}:${mod.loadCount}`;
+    globalThis.__runtimeExecuteFileDynamicImportDone = true;
+}).catch((error) => {
+    globalThis.__runtimeExecuteFileDynamicImportResult =
+        error && error.message ? error.message : String(error);
+    globalThis.__runtimeExecuteFileDynamicImportDone = true;
+});
+"#,
+        )
+        .expect("Failed to write main file");
+
+        let runtime = Runtime::new_default();
+        runtime
+            .execute_file(&main_path)
+            .expect("File execution should succeed");
+        let done = runtime
+            .execute_code("globalThis.__runtimeExecuteFileDynamicImportDone")
+            .expect("Failed to read dynamic import completion marker");
+        assert_eq!(done.trim(), "true");
+        let result = runtime
+            .execute_code("globalThis.__runtimeExecuteFileDynamicImportResult")
+            .expect("Failed to read dynamic import result");
+
+        assert_eq!(result.trim(), "42:1");
+    }
+
     /// 测试快速模式下 Runtime 持久化
     #[test]
     fn test_fast_mode_runtime_persistence() {

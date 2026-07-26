@@ -191,6 +191,138 @@ fn test_import_key_supports_raw_format() {
 
 #[test]
 #[serial]
+fn test_import_key_jwk_hmac_round_trip() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.importKey(
+                'jwk',
+                {
+                    kty: 'oct',
+                    k: 'AQIDBAUGBwgJCgsMDQ4PEA',
+                    alg: 'HS256',
+                    key_ops: ['sign', 'verify'],
+                    ext: true
+                },
+                { name: 'HMAC', hash: 'SHA-256' },
+                true,
+                ['sign', 'verify']
+            );
+            const data = new TextEncoder().encode('jwk hmac import');
+            const signature = await crypto.subtle.sign({ name: 'HMAC' }, key, data);
+            const valid = await crypto.subtle.verify({ name: 'HMAC' }, key, signature, data);
+            const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+            return valid &&
+                raw.length === 16 &&
+                raw[0] === 1 &&
+                raw[15] === 16 &&
+                key.algorithm.name === 'HMAC' &&
+                key.usages.join(',') === 'sign,verify';
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_import_key_jwk_aes_gcm_rejects_alg_mismatch() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.importKey(
+                    'jwk',
+                    {
+                        kty: 'oct',
+                        k: 'A'.repeat(43),
+                        alg: 'A128GCM',
+                        key_ops: ['encrypt'],
+                        ext: true
+                    },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt']
+                );
+                return 'accepted';
+            } catch (error) {
+                const message = String(error && error.message ? error.message : error);
+                return message.includes('alg') ? 'rejected' : message;
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "rejected");
+}
+
+#[test]
+#[serial]
+fn test_import_key_jwk_rejects_key_ops_missing_requested_usage() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.importKey(
+                    'jwk',
+                    {
+                        kty: 'oct',
+                        k: 'A'.repeat(43),
+                        alg: 'A256GCM',
+                        key_ops: ['decrypt'],
+                        ext: true
+                    },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt']
+                );
+                return 'accepted';
+            } catch (error) {
+                const message = String(error && error.message ? error.message : error);
+                return message.includes('key_ops') ? 'rejected' : message;
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "rejected");
+}
+
+#[test]
+#[serial]
+fn test_import_key_jwk_rejects_ext_false_when_extractable_true() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.importKey(
+                    'jwk',
+                    {
+                        kty: 'oct',
+                        k: 'A'.repeat(43),
+                        alg: 'A256GCM',
+                        key_ops: ['encrypt'],
+                        ext: false
+                    },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt']
+                );
+                return 'accepted';
+            } catch (error) {
+                const message = String(error && error.message ? error.message : error);
+                return message.includes('ext') || message.includes('extractable') ? 'rejected' : message;
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "rejected");
+}
+
+#[test]
+#[serial]
 fn test_import_key_supports_hmac_algorithm() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"

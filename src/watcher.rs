@@ -111,6 +111,16 @@ pub struct WatcherStatsSummary {
     pub last_reload_time_ms: u64,
     pub files_watched: u64,
 }
+
+fn check_fs_read_permission(path: &Path) -> anyhow::Result<()> {
+    crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::FileSystem,
+        crate::permissions::PermissionAction::Read,
+        crate::permissions::ResourceId::Path(path.to_path_buf()),
+    )
+    .map_err(|e| anyhow::anyhow!(e.to_string()))
+}
+
 /// Hot reload watcher for Beejs runtime
 pub struct HotReloader {
     config: WatcherConfig,
@@ -156,19 +166,19 @@ impl HotReloader {
     /// Returns a channel receiver for file change events
     pub fn watch(&mut self, path: impl AsRef<Path>) -> anyhow::Result<mpsc::Receiver<FileChange>> {
         let path: _ = path.as_ref().to_path_buf();
+        check_fs_read_permission(&path)?;
         let (tx, rx) = mpsc::channel();
         let config: _ = self.config.clone();
         let stats: _ = self.stats.clone();
         let running: _ = self.running.clone();
-        running.store(true, Ordering::SeqCst);
         // Count initial files
         let mut file_count = 0u64;
         if path.is_dir() {
-            for entry in walkdir::WalkDir::new(&path)
-                .into_iter()
-                .filter_map(|e| e.ok())
-            {
+            for entry in walkdir::WalkDir::new(&path) {
+                let entry =
+                    entry.map_err(|e| anyhow::anyhow!("Failed to scan watched path: {}", e))?;
                 if entry.file_type().is_file() && self.should_watch(entry.path()) {
+                    check_fs_read_permission(entry.path())?;
                     file_count += 1;
                 }
             }
@@ -176,6 +186,7 @@ impl HotReloader {
             file_count = 1;
         }
         stats.files_watched.store(file_count, Ordering::SeqCst);
+        running.store(true, Ordering::SeqCst);
         let debounce_duration: _ = Duration::from_millis(config.debounce_ms);
         std::thread::spawn(move || {
             let (notify_tx, notify_rx) = std::sync::mpsc::channel();
@@ -183,6 +194,7 @@ impl HotReloader {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("[beejs] Failed to create file watcher: {}", e);
+                    running.store(false, Ordering::SeqCst);
                     return;
                 }
             };
@@ -193,6 +205,7 @@ impl HotReloader {
             };
             if let Err(e) = debouncer.watcher().watch(&path, mode) {
                 eprintln!("[beejs] Failed to watch path {:?}: {}", path, e);
+                running.store(false, Ordering::SeqCst);
                 return;
             }
             if config.show_notifications {
@@ -229,6 +242,9 @@ impl HotReloader {
                                 }
                             }
                             if ignored {
+                                continue;
+                            }
+                            if check_fs_read_permission(&event_path).is_err() {
                                 continue;
                             }
                             let change_type: _ = match event.kind {

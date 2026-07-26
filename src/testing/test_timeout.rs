@@ -72,21 +72,24 @@ impl TestTimeout {
         func: F,
     ) -> Result<T, TimeoutError>
     where
-        F: FnOnce() -> T + Send,
+        F: FnOnce() -> T + Send + 'static,
         F: std::panic::UnwindSafe,
-        T: Send,
+        T: Send + 'static,
     {
         let timeout: _ = self.validate_timeout(timeout)?;
-        let start: _ = Instant::now();
-        let result: _ = std::panic::catch_unwind(func);
-        let elapsed: _ = start.elapsed();
-        if elapsed > timeout {
-            Err(TimeoutError::Exceeded(timeout))
-        } else {
-            match result {
-                Ok(value) => Ok(value),
-                Err(_) => Err(TimeoutError::Panicked),
+        let (sender, receiver) = unbounded::<Result<T, TimeoutError>>();
+
+        let handle = std::thread::spawn(move || {
+            let result = std::panic::catch_unwind(func).map_err(|_| TimeoutError::Panicked);
+            let _ = sender.send(result);
+        });
+
+        match receiver.recv_timeout(timeout) {
+            Ok(result) => {
+                let _ = handle.join();
+                result
             }
+            Err(_) => Err(TimeoutError::Exceeded(timeout)),
         }
     }
     /// Validate timeout is within acceptable range
@@ -201,6 +204,23 @@ mod tests {
             42
         });
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn run_async_with_timeout_returns_exceeded_before_blocking_closure_finishes() {
+        let timeout = TestTimeout::default();
+        let start = std::time::Instant::now();
+
+        let result = timeout.run_async_with_timeout(Duration::from_millis(30), || {
+            std::thread::sleep(Duration::from_millis(200));
+            42
+        });
+
+        assert!(matches!(result, Err(super::TimeoutError::Exceeded(_))));
+        assert!(
+            start.elapsed() < Duration::from_millis(120),
+            "timeout should return before the blocking closure finishes"
+        );
     }
 }
 

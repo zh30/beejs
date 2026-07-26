@@ -440,6 +440,87 @@ fn test_try_recv_http_request_empty() {
     );
 }
 
+#[test]
+#[serial]
+fn http_server_missing_dispatcher_does_not_return_fake_200() {
+    setup_test_environment();
+
+    use beejs::nodejs_core::http::{get_http_server_channel, reset_http_server_channel};
+
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    let code = r#"
+        const server = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('real handler response');
+        });
+        globalThis._testServer = server;
+        server.listen(3549);
+    "#;
+
+    runtime.execute_code(code).expect("Execution failed");
+    wait_for_server(3549);
+
+    let channel = get_http_server_channel().expect("HTTP server channel should be initialized");
+    {
+        let mut channel_guard = channel.lock().unwrap();
+        *channel_guard = None;
+    }
+
+    let mut stream = TcpStream::connect(("127.0.0.1", 3549)).expect("Failed to connect");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("set_read_timeout failed");
+    stream
+        .write_all(
+            concat!(
+                "GET /missing-dispatcher HTTP/1.1\r\n",
+                "Host: localhost\r\n",
+                "Connection: close\r\n\r\n"
+            )
+            .as_bytes(),
+        )
+        .expect("Failed to write");
+    let _ = stream.shutdown(std::net::Shutdown::Write);
+
+    let mut response_bytes = Vec::new();
+    let mut buffer = [0u8; 1024];
+    loop {
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => response_bytes.extend_from_slice(&buffer[..n]),
+            Err(ref e)
+                if e.kind() == std::io::ErrorKind::WouldBlock
+                    || e.kind() == std::io::ErrorKind::TimedOut =>
+            {
+                break;
+            }
+            Err(e) => panic!("Read error: {}", e),
+        }
+    }
+
+    let response = String::from_utf8_lossy(&response_bytes).to_string();
+    let fail_closed = response.is_empty() || response.starts_with("HTTP/1.1 5");
+
+    close_test_server(&mut runtime);
+    reset_http_server_channel();
+
+    assert!(
+        fail_closed,
+        "Missing dispatcher should fail closed with 5xx or a closed connection, got: {}",
+        response
+    );
+    assert!(
+        !response.starts_with("HTTP/1.1 200"),
+        "Missing dispatcher must not return fake 200, got: {}",
+        response
+    );
+    assert!(
+        !response.contains("Handler: not configured"),
+        "Missing dispatcher must not expose fake handler body, got: {}",
+        response
+    );
+}
+
 // v0.3.91: 端到端 HTTP Server 测试
 // 测试完整的请求/响应周期（通过消息通道）
 
@@ -698,8 +779,8 @@ fn test_http_server_404_response() {
     close_test_server(&mut runtime);
 
     assert!(
-        response.contains("HTTP/1.1 404"),
-        "Should return 404 status, got: {}",
+        response.starts_with("HTTP/1.1 404 Not Found"),
+        "Should return a 404 Not Found status line, got: {}",
         response
     );
     assert!(response.contains("Not Found"), "Should have Not Found body");

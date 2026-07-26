@@ -19,8 +19,12 @@ fn test_to_be_truthy_basic() {
     assert!(matcher.matches(&serde_json::json!(true)));
     assert!(matcher.matches(&serde_json::json!(1)));
     assert!(matcher.matches(&serde_json::json!("hello")));
+    assert!(matcher.matches(&serde_json::json!("false")));
+    assert!(matcher.matches(&serde_json::json!("0")));
     assert!(matcher.matches(&serde_json::json!([1, 2, 3])));
+    assert!(matcher.matches(&serde_json::json!([])));
     assert!(matcher.matches(&serde_json::json!({"key": "value"})));
+    assert!(matcher.matches(&serde_json::json!({})));
 }
 
 /// Test toBeTruthy matcher - falsy values should fail
@@ -31,7 +35,6 @@ fn test_to_be_truthy_falsy_fail() {
     assert!(!matcher.matches(&serde_json::json!(0)));
     assert!(!matcher.matches(&serde_json::json!("")));
     assert!(!matcher.matches(&serde_json::json!(null)));
-    assert!(!matcher.matches(&serde_json::json!([])));
 }
 
 /// Test toBeFalsy matcher
@@ -51,6 +54,37 @@ fn test_to_be_falsy_truthy_fail() {
     assert!(!matcher.matches(&serde_json::json!(true)));
     assert!(!matcher.matches(&serde_json::json!(1)));
     assert!(!matcher.matches(&serde_json::json!("hello")));
+    assert!(!matcher.matches(&serde_json::json!("false")));
+    assert!(!matcher.matches(&serde_json::json!("0")));
+    assert!(!matcher.matches(&serde_json::json!([])));
+    assert!(!matcher.matches(&serde_json::json!({})));
+}
+
+#[test]
+fn to_be_truthy_treats_empty_array_and_object_as_truthy() {
+    let to_be_truthy = ExtendedMatcher::to_be_truthy();
+    let to_be_falsy = ExtendedMatcher::to_be_falsy();
+    let truthy = ExtendedMatcher::new_truthy();
+    let falsy = ExtendedMatcher::new_falsy();
+
+    for value in [serde_json::json!([]), serde_json::json!({})] {
+        assert!(
+            to_be_truthy.matches(&value),
+            "toBeTruthy should treat {value:?} as truthy"
+        );
+        assert!(
+            truthy.matches(&value),
+            "Truthy matcher should treat {value:?} as truthy"
+        );
+        assert!(
+            !to_be_falsy.matches(&value),
+            "toBeFalsy should not treat {value:?} as falsy"
+        );
+        assert!(
+            !falsy.matches(&value),
+            "Falsy matcher should not treat {value:?} as falsy"
+        );
+    }
 }
 
 /// Test toThrow matcher with error message

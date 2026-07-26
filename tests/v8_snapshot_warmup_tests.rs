@@ -3,6 +3,29 @@
 
 use serial_test::serial;
 
+fn reset_global_broker() {
+    use beejs::permissions::{global_resource_broker, ResourceBroker};
+
+    *global_resource_broker()
+        .write()
+        .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
+}
+
+struct BrokerResetGuard;
+
+impl BrokerResetGuard {
+    fn new() -> Self {
+        reset_global_broker();
+        Self
+    }
+}
+
+impl Drop for BrokerResetGuard {
+    fn drop(&mut self) {
+        reset_global_broker();
+    }
+}
+
 #[test]
 #[serial]
 fn test_snapshot_manager_warmup_stats() {
@@ -100,24 +123,140 @@ fn test_snapshot_metadata() {
 
 #[test]
 #[serial]
-fn test_generate_snapshot() {
+fn test_generate_snapshot_fails_closed_until_real_v8_snapshot_exists() {
     use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
 
     let config = SnapshotConfig::default();
     let manager = SnapshotManager::new(config);
 
-    // 生成快照
     let result = manager.generate_snapshot();
-    assert!(result.is_ok(), "生成快照应该成功");
+    assert!(result.is_err(), "真实 V8 snapshot 未实现前不应生成空快照");
+    assert!(
+        result.unwrap_err().to_string().contains("not implemented"),
+        "错误信息应明确说明 snapshot generation 未实现"
+    );
 
-    let snapshot = result.unwrap();
-    assert_eq!(snapshot.version, format!("v{}", env!("CARGO_PKG_VERSION")));
-
-    // 验证统计更新
     let stats = manager.get_stats();
     assert_eq!(
-        stats.snapshots_generated, 1,
-        "生成后 snapshots_generated 应该为 1"
+        stats.snapshots_generated, 0,
+        "未生成有效 snapshot 时不应递增 snapshots_generated"
+    );
+}
+
+#[test]
+#[serial]
+fn test_save_invalid_snapshot_rejects() {
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager, V8Snapshot};
+
+    let dir = tempfile::tempdir().unwrap();
+    let manager = SnapshotManager::new(SnapshotConfig::default());
+    let snapshot = V8Snapshot::new(vec![], "invalid-empty".to_string(), false, true);
+
+    let result = manager.save_snapshot_to_disk(&snapshot, dir.path());
+    assert!(result.is_err(), "不能把空 snapshot 持久化为可信产物");
+}
+
+#[test]
+#[serial]
+fn snapshot_persistence_uses_global_file_broker() {
+    use beejs::permissions::{
+        global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+    };
+    use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager, V8Snapshot};
+
+    let _guard = BrokerResetGuard::new();
+    let dir = tempfile::tempdir().unwrap();
+    let manager = SnapshotManager::new(SnapshotConfig::default());
+    let snapshot = V8Snapshot::new(vec![1, 2, 3, 4], "broker-test".to_string(), false, true);
+    let snapshot_dir = dir.path().join("snapshots");
+    let snapshot_file = snapshot_dir.join("broker-test.bin");
+    let metadata_file = snapshot_dir.join("broker-test.meta");
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Any,
+        );
+    }
+
+    let denied_save = manager.save_snapshot_to_disk(&snapshot, dir.path());
+    assert!(
+        denied_save
+            .unwrap_err()
+            .to_string()
+            .contains("permission denied"),
+        "snapshot save must fail before writing when FileSystem/Write is denied"
+    );
+    assert!(
+        !snapshot_dir.exists(),
+        "denied save must not create the snapshots directory"
+    );
+
+    reset_global_broker();
+    manager
+        .save_snapshot_to_disk(&snapshot, dir.path())
+        .unwrap();
+    assert!(snapshot_file.exists());
+    assert!(metadata_file.exists());
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Any,
+        );
+    }
+
+    let denied_load = manager.load_snapshot_from_disk("broker-test", dir.path());
+    assert!(
+        denied_load
+            .unwrap_err()
+            .to_string()
+            .contains("permission denied"),
+        "snapshot load must fail before reading when FileSystem/Read is denied"
+    );
+    let denied_list = manager.list_persistent_snapshots(dir.path());
+    assert!(
+        denied_list
+            .unwrap_err()
+            .to_string()
+            .contains("permission denied"),
+        "snapshot listing must fail before scanning when FileSystem/Read is denied"
+    );
+
+    reset_global_broker();
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Any,
+        );
+    }
+
+    let denied_delete = manager.delete_persistent_snapshot("broker-test", dir.path());
+    assert!(
+        denied_delete
+            .unwrap_err()
+            .to_string()
+            .contains("permission denied"),
+        "snapshot delete must fail before removing files when FileSystem/Write is denied"
+    );
+    assert!(
+        snapshot_file.exists() && metadata_file.exists(),
+        "denied delete must leave snapshot files intact"
     );
 }
 

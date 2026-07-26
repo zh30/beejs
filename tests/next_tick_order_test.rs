@@ -16,22 +16,29 @@ fn cleanup_global_state() {
     clear_next_tick_queue(); // Clear nextTick queue
 }
 
+fn read_order(runtime: &mut MinimalRuntime) -> String {
+    runtime
+        .execute_code("globalThis.__order.join(',');")
+        .unwrap()
+}
+
 #[test]
 #[serial]
 fn test_next_tick_before_timer() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Use the result of setImmediate - it returns the callback's return value
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push('nextTick'));
-        setTimeout(() => order.push('timer'), 0);
-        setImmediate(() => order.join(','))
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        setTimeout(() => globalThis.__order.push('timer'), 0);
+        setImmediate(() => globalThis.__order.join(','))
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // Both callbacks executed, nextTick should be before timer
     // setImmediate returns the callback's return value
     assert_eq!(
@@ -49,16 +56,17 @@ fn test_next_tick_before_setimmediate() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // nextTick should execute before setImmediate
     // Use setImmediate to capture the order after both callbacks have run
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push('nextTick'));
-        setImmediate(() => order.push('immediate'));
-        order.join(',');
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        setImmediate(() => globalThis.__order.push('immediate'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // In Node.js, both nextTick and setImmediate run in the same iteration
     // nextTick has higher priority (runs first), then setImmediate
     assert_eq!(
@@ -75,16 +83,19 @@ fn test_next_tick_with_args() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // nextTick should pass arguments correctly
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let result = null;
+        globalThis.__nextTickArgResult = null;
         process.nextTick((a, b, c) => {
-            result = a + b + c;
+            globalThis.__nextTickArgResult = a + b + c;
         }, 1, 2, 3);
-        result;
+        globalThis.__nextTickArgResult;
     "#,
         )
+        .unwrap();
+    let result = runtime
+        .execute_code("globalThis.__nextTickArgResult;")
         .unwrap();
     assert_eq!(
         result.trim(),
@@ -100,17 +111,18 @@ fn test_multiple_next_ticks() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Multiple nextTicks should execute in order
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push(1));
-        process.nextTick(() => order.push(2));
-        process.nextTick(() => order.push(3));
-        order.join(',');
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push(1));
+        process.nextTick(() => globalThis.__order.push(2));
+        process.nextTick(() => globalThis.__order.push(3));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     assert_eq!(
         result.trim(),
         "1,2,3",
@@ -127,19 +139,20 @@ fn test_next_tick_chain() {
     // nextTick callbacks can add more nextTicks
     // In Node.js: when a nextTick callback adds another nextTick,
     // the new one executes after the current callback but before Promise callbacks
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
+        globalThis.__order = [];
         process.nextTick(() => {
-            order.push('a');
-            process.nextTick(() => order.push('c'));
+            globalThis.__order.push('a');
+            process.nextTick(() => globalThis.__order.push('c'));
         });
-        process.nextTick(() => order.push('b'));
-        order.join(',');
+        process.nextTick(() => globalThis.__order.push('b'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // a executes, adds c, b executes, then c executes (FIFO within each level)
     // Node.js processes all current nextTicks, then any newly added nextTicks
     assert_eq!(
@@ -204,16 +217,17 @@ fn test_next_tick_with_promise() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // nextTick should execute before Promise callbacks
     // This is a key difference from standard microtasks
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push('nextTick'));
-        Promise.resolve().then(() => order.push('promise'));
-        order.join(',');
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        Promise.resolve().then(() => globalThis.__order.push('promise'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // In our implementation, both are microtasks but nextTick queue is processed first
     // The order depends on implementation: nextTick first or Promise first
     // Since we process nextTick before perform_microtask_checkpoint, nextTick should be first
@@ -233,16 +247,17 @@ fn test_timer_before_setimmediate() {
     let mut runtime = MinimalRuntime::new().unwrap();
     // Use setImmediate to capture result after all callbacks have executed
     // Timer (delay=0) should fire before setImmediate in the same event loop iteration
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        setTimeout(() => order.push('timer'), 0);
-        setImmediate(() => order.push('immediate'));
-        setImmediate(() => order.join(','));
+        globalThis.__order = [];
+        setTimeout(() => globalThis.__order.push('timer'), 0);
+        setImmediate(() => globalThis.__order.push('immediate'));
+        setImmediate(() => globalThis.__order.join(','));
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // Timer should execute before setImmediate
     assert_eq!(
         result.trim(),

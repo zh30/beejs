@@ -1,6 +1,7 @@
 // V8 快照管理器
 // 负责快照的生成、加载、缓存和管理
 
+use crate::permissions::{check_global_permission, PermissionAction, PermissionKind, ResourceId};
 use crate::v8_snapshot::{SnapshotConfig, V8Snapshot};
 use anyhow::{anyhow, Result};
 use rusty_v8 as v8;
@@ -35,22 +36,9 @@ impl SnapshotManager {
     /// 生成快照
     pub fn generate_snapshot(&self) -> Result<V8Snapshot> {
         // Note: V8 snapshot creation is complex and requires careful API usage
-        // For now, we'll create a placeholder snapshot that can be enhanced later
-        // 创建基本的快照数据（临时实现）
-        let snapshot_data: _ = Vec::new(); // TODO: 实现真正的快照生成
-        let snapshot: _ = V8Snapshot::new(
-            snapshot_data,
-            self.config.version.clone(),
-            self.config.enable_compression,
-            self.config.builtin_warmup,
-        );
-        // 更新统计
-        {
-            let mut stats = self.stats.lock().unwrap();
-            stats.snapshots_generated += 1;
-            stats.last_generated_at = Some(SystemTime::now());
-        }
-        Ok(snapshot)
+        // Returning an empty placeholder makes performance and startup claims
+        // look successful while producing data that V8 cannot actually load.
+        Err(anyhow!("V8 snapshot generation is not implemented"))
     }
     /// 加载快照
     pub fn load_snapshot(&self, snapshot_id: &str) -> Result<()> {
@@ -59,12 +47,15 @@ impl SnapshotManager {
             let cache: _ = self.snapshot_cache.lock().unwrap();
             cache.get(snapshot_id).cloned()
         };
-        let _snapshot = match snapshot {
+        let snapshot = match snapshot {
             Some(s) => s,
             None => {
                 return Err(anyhow!("Snapshot '{}' not found", snapshot_id));
             }
         };
+        if !snapshot.validate() {
+            return Err(anyhow!("Invalid snapshot data"));
+        }
         // 验证快照
         // Note: 在实际实现中，需要重新创建 Isolate 或使用现有 API
         // 这里只是示例，实际实现需要根据 V8 API 调整
@@ -235,9 +226,15 @@ impl SnapshotManager {
         snapshot: &V8Snapshot,
         base_dir: &Path,
     ) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
+        if !snapshot.validate() {
+            return Err("Invalid snapshot data".into());
+        }
+
         let snapshot_dir: _ = base_dir.join("snapshots");
+        check_filesystem_permission(PermissionAction::Write, &snapshot_dir)?;
         fs::create_dir_all(&snapshot_dir)?;
         let snapshot_file: _ = snapshot_dir.join(format!("{}.bin", snapshot.version));
+        check_filesystem_permission(PermissionAction::Write, &snapshot_file)?;
         // 写入快照数据
         let mut file = fs::File::create(&snapshot_file)?;
         file.write_all(&snapshot.snapshot_data)?;
@@ -251,6 +248,7 @@ impl SnapshotManager {
         };
         let metadata_file: _ = snapshot_dir.join(format!("{}.meta", snapshot.version));
         let metadata_json: _ = serde_json::to_string(&metadata)?;
+        check_filesystem_permission(PermissionAction::Write, &metadata_file)?;
         fs::write(&metadata_file, metadata_json)?;
         // 更新统计
         {
@@ -267,6 +265,7 @@ impl SnapshotManager {
     ) -> Result<V8Snapshot, Box<dyn std::error::Error + Send + Sync>> {
         let snapshot_dir: _ = base_dir.join("snapshots");
         let metadata_file: _ = snapshot_dir.join(format!("{}.meta", version));
+        check_filesystem_permission(PermissionAction::Read, &metadata_file)?;
         // 检查元数据文件是否存在
         if !metadata_file.exists() {
             return Err(format!("Snapshot metadata file not found: {:?}", metadata_file).into());
@@ -276,6 +275,7 @@ impl SnapshotManager {
         let metadata: SnapshotMetadata = serde_json::from_str(&metadata_json)?;
         // 读取快照数据
         let snapshot_file: _ = snapshot_dir.join(format!("{}.bin", version));
+        check_filesystem_permission(PermissionAction::Read, &snapshot_file)?;
         let snapshot_data: _ = fs::read(&snapshot_file)?;
         let snapshot: _ = V8Snapshot::new(
             snapshot_data,
@@ -283,6 +283,9 @@ impl SnapshotManager {
             metadata.is_compressed,
             metadata.builtin_warmup,
         );
+        if !snapshot.validate() {
+            return Err("Invalid snapshot data".into());
+        }
         // 更新统计
         {
             let mut stats = self.stats.lock().unwrap();
@@ -297,6 +300,7 @@ impl SnapshotManager {
         base_dir: &Path,
     ) -> Result<Vec<SnapshotMetadata>, Box<dyn std::error::Error + Send + Sync>> {
         let snapshot_dir: _ = base_dir.join("snapshots");
+        check_filesystem_permission(PermissionAction::Read, &snapshot_dir)?;
         if !snapshot_dir.exists() {
             return Ok(Vec::new());
         }
@@ -306,6 +310,7 @@ impl SnapshotManager {
             let entry: _ = entry?;
             let path: _ = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("meta") {
+                check_filesystem_permission(PermissionAction::Read, &path)?;
                 let metadata_json: _ = fs::read_to_string(&path)?;
                 let metadata: SnapshotMetadata = serde_json::from_str(&metadata_json)?;
                 snapshots.push(metadata);
@@ -322,16 +327,32 @@ impl SnapshotManager {
         let snapshot_dir: _ = base_dir.join("snapshots");
         let metadata_file: _ = snapshot_dir.join(format!("{}.meta", version));
         let snapshot_file: _ = snapshot_dir.join(format!("{}.bin", version));
+        check_filesystem_permission(PermissionAction::Write, &snapshot_dir)?;
         // 删除文件（如果存在）
         if metadata_file.exists() {
+            check_filesystem_permission(PermissionAction::Write, &metadata_file)?;
             fs::remove_file(&metadata_file)?;
         }
         if snapshot_file.exists() {
+            check_filesystem_permission(PermissionAction::Write, &snapshot_file)?;
             fs::remove_file(&snapshot_file)?;
         }
         Ok(())
     }
 }
+
+fn check_filesystem_permission(
+    action: PermissionAction,
+    path: &Path,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    check_global_permission(
+        PermissionKind::FileSystem,
+        action,
+        ResourceId::Path(path.to_path_buf()),
+    )?;
+    Ok(())
+}
+
 /// 快照元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SnapshotMetadata {
@@ -405,8 +426,12 @@ mod tests {
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
-        // 生成快照
-        let snapshot: _ = manager.generate_snapshot().unwrap();
+        let snapshot = V8Snapshot::new(
+            vec![1, 2, 3, 4],
+            manager.config.version.clone(),
+            false,
+            manager.config.builtin_warmup,
+        );
         // 保存快照
         let result: _ = manager.save_snapshot_to_disk(&snapshot, base_dir);
         assert!(result.is_ok());
@@ -426,8 +451,12 @@ mod tests {
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
-        // 生成并保存快照
-        let snapshot: _ = manager.generate_snapshot().unwrap();
+        let snapshot = V8Snapshot::new(
+            vec![1, 2, 3, 4],
+            manager.config.version.clone(),
+            false,
+            manager.config.builtin_warmup,
+        );
         manager.save_snapshot_to_disk(&snapshot, base_dir).unwrap();
         // 验证快照存在
         let list: _ = manager.list_persistent_snapshots(base_dir).unwrap();

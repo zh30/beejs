@@ -50,33 +50,65 @@ mod tests {
         assert_eq!(result.unwrap().trim(), "true");
     }
 
+    #[test]
+    #[serial]
+    fn test_clipboard_text_methods_are_promises_and_fail_closed() {
+        let code = r#"
+            (async () => {
+                const writeResult = navigator.clipboard.writeText('Hello, Beejs!');
+                const readResult = navigator.clipboard.readText();
+                const writeIsPromise = writeResult instanceof Promise;
+                const readIsPromise = readResult instanceof Promise;
+                const writeOutcome = await writeResult.then(
+                    () => 'write-resolved',
+                    error => `write-rejected:${String(error && error.message ? error.message : error)}`
+                );
+                const readOutcome = await readResult.then(
+                    value => `read-resolved:${value}`,
+                    error => `read-rejected:${String(error && error.message ? error.message : error)}`
+                );
+                return `${writeIsPromise}:${readIsPromise}:${writeOutcome}:${readOutcome}`;
+            })();
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code).unwrap();
+        assert!(
+            result.trim().contains("true:true:write-rejected:")
+                && result.trim().contains(":read-rejected:")
+                && result.trim().contains("not supported"),
+            "clipboard text methods must be Promise-based and fail closed without permission/backend: {}",
+            result
+        );
+    }
+
     /// 测试 writeText 基本功能
     #[test]
     #[serial]
     fn test_write_text_basic() {
         let code = r#"
             const result = navigator.clipboard.writeText('Hello, Beejs!');
-            result === undefined
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "writeText should work");
+        assert!(result.is_ok(), "writeText should return a Promise");
         assert_eq!(result.unwrap().trim(), "true");
     }
 
-    /// 测试 readText 返回字符串
+    /// 测试 readText 返回 Promise
     #[test]
     #[serial]
-    fn test_read_text_returns_string() {
+    fn test_read_text_returns_promise() {
         let code = r#"
             const result = navigator.clipboard.readText();
-            typeof result === 'string'
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "readText should return a string");
+        assert!(result.is_ok(), "readText should return a Promise");
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -87,12 +119,15 @@ mod tests {
         let code = r#"
             const text = 'Hello 世界! 🐝';
             const result = navigator.clipboard.writeText(text);
-            result === undefined
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "writeText should handle special characters");
+        assert!(
+            result.is_ok(),
+            "writeText should return a Promise for special characters"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -102,12 +137,15 @@ mod tests {
     fn test_write_text_empty() {
         let code = r#"
             const result = navigator.clipboard.writeText('');
-            result === undefined
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "writeText should handle empty string");
+        assert!(
+            result.is_ok(),
+            "writeText should return a Promise for empty string"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -118,12 +156,15 @@ mod tests {
         let code = r#"
             const text = 'Line 1\nLine 2\tTabbed';
             const result = navigator.clipboard.writeText(text);
-            result === undefined
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "writeText should handle newlines and tabs");
+        assert!(
+            result.is_ok(),
+            "writeText should return a Promise for newlines and tabs"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -155,33 +196,65 @@ mod tests {
         assert_eq!(result.unwrap().trim(), "true");
     }
 
-    /// 测试 read 返回数组
     #[test]
     #[serial]
-    fn test_read_returns_array() {
+    fn test_clipboard_item_methods_are_promises_and_fail_closed() {
+        let code = r#"
+            (async () => {
+                const readResult = navigator.clipboard.read();
+                const writeResult = navigator.clipboard.write([]);
+                const readIsPromise = readResult instanceof Promise;
+                const writeIsPromise = writeResult instanceof Promise;
+                const readOutcome = await readResult.then(
+                    value => `read-resolved:${Array.isArray(value)}:${value.length}`,
+                    error => `read-rejected:${String(error && error.message ? error.message : error)}`
+                );
+                const writeOutcome = await writeResult.then(
+                    () => 'write-resolved',
+                    error => `write-rejected:${String(error && error.message ? error.message : error)}`
+                );
+                return `${readIsPromise}:${writeIsPromise}:${readOutcome}:${writeOutcome}`;
+            })();
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code).unwrap();
+        assert!(
+            result.trim().contains("true:true:read-rejected:")
+                && result.trim().contains(":write-rejected:")
+                && result.trim().contains("not supported"),
+            "clipboard item methods must be Promise-based and fail closed without backend: {}",
+            result
+        );
+    }
+
+    /// 测试 read 返回 Promise
+    #[test]
+    #[serial]
+    fn test_read_returns_promise() {
         let code = r#"
             const result = navigator.clipboard.read();
-            Array.isArray(result)
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "read should return an array");
+        assert!(result.is_ok(), "read should return a Promise");
         assert_eq!(result.unwrap().trim(), "true");
     }
 
-    /// 测试 write 返回 undefined
+    /// 测试 write 返回 Promise
     #[test]
     #[serial]
-    fn test_write_returns_undefined() {
+    fn test_write_returns_promise() {
         let code = r#"
             const result = navigator.clipboard.write([]);
-            result === undefined
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "write should return undefined");
+        assert!(result.is_ok(), "write should return a Promise");
         assert_eq!(result.unwrap().trim(), "true");
     }
 
@@ -193,12 +266,12 @@ mod tests {
             // Simulate AI processing result
             const aiResult = JSON.stringify({ prediction: 'cat', confidence: 0.95 });
             const result = navigator.clipboard.writeText(aiResult);
-            result === undefined
+            result instanceof Promise
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "AI workload copy should work");
+        assert!(result.is_ok(), "AI workload copy should return a Promise");
         assert_eq!(result.unwrap().trim(), "true");
     }
 

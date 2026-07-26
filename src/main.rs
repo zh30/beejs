@@ -2,7 +2,9 @@
 //! Built with Rust and V8
 
 use anyhow::{anyhow, Result};
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
+use serde::Deserialize;
+use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -20,10 +22,74 @@ struct Cli {
     command: Option<Command>,
 }
 
+#[derive(Args, Clone, Debug, Default)]
+struct PermissionCliOptions {
+    /// Load JavaScript permission policy from a JSON file
+    #[arg(
+        long = "permission-policy",
+        visible_alias = "policy",
+        value_name = "PATH"
+    )]
+    policy: Option<PathBuf>,
+    /// Deny JavaScript file-system reads and writes unless explicitly allowed
+    #[arg(long = "deny-fs")]
+    deny_fs: bool,
+    /// Deny JavaScript network connections unless explicitly allowed
+    #[arg(long = "deny-net")]
+    deny_net: bool,
+    /// Deny JavaScript environment variable reads unless explicitly allowed
+    #[arg(long = "deny-env")]
+    deny_env: bool,
+    /// Deny JavaScript child process execution unless explicitly allowed
+    #[arg(long = "deny-run")]
+    deny_run: bool,
+    /// Allow JavaScript file-system reads for an exact path (repeatable)
+    #[arg(long = "allow-read", value_name = "PATH")]
+    allow_read: Vec<PathBuf>,
+    /// Allow JavaScript file-system writes for an exact path (repeatable)
+    #[arg(long = "allow-write", value_name = "PATH")]
+    allow_write: Vec<PathBuf>,
+    /// Allow JavaScript network connections for a host or exact URL (repeatable)
+    #[arg(long = "allow-net", value_name = "HOST_OR_URL")]
+    allow_net: Vec<String>,
+    /// Allow JavaScript network listeners for a host or exact URL (repeatable)
+    #[arg(long = "allow-listen", value_name = "HOST_OR_URL")]
+    allow_listen: Vec<String>,
+    /// Allow JavaScript environment variable reads for an exact variable name (repeatable)
+    #[arg(long = "allow-env", value_name = "NAME")]
+    allow_env: Vec<String>,
+    /// Allow JavaScript child process execution for an exact command name (repeatable)
+    #[arg(long = "allow-run", value_name = "COMMAND")]
+    allow_run: Vec<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+struct PermissionPolicyFile {
+    permissions: PermissionPolicyRules,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+struct PermissionPolicyRules {
+    deny_fs: bool,
+    deny_net: bool,
+    deny_env: bool,
+    deny_run: bool,
+    allow_read: Vec<PathBuf>,
+    allow_write: Vec<PathBuf>,
+    allow_net: Vec<String>,
+    allow_listen: Vec<String>,
+    allow_env: Vec<String>,
+    allow_run: Vec<String>,
+}
+
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Run a script file
     Run {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Script file to execute
         file: PathBuf,
         /// Arguments to pass to the script
@@ -46,6 +112,8 @@ enum Command {
     },
     /// Evaluate JavaScript code
     Eval {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// JavaScript code to execute
         code: String,
     },
@@ -53,6 +121,8 @@ enum Command {
     Repl,
     /// Run tests
     Test {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Test file to run (optional)
         file: Option<PathBuf>,
         /// Filter tests by name pattern (regex)
@@ -71,14 +141,19 @@ enum Command {
         #[arg(long = "parallel")]
         parallel: bool,
         /// Test timeout in seconds
-        #[arg(long = "timeout", default_value = "30")]
-        timeout: u64,
+        #[arg(long = "timeout")]
+        timeout: Option<u64>,
+        /// Update missing or mismatched file snapshots
+        #[arg(long = "update-snapshots")]
+        update_snapshots: bool,
         /// Verbose output
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
     },
     /// Bundle code for production
     Bundle {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Entry file to bundle
         entry: PathBuf,
         /// Output file path
@@ -99,6 +174,8 @@ enum Command {
     },
     /// Debug a script
     Debug {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Script file to debug
         file: PathBuf,
     },
@@ -106,6 +183,8 @@ enum Command {
     Version,
     /// Start HTTP/HTTPS server
     Serve {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Port number
         #[arg(short, long, default_value = "3000")]
         port: u16,
@@ -124,11 +203,15 @@ enum Command {
     },
     /// Initialize new project
     Init {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Project name
         name: Option<String>,
     },
     /// Add dependency package
     Add {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Package name (with optional version, e.g., "lodash@4.17.21")
         package: String,
         /// Install exact version (no caret/tilde prefix)
@@ -140,23 +223,38 @@ enum Command {
     },
     /// Remove dependency package
     Remove {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Package name to remove
         package: String,
     },
     /// Install dependencies from package.json
-    Install,
+    Install {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+        /// Fail if package.json and package-lock.json are out of sync
+        #[arg(long = "frozen-lockfile")]
+        frozen_lockfile: bool,
+    },
     /// Remove unused dependencies from node_modules
-    Prune,
+    Prune {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+    },
     /// Create new project
     Create {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+        /// Project name
+        name: String,
         /// Template type (js/ts)
         #[arg(default_value = "js")]
         template: String,
-        /// Project name
-        name: String,
     },
     /// Run a package without installing it (like bunx/npm exec)
     Bunx {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Package name (with optional version, e.g., "lodash@4.17.21")
         package: String,
         /// Arguments to pass to the package
@@ -164,6 +262,8 @@ enum Command {
     },
     /// Upgrade dependencies to latest versions
     Upgrade {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
         /// Package to upgrade (all if not specified)
         package: Option<String>,
     },
@@ -177,8 +277,10 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
         .map(|e| e.to_lowercase())
         .unwrap_or_default();
 
-    let source =
-        std::fs::read_to_string(file).map_err(|e| anyhow!("Failed to read file: {}", e))?;
+    let source = {
+        check_file_read_permission(file)?;
+        std::fs::read_to_string(file).map_err(|e| anyhow!("Failed to read file: {}", e))?
+    };
 
     // If it's a TypeScript file, compile it
     if extension == "ts" || extension == "tsx" {
@@ -200,7 +302,28 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
                         }
                     }
                 }
-                Ok(output.js_code)
+                let error_messages: Vec<&str> = output
+                    .diagnostics
+                    .iter()
+                    .filter_map(|diagnostic| match diagnostic.severity {
+                        beejs::typescript::ErrorSeverity::Error => {
+                            Some(diagnostic.message.as_str())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if !error_messages.is_empty() {
+                    return Err(anyhow!(
+                        "TypeScript compilation failed with {} error(s): {}",
+                        error_messages.len(),
+                        error_messages.join("; ")
+                    ));
+                }
+                Ok(format!(
+                    "{}\n//# sourceURL={}",
+                    output.js_code,
+                    file.to_string_lossy()
+                ))
             }
             Err(e) => Err(anyhow!("TypeScript compilation failed: {}", e)),
         }
@@ -208,6 +331,3958 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
         // Return JavaScript as-is
         Ok(source)
     }
+}
+
+fn bundle_local_static_imports(entry: &Path) -> Result<String> {
+    let mut seen = HashSet::new();
+    bundle_local_static_imports_inner(entry, &mut seen)
+}
+
+fn bundle_local_static_imports_inner(file: &Path, seen: &mut HashSet<PathBuf>) -> Result<String> {
+    let module_key = normalize_module_path(file)?;
+    if !seen.insert(module_key) {
+        return Ok(String::new());
+    }
+
+    let code = read_and_compile_source(file)?;
+    let mut dependencies = Vec::new();
+    let mut body = String::new();
+
+    for line in static_module_statements(&code) {
+        if let Some(specifier) = static_import_specifier(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                let dependency_bundle = bundle_local_static_imports_inner(&dependency_path, seen)?;
+                if !dependency_bundle.trim().is_empty() {
+                    dependencies.push(dependency_bundle);
+                }
+                body.push_str(&static_import_binding_rewrites(&line, &dependency_path)?);
+                continue;
+            }
+        }
+
+        if let Some(specifier) = static_export_from_specifier(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                let dependency_bundle = bundle_local_static_imports_inner(&dependency_path, seen)?;
+                if !dependency_bundle.trim().is_empty() {
+                    dependencies.push(dependency_bundle);
+                }
+                continue;
+            }
+        }
+
+        body.push_str(&line);
+        body.push('\n');
+    }
+
+    let mut bundled = String::new();
+    for dependency in dependencies {
+        bundled.push_str(&dependency);
+        if !dependency.ends_with('\n') {
+            bundled.push('\n');
+        }
+    }
+
+    bundled.push_str(&format!("// module: {}\n", file.display()));
+    bundled.push_str(&rewrite_esm_exports_for_bundle(file, &body)?);
+    Ok(bundled)
+}
+
+fn static_import_specifier(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    if !trimmed.starts_with("import ") || trimmed.starts_with("import(") {
+        return None;
+    }
+
+    if let Some(from_pos) = trimmed.rfind(" from ") {
+        return parse_quoted_module_specifier(&trimmed[from_pos + " from ".len()..]);
+    }
+
+    parse_quoted_module_specifier(trimmed.strip_prefix("import")?.trim_start())
+}
+
+fn static_export_from_specifier(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    if !trimmed.starts_with("export ") {
+        return None;
+    }
+
+    let from_pos = trimmed.rfind(" from ")?;
+    parse_quoted_module_specifier(&trimmed[from_pos + " from ".len()..])
+}
+
+fn parse_quoted_module_specifier(input: &str) -> Option<String> {
+    let trimmed = input.trim_start();
+    let quote = trimmed.chars().next()?;
+    if quote != '\'' && quote != '"' {
+        return None;
+    }
+
+    let rest = &trimmed[quote.len_utf8()..];
+    let end = rest.find(quote)?;
+    Some(rest[..end].to_string())
+}
+
+fn static_module_statements(code: &str) -> Vec<String> {
+    let mut statements = Vec::new();
+    let mut pending_static = None::<String>;
+
+    for line in code.lines() {
+        for segment in static_module_line_segments(line) {
+            let mut active_segment = Some(segment);
+            while let Some(segment) = active_segment.take() {
+                let trimmed = segment.trim();
+
+                if let Some(mut current) = pending_static.take() {
+                    if static_closed_export_list_waiting_for_optional_from(&current)
+                        && !trimmed.is_empty()
+                        && !trimmed.starts_with("from ")
+                    {
+                        statements.push(current);
+                        active_segment = Some(segment);
+                        continue;
+                    }
+
+                    if !trimmed.is_empty() {
+                        if !current.is_empty() {
+                            current.push(' ');
+                        }
+                        current.push_str(trimmed);
+                    }
+
+                    if static_multiline_statement_complete(&current) {
+                        statements.push(current);
+                    } else {
+                        pending_static = Some(current);
+                    }
+                    continue;
+                }
+
+                if starts_multiline_static_statement(trimmed)
+                    && !static_multiline_statement_complete(trimmed)
+                {
+                    pending_static = Some(trimmed.to_string());
+                } else {
+                    statements.push(segment.to_string());
+                }
+            }
+        }
+    }
+
+    if let Some(statement) = pending_static {
+        statements.push(statement);
+    }
+
+    statements
+}
+
+fn static_module_line_segments(line: &str) -> Vec<&str> {
+    let mut segments = Vec::new();
+    if line.is_empty() {
+        segments.push(line);
+        return segments;
+    }
+
+    let mut start = 0;
+    let mut quote = None;
+    let mut escaped = false;
+    let mut chars = line.char_indices().peekable();
+
+    while let Some((index, character)) = chars.next() {
+        if let Some(quote_character) = quote {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if character == '\\' {
+                escaped = true;
+                continue;
+            }
+            if character == quote_character {
+                quote = None;
+            }
+            continue;
+        }
+
+        if character == '\'' || character == '"' || character == '`' {
+            quote = Some(character);
+            continue;
+        }
+
+        if character == '/' && matches!(chars.peek(), Some((_, '/'))) {
+            break;
+        }
+
+        if character != ';' {
+            continue;
+        }
+
+        let statement_end = index + character.len_utf8();
+        let rest = &line[statement_end..];
+        let whitespace_len = rest.len() - rest.trim_start().len();
+        let next_start = statement_end + whitespace_len;
+        let next = &line[next_start..];
+        let current = line[start..statement_end].trim_start();
+        if current.starts_with("import ")
+            || current.starts_with("export ")
+            || next.starts_with("import ")
+            || next.starts_with("export ")
+        {
+            segments.push(&line[start..statement_end]);
+            start = next_start;
+        }
+    }
+
+    if start < line.len() {
+        segments.push(&line[start..]);
+    }
+
+    segments
+}
+
+fn starts_multiline_static_statement(trimmed: &str) -> bool {
+    trimmed.starts_with("import ")
+        || trimmed.starts_with("export {")
+        || trimmed.starts_with("export *")
+}
+
+fn static_multiline_statement_complete(statement: &str) -> bool {
+    let trimmed = statement.trim();
+    trimmed.ends_with(';')
+        || static_import_specifier(trimmed).is_some()
+        || static_export_from_specifier(trimmed).is_some()
+}
+
+fn static_closed_export_list_waiting_for_optional_from(statement: &str) -> bool {
+    let trimmed = statement.trim();
+    let Some(rest) = trimmed.strip_prefix("export ") else {
+        return false;
+    };
+    let rest = rest.trim_start();
+    rest.starts_with('{')
+        && export_list_bindings(rest).is_some()
+        && !trimmed.ends_with(';')
+        && static_export_from_specifier(trimmed).is_none()
+}
+
+fn static_import_binding_rewrites(line: &str, dependency_path: &Path) -> Result<String> {
+    let mut rewrites = String::new();
+    let export_map = local_static_export_map(dependency_path)?;
+
+    if let Some(default_binding) = static_import_default_binding(line) {
+        let source = export_map
+            .iter()
+            .find_map(|(exported, source)| {
+                if exported == "default" {
+                    Some(source.as_str())
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                anyhow!(
+                    "Local module {} does not export default",
+                    dependency_path.display()
+                )
+            })?;
+        rewrites.push_str(&format!("const {} = {};\n", default_binding, source));
+    }
+
+    if let Some(named_imports) = static_import_named_clause(line) {
+        for item in named_imports.split(',') {
+            if let Some((imported, local)) = parse_named_import_binding(item) {
+                let source = export_map
+                    .iter()
+                    .find_map(|(exported, source)| {
+                        if exported == imported {
+                            Some(source.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "Local module {} does not export '{}'",
+                            dependency_path.display(),
+                            imported
+                        )
+                    })?;
+                if source != local {
+                    rewrites.push_str(&format!("const {} = {};\n", local, source));
+                }
+            }
+        }
+    }
+
+    if let Some(namespace_binding) = static_import_namespace_binding(line) {
+        let namespace_entries = export_map
+            .iter()
+            .map(|(exported, source)| format!("{exported}: {source}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        rewrites.push_str(&format!(
+            "const {} = {{ {} }};\n",
+            namespace_binding, namespace_entries
+        ));
+    }
+
+    Ok(rewrites)
+}
+
+fn parse_named_import_binding(item: &str) -> Option<(&str, &str)> {
+    let parts = item.split_whitespace().collect::<Vec<_>>();
+    match parts.as_slice() {
+        [imported] => Some((*imported, *imported)),
+        [imported, "as", local] => Some((*imported, *local)),
+        _ => None,
+    }
+}
+
+fn static_import_namespace_binding(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let from_pos = trimmed.rfind(" from ")?;
+    let import_clause = trimmed
+        .strip_prefix("import ")?
+        .get(..from_pos - "import ".len())?
+        .trim();
+    let namespace_start = import_clause.find("* as ")?;
+    let namespace_binding = import_clause[namespace_start + "* as ".len()..]
+        .split(',')
+        .next()?
+        .trim();
+    if namespace_binding.is_empty() {
+        return None;
+    }
+    Some(namespace_binding)
+}
+
+fn static_import_default_binding(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let from_pos = trimmed.rfind(" from ")?;
+    let import_clause = trimmed
+        .strip_prefix("import ")?
+        .get(..from_pos - "import ".len())?
+        .trim();
+    if import_clause.is_empty() || import_clause.starts_with('{') || import_clause.starts_with('*')
+    {
+        return None;
+    }
+
+    Some(import_clause.split(',').next()?.trim())
+}
+
+fn static_import_named_clause(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let from_pos = trimmed.rfind(" from ")?;
+    let import_clause = trimmed
+        .strip_prefix("import ")?
+        .get(..from_pos - "import ".len())?;
+    let named_start = import_clause.find('{')?;
+    let named_end = import_clause.rfind('}')?;
+    if named_end <= named_start {
+        return None;
+    }
+    Some(&import_clause[named_start + 1..named_end])
+}
+
+fn local_static_export_map(file: &Path) -> Result<Vec<(String, String)>> {
+    local_static_export_map_inner(file, &mut HashSet::new())
+}
+
+fn local_static_export_map_inner(
+    file: &Path,
+    seen: &mut HashSet<PathBuf>,
+) -> Result<Vec<(String, String)>> {
+    let module_key = normalize_module_path(file)?;
+    if !seen.insert(module_key) {
+        return Ok(Vec::new());
+    }
+
+    let code = read_and_compile_source(file)?;
+    let default_binding = default_export_binding_name(file)?;
+    let mut export_map = extract_static_export_map(file, &code, &default_binding)?;
+
+    for line in static_module_statements(&code) {
+        if let Some((specifier, re_exports)) = static_re_export_list_bindings(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                let dependency_export_map = local_static_export_map_inner(&dependency_path, seen)?;
+                for (exported, imported) in re_exports {
+                    let source = dependency_export_map
+                        .iter()
+                        .find_map(|(dependency_exported, dependency_source)| {
+                            if dependency_exported == &imported {
+                                Some(dependency_source.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "Local module {} does not export '{}' for re-export",
+                                dependency_path.display(),
+                                imported
+                            )
+                        })?;
+                    export_map.push((exported, source));
+                }
+            }
+        }
+
+        if let Some(specifier) = static_export_star_from_specifier(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                export_map.extend(
+                    local_static_export_map_inner(&dependency_path, seen)?
+                        .into_iter()
+                        .filter(|(exported, _)| exported != "default"),
+                );
+            }
+        }
+    }
+
+    Ok(export_map)
+}
+
+fn extract_static_export_map(
+    file: &Path,
+    code: &str,
+    default_binding: &str,
+) -> Result<Vec<(String, String)>> {
+    let mut exports = Vec::new();
+    for line in static_module_statements(code) {
+        let Some(rest) = line.trim_start().strip_prefix("export ") else {
+            continue;
+        };
+        let rest = rest.trim_start();
+
+        if rest.starts_with("default ") {
+            exports.push(("default".to_string(), default_binding.to_string()));
+            continue;
+        }
+
+        if rest.starts_with('{') && rest.contains(" from ") {
+            continue;
+        }
+
+        if let Some(list_exports) = export_list_bindings(rest) {
+            for (exported, _) in list_exports {
+                let source = if exported == "default" {
+                    default_binding.to_string()
+                } else {
+                    exported_binding_name(file, &exported)?
+                };
+                exports.push((exported, source));
+            }
+            continue;
+        }
+
+        for keyword in ["const ", "let ", "var ", "function ", "class "] {
+            if let Some(name) = exported_declaration_name(rest, keyword) {
+                exports.push((name.clone(), exported_binding_name(file, &name)?));
+                break;
+            }
+        }
+    }
+    Ok(exports)
+}
+
+fn static_re_export_list_bindings(line: &str) -> Option<(String, Vec<(String, String)>)> {
+    let trimmed = line.trim();
+    let rest = trimmed.strip_prefix("export ")?.trim_start();
+    if !rest.starts_with('{') {
+        return None;
+    }
+
+    let specifier = static_export_from_specifier(line)?;
+    let bindings = export_list_bindings(rest)?;
+    Some((specifier, bindings))
+}
+
+fn static_export_star_from_specifier(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    let rest = trimmed.strip_prefix("export ")?.trim_start();
+    if !rest.starts_with("* from ") {
+        return None;
+    }
+
+    parse_quoted_module_specifier(rest.strip_prefix("* from ")?.trim_start())
+}
+
+fn export_list_bindings(rest: &str) -> Option<Vec<(String, String)>> {
+    let export_list = rest.strip_prefix('{')?;
+    let end = export_list.find('}')?;
+    let export_list = &export_list[..end];
+    let mut exports = Vec::new();
+
+    for item in export_list.split(',') {
+        let item = item.trim();
+        if item.is_empty() {
+            continue;
+        }
+
+        let parts = item.split_whitespace().collect::<Vec<_>>();
+        match parts.as_slice() {
+            [local] => exports.push(((*local).to_string(), (*local).to_string())),
+            [local, "as", exported] => {
+                exports.push(((*exported).to_string(), (*local).to_string()))
+            }
+            _ => {}
+        }
+    }
+
+    Some(exports)
+}
+
+fn exported_declaration_name(rest: &str, keyword: &str) -> Option<String> {
+    let declaration = rest.strip_prefix(keyword)?.trim_start();
+    let end = declaration
+        .char_indices()
+        .find_map(|(index, character)| {
+            if is_js_identifier_part(character) {
+                None
+            } else {
+                Some(index)
+            }
+        })
+        .unwrap_or(declaration.len());
+    if end == 0 {
+        return None;
+    }
+    Some(declaration[..end].to_string())
+}
+
+fn is_js_identifier_part(character: char) -> bool {
+    character == '_' || character == '$' || character.is_ascii_alphanumeric()
+}
+
+fn resolve_local_static_import(importer: &Path, specifier: &str) -> Result<Option<PathBuf>> {
+    if !specifier.starts_with("./") && !specifier.starts_with("../") {
+        return Ok(None);
+    }
+
+    let base_dir = importer.parent().unwrap_or_else(|| Path::new("."));
+    let candidate = base_dir.join(specifier);
+    for path in local_module_candidates(&candidate) {
+        if path.is_file() {
+            return Ok(Some(path));
+        }
+    }
+
+    Err(anyhow!(
+        "Failed to resolve local import '{}' from {}",
+        specifier,
+        importer.display()
+    ))
+}
+
+fn local_module_candidates(candidate: &Path) -> Vec<PathBuf> {
+    if candidate.extension().is_some() {
+        return vec![candidate.to_path_buf()];
+    }
+
+    vec![
+        candidate.to_path_buf(),
+        candidate.with_extension("js"),
+        candidate.with_extension("mjs"),
+        candidate.with_extension("ts"),
+        candidate.with_extension("tsx"),
+        candidate.join("index.js"),
+        candidate.join("index.ts"),
+    ]
+}
+
+fn normalize_module_path(path: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+
+    let mut normalized = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                normalized.pop();
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    Ok(normalized)
+}
+
+fn module_binding_hash(file: &Path) -> Result<String> {
+    let normalized = normalize_module_path(file)?;
+    let normalized = normalized.to_string_lossy();
+    let digest = blake3::hash(normalized.as_bytes());
+    let hex = digest.to_hex();
+    Ok(hex.as_str()[..16].to_string())
+}
+
+fn default_export_binding_name(file: &Path) -> Result<String> {
+    Ok(format!(
+        "__beejs_default_export_{}",
+        module_binding_hash(file)?
+    ))
+}
+
+fn exported_binding_name(file: &Path, exported: &str) -> Result<String> {
+    if exported == "default" {
+        return default_export_binding_name(file);
+    }
+
+    Ok(format!(
+        "__beejs_export_{}_{}",
+        module_binding_hash(file)?,
+        sanitized_js_identifier_fragment(exported)
+    ))
+}
+
+fn sanitized_js_identifier_fragment(value: &str) -> String {
+    let mut sanitized = String::new();
+    for character in value.chars() {
+        if character == '_' || character == '$' || character.is_ascii_alphanumeric() {
+            sanitized.push(character);
+        } else {
+            sanitized.push('_');
+        }
+    }
+
+    if sanitized.is_empty() {
+        return "export".to_string();
+    }
+
+    if sanitized
+        .chars()
+        .next()
+        .is_some_and(|character| character.is_ascii_digit())
+    {
+        sanitized.insert(0, '_');
+    }
+
+    sanitized
+}
+
+fn static_default_export_declaration_exists(code: &str) -> bool {
+    static_module_statements(code).into_iter().any(|line| {
+        line.trim_start()
+            .strip_prefix("export ")
+            .is_some_and(|rest| rest.trim_start().starts_with("default "))
+    })
+}
+
+fn local_export_bindings(file: &Path, code: &str) -> Result<Vec<(String, String)>> {
+    let mut bindings = Vec::new();
+    for line in static_module_statements(code) {
+        let Some(rest) = line.trim_start().strip_prefix("export ") else {
+            continue;
+        };
+        let rest = rest.trim_start();
+
+        if rest.starts_with("default ") || rest.starts_with('{') && rest.contains(" from ") {
+            continue;
+        }
+
+        if let Some(list_exports) = export_list_bindings(rest) {
+            for (exported, local) in list_exports {
+                bindings.push((exported_binding_name(file, &exported)?, local));
+            }
+            continue;
+        }
+
+        for keyword in ["const ", "let ", "var ", "function ", "class "] {
+            if let Some(name) = exported_declaration_name(rest, keyword) {
+                bindings.push((exported_binding_name(file, &name)?, name));
+                break;
+            }
+        }
+    }
+
+    Ok(bindings)
+}
+
+fn rewrite_esm_exports_for_bundle(file: &Path, code: &str) -> Result<String> {
+    let mut output = String::new();
+    let default_binding = default_export_binding_name(file)?;
+    let export_bindings = local_export_bindings(file, code)?;
+    let mut declared_bindings = Vec::new();
+    let mut seen_bindings = HashSet::new();
+
+    if static_default_export_declaration_exists(code)
+        && seen_bindings.insert(default_binding.clone())
+    {
+        declared_bindings.push(default_binding.clone());
+    }
+
+    for (binding, _) in &export_bindings {
+        if seen_bindings.insert(binding.clone()) {
+            declared_bindings.push(binding.clone());
+        }
+    }
+
+    for binding in &declared_bindings {
+        output.push_str("let ");
+        output.push_str(binding);
+        output.push_str(";\n");
+    }
+    output.push_str("{\n");
+
+    for line in static_module_statements(code) {
+        let indent_len = line.len() - line.trim_start().len();
+        let indent = &line[..indent_len];
+        let trimmed = line.trim_start();
+
+        if let Some(rest) = trimmed.strip_prefix("export ") {
+            let rest = rest.trim_start();
+            if rest.starts_with('{') {
+                continue;
+            }
+
+            if let Some(default_rest) = rest.strip_prefix("default ") {
+                output.push_str(indent);
+                output.push_str(&default_binding);
+                output.push_str(" = ");
+                output.push_str(default_rest);
+                output.push('\n');
+                continue;
+            }
+
+            if starts_with_exportable_declaration(rest) {
+                output.push_str(indent);
+                output.push_str(rest);
+                output.push('\n');
+                continue;
+            }
+        }
+
+        output.push_str(&line);
+        output.push('\n');
+    }
+
+    for (binding, local) in export_bindings {
+        output.push_str(&binding);
+        output.push_str(" = ");
+        output.push_str(&local);
+        output.push_str(";\n");
+    }
+    output.push_str("}\n");
+
+    Ok(output)
+}
+
+fn starts_with_exportable_declaration(input: &str) -> bool {
+    ["const ", "let ", "var ", "function ", "class "]
+        .iter()
+        .any(|prefix| input.starts_with(prefix))
+}
+
+fn minify_bundle_source(code: &str) -> String {
+    code.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn normalize_create_args(name: String, template: String) -> (String, String) {
+    match (name.as_str(), template.as_str()) {
+        ("js" | "ts", actual_name) if actual_name != "js" && actual_name != "ts" => {
+            (actual_name.to_string(), name)
+        }
+        _ => (name, template),
+    }
+}
+
+fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
+    use beejs::permissions::{
+        global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+    };
+
+    let mut broker = global_resource_broker()
+        .write()
+        .map_err(|_| anyhow!("resource broker lock poisoned"))?;
+    *broker = ResourceBroker::default();
+
+    if let Some(policy_path) = &options.policy {
+        apply_permission_policy_file(&mut broker, policy_path)?;
+    }
+
+    if options.deny_fs {
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Any,
+        );
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Any,
+        );
+    }
+
+    if options.deny_net {
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Any,
+        );
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Listen,
+            ResourceId::Any,
+        );
+    }
+
+    if options.deny_env {
+        broker.deny(
+            PermissionKind::Environment,
+            PermissionAction::Read,
+            ResourceId::Any,
+        );
+    }
+
+    if options.deny_run {
+        broker.deny(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Any,
+        );
+    }
+
+    for path in &options.allow_read {
+        broker.allow(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(path.clone()),
+        );
+    }
+
+    for path in &options.allow_write {
+        broker.allow(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(path.clone()),
+        );
+    }
+
+    for target in &options.allow_net {
+        broker.allow(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            network_resource_from_cli_target(target),
+        );
+    }
+
+    for target in &options.allow_listen {
+        broker.allow(
+            PermissionKind::Network,
+            PermissionAction::Listen,
+            network_resource_from_cli_target(target),
+        );
+    }
+
+    for name in &options.allow_env {
+        broker.allow(
+            PermissionKind::Environment,
+            PermissionAction::Read,
+            ResourceId::Name(name.clone()),
+        );
+    }
+
+    for command in &options.allow_run {
+        broker.allow(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Name(command.clone()),
+        );
+    }
+
+    Ok(())
+}
+
+fn apply_permission_policy_file(
+    broker: &mut beejs::permissions::ResourceBroker,
+    policy_path: &Path,
+) -> Result<()> {
+    let contents = std::fs::read_to_string(policy_path).map_err(|e| {
+        anyhow!(
+            "Failed to read permission policy {}: {}",
+            policy_path.display(),
+            e
+        )
+    })?;
+    let policy = parse_permission_policy(policy_path, &contents)?;
+    let base_dir = policy_path.parent().unwrap_or_else(|| Path::new("."));
+    apply_permission_policy_rules(broker, &policy.permissions, base_dir);
+    Ok(())
+}
+
+fn parse_permission_policy(policy_path: &Path, contents: &str) -> Result<PermissionPolicyFile> {
+    serde_json::from_str(contents).map_err(|e| {
+        anyhow!(
+            "Failed to parse permission policy {} as JSON: {}",
+            policy_path.display(),
+            e
+        )
+    })
+}
+
+fn apply_permission_policy_rules(
+    broker: &mut beejs::permissions::ResourceBroker,
+    rules: &PermissionPolicyRules,
+    base_dir: &Path,
+) {
+    use beejs::permissions::{PermissionAction, PermissionKind, ResourceId};
+
+    if rules.deny_fs {
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Any,
+        );
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Any,
+        );
+    }
+
+    if rules.deny_net {
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Any,
+        );
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Listen,
+            ResourceId::Any,
+        );
+    }
+
+    if rules.deny_env {
+        broker.deny(
+            PermissionKind::Environment,
+            PermissionAction::Read,
+            ResourceId::Any,
+        );
+    }
+
+    if rules.deny_run {
+        broker.deny(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Any,
+        );
+    }
+
+    for path in &rules.allow_read {
+        broker.allow(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(resolve_policy_path(base_dir, path)),
+        );
+    }
+
+    for path in &rules.allow_write {
+        broker.allow(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(resolve_policy_path(base_dir, path)),
+        );
+    }
+
+    for target in &rules.allow_net {
+        broker.allow(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            network_resource_from_cli_target(target),
+        );
+    }
+
+    for target in &rules.allow_listen {
+        broker.allow(
+            PermissionKind::Network,
+            PermissionAction::Listen,
+            network_resource_from_cli_target(target),
+        );
+    }
+
+    for name in &rules.allow_env {
+        broker.allow(
+            PermissionKind::Environment,
+            PermissionAction::Read,
+            ResourceId::Name(name.clone()),
+        );
+    }
+
+    for command in &rules.allow_run {
+        broker.allow(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Name(command.clone()),
+        );
+    }
+}
+
+fn resolve_policy_path(base_dir: &Path, path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        base_dir.join(path)
+    }
+}
+
+fn network_resource_from_cli_target(target: &str) -> beejs::permissions::ResourceId {
+    if target.contains("://") {
+        beejs::permissions::ResourceId::Url(target.to_string())
+    } else {
+        beejs::permissions::ResourceId::Name(target.to_string())
+    }
+}
+
+fn check_file_read_permission(path: &Path) -> Result<()> {
+    beejs::permissions::check_global_permission(
+        beejs::permissions::PermissionKind::FileSystem,
+        beejs::permissions::PermissionAction::Read,
+        beejs::permissions::ResourceId::Path(path.to_path_buf()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_file_write_permission(path: &Path) -> Result<()> {
+    beejs::permissions::check_global_permission(
+        beejs::permissions::PermissionKind::FileSystem,
+        beejs::permissions::PermissionAction::Write,
+        beejs::permissions::ResourceId::Path(path.to_path_buf()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_network_listen_permission(target: &str) -> Result<()> {
+    beejs::permissions::check_global_permission(
+        beejs::permissions::PermissionKind::Network,
+        beejs::permissions::PermissionAction::Listen,
+        network_resource_from_cli_target(target),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_process_execute_permission(command: &str) -> Result<()> {
+    beejs::permissions::check_global_permission(
+        beejs::permissions::PermissionKind::Process,
+        beejs::permissions::PermissionAction::Execute,
+        beejs::permissions::ResourceId::Name(command.to_string()),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct SemverTriple {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
+fn validate_frozen_lockfile(package_data: &serde_json::Value, lock_path: &Path) -> Result<()> {
+    if !lock_path.exists() {
+        return Err(anyhow!(
+            "frozen lockfile requires package-lock.json to exist"
+        ));
+    }
+
+    check_file_read_permission(lock_path)?;
+    let lock_content = std::fs::read_to_string(lock_path)
+        .map_err(|e| anyhow!("Failed to read package-lock.json: {}", e))?;
+    let lock: beejs::package_manager::PackageLock = serde_json::from_str(&lock_content)
+        .map_err(|e| anyhow!("Failed to parse package-lock.json: {}", e))?;
+    let locked_deps = lock.dependencies.unwrap_or_default();
+
+    for section in ["dependencies", "devDependencies", "optionalDependencies"] {
+        let Some(deps) = package_data
+            .get(section)
+            .and_then(|value| value.as_object())
+        else {
+            continue;
+        };
+
+        for (name, requested_value) in deps {
+            let requested = requested_value.as_str().ok_or_else(|| {
+                anyhow!(
+                    "frozen lockfile cannot validate non-string dependency '{}' in {}",
+                    name,
+                    section
+                )
+            })?;
+            let locked = locked_deps.get(name).ok_or_else(|| {
+                anyhow!(
+                    "frozen lockfile mismatch for package '{}': missing from package-lock.json",
+                    name
+                )
+            })?;
+
+            if !dependency_request_matches_locked_version(requested, &locked.version) {
+                return Err(anyhow!(
+                    "frozen lockfile mismatch for package '{}': package.json requests '{}' but package-lock.json locks '{}'",
+                    name,
+                    requested,
+                    locked.version
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn dependency_request_matches_locked_version(requested: &str, locked: &str) -> bool {
+    let requested = requested.trim();
+    let locked = locked.trim();
+    if requested == "*" || requested.eq_ignore_ascii_case("latest") {
+        return true;
+    }
+
+    if requested == locked {
+        return true;
+    }
+
+    if let Some(base) = requested.strip_prefix('^') {
+        return semver_caret_matches(base, locked);
+    }
+    if let Some(base) = requested.strip_prefix('~') {
+        return semver_tilde_matches(base, locked);
+    }
+    if let Some(base) = requested.strip_prefix('=') {
+        return locked == base.trim();
+    }
+
+    false
+}
+
+fn semver_caret_matches(base: &str, locked: &str) -> bool {
+    let Some(base) = parse_semver_triplet(base) else {
+        return false;
+    };
+    let Some(locked) = parse_semver_triplet(locked) else {
+        return false;
+    };
+
+    if locked < base {
+        return false;
+    }
+    if base.major > 0 {
+        return locked.major == base.major;
+    }
+    if base.minor > 0 {
+        return locked.major == 0 && locked.minor == base.minor;
+    }
+    locked.major == 0 && locked.minor == 0 && locked.patch == base.patch
+}
+
+fn semver_tilde_matches(base: &str, locked: &str) -> bool {
+    let Some(base) = parse_semver_triplet(base) else {
+        return false;
+    };
+    let Some(locked) = parse_semver_triplet(locked) else {
+        return false;
+    };
+
+    locked >= base && locked.major == base.major && locked.minor == base.minor
+}
+
+fn parse_semver_triplet(version: &str) -> Option<SemverTriple> {
+    let core = version
+        .trim()
+        .trim_start_matches('v')
+        .split(['-', '+'])
+        .next()?;
+    let mut parts = core.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next().unwrap_or("0").parse().ok()?;
+    let patch = parts.next().unwrap_or("0").parse().ok()?;
+    Some(SemverTriple {
+        major,
+        minor,
+        patch,
+    })
+}
+
+fn build_process_argv(file: &Path, args: &[String]) -> Vec<String> {
+    let mut argv = vec!["bee".to_string(), file.to_string_lossy().into_owned()];
+    argv.extend(args.iter().cloned());
+    argv
+}
+
+fn preload_require_source(preload: &str) -> Result<String> {
+    let preload_path = Path::new(preload);
+    let specifier = if preload_path.exists() {
+        preload_path
+            .canonicalize()
+            .map_err(|e| anyhow!("Failed to resolve preload file {}: {}", preload, e))?
+            .to_string_lossy()
+            .to_string()
+    } else {
+        preload.to_string()
+    };
+    let specifier = serde_json::to_string(&specifier)
+        .map_err(|e| anyhow!("Failed to encode preload specifier: {}", e))?;
+    Ok(format!("require({specifier});"))
+}
+
+fn snapshot_path_for_test_file(test_file: &Path) -> PathBuf {
+    let file_name = test_file
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| "test.js".to_string());
+    let base_dir = test_file.parent().unwrap_or_else(|| Path::new("."));
+    base_dir
+        .join("__snapshots__")
+        .join(format!("{}.snap", file_name))
+}
+
+fn read_snapshot_content(test_file: &Path) -> Result<(PathBuf, Option<String>)> {
+    let snapshot_path = snapshot_path_for_test_file(test_file);
+    if !snapshot_path.is_file() {
+        return Ok((snapshot_path, None));
+    }
+
+    check_file_read_permission(&snapshot_path)?;
+    let content = std::fs::read_to_string(&snapshot_path).map_err(|e| {
+        anyhow!(
+            "Failed to read snapshot file {}: {}",
+            snapshot_path.display(),
+            e
+        )
+    })?;
+    Ok((snapshot_path, Some(content)))
+}
+
+#[derive(Debug, Deserialize)]
+struct TestFileRunResult {
+    summary: String,
+    #[serde(default, rename = "snapshotUpdated")]
+    snapshot_updated: bool,
+    #[serde(default, rename = "snapshotContent")]
+    snapshot_content: Option<String>,
+    #[serde(default, rename = "inlineSnapshotUpdated")]
+    inline_snapshot_updated: bool,
+    #[serde(default, rename = "inlineSnapshotUpdates")]
+    inline_snapshot_updates: Vec<InlineSnapshotUpdate>,
+}
+
+#[derive(Debug, Deserialize)]
+struct InlineSnapshotUpdate {
+    index: usize,
+    content: String,
+}
+
+fn write_snapshot_content(snapshot_path: &Path, content: &str) -> Result<()> {
+    let snapshot_dir = snapshot_path
+        .parent()
+        .ok_or_else(|| anyhow!("Snapshot path has no parent: {}", snapshot_path.display()))?;
+    check_file_write_permission(snapshot_dir)?;
+    check_file_write_permission(snapshot_path)?;
+    std::fs::create_dir_all(snapshot_dir).map_err(|e| {
+        anyhow!(
+            "Failed to create snapshot directory {}: {}",
+            snapshot_dir.display(),
+            e
+        )
+    })?;
+    std::fs::write(snapshot_path, content).map_err(|e| {
+        anyhow!(
+            "Failed to write snapshot file {}: {}",
+            snapshot_path.display(),
+            e
+        )
+    })
+}
+
+fn escape_inline_snapshot_content(content: &str) -> String {
+    content
+        .replace('\\', "\\\\")
+        .replace('`', "\\`")
+        .replace('$', "\\$")
+}
+
+fn find_matching_paren(source: &str, open_paren_index: usize) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut quote: Option<char> = None;
+    let mut escaped = false;
+
+    for (offset, ch) in source[open_paren_index..].char_indices() {
+        let index = open_paren_index + offset;
+
+        if let Some(quote_char) = quote {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if ch == '\\' {
+                escaped = true;
+                continue;
+            }
+            if ch == quote_char {
+                quote = None;
+            }
+            continue;
+        }
+
+        match ch {
+            '\'' | '"' | '`' => quote = Some(ch),
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(index);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+fn apply_inline_snapshot_updates(source: &str, updates: &[InlineSnapshotUpdate]) -> Result<String> {
+    if updates.is_empty() {
+        return Ok(source.to_string());
+    }
+
+    let marker = ".toMatchInlineSnapshot(";
+    let mut call_index = 0usize;
+    let mut search_start = 0usize;
+    let mut replacements: Vec<(usize, usize, String)> = Vec::new();
+
+    while let Some(relative_start) = source[search_start..].find(marker) {
+        let marker_start = search_start + relative_start;
+        let open_paren = marker_start + marker.len() - 1;
+        let close_paren = find_matching_paren(source, open_paren).ok_or_else(|| {
+            anyhow!(
+                "Failed to find closing parenthesis for inline snapshot call {}",
+                call_index + 1
+            )
+        })?;
+
+        call_index += 1;
+        if let Some(update) = updates.iter().find(|update| update.index == call_index) {
+            let escaped = escape_inline_snapshot_content(&update.content);
+            replacements.push((open_paren + 1, close_paren, format!("`\n{}\n`", escaped)));
+        }
+
+        search_start = close_paren + 1;
+    }
+
+    for update in updates {
+        if update.index == 0 || update.index > call_index {
+            return Err(anyhow!(
+                "Inline snapshot update referenced call {}, but only found {} inline snapshot call(s)",
+                update.index,
+                call_index
+            ));
+        }
+    }
+
+    let mut updated_source = source.to_string();
+    for (start, end, replacement) in replacements.into_iter().rev() {
+        updated_source.replace_range(start..end, &replacement);
+    }
+    Ok(updated_source)
+}
+
+fn write_inline_snapshot_source(test_file: &Path, updates: &[InlineSnapshotUpdate]) -> Result<()> {
+    check_file_write_permission(test_file)?;
+    check_file_read_permission(test_file)?;
+    let source = std::fs::read_to_string(test_file)
+        .map_err(|e| anyhow!("Failed to read test file {}: {}", test_file.display(), e))?;
+    let updated_source = apply_inline_snapshot_updates(&source, updates)?;
+    std::fs::write(test_file, updated_source)
+        .map_err(|e| anyhow!("Failed to write test file {}: {}", test_file.display(), e))
+}
+
+fn process_test_file_result(
+    test_file: &Path,
+    snapshot_path: &Path,
+    options: &TestFileOptions,
+    raw_result: String,
+) -> Result<String> {
+    let trimmed = raw_result.trim();
+    let Ok(run_result) = serde_json::from_str::<TestFileRunResult>(trimmed) else {
+        return Ok(raw_result);
+    };
+
+    if run_result.inline_snapshot_updated {
+        if !options.update_snapshots {
+            return Err(anyhow!(
+                "inline snapshot update requested without --update-snapshots"
+            ));
+        }
+        write_inline_snapshot_source(test_file, &run_result.inline_snapshot_updates)?;
+    }
+
+    if run_result.snapshot_updated {
+        let content = run_result
+            .snapshot_content
+            .ok_or_else(|| anyhow!("snapshot update result omitted snapshot content"))?;
+        if !options.update_snapshots {
+            return Err(anyhow!(
+                "snapshot update requested without --update-snapshots"
+            ));
+        }
+        write_snapshot_content(snapshot_path, &content)?;
+    }
+
+    Ok(run_result.summary)
+}
+
+fn execute_test_file(test_file: &Path, options: &TestFileOptions) -> Result<String> {
+    let code = read_and_compile_source(test_file)?;
+    let (snapshot_path, snapshot_content) = read_snapshot_content(test_file)?;
+    let code = wrap_test_source(&code, options, &snapshot_path, snapshot_content.as_deref());
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    runtime.set_process_argv(build_process_argv(test_file, &[]));
+    let runtime_test_path = test_file.with_extension("bee-test.cjs");
+    runtime.set_main_module_path(&runtime_test_path);
+    runtime.set_timer_drain_limit_ms(options.timeout_seconds.unwrap_or(30).saturating_mul(1000));
+
+    let result = runtime.execute_code(&code)?;
+    if result.trim() == "[object Promise]" {
+        return Err(anyhow!(
+            "test run did not settle before the configured timeout"
+        ));
+    }
+
+    process_test_file_result(test_file, &snapshot_path, options, result)
+}
+
+#[derive(Clone, Debug)]
+struct TestFileOptions {
+    include_pattern: Option<String>,
+    skip_pattern: Option<String>,
+    bail: bool,
+    timeout_seconds: Option<u64>,
+    update_snapshots: bool,
+}
+
+fn wrap_test_source(
+    source: &str,
+    options: &TestFileOptions,
+    snapshot_path: &Path,
+    snapshot_content: Option<&str>,
+) -> String {
+    let config = serde_json::json!({
+        "includePattern": options.include_pattern.as_deref().unwrap_or(""),
+        "skipPattern": options.skip_pattern.as_deref().unwrap_or(""),
+        "bail": options.bail,
+        "timeoutSeconds": options.timeout_seconds.unwrap_or(0),
+        "updateSnapshots": options.update_snapshots,
+        "snapshotPath": snapshot_path.to_string_lossy().to_string(),
+        "snapshotContent": snapshot_content,
+    });
+
+    let mut wrapped = format!(
+        "// @beejs-no-runtime-typescript-transpile\nlet __beejsTestConfig = {};\n",
+        config
+    );
+    wrapped.push_str(
+        r#"
+let __beejsTestPassed = 0;
+let __beejsTestFailed = 0;
+let __beejsTestSkipped = 0;
+let __beejsTestErrors = [];
+let __beejsTestQueue = [];
+let __beejsDescribeStack = [];
+let __beejsSuiteCounter = 0;
+let __beejsSuiteRegistry = {};
+let __beejsSuiteOrder = [];
+let __beejsRemainingSuiteTests = {};
+let __beejsStartedSuites = {};
+let __beejsFinishedSuites = {};
+let __beejsFailedBeforeAllSuites = {};
+let __beejsMockFunctions = [];
+let __beejsSpyRestorers = [];
+let __beejsCustomMatchers = Object.create(null);
+let __beejsCurrentTestName = "";
+let __beejsAssertionCount = 0;
+let __beejsExpectedAssertionCount = undefined;
+let __beejsHasAssertionExpectation = false;
+let __beejsSnapshotCounters = {};
+let __beejsSnapshotUpdates = {};
+let __beejsInlineSnapshotCounter = 0;
+let __beejsInlineSnapshotUpdates = [];
+let __beejsRootHooks = {
+  id: "root",
+  name: "",
+  beforeAll: [],
+  beforeEach: [],
+  afterEach: [],
+  afterAll: []
+};
+__beejsSuiteRegistry[__beejsRootHooks.id] = __beejsRootHooks;
+__beejsSuiteOrder.push(__beejsRootHooks.id);
+
+function __beejsNormalizeSnapshotText(value) {
+  let text = String(value);
+  if (text.startsWith("\n")) {
+    text = text.slice(1);
+  }
+  if (text.endsWith("\n")) {
+    text = text.slice(0, -1);
+  }
+  return text;
+}
+
+function __beejsUnescapeSnapshotLiteral(value) {
+  return String(value)
+    .replace(/\\`/g, "`")
+    .replace(/\\\$/g, "$")
+    .replace(/\\\\/g, "\\");
+}
+
+function __beejsEscapeSnapshotLiteral(value) {
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/`/g, "\\`")
+    .replace(/\$/g, "\\$");
+}
+
+function __beejsParseSnapshots(content) {
+  const snapshots = {};
+  if (typeof content !== "string" || content.length === 0) {
+    return snapshots;
+  }
+  const pattern = /exports\[`((?:\\`|[^`])+)`\]\s*=\s*`([\s\S]*?)`;/g;
+  let match;
+  while ((match = pattern.exec(content)) !== null) {
+    const key = __beejsUnescapeSnapshotLiteral(match[1]);
+    snapshots[key] = __beejsNormalizeSnapshotText(__beejsUnescapeSnapshotLiteral(match[2]));
+  }
+  return snapshots;
+}
+
+const __beejsSnapshots = __beejsParseSnapshots(__beejsTestConfig.snapshotContent || "");
+
+function __beejsBuildSnapshotFileContent() {
+  const merged = {};
+  for (const key of Object.keys(__beejsSnapshots)) {
+    merged[key] = __beejsSnapshots[key];
+  }
+  for (const key of Object.keys(__beejsSnapshotUpdates)) {
+    merged[key] = __beejsSnapshotUpdates[key];
+  }
+
+  return Object.keys(merged).sort().map((key) => {
+    const escapedKey = __beejsEscapeSnapshotLiteral(key);
+    const escapedValue = __beejsEscapeSnapshotLiteral(merged[key]);
+    return `exports[\`${escapedKey}\`] = \`\n${escapedValue}\n\`;\n`;
+  }).join("\n");
+}
+
+function __beejsFormatValue(value) {
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  if (__beejsIsMap(value)) {
+    return `Map ${__beejsFormatValue(Array.from(value.entries()))}`;
+  }
+  if (__beejsIsSet(value)) {
+    return `Set ${__beejsFormatValue(Array.from(value.values()))}`;
+  }
+  try {
+    const json = JSON.stringify(value);
+    return json === undefined ? String(value) : json;
+  } catch (_) {
+    return String(value);
+  }
+}
+
+function __beejsRecordFailure(name, error) {
+  __beejsTestFailed++;
+  const message = error && error.message ? error.message : String(error);
+  const line = `${name}: ${message}`;
+  __beejsTestErrors.push(line);
+  console.error(`FAIL ${line}`);
+}
+
+function __beejsPatternMatches(pattern, name, suite) {
+  if (pattern === "") {
+    return true;
+  }
+  let regex;
+  try {
+    regex = new RegExp(String(pattern));
+  } catch (error) {
+    throw new Error(`Invalid test pattern ${JSON.stringify(pattern)}: ${error.message}`);
+  }
+  return regex.test(String(name)) || regex.test(String(suite || ""));
+}
+
+function __beejsCurrentHookFrame() {
+  if (__beejsDescribeStack.length === 0) {
+    return __beejsRootHooks;
+  }
+  return __beejsDescribeStack[__beejsDescribeStack.length - 1];
+}
+
+function __beejsCreateSuiteFrame(name) {
+  return __beejsCreateSuiteFrameWithOptions(name, {});
+}
+
+function __beejsCreateSuiteFrameWithOptions(name, options) {
+  const frame = {
+    id: `suite:${++__beejsSuiteCounter}`,
+    name: String(name),
+    skip: Boolean(options && options.skip),
+    only: Boolean(options && options.only),
+    beforeAll: [],
+    beforeEach: [],
+    afterEach: [],
+    afterAll: []
+  };
+  __beejsSuiteRegistry[frame.id] = frame;
+  __beejsSuiteOrder.push(frame.id);
+  return frame;
+}
+
+function __beejsCurrentSuiteHasFlag(flag) {
+  return __beejsDescribeStack.some((frame) => Boolean(frame[flag]));
+}
+
+function __beejsCaptureSuiteIds() {
+  return [__beejsRootHooks].concat(__beejsDescribeStack).map((frame) => frame.id);
+}
+
+function __beejsCaptureBeforeEachHooks() {
+  let hooks = __beejsRootHooks.beforeEach.slice();
+  for (const frame of __beejsDescribeStack) {
+    hooks = hooks.concat(frame.beforeEach);
+  }
+  return hooks;
+}
+
+function __beejsCaptureAfterEachHooks() {
+  let hooks = [];
+  for (let i = __beejsDescribeStack.length - 1; i >= 0; i--) {
+    hooks = hooks.concat(__beejsDescribeStack[i].afterEach);
+  }
+  return hooks.concat(__beejsRootHooks.afterEach);
+}
+
+function __beejsQueueTest(name, callback, options) {
+  const suite = __beejsDescribeStack.map((frame) => frame.name).join(" ");
+  const suiteSkip = __beejsCurrentSuiteHasFlag("skip");
+  const skip = Boolean(options && options.skip) || suiteSkip;
+  __beejsTestQueue.push({
+    name: String(name),
+    suite,
+    callback,
+    skip,
+    failing: Boolean(options && options.failing),
+    only: !skip && (Boolean(options && options.only) || __beejsCurrentSuiteHasFlag("only")),
+    suiteIds: __beejsCaptureSuiteIds(),
+    beforeEachHooks: __beejsCaptureBeforeEachHooks(),
+    afterEachHooks: __beejsCaptureAfterEachHooks()
+  });
+}
+
+function test(name, callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("test callback must be a function"));
+    return;
+  }
+  __beejsQueueTest(name, callback, {});
+}
+
+test.skip = function testSkip(name, callback) {
+  __beejsQueueTest(name || "skipped test", callback, { skip: true });
+};
+test.only = function testOnly(name, callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("test callback must be a function"));
+    return;
+  }
+  __beejsQueueTest(name, callback, { only: true });
+};
+test.todo = function testTodo(name) {
+  __beejsQueueTest(name || "todo test", undefined, { skip: true });
+};
+test.failing = function testFailing(name, callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("test callback must be a function"));
+    return;
+  }
+  __beejsQueueTest(name, callback, { failing: true });
+};
+
+function __beejsCreateConcurrentTest() {
+  function concurrent(name, callback) {
+    if (typeof callback !== "function") {
+      __beejsRecordFailure(name, new Error("test callback must be a function"));
+      return;
+    }
+    __beejsQueueTest(name, callback, {});
+  }
+
+  concurrent.skip = function concurrentSkip(name, callback) {
+    __beejsQueueTest(name || "skipped test", callback, { skip: true });
+  };
+  concurrent.only = function concurrentOnly(name, callback) {
+    if (typeof callback !== "function") {
+      __beejsRecordFailure(name, new Error("test callback must be a function"));
+      return;
+    }
+    __beejsQueueTest(name, callback, { only: true });
+  };
+  concurrent.todo = function concurrentTodo(name) {
+    __beejsQueueTest(name || "todo test", undefined, { skip: true });
+  };
+  concurrent.failing = function concurrentFailing(name, callback) {
+    if (typeof callback !== "function") {
+      __beejsRecordFailure(name, new Error("test callback must be a function"));
+      return;
+    }
+    __beejsQueueTest(name, callback, { failing: true });
+  };
+  return concurrent;
+}
+
+test.concurrent = __beejsCreateConcurrentTest();
+
+const it = test;
+it.skip = test.skip;
+it.only = test.only;
+it.todo = test.todo;
+it.failing = test.failing;
+it.concurrent = test.concurrent;
+
+function beforeEach(callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure("beforeEach", new Error("beforeEach callback must be a function"));
+    return;
+  }
+  __beejsCurrentHookFrame().beforeEach.push(callback);
+}
+
+function afterEach(callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure("afterEach", new Error("afterEach callback must be a function"));
+    return;
+  }
+  __beejsCurrentHookFrame().afterEach.push(callback);
+}
+
+function beforeAll(callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure("beforeAll", new Error("beforeAll callback must be a function"));
+    return;
+  }
+  __beejsCurrentHookFrame().beforeAll.push(callback);
+}
+
+function afterAll(callback) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure("afterAll", new Error("afterAll callback must be a function"));
+    return;
+  }
+  __beejsCurrentHookFrame().afterAll.push(callback);
+}
+
+function describe(name, callback) {
+  return __beejsDescribe(name, callback, {});
+}
+
+function __beejsDescribe(name, callback, options) {
+  if (typeof callback !== "function") {
+    __beejsRecordFailure(name, new Error("describe callback must be a function"));
+    return;
+  }
+
+  try {
+    __beejsDescribeStack.push(__beejsCreateSuiteFrameWithOptions(name, options));
+    callback();
+  } catch (error) {
+    __beejsRecordFailure(name, error);
+  } finally {
+    __beejsDescribeStack.pop();
+  }
+}
+
+describe.skip = function describeSkip(name, callback) {
+  return __beejsDescribe(name, callback, { skip: true });
+};
+describe.only = function describeOnly(name, callback) {
+  return __beejsDescribe(name, callback, { only: true });
+};
+
+function __beejsEachArgs(row) {
+  return Array.isArray(row) ? row : [row];
+}
+
+function __beejsSplitEachLine(line) {
+  const cells = String(line).split("|").map((cell) => cell.trim());
+  if (cells.length > 0 && cells[0] === "") {
+    cells.shift();
+  }
+  if (cells.length > 0 && cells[cells.length - 1] === "") {
+    cells.pop();
+  }
+  return cells;
+}
+
+function __beejsEachValueMarker(index) {
+  return `__BEEJS_EACH_VALUE_${index}__`;
+}
+
+function __beejsParseEachTemplateCell(cell, values) {
+  const exactMatch = String(cell).match(/^__BEEJS_EACH_VALUE_(\d+)__$/);
+  if (exactMatch) {
+    return values[Number(exactMatch[1])];
+  }
+  return String(cell).replace(/__BEEJS_EACH_VALUE_(\d+)__/g, (_, index) => {
+    return String(values[Number(index)]);
+  });
+}
+
+function __beejsParseEachTemplateTable(strings, values) {
+  let text = "";
+  for (let index = 0; index < strings.length; index++) {
+    text += strings[index];
+    if (index < values.length) {
+      text += __beejsEachValueMarker(index);
+    }
+  }
+
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return [];
+  }
+  const headers = __beejsSplitEachLine(lines[0]);
+  return lines.slice(1).map((line) => {
+    const cells = __beejsSplitEachLine(line);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = __beejsParseEachTemplateCell(cells[index] || "", values);
+    });
+    return row;
+  });
+}
+
+function __beejsResolveEachRows(table, values) {
+  if (Array.isArray(table) && Array.isArray(table.raw)) {
+    return __beejsParseEachTemplateTable(table, values);
+  }
+  if (Array.isArray(table)) {
+    return table;
+  }
+  return null;
+}
+
+function __beejsFormatEachTitle(name, args, rowIndex) {
+  let argIndex = 0;
+  let title = String(name);
+  if (args.length === 1 && args[0] !== null && typeof args[0] === "object" && !Array.isArray(args[0])) {
+    const row = args[0];
+    title = title.replace(/\$#|\$[A-Za-z_$][A-Za-z0-9_$]*/g, (token) => {
+      if (token === "$#") {
+        return String(rowIndex);
+      }
+      const key = token.slice(1);
+      return Object.prototype.hasOwnProperty.call(row, key) ? String(row[key]) : token;
+    });
+  }
+  return title.replace(/%[#sdifjp]/g, (token) => {
+    if (token === "%#") {
+      return String(rowIndex);
+    }
+    const value = args[argIndex++];
+    if (token === "%s") {
+      return String(value);
+    }
+    if (token === "%i" || token === "%d") {
+      return String(Number.parseInt(value, 10));
+    }
+    if (token === "%f") {
+      return String(Number(value));
+    }
+    if (token === "%j") {
+      try {
+        return JSON.stringify(value);
+      } catch (_) {
+        return String(value);
+      }
+    }
+    return __beejsFormatValue(value);
+  });
+}
+
+function __beejsEachCallback(callback, args) {
+  if (typeof callback !== "function") {
+    return callback;
+  }
+  if (callback.length > args.length) {
+    return function (done) {
+      return callback.apply(undefined, args.concat(done));
+    };
+  }
+  return function () {
+    return callback.apply(undefined, args);
+  };
+}
+
+function __beejsCreateTestEach(registerTest) {
+  return function each(table, ...values) {
+    const rows = __beejsResolveEachRows(table, values);
+    return function eachTest(name, callback) {
+      if (!rows) {
+        __beejsRecordFailure(name, new Error("each table must be an array"));
+        return;
+      }
+      rows.forEach((row, rowIndex) => {
+        const args = __beejsEachArgs(row);
+        registerTest(__beejsFormatEachTitle(name, args, rowIndex), __beejsEachCallback(callback, args));
+      });
+    };
+  };
+}
+
+function __beejsCreateDescribeEach(registerDescribe) {
+  return function each(table, ...values) {
+    const rows = __beejsResolveEachRows(table, values);
+    return function eachDescribe(name, callback) {
+      if (!rows) {
+        __beejsRecordFailure(name, new Error("each table must be an array"));
+        return;
+      }
+      rows.forEach((row, rowIndex) => {
+        const args = __beejsEachArgs(row);
+        registerDescribe(__beejsFormatEachTitle(name, args, rowIndex), function () {
+          return callback.apply(undefined, args);
+        });
+      });
+    };
+  };
+}
+
+test.each = __beejsCreateTestEach(test);
+test.skip.each = __beejsCreateTestEach(test.skip);
+test.only.each = __beejsCreateTestEach(test.only);
+test.failing.each = __beejsCreateTestEach(test.failing);
+test.concurrent.each = __beejsCreateTestEach(test.concurrent);
+test.concurrent.skip.each = __beejsCreateTestEach(test.concurrent.skip);
+test.concurrent.only.each = __beejsCreateTestEach(test.concurrent.only);
+test.concurrent.failing.each = __beejsCreateTestEach(test.concurrent.failing);
+it.each = test.each;
+it.skip.each = test.skip.each;
+it.only.each = test.only.each;
+it.failing.each = test.failing.each;
+it.concurrent.each = test.concurrent.each;
+it.concurrent.skip.each = test.concurrent.skip.each;
+it.concurrent.only.each = test.concurrent.only.each;
+it.concurrent.failing.each = test.concurrent.failing.each;
+describe.each = __beejsCreateDescribeEach(describe);
+describe.skip.each = __beejsCreateDescribeEach(describe.skip);
+describe.only.each = __beejsCreateDescribeEach(describe.only);
+
+function __beejsIsAsymmetricMatcher(value) {
+  return Boolean(value && value.__beejsAsymmetricMatcher === true && typeof value.asymmetricMatch === "function");
+}
+
+function __beejsContainsAsymmetricMatcher(value) {
+  if (__beejsIsAsymmetricMatcher(value)) {
+    return true;
+  }
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  const keys = Object.keys(value);
+  for (const key of keys) {
+    if (__beejsContainsAsymmetricMatcher(value[key])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function __beejsIsMap(value) {
+  return Object.prototype.toString.call(value) === "[object Map]";
+}
+
+function __beejsIsSet(value) {
+  return Object.prototype.toString.call(value) === "[object Set]";
+}
+
+function __beejsMapsEqual(actual, expected, valuesEqual) {
+  if (!__beejsIsMap(actual) || !__beejsIsMap(expected) || actual.size !== expected.size) {
+    return false;
+  }
+
+  const expectedEntries = Array.from(expected.entries());
+  const matched = new Array(expectedEntries.length).fill(false);
+  for (const [actualKey, actualValue] of actual.entries()) {
+    let found = false;
+    for (let index = 0; index < expectedEntries.length; index++) {
+      if (matched[index]) {
+        continue;
+      }
+      const [expectedKey, expectedValue] = expectedEntries[index];
+      if (valuesEqual(actualKey, expectedKey) && valuesEqual(actualValue, expectedValue)) {
+        matched[index] = true;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function __beejsSetsEqual(actual, expected, valuesEqual) {
+  if (!__beejsIsSet(actual) || !__beejsIsSet(expected) || actual.size !== expected.size) {
+    return false;
+  }
+
+  const expectedValues = Array.from(expected.values());
+  const matched = new Array(expectedValues.length).fill(false);
+  for (const actualValue of actual.values()) {
+    let found = false;
+    for (let index = 0; index < expectedValues.length; index++) {
+      if (matched[index]) {
+        continue;
+      }
+      if (valuesEqual(actualValue, expectedValues[index])) {
+        matched[index] = true;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function __beejsValuesEqual(actual, expected) {
+  if (__beejsIsAsymmetricMatcher(expected)) {
+    return expected.asymmetricMatch(actual);
+  }
+  if (Object.is(actual, expected)) {
+    return true;
+  }
+  if (__beejsIsMap(actual) || __beejsIsMap(expected)) {
+    return __beejsMapsEqual(actual, expected, __beejsValuesEqual);
+  }
+  if (__beejsIsSet(actual) || __beejsIsSet(expected)) {
+    return __beejsSetsEqual(actual, expected, __beejsValuesEqual);
+  }
+  if (__beejsContainsAsymmetricMatcher(expected)) {
+    if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") {
+      return false;
+    }
+    if (Array.isArray(actual) || Array.isArray(expected)) {
+      if (!Array.isArray(actual) || !Array.isArray(expected) || actual.length !== expected.length) {
+        return false;
+      }
+      for (let index = 0; index < expected.length; index++) {
+        if (!__beejsValuesEqual(actual[index], expected[index])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    const actualKeys = Object.keys(actual).sort();
+    const expectedKeys = Object.keys(expected).sort();
+    if (actualKeys.length !== expectedKeys.length) {
+      return false;
+    }
+    for (let index = 0; index < expectedKeys.length; index++) {
+      const key = expectedKeys[index];
+      if (actualKeys[index] !== key || !__beejsValuesEqual(actual[key], expected[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return JSON.stringify(actual) === JSON.stringify(expected);
+}
+
+function __beejsOwnKeys(value) {
+  return Reflect.ownKeys(value).sort((left, right) => {
+    const leftText = String(left);
+    const rightText = String(right);
+    if (leftText < rightText) {
+      return -1;
+    }
+    if (leftText > rightText) {
+      return 1;
+    }
+    return 0;
+  });
+}
+
+function __beejsStrictValuesEqual(actual, expected) {
+  if (__beejsIsAsymmetricMatcher(expected)) {
+    return expected.asymmetricMatch(actual);
+  }
+  if (Object.is(actual, expected)) {
+    return true;
+  }
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") {
+    return false;
+  }
+  if (Object.getPrototypeOf(actual) !== Object.getPrototypeOf(expected)) {
+    return false;
+  }
+  if (__beejsIsMap(actual) || __beejsIsMap(expected)) {
+    return __beejsMapsEqual(actual, expected, __beejsStrictValuesEqual);
+  }
+  if (__beejsIsSet(actual) || __beejsIsSet(expected)) {
+    return __beejsSetsEqual(actual, expected, __beejsStrictValuesEqual);
+  }
+  if (Array.isArray(actual) || Array.isArray(expected)) {
+    if (!Array.isArray(actual) || !Array.isArray(expected) || actual.length !== expected.length) {
+      return false;
+    }
+    for (let index = 0; index < actual.length; index++) {
+      const actualHasIndex = Object.prototype.hasOwnProperty.call(actual, index);
+      const expectedHasIndex = Object.prototype.hasOwnProperty.call(expected, index);
+      if (actualHasIndex !== expectedHasIndex) {
+        return false;
+      }
+      if (actualHasIndex && !__beejsStrictValuesEqual(actual[index], expected[index])) {
+        return false;
+      }
+    }
+  }
+
+  const actualKeys = __beejsOwnKeys(actual);
+  const expectedKeys = __beejsOwnKeys(expected);
+  if (actualKeys.length !== expectedKeys.length) {
+    return false;
+  }
+  for (let index = 0; index < actualKeys.length; index++) {
+    if (actualKeys[index] !== expectedKeys[index]) {
+      return false;
+    }
+    const key = actualKeys[index];
+    if (!__beejsStrictValuesEqual(actual[key], expected[key])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function __beejsContains(actual, expected) {
+  if (typeof actual === "string") {
+    return actual.includes(String(expected));
+  }
+  if (Array.isArray(actual)) {
+    return actual.some((item) => __beejsValuesEqual(item, expected));
+  }
+  if (actual && typeof actual.includes === "function") {
+    return actual.includes(expected);
+  }
+  return false;
+}
+
+function __beejsContainsEqual(actual, expected) {
+  if (!Array.isArray(actual)) {
+    return false;
+  }
+  return actual.some((item) => __beejsValuesEqual(item, expected));
+}
+
+function __beejsLengthOf(actual) {
+  if (actual == null || typeof actual.length !== "number") {
+    throw new Error(`Expected ${__beejsFormatValue(actual)} to have a length property`);
+  }
+  return actual.length;
+}
+
+function __beejsEnsureFiniteNumber(value, label) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    throw new Error(`Expected ${label} to be a number, got ${__beejsFormatValue(value)}`);
+  }
+  return value;
+}
+
+function __beejsCloseTo(actual, expected, precision) {
+  const actualNumber = __beejsEnsureFiniteNumber(actual, "actual value");
+  const expectedNumber = __beejsEnsureFiniteNumber(expected, "expected value");
+  const digits = precision === undefined ? 2 : Number(precision);
+  if (!Number.isInteger(digits) || digits < 0) {
+    throw new Error(`Expected precision to be a non-negative integer, got ${__beejsFormatValue(precision)}`);
+  }
+  return Math.abs(actualNumber - expectedNumber) < 10 ** -digits / 2;
+}
+
+function __beejsMatches(actual, expected) {
+  const text = String(actual);
+  if (expected instanceof RegExp) {
+    return expected.test(text);
+  }
+  return text.includes(String(expected));
+}
+
+function __beejsPropertyPathSegments(path) {
+  if (Array.isArray(path)) {
+    return path.map((segment) => String(segment));
+  }
+  if (typeof path === "string") {
+    const segments = [];
+    let current = "";
+    for (let index = 0; index < path.length; index++) {
+      const character = path[index];
+      if (character === ".") {
+        segments.push(current);
+        current = "";
+        continue;
+      }
+      if (character === "[") {
+        if (current !== "") {
+          segments.push(current);
+          current = "";
+        }
+        const closeIndex = path.indexOf("]", index + 1);
+        if (closeIndex === -1) {
+          throw new Error(`Invalid property path ${__beejsFormatValue(path)}: missing closing ]`);
+        }
+        const bracketSegment = path.slice(index + 1, closeIndex).trim();
+        if (bracketSegment === "") {
+          throw new Error(`Invalid property path ${__beejsFormatValue(path)}: empty bracket segment`);
+        }
+        let segment = bracketSegment;
+        if ((segment[0] === '"' && segment[segment.length - 1] === '"') ||
+            (segment[0] === "'" && segment[segment.length - 1] === "'")) {
+          if (segment[0] === '"') {
+            try {
+              segment = JSON.parse(segment);
+            } catch (_) {
+              throw new Error(`Invalid property path ${__beejsFormatValue(path)}: invalid quoted bracket segment`);
+            }
+          } else {
+            segment = segment.slice(1, -1).replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+          }
+        }
+        segments.push(String(segment));
+        index = path[closeIndex + 1] === "." ? closeIndex + 1 : closeIndex;
+        continue;
+      }
+      current += character;
+    }
+    if (current !== "" || path.length === 0 || path[path.length - 1] === ".") {
+      segments.push(current);
+    }
+    return segments;
+  }
+  throw new Error(`Expected property path to be a string or array, got ${__beejsFormatValue(path)}`);
+}
+
+function __beejsGetPropertyAtPath(actual, path) {
+  let current = actual;
+  for (const segment of __beejsPropertyPathSegments(path)) {
+    if (current === null || current === undefined) {
+      return { exists: false, value: undefined };
+    }
+    const object = Object(current);
+    if (!(segment in object)) {
+      return { exists: false, value: undefined };
+    }
+    current = object[segment];
+  }
+  return { exists: true, value: current };
+}
+
+function __beejsPartialObjectMatches(actual, expected) {
+  if (__beejsIsAsymmetricMatcher(expected)) {
+    return expected.asymmetricMatch(actual);
+  }
+  if (expected === null || typeof expected !== "object") {
+    return __beejsValuesEqual(actual, expected);
+  }
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual) || actual.length < expected.length) {
+      return false;
+    }
+    return expected.every((item, index) => __beejsPartialObjectMatches(actual[index], item));
+  }
+  if (actual === null || typeof actual !== "object") {
+    return false;
+  }
+  const object = Object(actual);
+  for (const key of Object.keys(expected)) {
+    if (!(key in object) || !__beejsPartialObjectMatches(object[key], expected[key])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function __beejsThrownMessage(error) {
+  if (error && error.message !== undefined) {
+    return String(error.message);
+  }
+  return String(error);
+}
+
+function __beejsThrowMatches(error, expected) {
+  if (expected === undefined) {
+    return true;
+  }
+  if (typeof expected === "string") {
+    return __beejsThrownMessage(error).includes(expected);
+  }
+  if (expected instanceof RegExp) {
+    return expected.test(__beejsThrownMessage(error));
+  }
+  if (typeof expected === "function") {
+    return error instanceof expected;
+  }
+  if (expected && expected.message !== undefined) {
+    return __beejsThrownMessage(error).includes(String(expected.message));
+  }
+  return false;
+}
+
+function __beejsDescribeThrowExpected(expected) {
+  if (expected === undefined) {
+    return "";
+  }
+  if (typeof expected === "function" && expected.name) {
+    return ` ${expected.name}`;
+  }
+  return ` matching ${__beejsFormatValue(expected)}`;
+}
+
+function __beejsFormatPromiseReason(reason) {
+  if (reason && reason.name !== undefined && reason.message !== undefined) {
+    return `${String(reason.name)}: ${String(reason.message)}`;
+  }
+  return __beejsFormatValue(reason);
+}
+
+function __beejsAssertRejectedToThrow(error, expected, negate) {
+  const expectedLabel = __beejsDescribeThrowExpected(expected);
+  const pass = __beejsThrowMatches(error, expected);
+  if (negate ? pass : !pass) {
+    throw new Error(
+      negate
+        ? `Expected promise rejection not to throw an error${expectedLabel}`
+        : `Expected promise rejection to throw an error${expectedLabel}`
+    );
+  }
+}
+
+function __beejsCreateMockFunction(implementation) {
+  const onceImplementations = [];
+  let defaultImplementation = typeof implementation === "function" ? implementation : undefined;
+  let mockName = "jest.fn()";
+
+  function mockFn(...args) {
+    mockFn.mock.calls.push(args);
+    mockFn.mock.contexts.push(this);
+    if (this !== undefined && this !== null && this !== globalThis) {
+      mockFn.mock.instances.push(this);
+    }
+
+    const nextImplementation = onceImplementations.length > 0
+      ? onceImplementations.shift()
+      : defaultImplementation;
+
+    try {
+      const value = typeof nextImplementation === "function"
+        ? nextImplementation.apply(this, args)
+        : undefined;
+      const result = {};
+      result["type"] = "return";
+      result.value = value;
+      mockFn.mock.results.push(result);
+      return value;
+    } catch (error) {
+      const result = {};
+      result["type"] = "throw";
+      result.value = error;
+      mockFn.mock.results.push(result);
+      throw error;
+    }
+  }
+
+  mockFn._isMockFunction = true;
+  mockFn.mock = {
+    calls: [],
+    results: [],
+    instances: [],
+    contexts: []
+  };
+  Object.defineProperty(mockFn.mock, "lastCall", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      return mockFn.mock.calls.length === 0
+        ? undefined
+        : mockFn.mock.calls[mockFn.mock.calls.length - 1];
+    }
+  });
+  mockFn.getMockName = function () {
+    return mockName;
+  };
+  mockFn.mockName = function (name) {
+    mockName = String(name);
+    return mockFn;
+  };
+  mockFn.mockClear = function () {
+    mockFn.mock.calls.length = 0;
+    mockFn.mock.results.length = 0;
+    mockFn.mock.instances.length = 0;
+    mockFn.mock.contexts.length = 0;
+    return mockFn;
+  };
+  mockFn.mockReset = function () {
+    mockFn.mockClear();
+    onceImplementations.length = 0;
+    defaultImplementation = undefined;
+    return mockFn;
+  };
+  mockFn.mockImplementation = function (callback) {
+    if (typeof callback !== "function") {
+      throw new Error("mockImplementation callback must be a function");
+    }
+    defaultImplementation = callback;
+    return mockFn;
+  };
+  mockFn.getMockImplementation = function () {
+    return defaultImplementation;
+  };
+  mockFn.mockImplementationOnce = function (callback) {
+    if (typeof callback !== "function") {
+      throw new Error("mockImplementationOnce callback must be a function");
+    }
+    onceImplementations.push(callback);
+    return mockFn;
+  };
+  mockFn.withImplementation = function (temporaryImplementation, callback) {
+    if (typeof temporaryImplementation !== "function") {
+      throw new Error("withImplementation temporary implementation must be a function");
+    }
+    if (typeof callback !== "function") {
+      throw new Error("withImplementation callback must be a function");
+    }
+    const previousImplementation = defaultImplementation;
+    defaultImplementation = temporaryImplementation;
+    try {
+      const result = callback();
+      if (result && typeof result.then === "function") {
+        return Promise.resolve(result).then(
+          (value) => {
+            defaultImplementation = previousImplementation;
+            return value;
+          },
+          (error) => {
+            defaultImplementation = previousImplementation;
+            throw error;
+          }
+        );
+      }
+      defaultImplementation = previousImplementation;
+      return result;
+    } catch (error) {
+      defaultImplementation = previousImplementation;
+      throw error;
+    }
+  };
+  mockFn.mockReturnValue = function (value) {
+    defaultImplementation = function () {
+      return value;
+    };
+    return mockFn;
+  };
+  mockFn.mockReturnThis = function () {
+    defaultImplementation = function () {
+      return this;
+    };
+    return mockFn;
+  };
+  mockFn.mockReturnValueOnce = function (value) {
+    onceImplementations.push(function () {
+      return value;
+    });
+    return mockFn;
+  };
+  mockFn.mockResolvedValue = function (value) {
+    defaultImplementation = function () {
+      return Promise.resolve(value);
+    };
+    return mockFn;
+  };
+  mockFn.mockResolvedValueOnce = function (value) {
+    onceImplementations.push(function () {
+      return Promise.resolve(value);
+    });
+    return mockFn;
+  };
+  mockFn.mockRejectedValue = function (value) {
+    defaultImplementation = function () {
+      return Promise.reject(value);
+    };
+    return mockFn;
+  };
+  mockFn.mockRejectedValueOnce = function (value) {
+    onceImplementations.push(function () {
+      return Promise.reject(value);
+    });
+    return mockFn;
+  };
+
+  __beejsMockFunctions.push(mockFn);
+  return mockFn;
+}
+
+function __beejsClearAllMocks() {
+  for (const mockFn of __beejsMockFunctions) {
+    mockFn.mockClear();
+  }
+}
+
+function __beejsResetAllMocks() {
+  for (const mockFn of __beejsMockFunctions) {
+    mockFn.mockReset();
+  }
+}
+
+function __beejsSpyOn(target, propertyName, accessType) {
+  if (target === null || (typeof target !== "object" && typeof target !== "function")) {
+    throw new Error("jest.spyOn target must be an object");
+  }
+  if (accessType !== undefined && accessType !== "get" && accessType !== "set") {
+    throw new Error(`jest.spyOn accessType must be "get" or "set", got ${__beejsFormatValue(accessType)}`);
+  }
+  const propertyKey = String(propertyName);
+  const hadOwnProperty = Object.prototype.hasOwnProperty.call(target, propertyKey);
+  const originalOwnDescriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+  let descriptorOwner = target;
+  let descriptor = Object.getOwnPropertyDescriptor(descriptorOwner, propertyKey);
+  while (!descriptor && descriptorOwner !== null) {
+    descriptorOwner = Object.getPrototypeOf(descriptorOwner);
+    descriptor = descriptorOwner
+      ? Object.getOwnPropertyDescriptor(descriptorOwner, propertyKey)
+      : undefined;
+  }
+  if (!descriptor) {
+    throw new Error(`Property ${propertyKey} does not exist`);
+  }
+
+  if (accessType !== undefined) {
+    const accessor = accessType === "get" ? descriptor.get : descriptor.set;
+    if (typeof accessor !== "function") {
+      throw new Error(`Property ${propertyKey} does not have a ${accessType === "get" ? "getter" : "setter"}`);
+    }
+    const targetDescriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+    if (targetDescriptor && targetDescriptor.configurable === false) {
+      throw new Error(`Property ${propertyKey} is not configurable`);
+    }
+
+    const spy = __beejsCreateMockFunction(function (...args) {
+      return accessor.apply(this, args);
+    });
+    let restored = false;
+    function restore() {
+      if (restored) {
+        return;
+      }
+      if (hadOwnProperty) {
+        Object.defineProperty(target, propertyKey, originalOwnDescriptor);
+      } else {
+        delete target[propertyKey];
+      }
+      restored = true;
+    }
+    spy.mockRestore = function () {
+      restore();
+      spy.mockReset();
+      return spy;
+    };
+    Object.defineProperty(target, propertyKey, {
+      configurable: true,
+      enumerable: descriptor.enumerable,
+      get: accessType === "get" ? spy : descriptor.get,
+      set: accessType === "set" ? spy : descriptor.set
+    });
+    __beejsSpyRestorers.push(restore);
+    return spy;
+  }
+
+  if (descriptor.get || descriptor.set) {
+    throw new Error("jest.spyOn accessors require an accessType of \"get\" or \"set\"");
+  }
+  const original = descriptor.value;
+  if (typeof original !== "function") {
+    throw new Error(`Property ${propertyKey} is not a function`);
+  }
+  const targetDescriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+  if (targetDescriptor && targetDescriptor.configurable === false && targetDescriptor.writable === false) {
+    throw new Error(`Property ${propertyKey} is not configurable`);
+  }
+
+  const spy = __beejsCreateMockFunction(function (...args) {
+    return original.apply(this, args);
+  });
+  let restored = false;
+  function restore() {
+    if (restored) {
+      return;
+    }
+    if (hadOwnProperty) {
+      Object.defineProperty(target, propertyKey, originalOwnDescriptor);
+    } else {
+      delete target[propertyKey];
+    }
+    restored = true;
+  }
+  spy.mockRestore = function () {
+    restore();
+    spy.mockReset();
+    return spy;
+  };
+  Object.defineProperty(target, propertyKey, {
+    configurable: true,
+    enumerable: descriptor.enumerable,
+    writable: true,
+    value: spy
+  });
+  __beejsSpyRestorers.push(restore);
+  return spy;
+}
+
+function __beejsReplaceProperty(target, propertyName, value) {
+  if (target === null || (typeof target !== "object" && typeof target !== "function")) {
+    throw new Error("jest.replaceProperty target must be an object");
+  }
+  const propertyKey = String(propertyName);
+  if (!(propertyKey in Object(target))) {
+    throw new Error(`Property ${propertyKey} does not exist`);
+  }
+
+  const hadOwnProperty = Object.prototype.hasOwnProperty.call(target, propertyKey);
+  const originalOwnDescriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
+  let descriptorOwner = target;
+  let descriptor = Object.getOwnPropertyDescriptor(descriptorOwner, propertyKey);
+  while (!descriptor && descriptorOwner !== null) {
+    descriptorOwner = Object.getPrototypeOf(descriptorOwner);
+    descriptor = descriptorOwner
+      ? Object.getOwnPropertyDescriptor(descriptorOwner, propertyKey)
+      : undefined;
+  }
+  if (!descriptor) {
+    throw new Error(`Property ${propertyKey} does not exist`);
+  }
+  if (descriptor.get || descriptor.set) {
+    throw new Error(`Property ${propertyKey} has accessors; use jest.spyOn with accessType instead`);
+  }
+  if (descriptor.writable === false && descriptor.configurable === false) {
+    throw new Error(`Property ${propertyKey} is not configurable`);
+  }
+
+  let restored = false;
+  function restore() {
+    if (restored) {
+      return;
+    }
+    if (hadOwnProperty) {
+      Object.defineProperty(target, propertyKey, originalOwnDescriptor);
+    } else {
+      delete target[propertyKey];
+    }
+    restored = true;
+  }
+
+  const replacedProperty = {
+    replaceValue(nextValue) {
+      Object.defineProperty(target, propertyKey, {
+        configurable: true,
+        enumerable: descriptor.enumerable,
+        writable: true,
+        value: nextValue
+      });
+      restored = false;
+      return replacedProperty;
+    },
+    restore() {
+      restore();
+      return replacedProperty;
+    }
+  };
+
+  replacedProperty.replaceValue(value);
+  __beejsSpyRestorers.push(restore);
+  return replacedProperty;
+}
+
+function __beejsRestoreAllMocks() {
+  const restorers = __beejsSpyRestorers.slice().reverse();
+  __beejsSpyRestorers.length = 0;
+  for (const restore of restorers) {
+    restore();
+  }
+}
+
+const __beejsMockModuleFactories = Object.create(null);
+let __beejsMockModuleExports = Object.create(null);
+let __beejsBypassModuleMocks = false;
+
+function __beejsResolveModuleSpecifier(specifier) {
+  if (typeof globalThis.require !== "function" || typeof globalThis.require.resolve !== "function") {
+    throw new Error("require.resolve is not available");
+  }
+  return String(globalThis.require.resolve(String(specifier)));
+}
+
+function __beejsResetMockModuleInstances() {
+  __beejsMockModuleExports = Object.create(null);
+}
+
+function __beejsMaterializeMockModule(resolvedSpecifier) {
+  if (!Object.prototype.hasOwnProperty.call(__beejsMockModuleFactories, resolvedSpecifier)) {
+    throw new Error(`No mock factory registered for ${resolvedSpecifier}`);
+  }
+  if (!Object.prototype.hasOwnProperty.call(__beejsMockModuleExports, resolvedSpecifier)) {
+    __beejsMockModuleExports[resolvedSpecifier] = __beejsMockModuleFactories[resolvedSpecifier]();
+  }
+  return __beejsMockModuleExports[resolvedSpecifier];
+}
+
+function __beejsInstallMockAwareRequire() {
+  const originalRequire = globalThis.require;
+  if (typeof originalRequire !== "function" || originalRequire.__beejsMockAware === true) {
+    return;
+  }
+
+  function requireWithMocks(specifier) {
+    const resolvedSpecifier = __beejsResolveModuleSpecifier(specifier);
+    if (!__beejsBypassModuleMocks && Object.prototype.hasOwnProperty.call(__beejsMockModuleFactories, resolvedSpecifier)) {
+      return __beejsMaterializeMockModule(resolvedSpecifier);
+    }
+    return originalRequire(specifier);
+  }
+
+  requireWithMocks.resolve = function (specifier) {
+    if (typeof originalRequire.resolve !== "function") {
+      throw new Error("require.resolve is not available");
+    }
+    return originalRequire.resolve(specifier);
+  };
+  requireWithMocks.main = originalRequire.main;
+  Object.defineProperty(requireWithMocks, "__beejsMockAware", {
+    configurable: false,
+    enumerable: false,
+    value: true
+  });
+  globalThis.require = requireWithMocks;
+}
+
+function __beejsRequireActual(specifier) {
+  const previousBypass = __beejsBypassModuleMocks;
+  __beejsBypassModuleMocks = true;
+  try {
+    return globalThis.require(specifier);
+  } finally {
+    __beejsBypassModuleMocks = previousBypass;
+  }
+}
+
+function __beejsCaptureModuleCaches() {
+  return {
+    hasModuleCache: Object.prototype.hasOwnProperty.call(globalThis, "__beejsModuleCache"),
+    moduleCache: globalThis.__beejsModuleCache,
+    hasEsmNamespaceCache: Object.prototype.hasOwnProperty.call(globalThis, "__beejsEsmNamespaceCache"),
+    esmNamespaceCache: globalThis.__beejsEsmNamespaceCache,
+    hasEsmNamespaceFingerprintCache: Object.prototype.hasOwnProperty.call(globalThis, "__beejsEsmNamespaceFingerprintCache"),
+    esmNamespaceFingerprintCache: globalThis.__beejsEsmNamespaceFingerprintCache,
+    mockModuleExports: __beejsMockModuleExports
+  };
+}
+
+function __beejsRestoreModuleCaches(caches) {
+  if (caches.hasModuleCache) {
+    globalThis.__beejsModuleCache = caches.moduleCache;
+  } else {
+    delete globalThis.__beejsModuleCache;
+  }
+
+  if (caches.hasEsmNamespaceCache) {
+    globalThis.__beejsEsmNamespaceCache = caches.esmNamespaceCache;
+  } else {
+    delete globalThis.__beejsEsmNamespaceCache;
+  }
+
+  if (caches.hasEsmNamespaceFingerprintCache) {
+    globalThis.__beejsEsmNamespaceFingerprintCache = caches.esmNamespaceFingerprintCache;
+  } else {
+    delete globalThis.__beejsEsmNamespaceFingerprintCache;
+  }
+  __beejsMockModuleExports = caches.mockModuleExports;
+}
+
+function __beejsUseFreshModuleCaches() {
+  globalThis.__beejsModuleCache = Object.create(null);
+  globalThis.__beejsEsmNamespaceCache = Object.create(null);
+  globalThis.__beejsEsmNamespaceFingerprintCache = Object.create(null);
+  __beejsResetMockModuleInstances();
+}
+
+function __beejsResetModuleCaches() {
+  __beejsUseFreshModuleCaches();
+}
+
+const jest = {};
+jest.fn = __beejsCreateMockFunction;
+jest.spyOn = __beejsSpyOn;
+jest.replaceProperty = __beejsReplaceProperty;
+jest.isMockFunction = function (value) {
+  return typeof value === "function" && value._isMockFunction === true && !!value.mock;
+};
+jest.clearAllMocks = __beejsClearAllMocks;
+jest.resetAllMocks = __beejsResetAllMocks;
+jest.restoreAllMocks = __beejsRestoreAllMocks;
+jest.resetModules = function () {
+  __beejsResetModuleCaches();
+  return jest;
+};
+jest.doMock = function (specifier, factory) {
+  if (typeof factory !== "function") {
+    throw new Error("jest.doMock() expects a module factory function");
+  }
+  const resolvedSpecifier = __beejsResolveModuleSpecifier(specifier);
+  __beejsMockModuleFactories[resolvedSpecifier] = factory;
+  delete __beejsMockModuleExports[resolvedSpecifier];
+  return jest;
+};
+jest.mock = jest.doMock;
+jest.setMock = function (specifier, moduleExports) {
+  const resolvedSpecifier = __beejsResolveModuleSpecifier(specifier);
+  __beejsMockModuleFactories[resolvedSpecifier] = function () {
+    return moduleExports;
+  };
+  __beejsMockModuleExports[resolvedSpecifier] = moduleExports;
+  return jest;
+};
+jest.requireMock = function (specifier) {
+  const resolvedSpecifier = __beejsResolveModuleSpecifier(specifier);
+  return __beejsMaterializeMockModule(resolvedSpecifier);
+};
+jest.unmock = function (specifier) {
+  const resolvedSpecifier = __beejsResolveModuleSpecifier(specifier);
+  delete __beejsMockModuleFactories[resolvedSpecifier];
+  delete __beejsMockModuleExports[resolvedSpecifier];
+  return jest;
+};
+jest.dontMock = jest.unmock;
+jest.requireActual = function (specifier) {
+  return __beejsRequireActual(specifier);
+};
+jest.isolateModules = function (callback) {
+  if (typeof callback !== "function") {
+    throw new Error(`jest.isolateModules() expects a callback function, got ${__beejsFormatValue(callback)}`);
+  }
+
+  const previousCaches = __beejsCaptureModuleCaches();
+  __beejsUseFreshModuleCaches();
+  try {
+    callback();
+  } finally {
+    __beejsRestoreModuleCaches(previousCaches);
+  }
+  return jest;
+};
+jest.isolateModulesAsync = function (callback) {
+  if (typeof callback !== "function") {
+    throw new Error(`jest.isolateModulesAsync() expects a callback function, got ${__beejsFormatValue(callback)}`);
+  }
+
+  const previousCaches = __beejsCaptureModuleCaches();
+  __beejsUseFreshModuleCaches();
+  let callbackResult;
+  try {
+    callbackResult = callback();
+  } catch (error) {
+    __beejsRestoreModuleCaches(previousCaches);
+    return Promise.reject(error);
+  }
+
+  return Promise.resolve(callbackResult).then(
+    function () {
+      __beejsRestoreModuleCaches(previousCaches);
+      return jest;
+    },
+    function (error) {
+      __beejsRestoreModuleCaches(previousCaches);
+      throw error;
+    }
+  );
+};
+jest.setTimeout = function (timeoutMs) {
+  const milliseconds = Number(timeoutMs);
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    throw new Error(`jest.setTimeout() expects a non-negative timeout in milliseconds, got ${__beejsFormatValue(timeoutMs)}`);
+  }
+  __beejsTestConfig.timeoutSeconds = milliseconds / 1000;
+};
+__beejsInstallMockAwareRequire();
+globalThis.jest = jest;
+
+function __beejsEnsureMockFunction(value) {
+  if (!value || value._isMockFunction !== true || !value.mock) {
+    throw new Error("Expected value to be a mock function");
+  }
+  return value;
+}
+
+function __beejsMockCalledWith(mockFn, expectedArgs) {
+  return mockFn.mock.calls.some((call) => __beejsValuesEqual(call, expectedArgs));
+}
+
+function __beejsEnsurePositiveInteger(value, label) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 1) {
+    throw new Error(`Expected ${label} to be a positive integer, got ${__beejsFormatValue(value)}`);
+  }
+  return number;
+}
+
+function __beejsMockNthCalledWith(mockFn, nthCall, expectedArgs) {
+  const index = nthCall - 1;
+  if (index < 0 || index >= mockFn.mock.calls.length) {
+    return false;
+  }
+  return __beejsValuesEqual(mockFn.mock.calls[index], expectedArgs);
+}
+
+function __beejsMockLastCalledWith(mockFn, expectedArgs) {
+  if (mockFn.mock.calls.length === 0) {
+    return false;
+  }
+  return __beejsValuesEqual(mockFn.mock.calls[mockFn.mock.calls.length - 1], expectedArgs);
+}
+
+function __beejsMockReturnCount(mockFn) {
+  return mockFn.mock.results.filter((result) => result && result["type"] === "return").length;
+}
+
+function __beejsMockReturnedWith(mockFn, expectedValue) {
+  return mockFn.mock.results.some((result) => {
+    return result && result["type"] === "return" && __beejsValuesEqual(result.value, expectedValue);
+  });
+}
+
+function __beejsMockNthReturnedWith(mockFn, nthCall, expectedValue) {
+  const index = nthCall - 1;
+  if (index < 0 || index >= mockFn.mock.results.length) {
+    return false;
+  }
+  const result = mockFn.mock.results[index];
+  return result && result["type"] === "return" && __beejsValuesEqual(result.value, expectedValue);
+}
+
+function __beejsMockLastReturnedWith(mockFn, expectedValue) {
+  if (mockFn.mock.results.length === 0) {
+    return false;
+  }
+  const result = mockFn.mock.results[mockFn.mock.results.length - 1];
+  return result && result["type"] === "return" && __beejsValuesEqual(result.value, expectedValue);
+}
+
+function __beejsSnapshotTestName(testCase) {
+  return testCase.suite ? `${testCase.suite} ${testCase.name}` : testCase.name;
+}
+
+function __beejsSnapshotIndent(level) {
+  let text = "";
+  for (let i = 0; i < level; i++) {
+    text += "  ";
+  }
+  return text;
+}
+
+function __beejsSerializeSnapshotValue(value, level) {
+  const depth = Number(level) || 0;
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return "[]";
+    }
+    const items = value.map((item) => {
+      return `${__beejsSnapshotIndent(depth + 1)}${__beejsSerializeSnapshotValue(item, depth + 1)}`;
+    });
+    return `[\n${items.join(",\n")}\n${__beejsSnapshotIndent(depth)}]`;
+  }
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value);
+    if (keys.length === 0) {
+      return "{}";
+    }
+    const entries = keys.map((key) => {
+      return `${__beejsSnapshotIndent(depth + 1)}${JSON.stringify(key)}: ${__beejsSerializeSnapshotValue(value[key], depth + 1)}`;
+    });
+    return `{\n${entries.join(",\n")}\n${__beejsSnapshotIndent(depth)}}`;
+  }
+  return String(value);
+}
+
+function __beejsNextSnapshotKey(hint) {
+  const baseName = hint === undefined
+    ? __beejsCurrentTestName
+    : `${__beejsCurrentTestName}: ${String(hint)}`;
+  const nextIndex = (__beejsSnapshotCounters[baseName] || 0) + 1;
+  __beejsSnapshotCounters[baseName] = nextIndex;
+  return `${baseName} ${nextIndex}`;
+}
+
+function __beejsResetAssertionState() {
+  __beejsAssertionCount = 0;
+  __beejsExpectedAssertionCount = undefined;
+  __beejsHasAssertionExpectation = false;
+}
+
+function __beejsRecordAssertion() {
+  __beejsAssertionCount++;
+}
+
+function __beejsSetExpectedAssertionCount(expectedCount) {
+  const count = Number(expectedCount);
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(`expect.assertions() expects a non-negative integer, got ${__beejsFormatValue(expectedCount)}`);
+  }
+  __beejsExpectedAssertionCount = count;
+}
+
+function __beejsVerifyAssertionState() {
+  if (__beejsExpectedAssertionCount !== undefined && __beejsAssertionCount !== __beejsExpectedAssertionCount) {
+    throw new Error(`Expected ${__beejsExpectedAssertionCount} assertions, but ${__beejsAssertionCount} were run`);
+  }
+  if (__beejsHasAssertionExpectation && __beejsAssertionCount === 0) {
+    throw new Error("Expected at least one assertion to be called, but none were called");
+  }
+}
+
+function __beejsCountMatcherCalls(matchers) {
+  for (const matcherName of Object.keys(matchers)) {
+    const matcher = matchers[matcherName];
+    if (typeof matcher !== "function") {
+      continue;
+    }
+    matchers[matcherName] = function (...args) {
+      __beejsRecordAssertion();
+      return matcher.apply(this, args);
+    };
+  }
+  return matchers;
+}
+
+function __beejsCustomMatcherMessage(result, matcherName, matcherContext) {
+  if (result && typeof result.message === "function") {
+    return String(result.message.call(matcherContext));
+  }
+  if (result && result.message !== undefined) {
+    return String(result.message);
+  }
+  return `Custom matcher ${matcherName} failed`;
+}
+
+function __beejsBuildCustomMatcher(actual, negate, matcherName, matcher) {
+  return function (...expectedArgs) {
+    const matcherContext = {
+      isNot: negate,
+      promise: "",
+      equals: __beejsValuesEqual
+    };
+    const result = matcher.call(matcherContext, actual, ...expectedArgs);
+    if (!result || typeof result.pass !== "boolean") {
+      throw new Error(`Custom matcher ${matcherName} must return an object with a boolean pass field`);
+    }
+    if (negate ? result.pass : !result.pass) {
+      throw new Error(__beejsCustomMatcherMessage(result, matcherName, matcherContext));
+    }
+  };
+}
+
+function __beejsAddCustomMatchers(matchers, actual, negate) {
+  for (const matcherName of Object.keys(__beejsCustomMatchers)) {
+    matchers[matcherName] = __beejsBuildCustomMatcher(
+      actual,
+      negate,
+      matcherName,
+      __beejsCustomMatchers[matcherName]
+    );
+  }
+  return matchers;
+}
+
+function __beejsBuildMatchers(actual, negate) {
+  function assertMatcher(pass, positiveMessage, negativeMessage) {
+    if (negate ? pass : !pass) {
+      const message = negate ? negativeMessage : positiveMessage;
+      throw new Error(typeof message === "function" ? message() : message);
+    }
+  }
+
+  const matchers = {
+    toBe(expected) {
+      assertMatcher(
+        Object.is(actual, expected),
+        () => `Expected ${__beejsFormatValue(actual)} to be ${__beejsFormatValue(expected)}`,
+        () => `Expected ${__beejsFormatValue(actual)} not to be ${__beejsFormatValue(expected)}`
+      );
+    },
+    toEqual(expected) {
+      assertMatcher(
+        __beejsValuesEqual(actual, expected),
+        () => `Expected ${__beejsFormatValue(actual)} to equal ${__beejsFormatValue(expected)}`,
+        () => `Expected ${__beejsFormatValue(actual)} not to equal ${__beejsFormatValue(expected)}`
+      );
+    },
+    toStrictEqual(expected) {
+      assertMatcher(
+        __beejsStrictValuesEqual(actual, expected),
+        () => `Expected ${__beejsFormatValue(actual)} to strictly equal ${__beejsFormatValue(expected)}`,
+        () => `Expected ${__beejsFormatValue(actual)} not to strictly equal ${__beejsFormatValue(expected)}`
+      );
+    },
+    toBeTruthy() {
+      assertMatcher(
+        Boolean(actual),
+        `Expected ${__beejsFormatValue(actual)} to be truthy`,
+        `Expected ${__beejsFormatValue(actual)} not to be truthy`
+      );
+    },
+    toBeFalsy() {
+      assertMatcher(
+        !actual,
+        `Expected ${__beejsFormatValue(actual)} to be falsy`,
+        `Expected ${__beejsFormatValue(actual)} not to be falsy`
+      );
+    },
+    toBeDefined() {
+      assertMatcher(
+        actual !== undefined,
+        "Expected value to be defined",
+        `Expected ${__beejsFormatValue(actual)} not to be defined`
+      );
+    },
+    toBeUndefined() {
+      assertMatcher(
+        actual === undefined,
+        `Expected ${__beejsFormatValue(actual)} to be undefined`,
+        "Expected value not to be undefined"
+      );
+    },
+    toBeNull() {
+      assertMatcher(
+        actual === null,
+        `Expected ${__beejsFormatValue(actual)} to be null`,
+        "Expected value not to be null"
+      );
+    },
+    toBeNaN() {
+      assertMatcher(
+        Number.isNaN(actual),
+        `Expected ${__beejsFormatValue(actual)} to be NaN`,
+        `Expected ${__beejsFormatValue(actual)} not to be NaN`
+      );
+    },
+    toContain(expected) {
+      assertMatcher(
+        __beejsContains(actual, expected),
+        `Expected ${__beejsFormatValue(actual)} to contain ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to contain ${__beejsFormatValue(expected)}`
+      );
+    },
+    toContainEqual(expected) {
+      assertMatcher(
+        __beejsContainsEqual(actual, expected),
+        `Expected ${__beejsFormatValue(actual)} to contain equal ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to contain equal ${__beejsFormatValue(expected)}`
+      );
+    },
+    toHaveLength(expected) {
+      const actualLength = __beejsLengthOf(actual);
+      assertMatcher(
+        Object.is(actualLength, expected),
+        `Expected ${__beejsFormatValue(actual)} to have length ${__beejsFormatValue(expected)}, got ${actualLength}`,
+        `Expected ${__beejsFormatValue(actual)} not to have length ${__beejsFormatValue(expected)}`
+      );
+    },
+    toMatch(expected) {
+      assertMatcher(
+        __beejsMatches(actual, expected),
+        `Expected ${__beejsFormatValue(actual)} to match ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to match ${__beejsFormatValue(expected)}`
+      );
+    },
+    toHaveProperty(path, expected) {
+      const hasExpectedValue = arguments.length > 1;
+      const result = __beejsGetPropertyAtPath(actual, path);
+      const pass = result.exists && (!hasExpectedValue || __beejsValuesEqual(result.value, expected));
+      const expectedSuffix = hasExpectedValue
+        ? ` with value ${__beejsFormatValue(expected)}`
+        : "";
+      assertMatcher(
+        pass,
+        `Expected ${__beejsFormatValue(actual)} to have property ${__beejsFormatValue(path)}${expectedSuffix}`,
+        `Expected ${__beejsFormatValue(actual)} not to have property ${__beejsFormatValue(path)}${expectedSuffix}`
+      );
+    },
+    toBeInstanceOf(expectedConstructor) {
+      if (typeof expectedConstructor !== "function") {
+        throw new Error("Expected constructor to be a function");
+      }
+      const constructorName = expectedConstructor.name || "provided constructor";
+      assertMatcher(
+        actual instanceof expectedConstructor,
+        `Expected ${__beejsFormatValue(actual)} to be instance of ${constructorName}`,
+        `Expected ${__beejsFormatValue(actual)} not to be instance of ${constructorName}`
+      );
+    },
+    toMatchObject(expected) {
+      assertMatcher(
+        __beejsPartialObjectMatches(actual, expected),
+        `Expected ${__beejsFormatValue(actual)} to match object ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to match object ${__beejsFormatValue(expected)}`
+      );
+    },
+    toBeGreaterThan(expected) {
+      const actualNumber = __beejsEnsureFiniteNumber(actual, "actual value");
+      const expectedNumber = __beejsEnsureFiniteNumber(expected, "expected value");
+      assertMatcher(
+        actualNumber > expectedNumber,
+        `Expected ${__beejsFormatValue(actual)} to be greater than ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to be greater than ${__beejsFormatValue(expected)}`
+      );
+    },
+    toBeLessThan(expected) {
+      const actualNumber = __beejsEnsureFiniteNumber(actual, "actual value");
+      const expectedNumber = __beejsEnsureFiniteNumber(expected, "expected value");
+      assertMatcher(
+        actualNumber < expectedNumber,
+        `Expected ${__beejsFormatValue(actual)} to be less than ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to be less than ${__beejsFormatValue(expected)}`
+      );
+    },
+    toBeGreaterThanOrEqual(expected) {
+      const actualNumber = __beejsEnsureFiniteNumber(actual, "actual value");
+      const expectedNumber = __beejsEnsureFiniteNumber(expected, "expected value");
+      assertMatcher(
+        actualNumber >= expectedNumber,
+        `Expected ${__beejsFormatValue(actual)} to be greater than or equal to ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to be greater than or equal to ${__beejsFormatValue(expected)}`
+      );
+    },
+    toBeLessThanOrEqual(expected) {
+      const actualNumber = __beejsEnsureFiniteNumber(actual, "actual value");
+      const expectedNumber = __beejsEnsureFiniteNumber(expected, "expected value");
+      assertMatcher(
+        actualNumber <= expectedNumber,
+        `Expected ${__beejsFormatValue(actual)} to be less than or equal to ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to be less than or equal to ${__beejsFormatValue(expected)}`
+      );
+    },
+    toBeCloseTo(expected, precision) {
+      assertMatcher(
+        __beejsCloseTo(actual, expected, precision),
+        `Expected ${__beejsFormatValue(actual)} to be close to ${__beejsFormatValue(expected)}`,
+        `Expected ${__beejsFormatValue(actual)} not to be close to ${__beejsFormatValue(expected)}`
+      );
+    },
+    toHaveBeenCalled() {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        mockFn.mock.calls.length > 0,
+        "Expected mock to have been called",
+        "Expected mock not to have been called"
+      );
+    },
+    toHaveBeenCalledTimes(expected) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        Object.is(mockFn.mock.calls.length, expected),
+        `Expected mock to have been called ${__beejsFormatValue(expected)} times, got ${mockFn.mock.calls.length}`,
+        `Expected mock not to have been called ${__beejsFormatValue(expected)} times`
+      );
+    },
+    toHaveBeenCalledWith(...expectedArgs) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        __beejsMockCalledWith(mockFn, expectedArgs),
+        `Expected mock to have been called with ${__beejsFormatValue(expectedArgs)}`,
+        `Expected mock not to have been called with ${__beejsFormatValue(expectedArgs)}`
+      );
+    },
+    toHaveBeenNthCalledWith(nthCall, ...expectedArgs) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      const callNumber = __beejsEnsurePositiveInteger(nthCall, "nth call");
+      assertMatcher(
+        __beejsMockNthCalledWith(mockFn, callNumber, expectedArgs),
+        `Expected mock nth call ${callNumber} to have been called with ${__beejsFormatValue(expectedArgs)}`,
+        `Expected mock nth call ${callNumber} not to have been called with ${__beejsFormatValue(expectedArgs)}`
+      );
+    },
+    toHaveBeenLastCalledWith(...expectedArgs) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        __beejsMockLastCalledWith(mockFn, expectedArgs),
+        `Expected mock last call to have been called with ${__beejsFormatValue(expectedArgs)}`,
+        `Expected mock last call not to have been called with ${__beejsFormatValue(expectedArgs)}`
+      );
+    },
+    toHaveReturned() {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        __beejsMockReturnCount(mockFn) > 0,
+        "Expected mock to have returned",
+        "Expected mock not to have returned"
+      );
+    },
+    toHaveReturnedTimes(expected) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      const returnCount = __beejsMockReturnCount(mockFn);
+      assertMatcher(
+        Object.is(returnCount, expected),
+        `Expected mock to have returned ${__beejsFormatValue(expected)} times, got ${returnCount}`,
+        `Expected mock not to have returned ${__beejsFormatValue(expected)} times`
+      );
+    },
+    toHaveReturnedWith(expectedValue) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        __beejsMockReturnedWith(mockFn, expectedValue),
+        `Expected mock to have returned with ${__beejsFormatValue(expectedValue)}`,
+        `Expected mock not to have returned with ${__beejsFormatValue(expectedValue)}`
+      );
+    },
+    toHaveLastReturnedWith(expectedValue) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      assertMatcher(
+        __beejsMockLastReturnedWith(mockFn, expectedValue),
+        `Expected mock last return to have returned with ${__beejsFormatValue(expectedValue)}`,
+        `Expected mock last return not to have returned with ${__beejsFormatValue(expectedValue)}`
+      );
+    },
+    toHaveNthReturnedWith(nthCall, expectedValue) {
+      const mockFn = __beejsEnsureMockFunction(actual);
+      const callNumber = __beejsEnsurePositiveInteger(nthCall, "nth return");
+      assertMatcher(
+        __beejsMockNthReturnedWith(mockFn, callNumber, expectedValue),
+        `Expected mock nth return ${callNumber} to have returned with ${__beejsFormatValue(expectedValue)}`,
+        `Expected mock nth return ${callNumber} not to have returned with ${__beejsFormatValue(expectedValue)}`
+      );
+    },
+    toThrow(expected) {
+      if (typeof actual !== "function") {
+        throw new Error("Expected value to be a function");
+      }
+      let didThrow = false;
+      let thrownError;
+      try {
+        actual();
+      } catch (error) {
+        didThrow = true;
+        thrownError = error;
+      }
+      const expectedLabel = __beejsDescribeThrowExpected(expected);
+      const pass = didThrow && __beejsThrowMatches(thrownError, expected);
+      assertMatcher(
+        pass,
+        `Expected function to throw an error${expectedLabel}`,
+        `Expected function not to throw an error${expectedLabel}`
+      );
+    },
+    toMatchSnapshot(hint) {
+      const key = __beejsNextSnapshotKey(hint);
+      const received = __beejsSerializeSnapshotValue(actual);
+      const expected = __beejsSnapshots[key];
+      if (expected === undefined) {
+        if (__beejsTestConfig.updateSnapshots) {
+          __beejsSnapshotUpdates[key] = received;
+          return;
+        }
+        throw new Error(`Snapshot not found for ${key} in ${__beejsTestConfig.snapshotPath}`);
+      }
+      if (expected !== received && __beejsTestConfig.updateSnapshots) {
+        __beejsSnapshotUpdates[key] = received;
+        return;
+      }
+      assertMatcher(
+        expected === received,
+        `Snapshot mismatch for ${key}\nExpected:\n${expected}\nReceived:\n${received}`,
+        `Expected snapshot ${key} not to match`
+      );
+    },
+    toMatchInlineSnapshot(expectedSnapshot) {
+      const snapshotIndex = ++__beejsInlineSnapshotCounter;
+      const received = __beejsSerializeSnapshotValue(actual);
+      if (expectedSnapshot === undefined) {
+        if (__beejsTestConfig.updateSnapshots) {
+          __beejsInlineSnapshotUpdates.push({ index: snapshotIndex, content: received });
+          return;
+        }
+        throw new Error("Inline snapshot value must be provided");
+      }
+      const expected = __beejsNormalizeSnapshotText(String(expectedSnapshot));
+      if (expected !== received && __beejsTestConfig.updateSnapshots) {
+        __beejsInlineSnapshotUpdates.push({ index: snapshotIndex, content: received });
+        return;
+      }
+      assertMatcher(
+        expected === received,
+        `Inline snapshot mismatch\nExpected:\n${expected}\nReceived:\n${received}`,
+        "Expected inline snapshot not to match"
+      );
+    }
+  };
+
+  matchers.toBeCalled = matchers.toHaveBeenCalled;
+  matchers.toBeCalledTimes = matchers.toHaveBeenCalledTimes;
+  matchers.toBeCalledWith = matchers.toHaveBeenCalledWith;
+  matchers.nthCalledWith = matchers.toHaveBeenNthCalledWith;
+  matchers.lastCalledWith = matchers.toHaveBeenLastCalledWith;
+  matchers.toReturn = matchers.toHaveReturned;
+  matchers.toReturnTimes = matchers.toHaveReturnedTimes;
+  matchers.toReturnWith = matchers.toHaveReturnedWith;
+  matchers.nthReturnedWith = matchers.toHaveNthReturnedWith;
+  matchers.lastReturnedWith = matchers.toHaveLastReturnedWith;
+
+  __beejsAddCustomMatchers(matchers, actual, negate);
+
+  return __beejsCountMatcherCalls(matchers);
+}
+
+function __beejsAwaitExpectedPromiseState(actual, mode) {
+  return Promise.resolve(actual).then(
+    (value) => {
+      if (mode === "rejects") {
+        throw new Error(`Expected promise to reject, but it resolved with ${__beejsFormatValue(value)}`);
+      }
+      return value;
+    },
+    (error) => {
+      if (mode === "resolves") {
+        throw new Error(`Expected promise to resolve, but it rejected with ${__beejsFormatPromiseReason(error)}`);
+      }
+      return error;
+    }
+  );
+}
+
+function __beejsCreateAsyncMatcherSet(actual, mode, negate) {
+  const asyncMatchers = {};
+  for (const matcherName of Object.keys(__beejsBuildMatchers(undefined, false))) {
+    asyncMatchers[matcherName] = async function (...args) {
+      const settledValue = await __beejsAwaitExpectedPromiseState(actual, mode);
+      if (mode === "rejects" && matcherName === "toThrow") {
+        __beejsRecordAssertion();
+        __beejsAssertRejectedToThrow(settledValue, args[0], negate);
+        return;
+      }
+      const matcher = __beejsBuildMatchers(settledValue, negate)[matcherName];
+      return matcher(...args);
+    };
+  }
+  return asyncMatchers;
+}
+
+function __beejsBuildAsyncMatchers(actual, mode) {
+  const matchers = __beejsCreateAsyncMatcherSet(actual, mode, false);
+  matchers.not = __beejsCreateAsyncMatcherSet(actual, mode, true);
+  return matchers;
+}
+
+function expect(actual) {
+  const matchers = __beejsBuildMatchers(actual, false);
+  matchers.not = __beejsBuildMatchers(actual, true);
+  matchers.resolves = __beejsBuildAsyncMatchers(actual, "resolves");
+  matchers.rejects = __beejsBuildAsyncMatchers(actual, "rejects");
+  return matchers;
+}
+
+expect.assertions = function expectAssertions(expectedCount) {
+  __beejsSetExpectedAssertionCount(expectedCount);
+};
+
+expect.hasAssertions = function expectHasAssertions() {
+  __beejsHasAssertionExpectation = true;
+};
+
+expect.extend = function expectExtend(matchers) {
+  if (!matchers || typeof matchers !== "object") {
+    throw new Error("expect.extend() expects an object of matcher functions");
+  }
+  for (const matcherName of Object.keys(matchers)) {
+    if (typeof matchers[matcherName] !== "function") {
+      throw new Error(`expect.extend matcher ${matcherName} must be a function`);
+    }
+    __beejsCustomMatchers[matcherName] = matchers[matcherName];
+  }
+};
+
+function __beejsCreateAsymmetricMatcher(name, matcher) {
+  return {
+    __beejsAsymmetricMatcher: true,
+    asymmetricMatch: matcher,
+    toString() {
+      return name;
+    }
+  };
+}
+
+function __beejsInvertAsymmetricMatcher(matcher) {
+  return __beejsCreateAsymmetricMatcher(`Not<${matcher.toString()}>`, function (actual) {
+    return !matcher.asymmetricMatch(actual);
+  });
+}
+
+expect.any = function expectAny(expectedConstructor) {
+  if (typeof expectedConstructor !== "function") {
+    throw new Error("expect.any() expects a constructor function");
+  }
+  return __beejsCreateAsymmetricMatcher(`Any<${expectedConstructor.name || "anonymous"}>`, function (actual) {
+    if (expectedConstructor === String) {
+      return typeof actual === "string" || actual instanceof String;
+    }
+    if (expectedConstructor === Number) {
+      return typeof actual === "number" || actual instanceof Number;
+    }
+    if (expectedConstructor === Boolean) {
+      return typeof actual === "boolean" || actual instanceof Boolean;
+    }
+    if (expectedConstructor === Function) {
+      return typeof actual === "function";
+    }
+    if (expectedConstructor === Object) {
+      return actual !== null && typeof actual === "object";
+    }
+    if (expectedConstructor === Array) {
+      return Array.isArray(actual);
+    }
+    return actual instanceof expectedConstructor;
+  });
+};
+
+expect.anything = function expectAnything() {
+  return __beejsCreateAsymmetricMatcher("Anything", function (actual) {
+    return actual !== null && actual !== undefined;
+  });
+};
+
+expect.objectContaining = function expectObjectContaining(sample) {
+  if (sample === null || typeof sample !== "object" || Array.isArray(sample)) {
+    throw new Error("expect.objectContaining() expects an object");
+  }
+  return __beejsCreateAsymmetricMatcher("ObjectContaining", function (actual) {
+    return __beejsPartialObjectMatches(actual, sample);
+  });
+};
+
+expect.arrayContaining = function expectArrayContaining(sample) {
+  if (!Array.isArray(sample)) {
+    throw new Error("expect.arrayContaining() expects an array");
+  }
+  return __beejsCreateAsymmetricMatcher("ArrayContaining", function (actual) {
+    if (!Array.isArray(actual)) {
+      return false;
+    }
+    return sample.every((expectedItem) => {
+      return actual.some((actualItem) => __beejsValuesEqual(actualItem, expectedItem));
+    });
+  });
+};
+
+expect.stringContaining = function expectStringContaining(sample) {
+  return __beejsCreateAsymmetricMatcher("StringContaining", function (actual) {
+    if (typeof actual !== "string" && !(actual instanceof String)) {
+      return false;
+    }
+    return String(actual).includes(String(sample));
+  });
+};
+
+expect.stringMatching = function expectStringMatching(sample) {
+  const matcher = sample instanceof RegExp ? sample : new RegExp(String(sample));
+  return __beejsCreateAsymmetricMatcher("StringMatching", function (actual) {
+    if (typeof actual !== "string" && !(actual instanceof String)) {
+      return false;
+    }
+    matcher.lastIndex = 0;
+    return matcher.test(String(actual));
+  });
+};
+
+expect.closeTo = function expectCloseTo(expected, precision) {
+  return __beejsCreateAsymmetricMatcher("CloseTo", function (actual) {
+    return __beejsCloseTo(actual, expected, precision);
+  });
+};
+
+expect.not = {};
+expect.not.objectContaining = function expectNotObjectContaining(sample) {
+  return __beejsInvertAsymmetricMatcher(expect.objectContaining(sample));
+};
+expect.not.arrayContaining = function expectNotArrayContaining(sample) {
+  return __beejsInvertAsymmetricMatcher(expect.arrayContaining(sample));
+};
+expect.not.stringContaining = function expectNotStringContaining(sample) {
+  return __beejsInvertAsymmetricMatcher(expect.stringContaining(sample));
+};
+expect.not.stringMatching = function expectNotStringMatching(sample) {
+  return __beejsInvertAsymmetricMatcher(expect.stringMatching(sample));
+};
+
+function __beejsShouldSkip(testCase, hasOnlyTests) {
+  if (testCase.skip) {
+    return true;
+  }
+  if (hasOnlyTests && !testCase.only) {
+    return true;
+  }
+  if (__beejsTestConfig.includePattern &&
+      !__beejsPatternMatches(__beejsTestConfig.includePattern, testCase.name, testCase.suite)) {
+    return true;
+  }
+  if (__beejsTestConfig.skipPattern &&
+      __beejsPatternMatches(__beejsTestConfig.skipPattern, testCase.name, testCase.suite)) {
+    return true;
+  }
+  return false;
+}
+
+function __beejsTimeoutError() {
+  return new Error(`timed out after ${__beejsTestConfig.timeoutSeconds}s`);
+}
+
+function __beejsAwaitTestResult(result) {
+  if (!result || typeof result.then !== "function") {
+    return Promise.resolve();
+  }
+
+  const timeoutMs = Number(__beejsTestConfig.timeoutSeconds) <= 0
+    ? 0
+    : Number(__beejsTestConfig.timeoutSeconds) * 1000;
+
+  return new Promise((resolve, reject) => {
+    let timeoutId = setTimeout(() => {
+      reject(__beejsTimeoutError());
+    }, timeoutMs);
+
+    Promise.resolve(result).then(
+      () => {
+        clearTimeout(timeoutId);
+        resolve();
+      },
+      (error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+function __beejsNormalizeDoneError(error) {
+  if (error === undefined || error === null) {
+    return undefined;
+  }
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error(String(error));
+}
+
+function __beejsAwaitDoneCallback(callback, callbackKind) {
+  const timeoutMs = Number(__beejsTestConfig.timeoutSeconds) <= 0
+    ? 0
+    : Number(__beejsTestConfig.timeoutSeconds) * 1000;
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeoutId = setTimeout(() => {
+      finish(__beejsTimeoutError());
+    }, timeoutMs);
+
+    function finish(error) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeoutId);
+      const normalizedError = __beejsNormalizeDoneError(error);
+      if (normalizedError) {
+        reject(normalizedError);
+      } else {
+        resolve();
+      }
+    }
+
+    try {
+      const result = callback(finish);
+      if (result && typeof result.then === "function") {
+        finish(new Error(`${callbackKind} callback cannot both use done callback and return a Promise`));
+      }
+    } catch (error) {
+      finish(error);
+    }
+  });
+}
+
+function __beejsRunTestCallback(callback) {
+  if (callback.length > 0) {
+    return __beejsAwaitDoneCallback(callback, "Test");
+  }
+  return __beejsAwaitTestResult(callback());
+}
+
+function __beejsRunHookCallback(callback) {
+  if (callback.length > 0) {
+    return __beejsAwaitDoneCallback(callback, "Hook");
+  }
+  return __beejsAwaitTestResult(callback());
+}
+
+function __beejsRunHooks(hooks) {
+  let chain = Promise.resolve();
+  for (const hook of hooks) {
+    chain = chain.then(() => {
+      try {
+        return __beejsRunHookCallback(hook);
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    });
+  }
+  return chain;
+}
+
+function __beejsBuildRemainingSuiteTests(hasOnlyTests) {
+  const remaining = {};
+  for (const testCase of __beejsTestQueue) {
+    if (__beejsShouldSkip(testCase, hasOnlyTests)) {
+      continue;
+    }
+    for (const suiteId of testCase.suiteIds) {
+      remaining[suiteId] = (remaining[suiteId] || 0) + 1;
+    }
+  }
+  return remaining;
+}
+
+function __beejsRunBeforeAllHooks(testCase) {
+  let chain = Promise.resolve();
+  for (const suiteId of testCase.suiteIds) {
+    const suite = __beejsSuiteRegistry[suiteId];
+    if (!suite || (__beejsRemainingSuiteTests[suiteId] || 0) === 0) {
+      continue;
+    }
+    if (!__beejsStartedSuites[suiteId]) {
+      __beejsStartedSuites[suiteId] = true;
+      chain = chain.then(() => __beejsRunHooks(suite.beforeAll)).catch((error) => {
+        __beejsFailedBeforeAllSuites[suiteId] = true;
+        const suiteName = suite.name || testCase.suite || "file";
+        __beejsRecordFailure(`${suiteName} beforeAll`, error);
+        return Promise.reject(error);
+      });
+    }
+  }
+
+  return chain;
+}
+
+function __beejsHasFailedBeforeAllSuite(testCase) {
+  return testCase.suiteIds.some((suiteId) => Boolean(__beejsFailedBeforeAllSuites[suiteId]));
+}
+
+function __beejsRunAfterAllHooksForTest(testCase) {
+  for (const suiteId of testCase.suiteIds) {
+    if ((__beejsRemainingSuiteTests[suiteId] || 0) > 0) {
+      __beejsRemainingSuiteTests[suiteId]--;
+    }
+  }
+
+  let hooks = [];
+  for (let i = testCase.suiteIds.length - 1; i >= 0; i--) {
+    const suiteId = testCase.suiteIds[i];
+    const suite = __beejsSuiteRegistry[suiteId];
+    if (!suite || !__beejsStartedSuites[suiteId] || __beejsFinishedSuites[suiteId]) {
+      continue;
+    }
+    if ((__beejsRemainingSuiteTests[suiteId] || 0) === 0) {
+      __beejsFinishedSuites[suiteId] = true;
+      hooks = hooks.concat(suite.afterAll);
+    }
+  }
+
+  return __beejsRunHooks(hooks).catch((error) => {
+    __beejsRecordFailure("afterAll", error);
+  });
+}
+
+function __beejsRunRemainingAfterAllHooks() {
+  let hooks = [];
+  for (let i = __beejsSuiteOrder.length - 1; i >= 0; i--) {
+    const suiteId = __beejsSuiteOrder[i];
+    const suite = __beejsSuiteRegistry[suiteId];
+    if (!suite || !__beejsStartedSuites[suiteId] || __beejsFinishedSuites[suiteId]) {
+      continue;
+    }
+    __beejsFinishedSuites[suiteId] = true;
+    hooks = hooks.concat(suite.afterAll);
+  }
+
+  return __beejsRunHooks(hooks).catch((error) => {
+    __beejsRecordFailure("afterAll", error);
+  });
+}
+
+function __beejsRunOneTest(testCase) {
+  if (__beejsTestConfig.bail && __beejsTestFailed > 0) {
+    __beejsTestSkipped++;
+    return Promise.resolve();
+  }
+
+  let beforeEachErrors = [];
+  let testErrors = [];
+  let afterEachErrors = [];
+  let assertionErrors = [];
+
+  __beejsResetAssertionState();
+  __beejsCurrentTestName = __beejsSnapshotTestName(testCase);
+
+  return __beejsRunHooks(testCase.beforeEachHooks)
+    .catch((error) => {
+      beforeEachErrors.push(error);
+    })
+    .then(() => {
+      if (beforeEachErrors.length > 0) {
+        return undefined;
+      }
+      try {
+        return __beejsRunTestCallback(testCase.callback).catch((error) => {
+          testErrors.push(error);
+        });
+      } catch (error) {
+        testErrors.push(error);
+        return undefined;
+      }
+    })
+    .then(() => {
+      return __beejsRunHooks(testCase.afterEachHooks);
+    })
+    .catch((error) => {
+      afterEachErrors.push(error);
+    })
+    .then(() => {
+      try {
+        __beejsVerifyAssertionState();
+      } catch (error) {
+        assertionErrors.push(error);
+      }
+      __beejsCurrentTestName = "";
+
+      const infrastructureErrors = beforeEachErrors.concat(afterEachErrors);
+      const expectedFailureErrors = testErrors.concat(assertionErrors);
+      if (testCase.failing) {
+        if (infrastructureErrors.length > 0) {
+          const message = infrastructureErrors
+            .map((error) => error && error.message ? error.message : String(error))
+            .join("; ");
+          __beejsRecordFailure(testCase.name, new Error(message));
+        } else if (expectedFailureErrors.length > 0) {
+          __beejsTestPassed++;
+        } else {
+          __beejsRecordFailure(testCase.name, new Error("Expected failing test to fail, but it passed"));
+        }
+        return;
+      }
+
+      const errors = infrastructureErrors.concat(expectedFailureErrors);
+      if (errors.length === 0) {
+        __beejsTestPassed++;
+      } else {
+        const message = errors
+          .map((error) => error && error.message ? error.message : String(error))
+          .join("; ");
+        __beejsRecordFailure(testCase.name, new Error(message));
+      }
+    });
+}
+
+function __beejsRunTests() {
+  if (__beejsTestQueue.length === 0 && __beejsTestFailed === 0) {
+    return Promise.reject(new Error("No tests found in test file"));
+  }
+
+  const hasOnlyTests = __beejsTestQueue.some((testCase) => testCase.only);
+  __beejsRemainingSuiteTests = __beejsBuildRemainingSuiteTests(hasOnlyTests);
+  let chain = Promise.resolve();
+
+  for (const testCase of __beejsTestQueue) {
+    chain = chain.then(() => {
+      if (__beejsShouldSkip(testCase, hasOnlyTests)) {
+        __beejsTestSkipped++;
+        return undefined;
+      }
+      if (__beejsTestConfig.bail && __beejsTestFailed > 0) {
+        __beejsTestSkipped++;
+        return undefined;
+      }
+      if (__beejsHasFailedBeforeAllSuite(testCase)) {
+        __beejsTestSkipped++;
+        return __beejsRunAfterAllHooksForTest(testCase);
+      }
+      return __beejsRunBeforeAllHooks(testCase)
+        .then(() => __beejsRunOneTest(testCase))
+        .catch(() => {
+          if (__beejsHasFailedBeforeAllSuite(testCase)) {
+            __beejsTestSkipped++;
+          }
+          return undefined;
+        })
+        .then(() => __beejsRunAfterAllHooksForTest(testCase));
+    });
+  }
+
+  return chain.then(() => __beejsRunRemainingAfterAllHooks()).then(() => {
+    if (__beejsTestFailed > 0) {
+      throw new Error(__beejsTestErrors.join("\n"));
+    }
+
+    const summary = `${__beejsTestPassed} passed, ${__beejsTestFailed} failed, ${__beejsTestSkipped} skipped`;
+    const snapshotUpdated = Object.keys(__beejsSnapshotUpdates).length > 0;
+    const inlineSnapshotUpdated = __beejsInlineSnapshotUpdates.length > 0;
+    return JSON.stringify({
+      summary,
+      snapshotUpdated,
+      snapshotContent: snapshotUpdated ? __beejsBuildSnapshotFileContent() : null,
+      inlineSnapshotUpdated,
+      inlineSnapshotUpdates: __beejsInlineSnapshotUpdates
+    });
+  });
+}
+
+"#,
+    );
+    wrapped.push_str(source);
+    wrapped.push_str(
+        r#"
+
+__beejsRunTests();
+"#,
+    );
+    wrapped
 }
 
 #[tokio::main]
@@ -271,6 +4346,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Run {
+            permissions,
             file,
             args,
             watch,
@@ -279,6 +4355,8 @@ async fn main() -> Result<()> {
             preloads,
             require,
         }) => {
+            apply_permission_cli_options(&permissions)?;
+
             // Combine preloads and require (they are equivalent)
             let all_preloads: Vec<String> =
                 preloads.iter().chain(require.iter()).cloned().collect();
@@ -294,6 +4372,8 @@ async fn main() -> Result<()> {
             }
 
             if watch {
+                check_file_read_permission(&file)?;
+
                 // Watch mode: enable hot reload
                 println!("🔥 Watch mode enabled (debounce: {}ms)", debounce);
 
@@ -335,6 +4415,8 @@ async fn main() -> Result<()> {
 
                     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                         .expect("Failed to create runtime");
+                    runtime.set_process_argv(build_process_argv(file, &args));
+                    runtime.set_main_module_path(file);
 
                     match runtime.execute_code(&code) {
                         Ok(result) => {
@@ -403,25 +4485,20 @@ async fn main() -> Result<()> {
                 // Normal execution mode
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                     .expect("Failed to create runtime");
+                runtime.set_process_argv(build_process_argv(&file, &args));
+                runtime.set_main_module_path(&file);
 
                 // Execute preload modules first
                 for preload in &all_preloads {
                     if verbose {
                         println!("Loading preload: {}", preload);
                     }
-                    // Try to load as a file path first, then as a module name
-                    let preload_code = if Path::new(preload).exists() {
-                        std::fs::read_to_string(preload).map_err(|e| {
-                            anyhow::anyhow!("Failed to read preload file {}: {}", preload, e)
-                        })?
-                    } else {
-                        // For module names, try to require them
-                        format!("require('{}');", preload)
-                    };
+                    // Use CommonJS loading for both file paths and module names so
+                    // preload files get their own __dirname and local require().
+                    let preload_code = preload_require_source(preload)?;
 
                     if let Err(e) = runtime.execute_code(&preload_code) {
-                        eprintln!("⚠️  Preload '{}' failed: {}", preload, e);
-                        // Continue execution even if preload fails (Bun behavior)
+                        return Err(anyhow!("Preload '{}' failed: {}", preload, e));
                     }
                 }
 
@@ -442,7 +4519,9 @@ async fn main() -> Result<()> {
             }
             return Ok(());
         }
-        Some(Command::Eval { code }) => {
+        Some(Command::Eval { permissions, code }) => {
+            apply_permission_cli_options(&permissions)?;
+
             if verbose {
                 println!("Evaluating JavaScript code");
             }
@@ -472,6 +4551,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Test {
+            permissions,
             file,
             test_name_pattern,
             test_only,
@@ -479,8 +4559,11 @@ async fn main() -> Result<()> {
             bail,
             parallel,
             timeout,
+            update_snapshots,
             verbose,
         }) => {
+            apply_permission_cli_options(&permissions)?;
+
             println!("🐝 Running tests...");
 
             // Build test filter from CLI options
@@ -513,25 +4596,30 @@ async fn main() -> Result<()> {
                 }
             }
 
-            let mut runtime =
-                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+            let test_file_options = TestFileOptions {
+                include_pattern: test_only.or(test_name_pattern),
+                skip_pattern: test_skip,
+                bail,
+                timeout_seconds: timeout,
+                update_snapshots,
+            };
 
             if let Some(test_file) = file {
                 // Run specific test file
                 println!("Running test file: {}", test_file.display());
+                if parallel {
+                    eprintln!("⚠️  --parallel is not supported for single-file test mode; running serially");
+                }
                 if verbose {
-                    if parallel {
-                        println!("  Mode: parallel execution");
-                    }
                     if bail {
                         println!("  Mode: bail on first failure");
                     }
-                    println!("  Timeout: {}s", timeout);
+                    if let Some(timeout) = timeout {
+                        println!("  Timeout: {}s", timeout);
+                    }
                 }
-                let code = std::fs::read_to_string(&test_file)
-                    .map_err(|e| anyhow::anyhow!("Failed to read test file: {}", e))?;
 
-                match runtime.execute_code(&code) {
+                match execute_test_file(&test_file, &test_file_options) {
                     Ok(result) => {
                         println!("Test result: {}", result);
                         println!("✅ Tests passed!");
@@ -542,6 +4630,70 @@ async fn main() -> Result<()> {
                     }
                 }
             } else {
+                use beejs::testing::test_discoverer::{TestDiscoverer, TestDiscovererConfig};
+
+                let mut discoverer_config = TestDiscovererConfig {
+                    root_path: std::env::current_dir()?,
+                    ..Default::default()
+                };
+                discoverer_config.exclude_patterns.extend([
+                    ".git".to_string(),
+                    "target".to_string(),
+                    "dist".to_string(),
+                ]);
+                let discovery = TestDiscoverer::new(discoverer_config)
+                    .discover_with_read_permission(|path| {
+                        check_file_read_permission(path).map_err(|e| {
+                            std::io::Error::new(std::io::ErrorKind::PermissionDenied, e.to_string())
+                        })
+                    })?;
+
+                if !discovery.test_files.is_empty() {
+                    if parallel {
+                        eprintln!(
+                            "⚠️  --parallel is not supported for discovered test mode; running serially"
+                        );
+                    }
+                    if verbose {
+                        println!("  Discovered {} test file(s)", discovery.test_files.len());
+                        if bail {
+                            println!("  Mode: bail on first failure");
+                        }
+                        if let Some(timeout) = timeout {
+                            println!("  Timeout: {}s", timeout);
+                        }
+                    }
+
+                    let mut passed_files = 0;
+                    let mut failed_files = 0;
+                    for test_file in discovery.test_files {
+                        println!("Running test file: {}", test_file.display());
+                        match execute_test_file(&test_file, &test_file_options) {
+                            Ok(result) => {
+                                println!("Test result: {}", result);
+                                passed_files += 1;
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Test failed in {}: {}", test_file.display(), e);
+                                failed_files += 1;
+                                if bail {
+                                    eprintln!("🛑 Stopping on first failure");
+                                    std::process::exit(1);
+                                }
+                            }
+                        }
+                    }
+
+                    println!(
+                        "\n📊 Test File Summary: {} passed, {} failed",
+                        passed_files, failed_files
+                    );
+                    if failed_files > 0 {
+                        std::process::exit(1);
+                    }
+                    return Ok(());
+                }
+
                 // Run built-in test suite with filtering
                 let test_cases = [
                     ("1 + 1", "2"),
@@ -557,6 +4709,8 @@ async fn main() -> Result<()> {
                 let mut passed = 0;
                 let mut failed = 0;
                 let mut skipped = 0;
+                let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                    .expect("Failed to create runtime");
 
                 for (i, (input, expected)) in test_cases.iter().enumerate() {
                     let test_name = format!("test_{}", i);
@@ -632,6 +4786,7 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Bundle {
+            permissions,
             entry,
             outfile,
             minify,
@@ -639,21 +4794,20 @@ async fn main() -> Result<()> {
             target,
             tree_shake,
         }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("🐝 Bundling JavaScript/TypeScript...");
 
-            let code = read_and_compile_source(&entry)?;
+            check_file_read_permission(&entry)?;
+            let code = bundle_local_static_imports(&entry)?;
             let output_path = outfile.unwrap_or_else(|| {
                 let mut path = entry.clone();
                 path.set_extension("bundle.js");
                 path
             });
+            check_file_write_permission(&output_path)?;
 
             let mut bundle = if minify {
-                code.lines()
-                    .map(str::trim)
-                    .filter(|line| !line.is_empty())
-                    .collect::<Vec<_>>()
-                    .join("")
+                minify_bundle_source(&code)
             } else {
                 format!(
                     "// Bundled by Beejs\n// target: {}\n// tree-shake: {}\n{}",
@@ -677,6 +4831,7 @@ async fn main() -> Result<()> {
                     r#"{{"version":3,"sources":["{}"],"names":[],"mappings":""}}"#,
                     source
                 );
+                check_file_write_permission(&map_path)?;
                 std::fs::write(&map_path, map)
                     .map_err(|e| anyhow::anyhow!("Failed to write source map: {}", e))?;
             }
@@ -691,11 +4846,13 @@ async fn main() -> Result<()> {
             );
             return Ok(());
         }
-        Some(Command::Debug { file }) => {
+        Some(Command::Debug { permissions, file }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("🐝 Debugging script: {}", file.display());
             println!("🔍 Debug mode enabled");
 
             // Read and display the file content
+            check_file_read_permission(&file)?;
             let code = std::fs::read_to_string(&file)
                 .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
 
@@ -726,12 +4883,18 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Serve {
+            permissions,
             port,
             host,
             https,
             cert,
             key,
         }) => {
+            apply_permission_cli_options(&permissions)?;
+            let scheme = if https { "https" } else { "http" };
+            let bind_target = format!("{scheme}://{host}:{port}");
+            check_network_listen_permission(&bind_target)?;
+
             if https {
                 // HTTPS mode
                 let cert_path = cert.unwrap_or_else(|| "cert.pem".to_string());
@@ -752,12 +4915,19 @@ async fn main() -> Result<()> {
             println!("💡 Tip: Use 'bee run' to execute JavaScript files");
             return Ok(());
         }
-        Some(Command::Init { name }) => {
+        Some(Command::Init { permissions, name }) => {
+            apply_permission_cli_options(&permissions)?;
             let project_name = name.as_deref().unwrap_or("my-beejs-project");
             println!("📦 Initializing new project: {}", project_name);
+            let project_dir = std::path::Path::new(project_name);
+            let package_json_path = project_dir.join("package.json");
+            let index_path = project_dir.join("index.js");
+            check_file_write_permission(project_dir)?;
+            check_file_write_permission(&package_json_path)?;
+            check_file_write_permission(&index_path)?;
 
             // Create project directory
-            std::fs::create_dir_all(project_name)?;
+            std::fs::create_dir_all(project_dir)?;
 
             // Create package.json
             let package_json = format!(
@@ -775,11 +4945,11 @@ async fn main() -> Result<()> {
                 project_name
             );
 
-            std::fs::write(format!("{}/package.json", project_name), package_json)?;
+            std::fs::write(&package_json_path, package_json)?;
 
             // Create example file
             let example_code = "console.log('Hello from Beejs!');\n";
-            std::fs::write(format!("{}/index.js", project_name), example_code)?;
+            std::fs::write(&index_path, example_code)?;
 
             println!("✅ Project initialized!");
             println!("  Project directory: {}", project_name);
@@ -788,10 +4958,12 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         Some(Command::Add {
+            permissions,
             package,
             save_exact,
             dev,
         }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("📦 Adding dependency: {}", package);
             println!("  Save exact: {}", save_exact);
             println!("  As devDependency: {}", dev);
@@ -818,6 +4990,13 @@ async fn main() -> Result<()> {
                     "package.json not found in current directory. Run 'bee init' first."
                 ));
             }
+            check_file_read_permission(package_json_path)?;
+            check_file_write_permission(package_json_path)?;
+            let lock_path = std::path::Path::new("package-lock.json");
+            if lock_path.exists() {
+                check_file_read_permission(lock_path)?;
+            }
+            check_file_write_permission(lock_path)?;
 
             // Create package manager
             let config = beejs::package_manager::PackageManagerConfig::default();
@@ -830,6 +5009,7 @@ async fn main() -> Result<()> {
                     println!("✅ Installed {}@{}", name, result.package.version);
 
                     // Read existing package.json
+                    check_file_read_permission(package_json_path)?;
                     let content = std::fs::read_to_string(package_json_path)
                         .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
 
@@ -864,13 +5044,13 @@ async fn main() -> Result<()> {
                     // Write updated package.json
                     let updated_content = serde_json::to_string_pretty(&package_data)
                         .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+                    check_file_write_permission(package_json_path)?;
                     std::fs::write(package_json_path, updated_content)
                         .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
 
                     println!("✅ Added '{}' to {}", name, dep_key);
 
                     // Generate/update package-lock.json
-                    let lock_path = std::path::Path::new("package-lock.json");
                     if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
                         let project_version = package_data
                             .get("version")
@@ -909,11 +5089,16 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Some(Command::Remove { package }) => {
+        Some(Command::Remove {
+            permissions,
+            package,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("🗑️  Removing dependency: {}", package);
 
             // Check if package.json exists
             let package_json_path = std::path::Path::new("package.json");
+            check_file_read_permission(package_json_path)?;
             if !package_json_path.exists() {
                 return Err(anyhow!("package.json not found in current directory"));
             }
@@ -962,6 +5147,7 @@ async fn main() -> Result<()> {
             // Write updated package.json
             let updated_content = serde_json::to_string_pretty(&package_data)
                 .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+            check_file_write_permission(package_json_path)?;
             std::fs::write(package_json_path, updated_content)
                 .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
 
@@ -970,7 +5156,11 @@ async fn main() -> Result<()> {
 
             return Ok(());
         }
-        Some(Command::Install) => {
+        Some(Command::Install {
+            permissions,
+            frozen_lockfile,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("📦 Installing dependencies from package.json...");
 
             // Check if package.json exists
@@ -982,12 +5172,22 @@ async fn main() -> Result<()> {
             }
 
             // Read package.json
+            check_file_read_permission(package_json_path)?;
             let content = std::fs::read_to_string(package_json_path)
                 .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
 
             // Parse package.json
             let package_data: serde_json::Value = serde_json::from_str(&content)
                 .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+            let lock_path = std::path::Path::new("package-lock.json");
+            if frozen_lockfile {
+                validate_frozen_lockfile(&package_data, lock_path)?;
+            } else if lock_path.exists() {
+                check_file_read_permission(lock_path)?;
+                check_file_write_permission(lock_path)?;
+            } else {
+                check_file_write_permission(lock_path)?;
+            }
 
             // Create package manager
             let config = beejs::package_manager::PackageManagerConfig::default();
@@ -1011,9 +5211,12 @@ async fn main() -> Result<()> {
                         println!("  - {}@{}", result.package.name, result.package.version);
                     }
 
-                    // Generate/update package-lock.json
-                    let lock_path = std::path::Path::new("package-lock.json");
-                    if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
+                    // Generate/update package-lock.json unless frozen mode made it read-only.
+                    if frozen_lockfile {
+                        println!("✅ Verified frozen package-lock.json");
+                    } else if let Some(project_name) =
+                        package_data.get("name").and_then(|n| n.as_str())
+                    {
                         let project_version = package_data
                             .get("version")
                             .and_then(|v| v.as_str())
@@ -1039,7 +5242,8 @@ async fn main() -> Result<()> {
 
             return Ok(());
         }
-        Some(Command::Prune) => {
+        Some(Command::Prune { permissions }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("✂️ Pruning unused dependencies from node_modules...");
 
             // Check if package.json exists
@@ -1052,6 +5256,7 @@ async fn main() -> Result<()> {
 
             // Check if node_modules exists
             let node_modules_path = std::path::Path::new("node_modules");
+            check_file_read_permission(node_modules_path)?;
             if !node_modules_path.exists() {
                 println!("✅ No node_modules directory found - nothing to prune");
                 return Ok(());
@@ -1087,22 +5292,36 @@ async fn main() -> Result<()> {
 
             return Ok(());
         }
-        Some(Command::Create { template, name }) => {
+        Some(Command::Create {
+            permissions,
+            template,
+            name,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
+            let (name, template) = normalize_create_args(name, template);
             println!("🎨 Creating new project: {}", name);
             println!("  Template: {}", template);
+            let project_dir = std::path::Path::new(&name);
+            let index_path = if template == "ts" {
+                project_dir.join("index.ts")
+            } else {
+                project_dir.join("index.js")
+            };
+            check_file_write_permission(project_dir)?;
+            check_file_write_permission(&index_path)?;
 
             // Create project directory
-            std::fs::create_dir_all(&name)?;
+            std::fs::create_dir_all(project_dir)?;
 
             match template.as_str() {
                 "ts" => {
                     let ts_code = "function greet(name: string): string {\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greet('Beejs'));\n";
-                    std::fs::write(format!("{}/index.ts", name), ts_code)?;
+                    std::fs::write(index_path, ts_code)?;
                     println!("✅ TypeScript project created");
                 }
                 _ => {
                     let js_code = "console.log('Hello from Beejs!');\n";
-                    std::fs::write(format!("{}/index.js", name), js_code)?;
+                    std::fs::write(index_path, js_code)?;
                     println!("✅ JavaScript project created");
                 }
             }
@@ -1110,7 +5329,12 @@ async fn main() -> Result<()> {
             println!("\nRun 'cd {} && bee run index.{}' to start", name, template);
             return Ok(());
         }
-        Some(Command::Bunx { package, args }) => {
+        Some(Command::Bunx {
+            permissions,
+            package,
+            args,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("🚀 Running package: {}", package);
             println!("  Args: {:?}", args);
 
@@ -1130,6 +5354,8 @@ async fn main() -> Result<()> {
 
             println!("  Package: {}", name);
             println!("  Version: {}", version);
+
+            check_process_execute_permission(&name)?;
 
             // Create temporary package manager
             let config = beejs::package_manager::PackageManagerConfig::default();
@@ -1203,7 +5429,11 @@ async fn main() -> Result<()> {
                 }
             }
         }
-        Some(Command::Upgrade { package }) => {
+        Some(Command::Upgrade {
+            permissions,
+            package,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
             println!("⬆️  Upgrading dependencies...");
 
             // Check if package.json exists
@@ -1213,11 +5443,18 @@ async fn main() -> Result<()> {
             }
 
             // Read package.json
+            check_file_read_permission(package_json_path)?;
             let content = std::fs::read_to_string(package_json_path)
                 .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
 
             let mut package_data: serde_json::Value = serde_json::from_str(&content)
                 .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
+            check_file_write_permission(package_json_path)?;
+            let lock_path = std::path::Path::new("package-lock.json");
+            if lock_path.exists() {
+                check_file_read_permission(lock_path)?;
+            }
+            check_file_write_permission(lock_path)?;
 
             // Create package manager
             let config = beejs::package_manager::PackageManagerConfig::default();
@@ -1297,6 +5534,13 @@ async fn main() -> Result<()> {
                                     }
                                 }
                                 Err(e) => {
+                                    if e.to_string().contains("permission denied") {
+                                        return Err(anyhow!(
+                                            "Failed to fetch package info for {}: {}",
+                                            pkg_name,
+                                            e
+                                        ));
+                                    }
                                     println!(" failed to fetch info");
                                     errors.push(format!("{}: {}", pkg_name, e));
                                 }
@@ -1309,11 +5553,11 @@ async fn main() -> Result<()> {
             // Write updated package.json
             let updated_content = serde_json::to_string_pretty(&package_data)
                 .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+            check_file_write_permission(package_json_path)?;
             std::fs::write(package_json_path, updated_content)
                 .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
 
             // Generate new package-lock.json
-            let lock_path = std::path::Path::new("package-lock.json");
             if let Some(project_name) = package_data.get("name").and_then(|n| n.as_str()) {
                 let project_version = package_data
                     .get("version")
@@ -1355,7 +5599,7 @@ async fn main() -> Result<()> {
             println!("  init [name]      Initialize new project");
             println!("  add <package>    Add dependency package");
             println!("  remove <package> Remove dependency package");
-            println!("  create [type]    Create new project");
+            println!("  create <name> [template] Create new project");
             println!("  bunx <package>   Run a package without installing");
             println!("  upgrade [pkg]    Upgrade dependencies to latest");
             println!("  version          Display version information");

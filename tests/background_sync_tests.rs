@@ -138,6 +138,61 @@ mod sync_manager_tests {
     }
 
     #[test]
+    fn test_sync_register_returns_promise_and_fails_closed_without_backend() {
+        let script = r#"
+            globalThis.__syncResult = 'pending';
+            const result = registration.sync.register('offline-job');
+            const isPromise = result instanceof Promise;
+            result.then(
+                () => {
+                    globalThis.__syncResult = 'resolved';
+                },
+                () => {
+                    registration.sync.getTags().then(tags => {
+                        globalThis.__syncResult = `${isPromise}:rejected:${tags.includes('offline-job')}`;
+                    });
+                }
+            );
+            setTimeout(() => {
+                console.log(globalThis.__syncResult);
+            }, 0);
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true:rejected:false"),
+            "sync.register should be a rejecting Promise and must not store fake tags: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_sync_get_tags_returns_promise() {
+        let script = r#"
+            globalThis.__syncResult = 'pending';
+            const result = registration.sync.getTags();
+            const isPromise = result instanceof Promise;
+            if (!isPromise) {
+                globalThis.__syncResult = `not-promise:${Object.prototype.toString.call(result)}`;
+            } else {
+                result.then(tags => {
+                    globalThis.__syncResult = `promise:${Array.isArray(tags)}:${tags.length}`;
+                });
+            }
+            setTimeout(() => {
+                console.log(globalThis.__syncResult);
+            }, 0);
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("promise:true:0"),
+            "sync.getTags should return a Promise resolving to the tag array: {}",
+            stdout
+        );
+    }
+
+    #[test]
     fn test_sync_event_type_property() {
         // Test that SyncEvent has correct type
         let script = r#"

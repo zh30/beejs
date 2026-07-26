@@ -60,6 +60,7 @@ pub mod monitor;
 // pub mod runtime_lite;  // Temporarily disabled - compilation issues
 // pub mod runtime_core;  // Temporarily disabled - compilation issues
 pub mod event_loop;
+pub mod permissions;
 pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution // v0.2.0: 异步事件循环实现
                          // pub mod v8_context_pool;  // Temporarily disabled - compilation issues
                          // pub mod v8_engine;  // Temporarily disabled - compilation issues
@@ -499,7 +500,12 @@ impl Runtime {
             code
         );
 
-        self.execute_code(&wrapped_code)
+        let mut runtime_ref = self.lite_runtime.borrow_mut();
+        let runtime = runtime_ref.get_or_insert_with(|| {
+            crate::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime")
+        });
+        runtime.set_main_module_path(path);
+        runtime.execute_code(&wrapped_code)
     }
 }
 /// 获取智能运行时（根据代码特征自动优化）

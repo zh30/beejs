@@ -4,6 +4,48 @@
 
 use rusty_v8 as v8;
 
+fn bool_option(
+    scope: &mut v8::HandleScope,
+    init_obj: v8::Local<v8::Object>,
+    key: &str,
+    default: bool,
+) -> bool {
+    let Some(key_string) = v8::String::new(scope, key) else {
+        return default;
+    };
+    init_obj
+        .get(scope, key_string.into())
+        .map(|value| value.to_boolean(scope).boolean_value(scope))
+        .unwrap_or(default)
+}
+
+fn has_own_property(scope: &mut v8::HandleScope, object: v8::Local<v8::Object>, key: &str) -> bool {
+    let Some(key_string) = v8::String::new(scope, key) else {
+        return false;
+    };
+    object
+        .get(scope, key_string.into())
+        .map(|value| !value.is_undefined())
+        .unwrap_or(false)
+}
+
+fn prevent_default_if_cancelable(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>) {
+    let Some(cancelable_key) = v8::String::new(scope, "cancelable") else {
+        return;
+    };
+    let is_cancelable = this
+        .get(scope, cancelable_key.into())
+        .map(|value| value.to_boolean(scope).boolean_value(scope))
+        .unwrap_or(false);
+    if !is_cancelable {
+        return;
+    }
+
+    let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
+    let true_val = v8::Boolean::new(scope, true);
+    this.set(scope, default_prevented_key, true_val.into());
+}
+
 /// Setup CustomEvent API in V8 context
 /// CustomEvent provides a way to create custom events with custom data (detail)
 pub fn setup_custom_event_api(
@@ -42,9 +84,7 @@ pub fn setup_custom_event_api(
          args: v8::FunctionCallbackArguments,
          _retval: v8::ReturnValue| {
             let this = args.this();
-            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-            let true_val = v8::Boolean::new(scope, true);
-            this.set(scope, default_prevented_key, true_val.into());
+            prevent_default_if_cancelable(scope, this);
         },
     )
     .unwrap();
@@ -62,7 +102,7 @@ pub fn setup_custom_event_api(
 /// eventInitDict:
 ///   - detail: Custom event data (default: null)
 ///   - bubbles: Whether event bubbles (default: false)
-///   - cancelable: Whether event is cancelable (default: true)
+///   - cancelable: Whether event is cancelable (default: false)
 fn custom_event_constructor(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -71,8 +111,8 @@ fn custom_event_constructor(
     // Initialize default values
     let mut event_type = String::from("custom");
     let mut detail: Option<v8::Local<v8::Value>> = None;
-    let bubbles = false;
-    let cancelable = true;
+    let mut bubbles = false;
+    let mut cancelable = false;
 
     // Parse arguments
     if args.length() >= 1 {
@@ -91,6 +131,9 @@ fn custom_event_constructor(
         if dict.is_object() {
             let dict: v8::Local<v8::Object> = unsafe { v8::Local::cast(dict) };
             let mut has_explicit_detail = false;
+            let has_event_init_field = has_own_property(scope, dict, "bubbles")
+                || has_own_property(scope, dict, "cancelable")
+                || has_own_property(scope, dict, "composed");
 
             // Get detail property
             let detail_key = v8::String::new(scope, "detail").unwrap();
@@ -114,24 +157,15 @@ fn custom_event_constructor(
             }
 
             if !has_explicit_detail {
-                detail = Some(dict.into());
-            }
-
-            // Get bubbles property
-            let bubbles_key = v8::String::new(scope, "bubbles").unwrap();
-            if let Some(val) = dict.get(scope, bubbles_key.into()) {
-                if val.is_boolean() {
-                    // We don't use bubbles in this implementation but parse it for spec compliance
+                if has_event_init_field {
+                    detail = None;
+                } else {
+                    detail = Some(dict.into());
                 }
             }
 
-            // Get cancelable property
-            let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
-            if let Some(val) = dict.get(scope, cancelable_key.into()) {
-                if val.is_boolean() {
-                    // We don't use cancelable in this implementation but parse it for spec compliance
-                }
-            }
+            bubbles = bool_option(scope, dict, "bubbles", false);
+            cancelable = bool_option(scope, dict, "cancelable", false);
         }
     }
 
@@ -186,9 +220,7 @@ fn custom_event_constructor(
          args: v8::FunctionCallbackArguments,
          _retval: v8::ReturnValue| {
             let this = args.this();
-            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-            let true_val = v8::Boolean::new(scope, true);
-            this.set(scope, default_prevented_key, true_val.into());
+            prevent_default_if_cancelable(scope, this);
         },
     )
     .unwrap();
@@ -228,7 +260,7 @@ pub fn create_custom_event_object<'a>(
     event_obj.set(scope, bubbles_key.into(), bubbles_val.into());
 
     let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
-    let cancelable_val = v8::Boolean::new(scope, true);
+    let cancelable_val = v8::Boolean::new(scope, false);
     event_obj.set(scope, cancelable_key.into(), cancelable_val.into());
 
     let composed_key = v8::String::new(scope, "composed").unwrap();
@@ -254,9 +286,7 @@ pub fn create_custom_event_object<'a>(
          args: v8::FunctionCallbackArguments,
          _retval: v8::ReturnValue| {
             let this = args.this();
-            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap().into();
-            let true_val = v8::Boolean::new(scope, true);
-            this.set(scope, default_prevented_key, true_val.into());
+            prevent_default_if_cancelable(scope, this);
         },
     )
     .unwrap();

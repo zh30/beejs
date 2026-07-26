@@ -3,7 +3,12 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::fs;
+use std::io::Write as _;
 use std::path::Path;
+
+use crate::permissions::{
+    check_global_permission, PermissionAction, PermissionError, PermissionKind, ResourceId,
+};
 
 /// 创建 Buffer 对象（v8::ArrayBuffer）- v0.3.66
 /// 用于 'buffer' 编码读取时返回二进制数据
@@ -20,6 +25,94 @@ fn create_buffer_from_bytes<'a>(
     buffer_obj.set(scope, length_key.into(), length_val.into());
     // 如果有 backing_store 访问权限，可以存储实际数据
     buffer_obj.into()
+}
+
+fn throw_permission_error(scope: &mut v8::HandleScope, error: PermissionError) {
+    let message = v8::String::new(scope, &error.to_string()).unwrap();
+    let exception = v8::Exception::type_error(scope, message);
+    scope.throw_exception(exception);
+}
+
+fn ensure_fs_permission(scope: &mut v8::HandleScope, action: PermissionAction, path: &str) -> bool {
+    match check_global_permission(
+        PermissionKind::FileSystem,
+        action,
+        ResourceId::Path(Path::new(path).to_path_buf()),
+    ) {
+        Ok(()) => true,
+        Err(error) => {
+            throw_permission_error(scope, error);
+            false
+        }
+    }
+}
+
+fn get_stats_flag(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>, key: &str) -> bool {
+    let key = v8::String::new(scope, key).unwrap();
+    this.get(scope, key.into())
+        .map(|value| value.to_boolean(scope).boolean_value(scope))
+        .unwrap_or(false)
+}
+
+fn stats_is_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let is_file = get_stats_flag(scope, args.this(), "__isFile");
+    retval.set(v8::Boolean::new(scope, is_file).into());
+}
+
+fn stats_is_directory_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let is_directory = get_stats_flag(scope, args.this(), "__isDirectory");
+    retval.set(v8::Boolean::new(scope, is_directory).into());
+}
+
+fn create_stats_object<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    metadata: &std::fs::Metadata,
+) -> v8::Local<'a, v8::Object> {
+    let stat_obj = v8::Object::new(scope);
+
+    let is_file_state_key = v8::String::new(scope, "__isFile").unwrap();
+    let is_file_state = v8::Boolean::new(scope, metadata.is_file());
+    stat_obj.set(scope, is_file_state_key.into(), is_file_state.into());
+
+    let is_dir_state_key = v8::String::new(scope, "__isDirectory").unwrap();
+    let is_dir_state = v8::Boolean::new(scope, metadata.is_dir());
+    stat_obj.set(scope, is_dir_state_key.into(), is_dir_state.into());
+
+    let is_file_func = v8::FunctionTemplate::new(scope, stats_is_file_callback);
+    let is_file_instance = is_file_func.get_function(scope).unwrap();
+    let is_file_key = v8::String::new(scope, "isFile").unwrap();
+    stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
+
+    let is_dir_func = v8::FunctionTemplate::new(scope, stats_is_directory_callback);
+    let is_dir_instance = is_dir_func.get_function(scope).unwrap();
+    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
+    stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
+
+    let size_key = v8::String::new(scope, "size").unwrap();
+    let size_value = v8::Number::new(scope, metadata.len() as f64);
+    stat_obj.set(scope, size_key.into(), size_value.into());
+
+    let mode_key = v8::String::new(scope, "mode").unwrap();
+    let mode_value = v8::Number::new(scope, 420.0_f64);
+    stat_obj.set(scope, mode_key.into(), mode_value.into());
+
+    let mtime_key = v8::String::new(scope, "mtime").unwrap();
+    if let Ok(modified) = metadata.modified() {
+        if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
+            let mtime_value = v8::Number::new(scope, duration.as_secs() as f64 * 1000.0);
+            stat_obj.set(scope, mtime_key.into(), mtime_value.into());
+        }
+    }
+
+    stat_obj
 }
 
 /// 设置fs API到全局作用域
@@ -77,6 +170,28 @@ pub fn setup_fs_api(
     let rename_key = v8::String::new(scope, "renameSync").unwrap();
     fs_obj.set(scope, rename_key.into(), rename_instance.into());
 
+    // rmdirSync - 删除目录
+    let rmdir_func = v8::FunctionTemplate::new(scope, fs_rmdir_sync_callback);
+    let rmdir_instance = rmdir_func.get_function(scope).unwrap();
+    let rmdir_key = v8::String::new(scope, "rmdirSync").unwrap();
+    fs_obj.set(scope, rmdir_key.into(), rmdir_instance.into());
+
+    // readFile/writeFile/appendFile - callback 风格最小兼容
+    let read_async_func = v8::FunctionTemplate::new(scope, fs_read_file_callback);
+    let read_async_instance = read_async_func.get_function(scope).unwrap();
+    let read_async_key = v8::String::new(scope, "readFile").unwrap();
+    fs_obj.set(scope, read_async_key.into(), read_async_instance.into());
+
+    let write_async_func = v8::FunctionTemplate::new(scope, fs_write_file_callback);
+    let write_async_instance = write_async_func.get_function(scope).unwrap();
+    let write_async_key = v8::String::new(scope, "writeFile").unwrap();
+    fs_obj.set(scope, write_async_key.into(), write_async_instance.into());
+
+    let append_async_func = v8::FunctionTemplate::new(scope, fs_append_file_callback);
+    let append_async_instance = append_async_func.get_function(scope).unwrap();
+    let append_async_key = v8::String::new(scope, "appendFile").unwrap();
+    fs_obj.set(scope, append_async_key.into(), append_async_instance.into());
+
     // promises - v0.3.64: 添加 Promise API
     let promises_obj = create_fs_promises(scope);
     let promises_key = v8::String::new(scope, "promises").unwrap();
@@ -106,11 +221,23 @@ fn create_fs_promises<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::
     let write_file_key = v8::String::new(scope, "writeFile").unwrap();
     promises_obj.set(scope, write_file_key.into(), write_file_instance.into());
 
+    // appendFile
+    let append_file_func = v8::FunctionTemplate::new(scope, fs_promises_append_file_callback);
+    let append_file_instance = append_file_func.get_function(scope).unwrap();
+    let append_file_key = v8::String::new(scope, "appendFile").unwrap();
+    promises_obj.set(scope, append_file_key.into(), append_file_instance.into());
+
     // mkdir
     let mkdir_func = v8::FunctionTemplate::new(scope, fs_promises_mkdir_callback);
     let mkdir_instance = mkdir_func.get_function(scope).unwrap();
     let mkdir_key = v8::String::new(scope, "mkdir").unwrap();
     promises_obj.set(scope, mkdir_key.into(), mkdir_instance.into());
+
+    // rmdir
+    let rmdir_func = v8::FunctionTemplate::new(scope, fs_promises_rmdir_callback);
+    let rmdir_instance = rmdir_func.get_function(scope).unwrap();
+    let rmdir_key = v8::String::new(scope, "rmdir").unwrap();
+    promises_obj.set(scope, rmdir_key.into(), rmdir_instance.into());
 
     // readdir
     let readdir_func = v8::FunctionTemplate::new(scope, fs_promises_readdir_callback);
@@ -151,6 +278,10 @@ fn fs_read_file_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
     // 读取文件内容
     match std::fs::read_to_string(&path) {
         Ok(content) => {
@@ -183,6 +314,10 @@ fn fs_write_file_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
     // 写入文件
     match std::fs::write(&path, &data) {
         Ok(()) => {
@@ -209,6 +344,10 @@ fn fs_exists_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
     let exists = Path::new(&path).exists();
     retval.set(v8::Boolean::new(scope, exists).into());
 }
@@ -224,6 +363,10 @@ fn fs_mkdir_sync_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
 
     match std::fs::create_dir_all(&path) {
         Ok(()) => {
@@ -249,6 +392,10 @@ fn fs_readdir_sync_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
 
     match std::fs::read_dir(&path) {
         Ok(entries) => {
@@ -286,40 +433,13 @@ fn fs_stat_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
     match std::fs::metadata(&path) {
         Ok(metadata) => {
-            // 创建 stat 对象
-            let stat_obj = v8::Object::new(scope);
-
-            // isFile
-            let is_file_key = v8::String::new(scope, "isFile").unwrap();
-            let is_file_value = v8::Boolean::new(scope, metadata.is_file());
-            stat_obj.set(scope, is_file_key.into(), is_file_value.into());
-
-            // isDirectory
-            let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
-            let is_dir_value = v8::Boolean::new(scope, metadata.is_dir());
-            stat_obj.set(scope, is_dir_key.into(), is_dir_value.into());
-
-            // size
-            let size_key = v8::String::new(scope, "size").unwrap();
-            let size_value = v8::Number::new(scope, metadata.len() as f64);
-            stat_obj.set(scope, size_key.into(), size_value.into());
-
-            // mode (permissions) - 使用 0o644 转换为十进制 420
-            let mode_key = v8::String::new(scope, "mode").unwrap();
-            let mode_value = v8::Number::new(scope, 420.0_f64);
-            stat_obj.set(scope, mode_key.into(), mode_value.into());
-
-            // mtime (modified time as timestamp)
-            let mtime_key = v8::String::new(scope, "mtime").unwrap();
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
-                    let mtime_value = v8::Number::new(scope, duration.as_secs() as f64 * 1000.0);
-                    stat_obj.set(scope, mtime_key.into(), mtime_value.into());
-                }
-            }
-
+            let stat_obj = create_stats_object(scope, &metadata);
             retval.set(stat_obj.into());
         }
         Err(e) => {
@@ -342,6 +462,10 @@ fn fs_unlink_sync_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
 
     match fs::remove_file(&path) {
         Ok(()) => {
@@ -374,6 +498,13 @@ fn fs_rename_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Write, &old_path) {
+        return;
+    }
+    if !ensure_fs_permission(scope, PermissionAction::Write, &new_path) {
+        return;
+    }
+
     match fs::rename(&old_path, &new_path) {
         Ok(()) => {
             retval.set(v8::undefined(scope).into());
@@ -385,6 +516,186 @@ fn fs_rename_sync_callback(
             scope.throw_exception(exc);
         }
     }
+}
+
+/// fs.rmdirSync(path) - 删除目录
+fn fs_rmdir_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    match fs::remove_dir(&path) {
+        Ok(()) => {
+            retval.set(v8::undefined(scope).into());
+        }
+        Err(e) => {
+            let error_msg = format!("Error removing directory: {}", e);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let exc = v8::Exception::type_error(scope, error);
+            scope.throw_exception(exc);
+        }
+    }
+}
+
+/// fs.readFile(path, [encoding], callback) - callback 风格读取
+fn fs_read_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let callback_val = if args.get(1).is_function() {
+        args.get(1)
+    } else if args.length() >= 3 && args.get(2).is_function() {
+        args.get(2)
+    } else {
+        let error = v8::String::new(scope, "readFile: callback must be a function").unwrap();
+        let exc = v8::Exception::type_error(scope, error);
+        scope.throw_exception(exc);
+        return;
+    };
+    let callback = v8::Local::<v8::Function>::try_from(callback_val).unwrap();
+
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
+    match std::fs::read_to_string(&path) {
+        Ok(content) => {
+            let content = v8::String::new(scope, &content).unwrap();
+            let undefined = v8::undefined(scope);
+            let null: v8::Local<v8::Value> = v8::null(scope).into();
+            let _ = callback.call(scope, undefined.into(), &[null, content.into()]);
+            retval.set(v8::undefined(scope).into());
+        }
+        Err(e) => {
+            let error_msg = format!("Error reading file: {}", e);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let undefined = v8::undefined(scope);
+            let data: v8::Local<v8::Value> = v8::undefined(scope).into();
+            let _ = callback.call(scope, undefined.into(), &[error.into(), data]);
+            retval.set(v8::undefined(scope).into());
+        }
+    }
+}
+
+/// fs.writeFile(path, data, callback) - callback 风格写入
+fn fs_write_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let data: String = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let callback_val = if args.get(2).is_function() {
+        args.get(2)
+    } else if args.get(1).is_function() {
+        args.get(1)
+    } else {
+        let error = v8::String::new(scope, "writeFile: callback must be a function").unwrap();
+        let exc = v8::Exception::type_error(scope, error);
+        scope.throw_exception(exc);
+        return;
+    };
+    let callback = v8::Local::<v8::Function>::try_from(callback_val).unwrap();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    match std::fs::write(&path, data) {
+        Ok(()) => {
+            let undefined = v8::undefined(scope);
+            let null: v8::Local<v8::Value> = v8::null(scope).into();
+            let _ = callback.call(scope, undefined.into(), &[null]);
+        }
+        Err(e) => {
+            let error_msg = format!("Error writing file: {}", e);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let undefined = v8::undefined(scope);
+            let _ = callback.call(scope, undefined.into(), &[error.into()]);
+        }
+    }
+    retval.set(v8::undefined(scope).into());
+}
+
+/// fs.appendFile(path, data, callback) - callback 风格追加写入
+fn fs_append_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let data: String = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let callback_val = if args.get(2).is_function() {
+        args.get(2)
+    } else if args.get(1).is_function() {
+        args.get(1)
+    } else {
+        let error = v8::String::new(scope, "appendFile: callback must be a function").unwrap();
+        let exc = v8::Exception::type_error(scope, error);
+        scope.throw_exception(exc);
+        return;
+    };
+    let callback = v8::Local::<v8::Function>::try_from(callback_val).unwrap();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    let result = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .and_then(|mut file| file.write_all(data.as_bytes()));
+
+    match result {
+        Ok(()) => {
+            let undefined = v8::undefined(scope);
+            let null: v8::Local<v8::Value> = v8::null(scope).into();
+            let _ = callback.call(scope, undefined.into(), &[null]);
+        }
+        Err(e) => {
+            let error_msg = format!("Error appending to file: {}", e);
+            let error = v8::String::new(scope, &error_msg).unwrap();
+            let undefined = v8::undefined(scope);
+            let _ = callback.call(scope, undefined.into(), &[error.into()]);
+        }
+    }
+    retval.set(v8::undefined(scope).into());
 }
 
 // ============ fs.promises API - v0.3.66 ============
@@ -455,6 +766,10 @@ fn fs_promises_read_file_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
     // 提取 encoding 参数 - v0.3.66
     let options = args.get(1);
     let encoding = extract_encoding_option(scope, &options);
@@ -505,6 +820,10 @@ fn fs_promises_read_file_callback(
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Read, &path_str) {
+                return;
+            }
 
             // 根据编码类型读取文件 - v0.3.66
             let read_result: Result<String, String> = {
@@ -612,6 +931,49 @@ fn fs_promises_read_file_callback(
     let then_key = v8::String::new(scope, "then").unwrap();
     thenable_obj.set(scope, then_key.into(), then_instance.into());
 
+    let catch_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_rejected = args.get(0);
+
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Read, &path_str) {
+                return;
+            }
+
+            if let Err(error) = std::fs::read(&path_str) {
+                if on_rejected.is_function() {
+                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                        let error_msg = format!("Error reading file: {}", error);
+                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                        let undefined = v8::undefined(scope);
+                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                        if let Some(r) = result {
+                            let result_key = v8::String::new(scope, "__result__").unwrap();
+                            this.set(scope, result_key.into(), r);
+                        }
+                    }
+                }
+            }
+
+            retval.set(this.into());
+        },
+    );
+    let catch_instance = catch_func.get_function(scope).unwrap();
+    let catch_key = v8::String::new(scope, "catch").unwrap();
+    thenable_obj.set(scope, catch_key.into(), catch_instance.into());
+
     retval.set(thenable_obj.into());
 }
 
@@ -631,6 +993,10 @@ fn fs_promises_write_file_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
 
     let thenable_obj = v8::Object::new(scope);
 
@@ -666,6 +1032,10 @@ fn fs_promises_write_file_callback(
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
 
             match std::fs::write(&path_str, &data_str) {
                 Ok(()) => {
@@ -710,6 +1080,112 @@ fn fs_promises_write_file_callback(
     retval.set(thenable_obj.into());
 }
 
+/// fs.promises.appendFile(path, data, options) - v0.3.66
+fn fs_promises_append_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let data: String = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    let thenable_obj = v8::Object::new(scope);
+
+    let path_val = v8::String::new(scope, &path).unwrap();
+    let data_val = v8::String::new(scope, &data).unwrap();
+    let path_key = v8::String::new(scope, "__path").unwrap();
+    let data_key = v8::String::new(scope, "__data").unwrap();
+    thenable_obj.set(scope, path_key.into(), path_val.into());
+    thenable_obj.set(scope, data_key.into(), data_val.into());
+
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
+
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let data_key = v8::String::new(scope, "__data").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let data_val = this
+                .get(scope, data_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let data_str = data_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
+
+            let append_result = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path_str)
+                .and_then(|mut file| file.write_all(data_str.as_bytes()));
+
+            match append_result {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(error) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error appending file: {}", error);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+            }
+
+            retval.set(this.into());
+        },
+    );
+
+    let then_instance = then_func.get_function(scope).unwrap();
+    let then_key = v8::String::new(scope, "then").unwrap();
+    thenable_obj.set(scope, then_key.into(), then_instance.into());
+
+    retval.set(thenable_obj.into());
+}
+
 /// fs.promises.mkdir(path, options) - v0.3.64
 fn fs_promises_mkdir_callback(
     scope: &mut v8::HandleScope,
@@ -721,6 +1197,10 @@ fn fs_promises_mkdir_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
 
     let thenable_obj = v8::Object::new(scope);
 
@@ -744,6 +1224,10 @@ fn fs_promises_mkdir_callback(
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
 
             match std::fs::create_dir_all(&path_str) {
                 Ok(()) => {
@@ -788,8 +1272,8 @@ fn fs_promises_mkdir_callback(
     retval.set(thenable_obj.into());
 }
 
-/// fs.promises.readdir(path) - v0.3.64
-fn fs_promises_readdir_callback(
+/// fs.promises.rmdir(path) - v0.3.66
+fn fs_promises_rmdir_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
@@ -799,6 +1283,10 @@ fn fs_promises_readdir_callback(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
 
     let thenable_obj = v8::Object::new(scope);
 
@@ -822,6 +1310,94 @@ fn fs_promises_readdir_callback(
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
+
+            match std::fs::remove_dir(&path_str) {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(error) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error removing directory: {}", error);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+            }
+
+            retval.set(this.into());
+        },
+    );
+
+    let then_instance = then_func.get_function(scope).unwrap();
+    let then_key = v8::String::new(scope, "then").unwrap();
+    thenable_obj.set(scope, then_key.into(), then_instance.into());
+
+    retval.set(thenable_obj.into());
+}
+
+/// fs.promises.readdir(path) - v0.3.64
+fn fs_promises_readdir_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
+    let thenable_obj = v8::Object::new(scope);
+
+    let path_val = v8::String::new(scope, &path).unwrap();
+    let path_key = v8::String::new(scope, "__path").unwrap();
+    thenable_obj.set(scope, path_key.into(), path_val.into());
+
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
+
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Read, &path_str) {
+                return;
+            }
 
             match std::fs::read_dir(&path_str) {
                 Ok(entries) => {
@@ -884,6 +1460,10 @@ fn fs_promises_stat_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
     let thenable_obj = v8::Object::new(scope);
 
     let path_val = v8::String::new(scope, &path).unwrap();
@@ -907,50 +1487,13 @@ fn fs_promises_stat_callback(
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
 
+            if !ensure_fs_permission(scope, PermissionAction::Read, &path_str) {
+                return;
+            }
+
             match std::fs::metadata(&path_str) {
                 Ok(metadata) => {
-                    let stat_obj = v8::Object::new(scope);
-                    let is_file = metadata.is_file();
-                    let is_dir = metadata.is_dir();
-
-                    // v0.3.64: isFile should be a function that returns a boolean
-                    // Use integer flag instead of closure to avoid V8 FunctionTemplate issues
-                    // Note: These flags are stored for potential future use with cross-beam scope
-                    let _is_file_flag: i32 = if is_file { 1 } else { 0 };
-                    let _is_dir_flag: i32 = if is_dir { 1 } else { 0 };
-
-                    let is_file_func = v8::FunctionTemplate::new(
-                        scope,
-                        |scope: &mut v8::HandleScope,
-                         _args: v8::FunctionCallbackArguments,
-                         mut retval: v8::ReturnValue| {
-                            // Use persistent state via closure capture (V8 restriction workaround)
-                            // We can't use the flags directly, so just return true for now
-                            // This is a limitation of the current implementation
-                            retval.set(v8::Boolean::new(scope, true).into());
-                        },
-                    );
-                    let is_file_instance = is_file_func.get_function(scope).unwrap();
-                    let is_file_key = v8::String::new(scope, "isFile").unwrap();
-                    stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
-
-                    // isDirectory function
-                    let is_dir_func = v8::FunctionTemplate::new(
-                        scope,
-                        |scope: &mut v8::HandleScope,
-                         _args: v8::FunctionCallbackArguments,
-                         mut retval: v8::ReturnValue| {
-                            retval.set(v8::Boolean::new(scope, false).into());
-                        },
-                    );
-                    let is_dir_instance = is_dir_func.get_function(scope).unwrap();
-                    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
-                    stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
-
-                    // size as a number (not a function)
-                    let size_key = v8::String::new(scope, "size").unwrap();
-                    let size_val = v8::Number::new(scope, metadata.len() as f64);
-                    stat_obj.set(scope, size_key.into(), size_val.into());
+                    let stat_obj = create_stats_object(scope, &metadata);
 
                     if on_fulfilled.is_function() {
                         if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
@@ -1005,6 +1548,10 @@ fn fs_promises_unlink_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
     let thenable_obj = v8::Object::new(scope);
 
     let path_val = v8::String::new(scope, &path).unwrap();
@@ -1027,6 +1574,10 @@ fn fs_promises_unlink_callback(
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
 
             match std::fs::remove_file(&path_str) {
                 Ok(()) => {
@@ -1088,6 +1639,13 @@ fn fs_promises_rename_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
+    if !ensure_fs_permission(scope, PermissionAction::Write, &old_path) {
+        return;
+    }
+    if !ensure_fs_permission(scope, PermissionAction::Write, &new_path) {
+        return;
+    }
+
     let thenable_obj = v8::Object::new(scope);
 
     let old_path_val = v8::String::new(scope, &old_path).unwrap();
@@ -1121,6 +1679,13 @@ fn fs_promises_rename_callback(
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &old_path_str) {
+                return;
+            }
+            if !ensure_fs_permission(scope, PermissionAction::Write, &new_path_str) {
+                return;
+            }
 
             match std::fs::rename(&old_path_str, &new_path_str) {
                 Ok(()) => {

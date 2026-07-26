@@ -133,6 +133,44 @@ fn test_existssync_returns_false_for_nonexistent_file() {
 
 #[test]
 #[serial]
+fn test_stat_sync_stats_methods_match_file_and_dir() {
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("stat_test.txt");
+    fs::write(&test_file, "stat me").expect("Failed to write test file");
+
+    let code = format!(
+        r#"
+        const fs = require('fs');
+        const fileStat = fs.statSync("{}");
+        const dirStat = fs.statSync("{}");
+        [
+          typeof fileStat.isFile,
+          fileStat.isFile(),
+          fileStat.isDirectory(),
+          typeof dirStat.isDirectory,
+          dirStat.isFile(),
+          dirStat.isDirectory(),
+          typeof fileStat.size,
+          fileStat.size > 0
+        ].join(',');
+    "#,
+        test_file.to_string_lossy().into_owned(),
+        temp_dir.path().to_string_lossy().into_owned()
+    );
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(
+        result.trim(),
+        "function,true,false,function,false,true,number,true",
+        "statSync Stats methods should match file and directory metadata"
+    );
+}
+
+#[test]
+#[serial]
 fn test_mkdirsync_creates_directory() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
@@ -290,7 +328,12 @@ fn test_readfilesync_error_handling() {
 
     let code = r#"
         const fs = require('fs');
-        fs.readFileSync("/nonexistent/path/to/file.txt");
+        try {
+            fs.readFileSync("/nonexistent/path/to/file.txt");
+            "allowed";
+        } catch (error) {
+            String(error && error.message ? error.message : error);
+        }
     "#;
 
     let result = runtime.execute_code(code).expect("Execution failed");

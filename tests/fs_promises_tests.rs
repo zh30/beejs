@@ -370,6 +370,47 @@ fn test_fs_promises_readfile_error_handling() {
     );
 }
 
+#[test]
+#[serial]
+fn test_promises_stat_stats_methods_match_file_and_dir() {
+    let mut runtime =
+        beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let test_file = temp_dir.path().join("stat_test.txt");
+    fs::write(&test_file, "stat me").expect("Failed to write test file");
+
+    let code = format!(
+        r#"
+        const fsPromises = require('fs/promises');
+        const fileStat = fsPromises.stat("{}");
+        fileStat.then(stat => [
+          typeof stat.isFile,
+          stat.isFile(),
+          stat.isDirectory(),
+          typeof stat.size,
+          stat.size > 0
+        ].join(','));
+        const dirStat = fsPromises.stat("{}");
+        dirStat.then(stat => [
+          typeof stat.isFile,
+          stat.isFile(),
+          stat.isDirectory()
+        ].join(','));
+        fileStat.__result__ + '|' + dirStat.__result__;
+    "#,
+        test_file.to_string_lossy().into_owned(),
+        temp_dir.path().to_string_lossy().into_owned()
+    );
+
+    let result = runtime.execute_code(&code).expect("Execution failed");
+    assert_eq!(
+        result.trim(),
+        "function,true,false,number,true|function,false,true",
+        "fs.promises.stat Stats methods should match file and directory metadata"
+    );
+}
+
 // ============ v0.3.66: Encoding Tests ============
 
 #[test]

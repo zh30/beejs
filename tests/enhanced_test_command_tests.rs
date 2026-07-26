@@ -93,3 +93,24 @@ fn test_suite_name_also_matched() {
     assert!(filter.matches("test_login", "suite_auth_tests"));
     assert!(!filter.matches("test_login", "user_suite"));
 }
+
+#[test]
+fn test_filter_patterns_are_regexes() {
+    let mut filter = beejs::testing::enhanced_runner::TestFilter::new();
+    filter.include(r"^test_(auth|user)_\d+$".to_string());
+
+    assert!(filter.matches("test_auth_42", "suite1"));
+    assert!(filter.matches("test_user_7", "suite1"));
+    assert!(!filter.matches("test_auth_alpha", "suite1"));
+    assert!(!filter.matches("prefix_test_auth_42", "suite1"));
+}
+
+#[test]
+fn test_exclude_patterns_are_regexes() {
+    let mut filter = beejs::testing::enhanced_runner::TestFilter::new();
+    filter.exclude(r"^test_slow_\d+$".to_string());
+
+    assert!(!filter.matches("test_slow_42", "suite1"));
+    assert!(filter.matches("test_slow_alpha", "suite1"));
+    assert!(filter.matches("prefix_test_slow_42", "suite1"));
+}

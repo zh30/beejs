@@ -7,6 +7,19 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 
+fn is_supported_content_type(content_type: &str) -> bool {
+    matches!(
+        content_type,
+        "text/html" | "text/xml" | "application/xml" | "application/xhtml+xml" | "image/svg+xml"
+    )
+}
+
+fn throw_type_error(scope: &mut v8::HandleScope, message: &str) {
+    let error_message = v8::String::new(scope, message).unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    scope.throw_exception(error);
+}
+
 /// Set up DOMParser API in the V8 context
 pub fn setup_dom_parser_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -35,14 +48,19 @@ pub fn setup_dom_parser_api(
                 String::new()
             };
 
-            let content_type_str = if content_type_arg.is_string() {
-                content_type_arg
-                    .to_string(scope)
-                    .map(|s| s.to_rust_string_lossy(scope))
-                    .unwrap_or_default()
-            } else {
-                "text/html".to_string()
-            };
+            if args.length() < 2 || !content_type_arg.is_string() {
+                throw_type_error(scope, "DOMParser.parseFromString: contentType is required");
+                return;
+            }
+
+            let content_type_str = content_type_arg
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            if !is_supported_content_type(&content_type_str) {
+                throw_type_error(scope, "DOMParser.parseFromString: unsupported contentType");
+                return;
+            }
 
             // Create a document-like object based on content type
             let document_obj: v8::Local<v8::Object> = v8::Object::new(scope);

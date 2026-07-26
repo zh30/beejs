@@ -31,7 +31,7 @@ impl Event {
             event_type,
             target: None,
             bubbles: false,
-            cancelable: true,
+            cancelable: false,
             composed: false,
             current_target: None,
             default_prevented: false,
@@ -62,7 +62,7 @@ impl ExtendableEvent {
             event_type,
             target: None,
             bubbles: false,
-            cancelable: true,
+            cancelable: false,
             composed: false,
             current_target: None,
             default_prevented: false,
@@ -72,6 +72,46 @@ impl ExtendableEvent {
         }
     }
 }
+
+fn bool_option(
+    scope: &mut v8::HandleScope,
+    init: v8::Local<v8::Value>,
+    key: &str,
+    default: bool,
+) -> bool {
+    if !init.is_object() || init.is_null() {
+        return default;
+    }
+
+    let Ok(init_obj) = v8::Local::<v8::Object>::try_from(init) else {
+        return default;
+    };
+    let Some(key_string) = v8::String::new(scope, key) else {
+        return default;
+    };
+    init_obj
+        .get(scope, key_string.into())
+        .map(|value| value.to_boolean(scope).boolean_value(scope))
+        .unwrap_or(default)
+}
+
+fn prevent_default_if_cancelable(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>) {
+    let Some(cancelable_key) = v8::String::new(scope, "cancelable") else {
+        return;
+    };
+    let is_cancelable = this
+        .get(scope, cancelable_key.into())
+        .map(|value| value.to_boolean(scope).boolean_value(scope))
+        .unwrap_or(false);
+    if !is_cancelable {
+        return;
+    }
+
+    let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
+    let true_val = v8::Boolean::new(scope, true);
+    this.set(scope, default_prevented_key.into(), true_val.into());
+}
+
 /// EventTarget structure
 #[derive(Clone)]
 pub struct EventTarget {
@@ -387,6 +427,10 @@ fn event_constructor_callback(
     } else {
         "".to_string()
     };
+    let init = args.get(1);
+    let bubbles = bool_option(scope, init, "bubbles", false);
+    let cancelable = bool_option(scope, init, "cancelable", false);
+    let composed = bool_option(scope, init, "composed", false);
 
     // Store type as internal property (using symbol)
     let type_key = v8::String::new(scope, "_type").unwrap();
@@ -397,13 +441,17 @@ fn event_constructor_callback(
     let type_prop_key = v8::String::new(scope, "type").unwrap();
     event_obj.set(scope, type_prop_key.into(), type_val.into());
 
-    let bubbles_false = v8::Boolean::new(scope, false);
+    let bubbles_false = v8::Boolean::new(scope, bubbles);
     let bubbles_key = v8::String::new(scope, "bubbles").unwrap();
     event_obj.set(scope, bubbles_key.into(), bubbles_false.into());
 
-    let cancelable_true = v8::Boolean::new(scope, true);
+    let cancelable_true = v8::Boolean::new(scope, cancelable);
     let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
     event_obj.set(scope, cancelable_key.into(), cancelable_true.into());
+
+    let composed_key = v8::String::new(scope, "composed").unwrap();
+    let composed_val = v8::Boolean::new(scope, composed);
+    event_obj.set(scope, composed_key.into(), composed_val.into());
 
     let default_prevented_false = v8::Boolean::new(scope, false);
     let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
@@ -419,9 +467,7 @@ fn event_constructor_callback(
          args: v8::FunctionCallbackArguments,
          _retval: v8::ReturnValue| {
             let this = args.this();
-            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
-            let true_val = v8::Boolean::new(scope, true);
-            this.set(scope, default_prevented_key.into(), true_val.into());
+            prevent_default_if_cancelable(scope, this);
         },
     )
     .unwrap();
@@ -448,6 +494,10 @@ fn extendable_event_constructor_callback(
     } else {
         "".to_string()
     };
+    let init = args.get(1);
+    let bubbles = bool_option(scope, init, "bubbles", false);
+    let cancelable = bool_option(scope, init, "cancelable", false);
+    let composed = bool_option(scope, init, "composed", false);
 
     // Store type as internal property
     let type_key = v8::String::new(scope, "_type").unwrap();
@@ -458,13 +508,17 @@ fn extendable_event_constructor_callback(
     let type_prop_key = v8::String::new(scope, "type").unwrap();
     event_obj.set(scope, type_prop_key.into(), type_val.into());
 
-    let bubbles_false = v8::Boolean::new(scope, false);
+    let bubbles_false = v8::Boolean::new(scope, bubbles);
     let bubbles_key = v8::String::new(scope, "bubbles").unwrap();
     event_obj.set(scope, bubbles_key.into(), bubbles_false.into());
 
-    let cancelable_true = v8::Boolean::new(scope, true);
+    let cancelable_true = v8::Boolean::new(scope, cancelable);
     let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
     event_obj.set(scope, cancelable_key.into(), cancelable_true.into());
+
+    let composed_key = v8::String::new(scope, "composed").unwrap();
+    let composed_val = v8::Boolean::new(scope, composed);
+    event_obj.set(scope, composed_key.into(), composed_val.into());
 
     let default_prevented_false = v8::Boolean::new(scope, false);
     let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
@@ -480,9 +534,7 @@ fn extendable_event_constructor_callback(
          args: v8::FunctionCallbackArguments,
          _retval: v8::ReturnValue| {
             let this = args.this();
-            let default_prevented_key = v8::String::new(scope, "defaultPrevented").unwrap();
-            let true_val = v8::Boolean::new(scope, true);
-            this.set(scope, default_prevented_key.into(), true_val.into());
+            prevent_default_if_cancelable(scope, this);
         },
     )
     .unwrap();
@@ -501,7 +553,7 @@ mod tests {
         let event: _ = Event::new("click".to_string());
         assert_eq!(event.event_type, "click");
         assert_eq!(event.bubbles, false);
-        assert_eq!(event.cancelable, true);
+        assert_eq!(event.cancelable, false);
     }
     #[test]
     fn test_event_target_creation() {

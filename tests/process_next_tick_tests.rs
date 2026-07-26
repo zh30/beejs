@@ -38,27 +38,33 @@ fn test_next_tick_returns_undefined() {
     );
 }
 
-/// Test process.nextTick() with callback arguments
-/// Note: MinimalRuntime's nextTick executes immediately (v0.3.239)
-/// In full async runtime, this would be deferred to microtask queue
+/// Test process.nextTick() with callback arguments.
+/// nextTick runs after the synchronous script completes; execute_code returns
+/// the main script completion value, so observe drained state in a second read.
 #[test]
 #[serial]
 fn test_next_tick_with_args() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let received = null;
+        globalThis.__nextTickReceived = null;
         process.nextTick((arg1, arg2) => {
-            received = arg1 + arg2;
+            globalThis.__nextTickReceived = arg1 + arg2;
         }, 1, 2);
-        // In MinimalRuntime, nextTick executes immediately
-        // So received should be 3 after the call
-        received;
+        globalThis.__nextTickReceived;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
-    // nextTick 在 MinimalRuntime 中立即执行，所以 received = 3
     assert_eq!(
         result.trim(),
+        "null",
+        "execute_code should return the main script completion before nextTick drain"
+    );
+
+    let observed = runtime
+        .execute_code("globalThis.__nextTickReceived;")
+        .expect("Execution failed");
+    assert_eq!(
+        observed.trim(),
         "3",
         "nextTick callback arguments should be passed correctly"
     );

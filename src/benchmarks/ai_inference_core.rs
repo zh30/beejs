@@ -9,7 +9,6 @@
 // - GPU 加速性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
-use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 
 /// AI 推理性能基准测试套件

@@ -10,10 +10,10 @@
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use rusty_v8 as v8;
-use std::collections::{BTreeMap, HashMap};
+use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::task::Context;
+use std::thread;
 use std::time::{Duration, Instant};
 
 /// JavaScript 核心基准测试套件
@@ -201,7 +201,7 @@ impl JavaScriptCoreBenchmark {
                 let results: _ = Arc::new(Mutex::new(Vec::new()));
                 let mut handles = vec![];
                 for _ in 0..num_threads {
-                    let results_clone: _ = Arc::clone(results);
+                    let results_clone: _ = Arc::clone(&results);
                     let handle: _ = thread::spawn(move || {
                         // 在每个线程中执行 JavaScript 代码
                         let mut isolate = v8::Isolate::new(v8::CreateParams::default());

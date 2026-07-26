@@ -16,22 +16,35 @@ fn cleanup_global_state() {
     clear_next_tick_queue();
 }
 
+fn read_order(runtime: &mut MinimalRuntime) -> String {
+    runtime
+        .execute_code("globalThis.__order.join(',');")
+        .unwrap()
+}
+
+fn read_results(runtime: &mut MinimalRuntime) -> String {
+    runtime
+        .execute_code("globalThis.__results.join(',');")
+        .unwrap()
+}
+
 #[test]
 #[serial]
 fn test_next_tick_priority_over_promise() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // nextTick should have higher priority than Promise callbacks
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push('nextTick'));
-        Promise.resolve().then(() => order.push('promise'));
-        order.join(',');
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        Promise.resolve().then(() => globalThis.__order.push('promise'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // nextTick should execute first (higher priority microtask)
     assert_eq!(
         result.trim(),
@@ -47,19 +60,20 @@ fn test_nested_next_tick_priority() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Nested nextTicks maintain FIFO order within nextTick queue
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
+        globalThis.__order = [];
         process.nextTick(() => {
-            order.push('a');
-            process.nextTick(() => order.push('c'));
+            globalThis.__order.push('a');
+            process.nextTick(() => globalThis.__order.push('c'));
         });
-        process.nextTick(() => order.push('b'));
-        order.join(',');
+        process.nextTick(() => globalThis.__order.push('b'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // FIFO: a, b, then c (c added during a's execution)
     assert_eq!(
         result.trim(),
@@ -75,16 +89,17 @@ fn test_timer_vs_immediate_execution_order() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // In Node.js timers phase: setTimeout(0) executes before setImmediate
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        setTimeout(() => order.push('timer'), 0);
-        setImmediate(() => order.push('immediate'));
-        setImmediate(() => order.join(','));
+        globalThis.__order = [];
+        setTimeout(() => globalThis.__order.push('timer'), 0);
+        setImmediate(() => globalThis.__order.push('immediate'));
+        setImmediate(() => globalThis.__order.join(','));
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     assert_eq!(
         result.trim(),
         "timer,immediate",
@@ -99,17 +114,18 @@ fn test_next_tick_vs_timer_vs_immediate() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Full order test: nextTick -> timer -> setImmediate
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push('nextTick'));
-        setTimeout(() => order.push('timer'), 0);
-        setImmediate(() => order.push('immediate'));
-        order.join(',');
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        setTimeout(() => globalThis.__order.push('timer'), 0);
+        setImmediate(() => globalThis.__order.push('immediate'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // All callbacks should execute in the same iteration
     // nextTick has highest priority, then timer, then setImmediate
     assert_eq!(
@@ -126,17 +142,18 @@ fn test_multiple_timers_order() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Timers should execute in creation order (FIFO)
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        setTimeout(() => order.push('first'), 0);
-        setTimeout(() => order.push('second'), 0);
-        setTimeout(() => order.push('third'), 0);
-        order.join(',');
+        globalThis.__order = [];
+        setTimeout(() => globalThis.__order.push('first'), 0);
+        setTimeout(() => globalThis.__order.push('second'), 0);
+        setTimeout(() => globalThis.__order.push('third'), 0);
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     assert_eq!(
         result.trim(),
         "first,second,third",
@@ -151,19 +168,20 @@ fn test_next_tick_inside_timer() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // nextTick inside timer should execute after timer completes
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
+        globalThis.__order = [];
         setTimeout(() => {
-            order.push('timer');
-            process.nextTick(() => order.push('nextTick-in-timer'));
+            globalThis.__order.push('timer');
+            process.nextTick(() => globalThis.__order.push('nextTick-in-timer'));
         }, 0);
-        setImmediate(() => order.push('immediate'));
-        setImmediate(() => order.join(','));
+        setImmediate(() => globalThis.__order.push('immediate'));
+        setImmediate(() => globalThis.__order.join(','));
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // Timer runs first, then nextTick (still in same phase), then setImmediate
     assert_eq!(
         result.trim(),
@@ -179,16 +197,17 @@ fn test_promise_then_next_tick() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Promise callback followed by nextTick - nextTick wins
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        Promise.resolve().then(() => order.push('promise'));
-        process.nextTick(() => order.push('nextTick'));
-        order.join(',');
+        globalThis.__order = [];
+        Promise.resolve().then(() => globalThis.__order.push('promise'));
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // nextTick has higher priority than Promise callbacks
     assert_eq!(
         result.trim(),
@@ -204,17 +223,18 @@ fn test_multiple_next_ticks_with_args() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Multiple nextTicks with different arguments
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let results = [];
-        process.nextTick((a) => results.push(a), 1);
-        process.nextTick((a, b) => results.push(a + b), 2, 3);
-        process.nextTick((a, b, c) => results.push(a + b + c), 4, 5, 6);
-        results.join(',');
+        globalThis.__results = [];
+        process.nextTick((a) => globalThis.__results.push(a), 1);
+        process.nextTick((a, b) => globalThis.__results.push(a + b), 2, 3);
+        process.nextTick((a, b, c) => globalThis.__results.push(a + b + c), 4, 5, 6);
+        globalThis.__results.join(',');
     "#,
         )
         .unwrap();
+    let result = read_results(&mut runtime);
     assert_eq!(
         result.trim(),
         "1,5,15",
@@ -229,17 +249,18 @@ fn test_next_tick_error_propagation() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Error in nextTick should not stop other callbacks
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        process.nextTick(() => order.push('first'));
+        globalThis.__order = [];
+        process.nextTick(() => globalThis.__order.push('first'));
         process.nextTick(() => { throw new Error('test'); });
-        process.nextTick(() => order.push('third'));
-        setImmediate(() => order.join(','));
+        process.nextTick(() => globalThis.__order.push('third'));
+        setImmediate(() => globalThis.__order.join(','));
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // Error in second nextTick should not prevent third from executing
     // The error handling depends on implementation
     assert!(
@@ -380,20 +401,21 @@ fn test_mixed_callbacks_execution_order() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // Complex mixed scenario
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
+        globalThis.__order = [];
         setTimeout(() => {
-            order.push('timer');
-            process.nextTick(() => order.push('nextTick-in-timer'));
+            globalThis.__order.push('timer');
+            process.nextTick(() => globalThis.__order.push('nextTick-in-timer'));
         }, 0);
-        process.nextTick(() => order.push('nextTick'));
-        setImmediate(() => order.push('immediate'));
-        order.join(',');
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        setImmediate(() => globalThis.__order.push('immediate'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // Expected: nextTick, timer, nextTick-in-timer, immediate
     // But immediate runs in "check phase" after timers
     assert_eq!(
@@ -410,16 +432,17 @@ fn test_queue_microtask_integration() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // queueMicrotask should work alongside nextTick
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let order = [];
-        queueMicrotask(() => order.push('microtask'));
-        process.nextTick(() => order.push('nextTick'));
-        order.join(',');
+        globalThis.__order = [];
+        queueMicrotask(() => globalThis.__order.push('microtask'));
+        process.nextTick(() => globalThis.__order.push('nextTick'));
+        globalThis.__order.join(',');
     "#,
         )
         .unwrap();
+    let result = read_order(&mut runtime);
     // nextTick has higher priority than queueMicrotask
     assert_eq!(
         result.trim(),
@@ -458,14 +481,17 @@ fn test_zero_delay_timer_precision() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // setTimeout with 0 delay should execute in same event loop iteration
-    let result = runtime
+    runtime
         .execute_code(
             r#"
-        let executed = false;
-        setTimeout(() => { executed = true; }, 0);
-        executed;
+        globalThis.__zeroDelayExecuted = false;
+        setTimeout(() => { globalThis.__zeroDelayExecuted = true; }, 0);
+        globalThis.__zeroDelayExecuted;
     "#,
         )
+        .unwrap();
+    let result = runtime
+        .execute_code("globalThis.__zeroDelayExecuted;")
         .unwrap();
     assert_eq!(
         result.trim(),
@@ -481,7 +507,7 @@ fn test_next_tick_isolation_between_contexts() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
     // nextTick callbacks should not leak between contexts
-    let result = runtime
+    runtime
         .execute_code(
             r#"
         globalThis.order = [];
@@ -491,6 +517,7 @@ fn test_next_tick_isolation_between_contexts() {
     "#,
         )
         .unwrap();
+    let result = runtime.execute_code("globalThis.order.join(',');").unwrap();
     assert_eq!(
         result.trim(),
         "a,b",

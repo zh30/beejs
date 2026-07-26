@@ -9,9 +9,10 @@
 // - 系统资源监控
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use rayon::prelude::*;
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 
 /// 内存和资源基准测试套件
@@ -97,7 +98,7 @@ impl MemoryResourceBenchmark {
                 let mut handles = vec![];
                 // 模拟多个线程同时从内存池分配和释放
                 for _ in 0..10 {
-                    let pool_clone: _ = Arc::clone(pool);
+                    let pool_clone: _ = Arc::clone(&pool);
                     let handle: _ = thread::spawn(move || {
                         for _ in 0..100 {
                             let mut pool = pool_clone.lock().unwrap();
@@ -209,7 +210,7 @@ impl MemoryResourceBenchmark {
             let results: _ = Arc::new(Mutex::new(Vec::new()));
             let mut handles = vec![];
             for _ in 0..num_threads {
-                let results_clone: _ = Arc::clone(results);
+                let results_clone: _ = Arc::clone(&results);
                 let handle: _ = thread::spawn(move || {
                     // 计算密集型任务
                     let mut sum = 0.0;

@@ -47,10 +47,25 @@ pub fn setup_require_api(
     let require_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         if args.length() >= 1 {
             let module_id = args.get(0);
-            let module_id_str = if let Some(s) = module_id.to_string(scope) {
+            let requested_module_id_str = if let Some(s) = module_id.to_string(scope) {
                 s.to_rust_string_lossy(scope)
             } else {
                 "unknown".to_string()
+            };
+            let module_id_str = if let Some(builtin_name) =
+                requested_module_id_str.strip_prefix("node:")
+            {
+                if crate::nodejs_core::commonjs_resolver::is_builtin_module(builtin_name) {
+                    builtin_name.to_string()
+                } else {
+                    let error_msg = format!("Cannot find module '{}'", requested_module_id_str);
+                    let error_str = v8::String::new(scope, &error_msg).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_str);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+            } else {
+                requested_module_id_str
             };
 
             // Return appropriate module object based on module id
@@ -131,10 +146,21 @@ pub fn setup_require_api(
                     result_obj.set(scope, buffer_key, buffer_fn.into());
                 }
                 "process" => {
-                    // Return process module with env property
-                    let env_obj = v8::Object::new(scope);
-                    let env_key = v8::String::new(scope, "env").unwrap().into();
-                    result_obj.set(scope, env_key, env_obj.into());
+                    let context = scope.get_current_context();
+                    let global = context.global(scope);
+                    let process_key = v8::String::new(scope, "process").unwrap();
+                    if let Some(process_value) = global.get(scope, process_key.into()) {
+                        if !process_value.is_undefined() {
+                            retval.set(process_value);
+                            return;
+                        }
+                    }
+
+                    let error_str =
+                        v8::String::new(scope, "process global is not available").unwrap();
+                    let error_obj = v8::Exception::error(scope, error_str);
+                    scope.throw_exception(error_obj.into());
+                    return;
                 }
                 "path" => {
                     // Return path module with join function
@@ -461,7 +487,7 @@ pub fn setup_require_api(
                 // These modules are set up as global objects in the runtime
                 "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
                 "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
-                "readline" => {
+                "readline" | "performance" => {
                     // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);
                     let module_key = v8::String::new(scope, &module_id_str).unwrap().into();

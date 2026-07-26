@@ -398,6 +398,52 @@ mod blob_api_tests {
         );
     }
 
+    /// Test 13b: Blob.arrayBuffer() returns stored bytes
+    #[test]
+    fn test_blob_array_buffer_returns_bytes() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const blob = new Blob(['abc']);
+                const bytes = Array.from(new Uint8Array(blob.arrayBuffer())).join(',');
+                console.log('arrayBuffer bytes:', bytes);
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("arrayBuffer bytes: 97,98,99"),
+            "Expected Blob.arrayBuffer() to expose stored bytes. Got: {}",
+            stdout
+        );
+    }
+
+    /// Test 13c: Blob.arrayBuffer() preserves non-UTF-8 bytes
+    #[test]
+    fn test_blob_array_buffer_preserves_uint8array_bytes() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const blob = new Blob([new Uint8Array([0, 255, 65])]);
+                const bytes = Array.from(new Uint8Array(blob.arrayBuffer())).join(',');
+                console.log('arrayBuffer binary bytes:', bytes);
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("arrayBuffer binary bytes: 0,255,65"),
+            "Expected Blob.arrayBuffer() to preserve binary bytes. Got: {}",
+            stdout
+        );
+    }
+
     /// Test 14: File inherits all Blob methods
     #[test]
     fn test_file_inherits_blob_methods() {

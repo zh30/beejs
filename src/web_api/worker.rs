@@ -1,6 +1,10 @@
-// Worker API implementation for Web standard
-// v0.3.320: Web Worker support for parallel execution in Beejs runtime
-// Enables running JavaScript in separate threads/processes with message passing
+// Worker API boundary for Web standard compatibility.
+//
+// Beejs does not yet have a real WorkerHost with an independent isolate,
+// event loop, structured-clone message queues, and termination lifecycle.
+// Until that exists, Worker construction must fail closed instead of returning
+// a synchronous object shell that makes scripts believe background execution
+// has started.
 
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -87,65 +91,16 @@ fn worker_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    // Get global context
-    let context = scope.get_current_context();
-    let global = context.global(scope);
-
-    // Create worker ID
-    let worker_id = WORKER_REGISTRY
-        .lock()
-        .unwrap()
-        .keys()
-        .max()
-        .map_or(0, |k| k + 1);
-
-    // Create Worker object
-    let worker_obj = v8::Object::new(scope);
-
-    // Set prototype from global
-    let prototype_key = v8::String::new(scope, "_workerPrototype").unwrap();
-    if let Some(proto_val) = global.get(scope, prototype_key.into()) {
-        let _ = worker_obj.set_prototype(scope, proto_val);
-    }
-
-    // Store worker ID as internal property
-    let worker_id_key = v8::String::new(scope, "_workerId").unwrap();
-    let worker_id_val = v8::Integer::new(scope, worker_id as i32);
-    worker_obj.set(scope, worker_id_key.into(), worker_id_val.into());
-
-    // Get script URL argument
-    let script_url = if args.length() > 0 {
-        let url_val = args.get(0);
-        if url_val.is_string() {
-            let url_str = url_val.to_string(scope).unwrap();
-            let rust_url = url_str.to_rust_string_lossy(scope);
-            let script_url_key = v8::String::new(scope, "_scriptUrl").unwrap();
-            worker_obj.set(scope, script_url_key.into(), url_val);
-            rust_url
-        } else {
-            "unknown".to_string()
-        }
+    let message = if args.length() == 0 {
+        "Worker constructor requires a script URL"
     } else {
-        "unknown".to_string()
+        "Worker script execution is not supported yet"
     };
 
-    // Store terminated state
-    let terminated_key = v8::String::new(scope, "_terminated").unwrap();
-    let false_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
-    worker_obj.set(scope, terminated_key.into(), false_val.into());
-
-    // Register worker
-    WORKER_REGISTRY.lock().unwrap().insert(
-        worker_id,
-        WorkerStateInfo {
-            worker_id,
-            script_url,
-            is_terminated: false,
-            created_at: std::time::Instant::now(),
-        },
-    );
-
-    rv.set(worker_obj.into());
+    let error_message = v8::String::new(scope, message).unwrap();
+    let exception = v8::Exception::type_error(scope, error_message);
+    scope.throw_exception(exception);
+    rv.set(v8::undefined(scope).into());
 }
 
 fn add_prototype_methods(

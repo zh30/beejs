@@ -188,7 +188,7 @@ mod tests {
     fn test_event_properties() {
         let code = r#"
             const event = new Event('test');
-            event.type === 'test' && event.bubbles === false && event.cancelable === true
+            event.type === 'test' && event.bubbles === false && event.cancelable === false
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -253,10 +253,14 @@ mod tests {
     #[serial]
     fn test_prevent_default() {
         let code = r#"
-            const event = new Event('test');
-            event.defaultPrevented === false;
-            event.preventDefault();
-            event.defaultPrevented === true
+            const passive = new Event('passive');
+            passive.preventDefault();
+
+            const cancelable = new Event('cancelable', { cancelable: true });
+            cancelable.preventDefault();
+
+            passive.defaultPrevented === false &&
+            cancelable.defaultPrevented === true
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -266,6 +270,29 @@ mod tests {
             "preventDefault should set defaultPrevented flag"
         );
         assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// 测试 EventInit bubbles/cancelable 语义和 dispatchEvent 返回值
+    #[test]
+    #[serial]
+    fn test_event_init_and_dispatch_default_prevented() {
+        let code = r#"
+            const target = new EventTarget();
+            target.addEventListener('submit', (event) => event.preventDefault());
+
+            const passive = new Event('submit');
+            const cancelable = new Event('submit', { bubbles: true, cancelable: true });
+
+            const passiveResult = target.dispatchEvent(passive);
+            const cancelableResult = target.dispatchEvent(cancelable);
+
+            `${passive.bubbles}:${passive.defaultPrevented}:${passiveResult}:${cancelable.bubbles}:${cancelable.defaultPrevented}:${cancelableResult}`;
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "EventInit should control cancelability");
+        assert_eq!(result.unwrap().trim(), "false:false:true:true:true:false");
     }
 
     /// 测试扩展 EventTarget

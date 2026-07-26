@@ -6,11 +6,12 @@
 use once_cell::sync::Lazy;
 use rusty_v8 as v8;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio::time::{sleep, timeout};
 
 /// 事件循环状态
@@ -226,24 +227,62 @@ impl V8EventLoop {
 // v0.3.249: 添加 fired timer 通知通道，支持 V8 主线程轮询执行回调
 // ============================================================
 
+const DEFAULT_TIMER_COMMAND_QUEUE_SIZE: usize = 100;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TimerScheduleError {
+    InvalidTimerId,
+    QueueFull,
+    ChannelClosed,
+}
+
+impl fmt::Display for TimerScheduleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidTimerId => write!(f, "timer id must be greater than zero"),
+            Self::QueueFull => write!(f, "timer command queue is full"),
+            Self::ChannelClosed => write!(f, "timer manager channel is closed"),
+        }
+    }
+}
+
+impl std::error::Error for TimerScheduleError {}
+
+#[derive(Debug, Clone, Copy)]
+struct TimerEntry {
+    deadline: Instant,
+    delay: Duration,
+    remaining: u32,
+    sequence: u64,
+}
+
 /// 定时器命令（用于与工作线程通信）
 enum TimerCommand {
     ScheduleTimeout {
         timer_id: u64,
+        deadline: Instant,
         delay: Duration,
+        sequence: u64,
     },
     ScheduleInterval {
         timer_id: u64,
+        deadline: Instant,
         delay: Duration,
         repeat_count: u32,
+        sequence: u64,
     },
     Cancel {
         timer_id: u64,
     },
+    CancelWithAck {
+        timer_id: u64,
+        ack: oneshot::Sender<bool>,
+    },
     Clear,
     Shutdown,
     /// v0.3.261: Clear with acknowledgement
-    ClearWithAck(tokio::sync::oneshot::Sender<()>),
+    ClearWithAck(oneshot::Sender<()>),
+    ShutdownWithAck(oneshot::Sender<()>),
 }
 
 /// 异步定时器管理器
@@ -256,18 +295,28 @@ pub struct AsyncTimerManager {
     // 下一个定时器 ID（本地缓存，用于立即返回）- v0.3.265: 预留用于外部 ID 模式
     #[allow(dead_code)]
     next_timer_id: AtomicU64,
+    // 调度插入序号；用于同 deadline timer 的稳定 FIFO 顺序
+    next_timer_sequence: AtomicU64,
     // Fired 定时器队列（使用 Arc<RwLock> 实现线程安全共享）
     // 工作线程写入，主线程读取
     fired_timers: Arc<RwLock<Vec<u64>>>,
     // v0.3.339: 已调度定时器计数（使用原子计数实现线程安全共享）
     // 工作线程在调度时递增，主线程可以检查是否有待处理的定时器
     scheduled_timer_count: Arc<AtomicU64>,
+    // 可检测的命令队列容量；0 用于稳定表示队列已满
+    command_queue_size: usize,
 }
 
 impl AsyncTimerManager {
     /// 创建新的定时器管理器
     pub fn new() -> Self {
-        let (cmd_tx, mut cmd_rx) = mpsc::channel::<TimerCommand>(100);
+        Self::new_with_command_queue_size(DEFAULT_TIMER_COMMAND_QUEUE_SIZE)
+    }
+
+    /// 创建指定命令队列容量的定时器管理器
+    pub fn new_with_command_queue_size(command_queue_size: usize) -> Self {
+        let channel_capacity = command_queue_size.max(1);
+        let (cmd_tx, mut cmd_rx) = mpsc::channel::<TimerCommand>(channel_capacity);
         // 创建 fired 定时器队列（共享状态）
         let fired_timers = Arc::new(RwLock::new(Vec::new()));
         let fired_timers_clone = fired_timers.clone();
@@ -279,7 +328,7 @@ impl AsyncTimerManager {
         let worker_thread = thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
             // 使用简单的 HashMap 存储定时器（不再需要回调）
-            let mut scheduled_timers: HashMap<u64, (Instant, Duration, u32)> = HashMap::new();
+            let mut scheduled_timers: HashMap<u64, TimerEntry> = HashMap::new();
 
             rt.block_on(async move {
                 let mut interval = tokio::time::interval(Duration::from_millis(1));
@@ -288,21 +337,38 @@ impl AsyncTimerManager {
                     tokio::select! {
                         _ = interval.tick() => {
                             let now = Instant::now();
-                            let mut fired_ids = Vec::new();
+                            let mut due_timers = Vec::new();
                             let mut to_reschedule = Vec::new();
                             let mut to_remove = Vec::new();
 
-                            for (id, (scheduled_time, delay, remaining)) in &scheduled_timers {
-                                if *scheduled_time <= now {
-                                    fired_ids.push(*id);
+                            for (id, entry) in &scheduled_timers {
+                                if entry.deadline <= now {
+                                    due_timers.push((*id, *entry));
+                                }
+                            }
 
-                                    if *remaining > 1 {
-                                        // 重复定时器，准备重新调度
-                                        to_reschedule.push((*id, *delay, *remaining - 1));
+                            due_timers.sort_by(|(left_id, left), (right_id, right)| {
+                                left.deadline
+                                    .cmp(&right.deadline)
+                                    .then_with(|| left.sequence.cmp(&right.sequence))
+                                    .then_with(|| left_id.cmp(right_id))
+                            });
+
+                            let mut fired_ids = Vec::with_capacity(due_timers.len());
+                            for (id, entry) in due_timers {
+                                fired_ids.push(id);
+
+                                if entry.remaining > 1 {
+                                    let remaining = if entry.remaining == u32::MAX {
+                                        u32::MAX
                                     } else {
-                                        // 非重复定时器，标记移除
-                                        to_remove.push(*id);
-                                    }
+                                        entry.remaining - 1
+                                    };
+                                    // 重复定时器，准备重新调度
+                                    to_reschedule.push((id, entry.delay, remaining));
+                                } else {
+                                    // 非重复定时器，标记移除
+                                    to_remove.push(id);
                                 }
                             }
 
@@ -323,28 +389,37 @@ impl AsyncTimerManager {
                             // 重新调度重复定时器
                             for (id, delay, remaining) in to_reschedule {
                                 let next_time = Instant::now() + delay;
-                                if let Some((_, old_delay, _)) = scheduled_timers.remove(&id) {
-                                    scheduled_timers.insert(id, (next_time, old_delay, remaining));
+                                if let Some(entry) = scheduled_timers.get_mut(&id) {
+                                    entry.deadline = next_time;
+                                    entry.remaining = remaining;
                                 }
                             }
                         }
                         cmd = cmd_rx.recv() => {
                             match cmd {
-                                Some(TimerCommand::ScheduleTimeout { timer_id, delay }) => {
-                                    let scheduled_time = Instant::now() + delay;
+                                Some(TimerCommand::ScheduleTimeout { timer_id, deadline, delay, sequence }) => {
                                     let is_new = !scheduled_timers.contains_key(&timer_id);
-                                    scheduled_timers.insert(timer_id, (scheduled_time, delay, 1));
+                                    scheduled_timers.insert(timer_id, TimerEntry {
+                                        deadline,
+                                        delay,
+                                        remaining: 1,
+                                        sequence,
+                                    });
                                     if is_new {
                                         scheduled_count_clone.fetch_add(1, Ordering::SeqCst);
                                     }
                                     // v0.3.261: Removed immediate firing - let the interval tick handle it
                                     // This avoids a race condition where the callback isn't stored yet
                                 }
-                                Some(TimerCommand::ScheduleInterval { timer_id, delay, repeat_count }) => {
-                                    let scheduled_time = Instant::now() + delay;
+                                Some(TimerCommand::ScheduleInterval { timer_id, deadline, delay, repeat_count, sequence }) => {
                                     let repeats = if repeat_count == 0 { u32::MAX } else { repeat_count };
                                     let is_new = !scheduled_timers.contains_key(&timer_id);
-                                    scheduled_timers.insert(timer_id, (scheduled_time, delay, repeats));
+                                    scheduled_timers.insert(timer_id, TimerEntry {
+                                        deadline,
+                                        delay,
+                                        remaining: repeats,
+                                        sequence,
+                                    });
                                     if is_new {
                                         scheduled_count_clone.fetch_add(1, Ordering::SeqCst);
                                     }
@@ -353,6 +428,13 @@ impl AsyncTimerManager {
                                     if scheduled_timers.remove(&timer_id).is_some() {
                                         scheduled_count_clone.fetch_sub(1, Ordering::SeqCst);
                                     }
+                                }
+                                Some(TimerCommand::CancelWithAck { timer_id, ack }) => {
+                                    let removed = scheduled_timers.remove(&timer_id).is_some();
+                                    if removed {
+                                        scheduled_count_clone.fetch_sub(1, Ordering::SeqCst);
+                                    }
+                                    let _ = ack.send(removed);
                                 }
                                 Some(TimerCommand::Clear) => {
                                     let count = scheduled_timers.len() as u64;
@@ -372,6 +454,13 @@ impl AsyncTimerManager {
                                     scheduled_count_clone.fetch_sub(count, Ordering::SeqCst);
                                     break;
                                 }
+                                Some(TimerCommand::ShutdownWithAck(sender)) => {
+                                    let count = scheduled_timers.len() as u64;
+                                    scheduled_timers.clear();
+                                    scheduled_count_clone.fetch_sub(count, Ordering::SeqCst);
+                                    let _ = sender.send(());
+                                    break;
+                                }
                                 None => {
                                     break;
                                 }
@@ -386,8 +475,10 @@ impl AsyncTimerManager {
             cmd_tx,
             _worker_thread: worker_thread,
             next_timer_id: AtomicU64::new(1),
+            next_timer_sequence: AtomicU64::new(1),
             fired_timers,
             scheduled_timer_count,
+            command_queue_size,
         }
     }
 
@@ -397,6 +488,46 @@ impl AsyncTimerManager {
         self.next_timer_id.fetch_add(1, Ordering::SeqCst)
     }
 
+    fn next_sequence(&self) -> u64 {
+        self.next_timer_sequence.fetch_add(1, Ordering::SeqCst)
+    }
+
+    fn map_try_send_error<T>(err: mpsc::error::TrySendError<T>) -> TimerScheduleError {
+        match err {
+            mpsc::error::TrySendError::Full(_) => TimerScheduleError::QueueFull,
+            mpsc::error::TrySendError::Closed(_) => TimerScheduleError::ChannelClosed,
+        }
+    }
+
+    fn try_send_schedule_command(&self, command: TimerCommand) -> Result<(), TimerScheduleError> {
+        if self.command_queue_size == 0 {
+            return Err(TimerScheduleError::QueueFull);
+        }
+
+        self.cmd_tx
+            .try_send(command)
+            .map_err(Self::map_try_send_error)
+    }
+
+    /// 安排一个一次性定时器，并返回调度错误
+    pub fn try_schedule_timeout(
+        &self,
+        delay: Duration,
+        timer_id: u64,
+        _callback: impl Fn() + Send + 'static,
+    ) -> Result<(), TimerScheduleError> {
+        if timer_id == 0 {
+            return Err(TimerScheduleError::InvalidTimerId);
+        }
+
+        self.try_send_schedule_command(TimerCommand::ScheduleTimeout {
+            timer_id,
+            deadline: Instant::now() + delay,
+            delay,
+            sequence: self.next_sequence(),
+        })
+    }
+
     /// 安排一个一次性定时器
     /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
     pub fn schedule_timeout(
@@ -404,10 +535,8 @@ impl AsyncTimerManager {
         delay: Duration,
         timer_id: u64,
         _callback: impl Fn() + Send + 'static,
-    ) {
-        let _ = self
-            .cmd_tx
-            .try_send(TimerCommand::ScheduleTimeout { timer_id, delay });
+    ) -> Result<(), TimerScheduleError> {
+        self.try_schedule_timeout(delay, timer_id, _callback)
     }
 
     /// Mark a timer as ready for main-thread execution without worker-thread scheduling.
@@ -422,28 +551,61 @@ impl AsyncTimerManager {
 
     /// 安排一个重复定时器
     /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
+    pub fn try_schedule_interval(
+        &self,
+        delay: Duration,
+        repeat_count: u32,
+        timer_id: u64,
+        _callback: impl Fn() + Send + 'static,
+    ) -> Result<(), TimerScheduleError> {
+        if timer_id == 0 {
+            return Err(TimerScheduleError::InvalidTimerId);
+        }
+
+        self.try_send_schedule_command(TimerCommand::ScheduleInterval {
+            timer_id,
+            deadline: Instant::now() + delay,
+            delay,
+            repeat_count,
+            sequence: self.next_sequence(),
+        })
+    }
+
+    /// 安排一个重复定时器
+    /// v0.3.261: Accept external timer_id to use epoch-based IDs for test isolation
     pub fn schedule_interval(
         &self,
         delay: Duration,
         repeat_count: u32,
         timer_id: u64,
         _callback: impl Fn() + Send + 'static,
-    ) {
-        let _ = self.cmd_tx.try_send(TimerCommand::ScheduleInterval {
-            timer_id,
-            delay,
-            repeat_count,
-        });
+    ) -> Result<(), TimerScheduleError> {
+        self.try_schedule_interval(delay, repeat_count, timer_id, _callback)
+    }
+
+    /// 取消定时器
+    pub fn try_cancel(&self, timer_id: u64) -> Result<(), TimerScheduleError> {
+        if timer_id == 0 {
+            return Err(TimerScheduleError::InvalidTimerId);
+        }
+
+        self.try_send_schedule_command(TimerCommand::Cancel { timer_id })
     }
 
     /// 取消定时器
     pub fn cancel(&self, timer_id: u64) -> bool {
+        self.try_cancel(timer_id).is_ok()
+    }
+
+    /// 取消定时器并等待工作线程确认是否移除了待触发 timer
+    pub async fn cancel_with_ack(&self, timer_id: u64) -> Result<bool, TimerScheduleError> {
         if timer_id == 0 {
-            return false;
+            return Err(TimerScheduleError::InvalidTimerId);
         }
 
-        let result = self.cmd_tx.try_send(TimerCommand::Cancel { timer_id });
-        result.is_ok()
+        let (tx, rx) = oneshot::channel();
+        self.try_send_schedule_command(TimerCommand::CancelWithAck { timer_id, ack: tx })?;
+        rx.await.map_err(|_| TimerScheduleError::ChannelClosed)
     }
 
     /// 清除所有定时器
@@ -477,15 +639,27 @@ impl AsyncTimerManager {
         let _ = self.cmd_tx.try_send(TimerCommand::Shutdown);
     }
 
+    /// 关闭定时器管理器并等待工作线程确认
+    pub async fn shutdown_with_ack(&self) -> Result<(), TimerScheduleError> {
+        let (tx, rx) = oneshot::channel();
+        self.cmd_tx
+            .try_send(TimerCommand::ShutdownWithAck(tx))
+            .map_err(Self::map_try_send_error)?;
+        rx.await.map_err(|_| TimerScheduleError::ChannelClosed)?;
+
+        while !self.cmd_tx.is_closed() {
+            tokio::task::yield_now().await;
+        }
+
+        Ok(())
+    }
+
     /// v0.3.249: 轮询并获取已触发的定时器 ID 列表
     /// 供 V8 主线程调用，返回自上次轮询以来触发的所有定时器 ID
     pub fn poll_fired_timers(&self) -> Vec<u64> {
         let mut fired = self.fired_timers.write().unwrap();
-        let mut ids = fired.clone();
+        let ids = fired.clone();
         fired.clear();
-        // Sort by timer ID to ensure FIFO execution order
-        // Timer IDs are generated sequentially, so sorting by ID preserves creation order
-        ids.sort();
         ids
     }
 
@@ -544,7 +718,9 @@ mod tests {
         let test_id = AtomicU64::new(1000);
 
         let id = next_test_id(&test_id);
-        manager.schedule_timeout(Duration::from_millis(10), id, || {});
+        manager
+            .schedule_timeout(Duration::from_millis(10), id, || {})
+            .unwrap();
 
         assert!(id > 0, "Timer ID should be positive");
 
@@ -562,7 +738,9 @@ mod tests {
         let test_id = AtomicU64::new(2000);
 
         let id = next_test_id(&test_id);
-        manager.schedule_interval(Duration::from_millis(10), 3, id, || {});
+        manager
+            .schedule_interval(Duration::from_millis(10), 3, id, || {})
+            .unwrap();
 
         assert!(id > 0, "Timer ID should be positive");
 
@@ -583,7 +761,9 @@ mod tests {
         let test_id = AtomicU64::new(3000);
 
         let id = next_test_id(&test_id);
-        manager.schedule_timeout(Duration::from_millis(50), id, || {});
+        manager
+            .schedule_timeout(Duration::from_millis(50), id, || {})
+            .unwrap();
 
         // 立即取消
         let cancelled = manager.cancel(id);
@@ -608,16 +788,24 @@ mod tests {
         let test_id = AtomicU64::new(4000);
 
         // 安排多个定时器
-        manager.schedule_timeout(Duration::from_millis(100), next_test_id(&test_id), || {});
-        manager.schedule_timeout(Duration::from_millis(200), next_test_id(&test_id), || {});
-        manager.schedule_timeout(Duration::from_millis(300), next_test_id(&test_id), || {});
+        manager
+            .schedule_timeout(Duration::from_millis(100), next_test_id(&test_id), || {})
+            .unwrap();
+        manager
+            .schedule_timeout(Duration::from_millis(200), next_test_id(&test_id), || {})
+            .unwrap();
+        manager
+            .schedule_timeout(Duration::from_millis(300), next_test_id(&test_id), || {})
+            .unwrap();
 
         // 清除所有定时器
         manager.clear();
 
         // 验证清除后可以安排新定时器
         let id = next_test_id(&test_id);
-        manager.schedule_timeout(Duration::from_millis(10), id, || {});
+        manager
+            .schedule_timeout(Duration::from_millis(10), id, || {})
+            .unwrap();
         assert!(id > 0, "Should be able to schedule after clear");
 
         // 验证取消已清除的定时器返回 false
@@ -632,7 +820,9 @@ mod tests {
 
         // 安排延迟为 0 的定时器
         let id = next_test_id(&test_id);
-        manager.schedule_timeout(Duration::from_millis(0), id, || {});
+        manager
+            .schedule_timeout(Duration::from_millis(0), id, || {})
+            .unwrap();
 
         assert!(id > 0, "Timer ID should be positive");
 
@@ -652,9 +842,15 @@ mod tests {
         let id2 = next_test_id(&test_id);
         let id3 = next_test_id(&test_id);
 
-        manager.schedule_timeout(Duration::from_millis(100), id1, || {});
-        manager.schedule_timeout(Duration::from_millis(200), id2, || {});
-        manager.schedule_timeout(Duration::from_millis(300), id3, || {});
+        manager
+            .schedule_timeout(Duration::from_millis(100), id1, || {})
+            .unwrap();
+        manager
+            .schedule_timeout(Duration::from_millis(200), id2, || {})
+            .unwrap();
+        manager
+            .schedule_timeout(Duration::from_millis(300), id3, || {})
+            .unwrap();
 
         assert_eq!(id2, id1 + 1, "Timer IDs should be sequential");
         assert_eq!(id3, id2 + 1, "Timer IDs should be sequential");

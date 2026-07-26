@@ -178,6 +178,51 @@ impl Default for V8TestExecutor {
     }
 }
 
+macro_rules! expectation_actual {
+    ($scope:expr, $args:expr) => {{
+        let this_obj = $args.this();
+        let actual_key = v8::String::new($scope, "_actual").unwrap();
+        this_obj
+            .get($scope, actual_key.into())
+            .unwrap_or_else(|| v8::undefined($scope).into())
+    }};
+}
+
+macro_rules! value_to_display {
+    ($scope:expr, $value:expr) => {{
+        let value = $value;
+        if value.is_undefined() {
+            "undefined".to_string()
+        } else if value.is_null() {
+            "null".to_string()
+        } else if value.is_string() {
+            let text = value
+                .to_string($scope)
+                .map(|value| value.to_rust_string_lossy($scope))
+                .unwrap_or_default();
+            format!("\"{}\"", text)
+        } else {
+            value
+                .to_string($scope)
+                .map(|value| value.to_rust_string_lossy($scope))
+                .unwrap_or_else(|| "<unprintable>".to_string())
+        }
+    }};
+}
+
+macro_rules! throw_matcher_error {
+    ($scope:expr, $matcher:expr, $actual:expr, $expected:expr $(,)?) => {{
+        let actual = value_to_display!($scope, $actual);
+        let message = format!(
+            "{} assertion failed: expected {} {}",
+            $matcher, actual, $expected
+        );
+        let message = v8::String::new($scope, &message).unwrap();
+        let exception = v8::Exception::error($scope, message);
+        $scope.throw_exception(exception);
+    }};
+}
+
 /// Set up testing APIs in V8 context (simplified version)
 fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>) {
     // Create expect function - simplified to not use closures
@@ -202,10 +247,14 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
                     let expected = args.get(0);
-                    // Get _actual from the same object (this is a simplification)
-                    let actual_val: v8::Local<v8::Value> = v8::undefined(scope).into();
+                    let actual_val = expectation_actual!(scope, args);
                     let result = actual_val.strict_equals(expected);
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        let expected = format!("toBe {}", value_to_display!(scope, expected));
+                        throw_matcher_error!(scope, "toBe", actual_val, expected);
+                    }
                 },
             )
             .unwrap();
@@ -219,15 +268,15 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
                     let expected = args.get(0);
-                    // Get _actual from the expect object's property
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     // Use strict equality for comparison
                     let result = actual_val.strict_equals(expected);
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        let expected = format!("toEqual {}", value_to_display!(scope, expected));
+                        throw_matcher_error!(scope, "toEqual", actual_val, expected);
+                    }
                 },
             )
             .unwrap();
@@ -240,11 +289,7 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                 |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     // Truthy check: not null, not undefined, not 0, not false, not empty string, not NaN
                     let is_truthy = !actual_val.is_null_or_undefined()
                         && !actual_val.is_false()
@@ -253,14 +298,24 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                     // Additional check for 0 and empty string
                     let result = if actual_val.is_number() {
                         let num = actual_val.to_number(scope).unwrap();
-                        num.value() != 0.0
+                        let value = num.value();
+                        value != 0.0 && !value.is_nan()
                     } else if actual_val.is_string() {
                         let str_val = actual_val.to_string(scope).unwrap();
                         str_val.length() > 0
                     } else {
                         is_truthy
                     };
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        throw_matcher_error!(
+                            scope,
+                            "toBeTruthy",
+                            actual_val,
+                            "to be truthy".to_string(),
+                        );
+                    }
                 },
             )
             .unwrap();
@@ -273,11 +328,7 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                 |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     // Falsy check: null, undefined, 0, false, empty string, NaN
                     let is_falsy = actual_val.is_null_or_undefined()
                         || actual_val.is_false()
@@ -286,14 +337,24 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                     // Additional check for 0 and empty string
                     let result = if actual_val.is_number() {
                         let num = actual_val.to_number(scope).unwrap();
-                        num.value() == 0.0
+                        let value = num.value();
+                        value == 0.0 || value.is_nan()
                     } else if actual_val.is_string() {
                         let str_val = actual_val.to_string(scope).unwrap();
                         str_val.length() == 0
                     } else {
                         is_falsy
                     };
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        throw_matcher_error!(
+                            scope,
+                            "toBeFalsy",
+                            actual_val,
+                            "to be falsy".to_string(),
+                        );
+                    }
                 },
             )
             .unwrap();
@@ -306,11 +367,7 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                 |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     let expected = args.get(0);
 
                     let result = if actual_val.is_string() && expected.is_string() {
@@ -359,7 +416,12 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                     } else {
                         false
                     };
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        let expected = format!("toContain {}", value_to_display!(scope, expected));
+                        throw_matcher_error!(scope, "toContain", actual_val, expected);
+                    }
                 },
             )
             .unwrap();
@@ -370,12 +432,31 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
             let to_throw_fn = v8::Function::new(
                 scope,
                 |scope: &mut v8::HandleScope,
-                 _args: v8::FunctionCallbackArguments,
+                 args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    // toThrow is typically used with expect(() => fn()).toThrow()
-                    // For now, return true (passes) as we can't easily check if a function threw
-                    // In a full implementation, this would need to wrap the call in try-catch
-                    retval.set(v8::Boolean::new(scope, true).into());
+                    let actual_val = expectation_actual!(scope, args);
+                    let Ok(function) = v8::Local::<v8::Function>::try_from(actual_val) else {
+                        throw_matcher_error!(
+                            scope,
+                            "toThrow",
+                            actual_val,
+                            "to be a function that throws".to_string(),
+                        );
+                        return;
+                    };
+
+                    let did_throw = {
+                        let mut try_catch = v8::TryCatch::new(scope);
+                        let undefined = v8::undefined(&mut try_catch);
+                        let _ = function.call(&mut try_catch, undefined.into(), &[]);
+                        try_catch.has_caught()
+                    };
+
+                    if did_throw {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        throw_matcher_error!(scope, "toThrow", actual_val, "to throw".to_string(),);
+                    }
                 },
             )
             .unwrap();
@@ -388,17 +469,18 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                 |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     let expected = args.get(0);
 
                     let expected_len = if expected.is_number() {
-                        expected.to_number(scope).unwrap().value() as u32
+                        let value = expected.to_number(scope).unwrap().value();
+                        if value >= 0.0 && value.fract() == 0.0 {
+                            Some(value as usize)
+                        } else {
+                            None
+                        }
                     } else {
-                        0
+                        None
                     };
 
                     let actual_len: usize = if actual_val.is_string() {
@@ -413,9 +495,14 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                     } else {
                         0
                     };
-                    let expected_len_usize = expected_len as usize;
 
-                    retval.set(v8::Boolean::new(scope, actual_len == expected_len_usize).into());
+                    if expected_len == Some(actual_len) {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        let expected =
+                            format!("toHaveLength {}", value_to_display!(scope, expected));
+                        throw_matcher_error!(scope, "toHaveLength", actual_val, expected);
+                    }
                 },
             )
             .unwrap();
@@ -428,13 +515,18 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                 |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     let result = !actual_val.is_undefined();
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        throw_matcher_error!(
+                            scope,
+                            "toBeDefined",
+                            actual_val,
+                            "to be defined".to_string(),
+                        );
+                    }
                 },
             )
             .unwrap();
@@ -447,13 +539,18 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
                 |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  mut retval: v8::ReturnValue| {
-                    let this_obj = args.this();
-                    let actual_key = v8::String::new(scope, "_actual").unwrap();
-                    let actual_val = this_obj
-                        .get(scope, actual_key.into())
-                        .unwrap_or(v8::undefined(scope).into());
+                    let actual_val = expectation_actual!(scope, args);
                     let result = actual_val.is_null();
-                    retval.set(v8::Boolean::new(scope, result).into());
+                    if result {
+                        retval.set(v8::Boolean::new(scope, true).into());
+                    } else {
+                        throw_matcher_error!(
+                            scope,
+                            "toBeNull",
+                            actual_val,
+                            "to be null".to_string(),
+                        );
+                    }
                 },
             )
             .unwrap();
@@ -545,4 +642,106 @@ fn setup_testing_apis(scope: &mut v8::HandleScope, global: v8::Local<v8::Object>
     global.set(scope, after_all_key.into(), after_all_fn.into());
 }
 
-// V8 test executor tests are in the tests/ directory to avoid V8 API compatibility issues
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    fn execute_with_testing_apis(source: &str) -> Result<String, String> {
+        crate::initialize_v8().map_err(|err| err.to_string())?;
+
+        let mut isolate = v8::Isolate::new(Default::default());
+        let mut handle_scope = v8::HandleScope::new(&mut isolate);
+        let context = v8::Context::new(&mut handle_scope);
+        let scope = &mut v8::ContextScope::new(&mut handle_scope, context);
+
+        let global = context.global(scope);
+        setup_testing_apis(scope, global);
+
+        let code = v8::String::new(scope, source).ok_or("failed to create script source")?;
+        let script = v8::Script::compile(scope, code, None).ok_or("failed to compile script")?;
+
+        let mut try_catch = v8::TryCatch::new(scope);
+        match script.run(&mut try_catch) {
+            Some(value) => Ok(value
+                .to_string(&mut try_catch)
+                .map(|value| value.to_rust_string_lossy(&mut try_catch))
+                .unwrap_or_default()),
+            None => {
+                let message = try_catch
+                    .exception()
+                    .and_then(|exception| exception.to_string(&mut try_catch))
+                    .map(|message| message.to_rust_string_lossy(&mut try_catch))
+                    .unwrap_or_else(|| "Unknown V8 exception".to_string());
+                Err(message)
+            }
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn expect_to_be_returns_success_for_matching_values() {
+        let result = execute_with_testing_apis("expect(1).toBe(1); 'ok';");
+
+        assert_eq!(result.as_deref(), Ok("ok"));
+    }
+
+    #[test]
+    #[serial]
+    fn expect_to_be_throws_for_mismatched_values() {
+        let error = execute_with_testing_apis("expect(1).toBe(2);").unwrap_err();
+
+        assert!(
+            error.contains("toBe"),
+            "matcher error should name toBe, got: {error}"
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn core_matchers_throw_for_mismatches() {
+        let cases = [
+            ("expect('bee').toEqual('wasp');", "toEqual"),
+            ("expect(0).toBeTruthy();", "toBeTruthy"),
+            ("expect(1).toBeFalsy();", "toBeFalsy"),
+            ("expect('bee').toContain('js');", "toContain"),
+            ("expect([1, 2]).toHaveLength(3);", "toHaveLength"),
+            ("expect(undefined).toBeDefined();", "toBeDefined"),
+            ("expect(1).toBeNull();", "toBeNull"),
+            ("expect(() => 1).toThrow();", "toThrow"),
+        ];
+
+        for (source, matcher) in cases {
+            let error = match execute_with_testing_apis(source) {
+                Ok(value) => panic!("{matcher} should throw, got value {value:?}"),
+                Err(error) => error,
+            };
+            assert!(
+                error.contains(matcher),
+                "{matcher} error should name matcher, got: {error}"
+            );
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn core_matchers_return_success_for_matching_values() {
+        let result = execute_with_testing_apis(
+            r#"
+            expect('bee').toEqual('bee');
+            expect(1).toBeTruthy();
+            expect(0).toBeFalsy();
+            expect('beejs').toContain('js');
+            expect([1, 2]).toContain(2);
+            expect([1, 2]).toHaveLength(2);
+            expect('bee').toHaveLength(3);
+            expect(null).toBeNull();
+            expect(1).toBeDefined();
+            expect(() => { throw new Error('boom'); }).toThrow();
+            'ok';
+            "#,
+        );
+
+        assert_eq!(result.as_deref(), Ok("ok"));
+    }
+}

@@ -37,6 +37,32 @@ mod package_lock_tests {
         println!("✅ Test 1: PackageLock serialization - PASSED");
     }
 
+    #[tokio::test]
+    async fn test_read_package_lock_prefers_project_root_lockfile() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_dir = temp_dir.path().join("cache");
+        let node_modules = temp_dir.path().join("node_modules");
+
+        let config = beejs::package_manager::PackageManagerConfig {
+            cache_dir,
+            node_modules_dir: node_modules,
+            ..Default::default()
+        };
+
+        let pm = beejs::package_manager::PackageManager::new(config).unwrap();
+
+        let lock_content = r#"{"name":"root-lock-project","version":"1.0.0","lockfileVersion":3,"requires":true,"dependencies":{"root-only":{"version":"1.2.3","resolved":"https://registry.npmjs.org/root-only/-/root-only-1.2.3.tgz","integrity":"sha512-root","dev":false}}}"#;
+        let lock_path = temp_dir.path().join("package-lock.json");
+        fs::write(&lock_path, lock_content).unwrap();
+
+        let lock = pm.read_package_lock().unwrap();
+        assert_eq!(lock.name, "root-lock-project");
+        let deps = lock
+            .dependencies
+            .expect("root lock should include dependencies");
+        assert_eq!(deps.get("root-only").unwrap().version, "1.2.3");
+    }
+
     /// Test 2: Generate package-lock.json from installed packages
     #[tokio::test]
     async fn test_generate_package_lock() {
@@ -170,7 +196,10 @@ mod package_lock_tests {
         let test_pkg = deps.get("test-pkg").unwrap();
 
         // Check integrity field exists
-        assert!(test_pkg.integrity.is_some() || test_pkg.integrity.is_none());
+        assert_eq!(
+            test_pkg.integrity.as_deref(),
+            Some("sha512-AAAACGcg7D3N/8XjWddww+G7JhkBBZRDhYvL1gHGIAYqYxlJ+Z7oJ6UzoSmcH1csmCW5BPj1ChzGWHeQUMvQ==")
+        );
         println!("✅ Test 5: PackageLock integrity verification - PASSED");
     }
 
@@ -243,7 +272,9 @@ mod package_lock_tests {
 
         let lock = pm.read_package_lock();
         // Should handle v2 format (maybe with warning)
-        assert!(lock.is_ok() || lock.is_err()); // Either format is handled or gracefully fails
+        let lock = lock.expect("v2 package-lock should be accepted for compatibility");
+        assert_eq!(lock.name, "v2-compat");
+        assert_eq!(lock.lockfile_version, 2);
         println!("✅ Test 7: Lock file version compatibility - PASSED");
     }
 }

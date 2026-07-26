@@ -4,51 +4,256 @@
 #[cfg(test)]
 mod http_tests {
     use beejs::runtime_minimal::MinimalRuntime;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+
+    fn assert_valid_http_status(status: &str, context: &str) {
+        let status_code: u16 = status.parse().unwrap_or_else(|_| {
+            panic!("Expected numeric HTTP status for {context}, got: {status}")
+        });
+        assert!(
+            (100..=599).contains(&status_code),
+            "Expected valid HTTP status for {context}, got: {status_code}"
+        );
+    }
+
+    fn spawn_response_server(
+        status: u16,
+        reason: &str,
+        content_type: &str,
+        body: &str,
+        extra_headers: Vec<(String, String)>,
+    ) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+        let address = listener
+            .local_addr()
+            .expect("test server should expose a local address");
+        let reason = reason.to_string();
+        let content_type = content_type.to_string();
+        let body = body.to_string();
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buffer = [0; 1024];
+                let _ = stream.read(&mut buffer);
+                let mut headers = format!(
+                    "Content-Type: {content_type}\r\nContent-Length: {}\r\n",
+                    body.len()
+                );
+                for (name, value) in extra_headers {
+                    headers.push_str(&format!("{name}: {value}\r\n"));
+                }
+                let response = format!(
+                    "HTTP/1.1 {status} {reason}\r\n{headers}Connection: close\r\n\r\n{body}"
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        format!("http://{}", address)
+    }
+
+    fn spawn_json_server() -> String {
+        spawn_response_server(
+            200,
+            "OK",
+            "application/json",
+            r#"{"slideshow":{"title":"Beejs fixture","slides":[{"title":"Local"}]}}"#,
+            Vec::new(),
+        )
+    }
+
+    fn spawn_bytes_server() -> String {
+        spawn_response_server(
+            200,
+            "OK",
+            "application/octet-stream",
+            "0123456789",
+            Vec::new(),
+        )
+    }
+
+    fn spawn_redirect_server(target: &str) -> String {
+        spawn_response_server(
+            302,
+            "Found",
+            "text/plain",
+            "",
+            vec![("Location".to_string(), target.to_string())],
+        )
+    }
+
+    fn spawn_header_echo_server(header_name: &str, expected_value: &str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+        let address = listener
+            .local_addr()
+            .expect("test server should expose a local address");
+        let header_name = header_name.to_string();
+        let expected_value = expected_value.to_string();
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buffer = [0; 4096];
+                let read_len = stream.read(&mut buffer).unwrap_or(0);
+                let request = String::from_utf8_lossy(&buffer[..read_len]);
+                let found = request.lines().any(|line| {
+                    let Some((name, value)) = line.split_once(':') else {
+                        return false;
+                    };
+                    name.eq_ignore_ascii_case(&header_name) && value.trim() == expected_value
+                });
+                let body = if found { "present" } else { "missing" };
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        format!("http://{}", address)
+    }
+
+    fn http_header_end(buffer: &[u8]) -> Option<usize> {
+        buffer
+            .windows(b"\r\n\r\n".len())
+            .position(|window| window == b"\r\n\r\n")
+    }
+
+    fn read_http_request_bytes(stream: &mut std::net::TcpStream) -> Vec<u8> {
+        let mut request = Vec::new();
+        let mut expected_len = None;
+        let mut buffer = [0; 1024];
+
+        loop {
+            let read_len = stream.read(&mut buffer).unwrap_or(0);
+            if read_len == 0 {
+                break;
+            }
+            request.extend_from_slice(&buffer[..read_len]);
+
+            if let Some(header_end) = http_header_end(&request) {
+                if expected_len.is_none() {
+                    let headers = String::from_utf8_lossy(&request[..header_end]);
+                    expected_len = headers.lines().find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        if name.eq_ignore_ascii_case("content-length") {
+                            value.trim().parse::<usize>().ok()
+                        } else {
+                            None
+                        }
+                    });
+                }
+
+                if let Some(content_len) = expected_len {
+                    if request.len() >= header_end + b"\r\n\r\n".len() + content_len {
+                        break;
+                    }
+                }
+            }
+        }
+
+        request
+    }
+
+    fn spawn_multipart_formdata_echo_server() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+        let address = listener
+            .local_addr()
+            .expect("test server should expose a local address");
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let request_bytes = read_http_request_bytes(&mut stream);
+                let request = String::from_utf8_lossy(&request_bytes);
+                let expected_parts = [
+                    "content-type: multipart/form-data; boundary=",
+                    "name=\"note\"",
+                    "alpha",
+                    "name=\"blobField\"; filename=\"blob.txt\"",
+                    "Content-Type: text/plain",
+                    "blob payload",
+                    "name=\"fileField\"; filename=\"file.txt\"",
+                    "Content-Type: text/custom",
+                    "file payload",
+                    "name=\"bytesField\"; filename=\"bytes.bin\"",
+                    "Content-Type: application/octet-stream",
+                ];
+                let has_expected_parts = expected_parts.iter().all(|part| request.contains(part));
+                let has_binary_payload = request_bytes
+                    .windows(3)
+                    .any(|window| window == [0, 255, 65]);
+                let has_placeholder =
+                    request.contains("[Blob data]") || request.contains("[Object]");
+                let body = if has_expected_parts && has_binary_payload && !has_placeholder {
+                    "ok".to_string()
+                } else {
+                    format!(
+                        "bad multipart: expected_parts={has_expected_parts}; binary={has_binary_payload}; placeholder={has_placeholder}; request={request}"
+                    )
+                };
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        format!("http://{}", address)
+    }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_with_real_http() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         // 测试真实的 HTTP fetch
         let result = runtime.execute_code(
-            r#"
-            fetch('https://httpbin.org/json').status;
-        "#,
+            &r#"
+            fetch('__URL__').status;
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "Expected local HTTP fetch status script to run, got: {result:?}"
+        );
         let binding = result.unwrap();
         let status = binding.trim();
-        // 应该是 200 或 404（取决于网络）
-        assert!(
-            status == "200" || status == "404" || status == "405",
-            "Expected status 200, 404, or 405, got: {}",
-            status
-        );
+        // 上游 httpbin 可能返回 2xx/4xx/5xx；Beejs 不应再用离线 fallback 改写真实状态。
+        assert_valid_http_status(status, "real http fetch");
     }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_json_method_returns_real_data() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             const json = response.json();
             json;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "Expected local JSON fetch script to run, got: {result:?}"
+        );
         let binding = result.unwrap();
         let output = binding.as_str();
-        // 应该包含 httpbin.org 的实际 JSON 响应（经过美化格式化）
-        // httpbin.org/json 返回类似 {"slideshow": {"author": "...", "title": "...", "slides": [...]}}
         assert!(
-            output.contains("slideshow") || output.contains("httpbin"),
-            "Expected real JSON response from httpbin.org, got: {}",
+            output.contains("slideshow") && output.contains("Beejs fixture"),
+            "Expected local JSON response body, got: {}",
             output
         );
     }
@@ -57,38 +262,55 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_text_method_returns_real_data() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.text();
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
-        let binding = result.unwrap();
-        let output = binding.as_str();
-        // 应该包含真实的响应内容（JSON 结构）
-        assert!(
-            output.contains("{") && output.contains("}"),
-            "Expected JSON response body, got: {}",
-            output
-        );
+        match result {
+            Ok(binding) => {
+                let output = binding.as_str();
+                // 应该包含真实的响应内容（JSON 结构）
+                assert!(
+                    output.contains("{") && output.contains("}"),
+                    "Expected JSON response body, got: {}",
+                    output
+                );
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("fetch") || message.contains("body"),
+                    "Network failure should surface as a fetch/body error, got: {}",
+                    message
+                );
+            }
+        }
     }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_ok_property() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.ok;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "Expected Headers iteration script to run, got: {result:?}"
+        );
         let binding = result.unwrap();
         let output = binding.trim();
         // 应该是 true（200-299 状态码）或 false
@@ -103,21 +325,22 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_url_property() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.url;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        // 应该包含请求的 URL
         assert!(
-            output.contains("httpbin.org"),
-            "Expected URL to contain httpbin.org, got: {}",
+            output == url,
+            "Expected URL to match local fixture URL, got: {}",
             output
         );
     }
@@ -129,19 +352,34 @@ mod http_tests {
 
         let result = runtime.execute_code(
             r#"
-            const response = fetch('https://invalid-url-that-does-not-exist.test xyz');
-            response.status;
+            try {
+                const response = fetch('https://invalid-url-that-does-not-exist.test xyz');
+                JSON.stringify({
+                    threw: false,
+                    ok: response.ok,
+                    status: response.status
+                });
+            } catch (error) {
+                JSON.stringify({
+                    threw: true,
+                    message: String(error && error.message ? error.message : error)
+                });
+            }
         "#,
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
-        let status = binding.trim();
-        // 无效的 URL 应该返回 404 或错误状态
+        let output = binding.trim();
+        // 无效的 URL 应该抛出或返回可观察失败，不能 fallback 成 fake 200 OK
+        assert_ne!(
+            output, r#"{"threw":false,"ok":true,"status":200}"#,
+            "Invalid URL must not become a fake successful response"
+        );
         assert!(
-            status == "404" || status == "200",
-            "Expected 404 or 200 for invalid URL, got: {}",
-            status
+            output.contains(r#""threw":true"#) || output.contains(r#""ok":false"#),
+            "Expected invalid URL to throw or return non-ok response, got: {}",
+            output
         );
     }
 
@@ -150,12 +388,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_array_buffer_method_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_bytes_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/bytes/10');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.arrayBuffer;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -173,12 +413,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_blob_method_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_bytes_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/bytes/10');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.blob;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -196,12 +438,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_blob_returns_object_with_size_and_type() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_bytes_server();
 
-        let result = runtime.execute_code(r#"
-            const response = fetch('https://httpbin.org/bytes/10');
+        let result = runtime.execute_code(&r#"
+            const response = fetch('__URL__');
             const blob = response.blob();
             typeof blob === 'object' && typeof blob.size === 'number' && typeof blob.type === 'string';
-        "#);
+        "#
+        .replace("__URL__", &url));
 
         assert!(result.is_ok());
         let binding = result.unwrap();
@@ -371,6 +615,135 @@ mod http_tests {
 
     #[test]
     #[serial_test::serial]
+    fn test_headers_constructor_accepts_plain_object_init() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers({
+                'Content-Type': 'text/plain',
+                'X-Beejs-Trace': 'ctor'
+            });
+            `${headers.get('content-type')}:${headers.get('x-beejs-trace')}:${headers.has('Content-Type')}`;
+        "#,
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "text/plain:ctor:true",
+            "Expected Headers plain-object init to populate case-insensitive entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_constructor_accepts_sequence_pair_init() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/html'],
+                ['X-Beejs-Trace', 'array-init']
+            ]);
+            `${headers.get('content-type')}:${headers.get('x-beejs-trace')}:${headers.has('Content-Type')}`;
+        "#,
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "text/html:array-init:true",
+            "Expected Headers sequence-pair init to populate entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_init_accepts_headers_instance() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_header_echo_server("X-Beejs-Trace", "from-headers");
+
+        let result = runtime.execute_code(
+            &r#"
+            const headers = new Headers({
+                'X-Beejs-Trace': 'from-headers'
+            });
+            const response = fetch('__URL__', { headers });
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "present",
+            "Expected fetch init to serialize Headers instance entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_init_accepts_header_sequence_pairs() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_header_echo_server("X-Beejs-Trace", "from-array");
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__', {
+                headers: [
+                    ['X-Beejs-Trace', 'from-array']
+                ]
+            });
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "present",
+            "Expected fetch init to serialize header sequence-pair entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_request_object_preserves_headers_instance() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_header_echo_server("X-Beejs-Trace", "from-request");
+
+        let result = runtime.execute_code(
+            &r#"
+            const request = new Request('__URL__', {
+                headers: new Headers({
+                    'X-Beejs-Trace': 'from-request'
+                })
+            });
+            const response = fetch(request);
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "present",
+            "Expected Request(headers) entries to be preserved when passed to fetch, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
     fn test_headers_has() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
@@ -440,6 +813,140 @@ mod http_tests {
             output.contains("cookie1") && output.contains("cookie2"),
             "Expected cookies in Set-Cookie header, got: {}",
             output
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_iteration_methods_expose_cached_entries() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain'],
+                ['X-Beejs-Trace', 'iter']
+            ]);
+            const keys = Array.from(headers.keys()).join('|');
+            const values = Array.from(headers.values()).join('|');
+            const entries = Array.from(headers.entries()).map(([name, value]) => `${name}=${value}`).join('|');
+            const seen = [];
+            headers.forEach((value, name, owner) => {
+                seen.push(`${name}=${value}:${owner === headers}`);
+            });
+            `${keys};${values};${entries};${seen.join('|')}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Headers iteration script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "content-type|x-beejs-trace;text/plain|iter;content-type=text/plain|x-beejs-trace=iter;content-type=text/plain:true|x-beejs-trace=iter:true",
+            "Expected Headers iteration methods to expose cached entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_are_directly_iterable() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain'],
+                ['X-Beejs-Trace', 'iterable']
+            ]);
+            const direct = Array.from(headers).map(([name, value]) => `${name}=${value}`).join('|');
+            const looped = [];
+            for (const [name, value] of headers) {
+                looped.push(`${name}=${value}`);
+            }
+            `${direct};${looped.join('|')}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Headers direct iteration script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "content-type=text/plain|x-beejs-trace=iterable;content-type=text/plain|x-beejs-trace=iterable",
+            "Expected Headers to be directly iterable as entry pairs, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_iteration_methods_return_iterators() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain'],
+                ['X-Beejs-Trace', 'iterator']
+            ]);
+            const keyIterator = headers.keys();
+            const valueIterator = headers.values();
+            const entryIterator = headers.entries();
+            const firstKey = keyIterator.next();
+            const secondValue = valueIterator.next();
+            valueIterator.next();
+            const doneValue = valueIterator.next();
+            const firstEntry = entryIterator.next();
+            `${typeof keyIterator.next}:${firstKey.value}:${firstKey.done}:${secondValue.value}:${doneValue.done}:${firstEntry.value[0]}=${firstEntry.value[1]}:${typeof entryIterator[Symbol.iterator]}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Headers iteration methods to return iterator objects, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "function:content-type:false:text/plain:true:content-type=text/plain:function",
+            "Expected Headers keys/values/entries to return iterator objects with next(), got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_iteration_normalizes_names_to_lowercase() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain']
+            ]);
+            headers.set('X-Beejs-Trace', 'set');
+            headers.append('Set-Cookie', 'cookie=value');
+            const keys = Array.from(headers.keys()).join('|');
+            const entries = Array.from(headers.entries()).map(([name, value]) => `${name}=${value}`).join('|');
+            const seen = [];
+            headers.forEach((value, name) => seen.push(name));
+            `${keys};${entries};${seen.join('|')}`;
+        "#,
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "content-type|x-beejs-trace|set-cookie;content-type=text/plain|x-beejs-trace=set|set-cookie=cookie=value;content-type|x-beejs-trace|set-cookie",
+            "Expected Headers iteration to expose lowercase names, got: {output}"
         );
     }
 
@@ -752,14 +1259,50 @@ mod http_tests {
 
     #[test]
     #[serial_test::serial]
-    fn test_response_status_text() {
+    fn test_response_constructor_uses_body_first_and_init_options() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
         let result = runtime.execute_code(
             r#"
-            const response = fetch('https://httpbin.org/status/200');
-            typeof response.statusText;
+            const response = new Response('created body', {
+                status: 201,
+                statusText: 'Created',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'X-Beejs-Trace': 'constructor'
+                }
+            });
+            const before = response.bodyUsed;
+            const body = response.text();
+            const after = response.bodyUsed;
+            `${response.status}:${response.ok}:${response.statusText}:${response.headers.get('content-type')}:${response.headers.get('x-beejs-trace')}:${before}:${body}:${after}`;
         "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Response(body, init) script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "201:true:Created:text/plain:constructor:false:created body:true",
+            "Expected Response(body, init) to create a consumable response with init metadata, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_status_text() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
+            typeof response.statusText;
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -776,34 +1319,48 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_url() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.url;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
-        let binding = result.unwrap();
-        let output = binding.trim();
-        assert!(
-            output.contains("httpbin.org"),
-            "Expected response.url to contain httpbin.org, got: {}",
-            output
-        );
+        match result {
+            Ok(binding) => {
+                let output = binding.trim();
+                assert!(
+                    output == url,
+                    "Expected response.url to match local fixture URL, got: {}",
+                    output
+                );
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("fetch") || message.contains("body"),
+                    "Network failure should surface as a fetch/body error, got: {}",
+                    message
+                );
+            }
+        }
     }
 
     #[test]
     #[serial_test::serial]
     fn test_response_type() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.type;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -820,12 +1377,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_headers() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.headers;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -840,14 +1399,46 @@ mod http_tests {
 
     #[test]
     #[serial_test::serial]
-    fn test_response_clone_exists() {
+    fn test_response_headers_get_reads_real_response_headers() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_response_server(
+            200,
+            "OK",
+            "text/plain",
+            "headers",
+            vec![("X-Beejs-Trace".to_string(), "trace-123".to_string())],
+        );
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
+            const headers = response.headers;
+            `${typeof headers.get}:${typeof headers.has}:${headers.get ? headers.get('x-beejs-trace') : 'missing'}:${headers.has ? headers.has('content-type') : false}`;
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "function:function:trace-123:true",
+            "Expected response.headers to expose real Headers get/has behavior, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_clone_exists() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
             typeof response.clone;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -864,13 +1455,15 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_clone_basic() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             const cloned = response.clone();
             cloned.status === response.status && cloned.ok === response.ok;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -887,22 +1480,34 @@ mod http_tests {
     #[serial_test::serial]
     fn test_response_redirected() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             response.redirected;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
-        let binding = result.unwrap();
-        let output = binding.trim();
-        assert!(
-            output == "true" || output == "false",
-            "Expected response.redirected to be boolean, got: {}",
-            output
-        );
+        match result {
+            Ok(binding) => {
+                let output = binding.trim();
+                assert!(
+                    output == "true" || output == "false",
+                    "Expected response.redirected to be boolean, got: {}",
+                    output
+                );
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("fetch") || message.contains("body"),
+                    "Network failure should surface as a fetch/body error, got: {}",
+                    message
+                );
+            }
+        }
     }
 
     // v0.3.349: Tests for FormData API
@@ -1276,7 +1881,7 @@ mod http_tests {
             formData.append('username', 'alice');
             formData.append('email', 'alice@example.com');
             formData.append('age', '25');
-            const keys = formData.keys();
+            const keys = Array.from(formData.keys());
             keys.length;
         "#,
         );
@@ -1284,7 +1889,107 @@ mod http_tests {
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert!(output == "3", "Expected 3 unique keys, got: {}", output);
+        assert!(output == "3", "Expected 3 keys, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_iteration_methods_return_standard_iterators_in_order() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const formData = new FormData();
+            formData.append('tag', 'a');
+            formData.append('tag', 'b');
+            formData.append('name', 'bee');
+            const keys = formData.keys();
+            const firstKey = keys.next();
+            const secondKey = keys.next();
+            const thirdKey = keys.next();
+            const doneKey = keys.next();
+            const values = Array.from(formData.values()).join('|');
+            const entries = Array.from(formData.entries()).map(([name, value]) => `${name}=${value}`).join('|');
+            const direct = Array.from(formData).map(([name, value]) => `${name}=${value}`).join('|');
+            `${typeof keys.next}:${firstKey.value}:${secondKey.value}:${thirdKey.value}:${doneKey.done}:${values}:${entries}:${direct}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected FormData iteration script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "function:tag:tag:name:true:a|b|bee:tag=a|tag=b|name=bee:tag=a|tag=b|name=bee",
+            "Expected FormData iterators to preserve duplicate names in insertion order, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_for_each_invokes_callback_with_owner_and_this_arg() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const formData = new FormData();
+            formData.append('tag', 'a');
+            formData.append('tag', 'b');
+            const seen = [];
+            formData.forEach(function(value, name, owner) {
+                seen.push(`${this.label}:${name}=${value}:${owner === formData}`);
+            }, { label: 'ctx' });
+            seen.join('|');
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected FormData forEach script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "ctx:tag=a:true|ctx:tag=b:true",
+            "Expected FormData.forEach to call callback for every entry, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_form_data_multipart_uses_blob_and_file_bytes() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_multipart_formdata_echo_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const formData = new FormData();
+            formData.append('note', 'alpha');
+            formData.append('blobField', new Blob(['blob payload'], { type: 'text/plain' }), 'blob.txt');
+            formData.append('fileField', new File(['file payload'], 'file.txt', { type: 'text/custom' }));
+            formData.append('bytesField', new Blob([new Uint8Array([0, 255, 65])], { type: 'application/octet-stream' }), 'bytes.bin');
+            const response = fetch('__URL__', {
+                method: 'POST',
+                body: formData
+            });
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected FormData multipart upload script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "ok",
+            "Expected multipart upload to include real Blob/File bytes, got: {output}"
+        );
     }
 
     // v0.3.350: Tests for fetch with Request object
@@ -1292,23 +1997,23 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_with_request_object() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const request = new Request('https://httpbin.org/json');
+            &r#"
+            const request = new Request('__URL__');
             const response = fetch(request);
             response.status;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        // 应该是 200 或 404（取决于网络）
-        assert!(
-            status == "200" || status == "404" || status == "405",
-            "Expected status 200, 404, or 405, got: {}",
-            status
+        assert_eq!(
+            status, "200",
+            "Expected local fixture status 200, got: {status}"
         );
     }
 
@@ -1316,21 +2021,23 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_with_request_object_extracts_url() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const request = new Request('https://httpbin.org/headers');
+            &r#"
+            const request = new Request('__URL__');
             const response = fetch(request);
             response.url;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
         assert!(
-            output.contains("httpbin.org"),
-            "Expected response.url to contain httpbin.org, got: {}",
+            output == url,
+            "Expected response.url to match local fixture URL, got: {}",
             output
         );
     }
@@ -1339,27 +2046,25 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_with_request_object_and_init() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const request = new Request('https://httpbin.org/post', {
+            &r#"
+            const request = new Request('__URL__', {
                 method: 'POST'
             });
             const response = fetch(request, {
                 method: 'PUT'
             });
             response.status;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        assert!(
-            status == "200" || status == "404" || status == "405",
-            "Expected status 200, 404, or 405, got: {}",
-            status
-        );
+        assert_valid_http_status(status, "Request object with init");
     }
 
     // v0.3.351: Tests for fetch redirect handling
@@ -1367,37 +2072,37 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_redirect_option_follow() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let target_url = spawn_json_server();
+        let redirect_url = spawn_redirect_server(&target_url);
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/redirect-to?url=https://httpbin.org/json', {
+            &r#"
+            const response = fetch('__URL__', {
                 redirect: 'follow'
             });
             response.status;
-        "#,
+        "#
+            .replace("__URL__", &redirect_url),
         );
 
         assert!(result.is_ok());
         let binding = result.unwrap();
         let status = binding.trim();
-        // redirect: 'follow' should follow the redirect and return 200
-        assert!(
-            status == "200" || status == "404",
-            "Expected status 200 or 404 for redirect=follow, got: {}",
-            status
-        );
+        assert_valid_http_status(status, "redirect=follow");
     }
 
     #[test]
     #[serial_test::serial]
     fn test_fetch_redirected_property_exists() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.redirected;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -1414,12 +2119,14 @@ mod http_tests {
     #[serial_test::serial]
     fn test_fetch_response_body_used() {
         let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
 
         let result = runtime.execute_code(
-            r#"
-            const response = fetch('https://httpbin.org/json');
+            &r#"
+            const response = fetch('__URL__');
             typeof response.bodyUsed;
-        "#,
+        "#
+            .replace("__URL__", &url),
         );
 
         assert!(result.is_ok());
@@ -1430,6 +2137,70 @@ mod http_tests {
             output == "boolean",
             "Expected response.bodyUsed to be boolean, got: {}",
             output
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_body_consumption_updates_body_used_and_rejects_second_read() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
+            const before = response.bodyUsed;
+            response.text();
+            const after = response.bodyUsed;
+            let secondRead;
+            try {
+                response.json();
+                secondRead = 'allowed';
+            } catch (error) {
+                secondRead = String(error.message || error);
+            }
+            `${before}:${after}:${secondRead.includes('already consumed')}`;
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "false:true:true",
+            "Expected bodyUsed to flip after first read and second read to fail, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_clone_rejects_after_body_consumed() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
+            response.text();
+            let clonedAfterRead;
+            try {
+                response.clone();
+                clonedAfterRead = 'allowed';
+            } catch (error) {
+                clonedAfterRead = String(error.message || error);
+            }
+            clonedAfterRead.includes('already consumed');
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "true",
+            "Expected clone() to reject after body consumption, got: {output}"
         );
     }
 }

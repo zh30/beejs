@@ -104,16 +104,35 @@ fn text_encoder_encode_into(
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let bytes: _ = input_str.as_bytes();
     let dest_array: _ = v8::Local::<v8::Uint8Array>::try_from(destination).unwrap();
     let dest_len: _ = dest_array.byte_length();
-    // Calculate how many bytes we can write
-    let written: _ = std::cmp::min(bytes.len(), dest_len);
-    // Copy bytes (simplified - in real impl we'd use proper backing store access)
-    // For now, return the result object
+    let mut encoded_bytes = Vec::new();
+    let mut read = 0usize;
+    let mut written = 0usize;
+
+    for ch in input_str.chars() {
+        let mut buffer = [0u8; 4];
+        let chunk = ch.encode_utf8(&mut buffer).as_bytes();
+        if written + chunk.len() > dest_len {
+            break;
+        }
+        encoded_bytes.extend_from_slice(chunk);
+        written += chunk.len();
+        read += ch.len_utf16();
+    }
+
+    if written > 0 {
+        let dest_buffer = dest_array.buffer(scope).unwrap();
+        let byte_offset = dest_array.byte_offset();
+        let backing_store = dest_buffer.get_backing_store();
+        for (i, byte) in encoded_bytes.iter().enumerate() {
+            backing_store[byte_offset + i].set(*byte);
+        }
+    }
+
     let result: _ = v8::Object::new(scope);
     let read_key: _ = v8::String::new(scope, "read").unwrap();
-    let read_val: _ = v8::Number::new(scope, input_str.chars().count() as f64);
+    let read_val: _ = v8::Number::new(scope, read as f64);
     result.set(scope, read_key.into(), read_val.into());
     let written_key: _ = v8::String::new(scope, "written").unwrap();
     let written_val: _ = v8::Number::new(scope, written as f64);
@@ -156,13 +175,30 @@ fn text_decoder_constructor(
     let encoding_key: _ = v8::String::new(scope, "encoding").unwrap();
     let encoding_val: _ = v8::String::new(scope, normalized_encoding).unwrap();
     decoder_obj.set(scope, encoding_key.into(), encoding_val.into());
+    let mut fatal = false;
+    let mut ignore_bom = false;
+    if args.length() >= 2 {
+        let options = args.get(1);
+        if let Ok(options_obj) = v8::Local::<v8::Object>::try_from(options) {
+            let fatal_key: _ = v8::String::new(scope, "fatal").unwrap();
+            fatal = options_obj
+                .get(scope, fatal_key.into())
+                .map(|value| value.to_boolean(scope).is_true())
+                .unwrap_or(false);
+            let ignore_bom_key: _ = v8::String::new(scope, "ignoreBOM").unwrap();
+            ignore_bom = options_obj
+                .get(scope, ignore_bom_key.into())
+                .map(|value| value.to_boolean(scope).is_true())
+                .unwrap_or(false);
+        }
+    }
     // Set fatal property (from options)
     let fatal_key: _ = v8::String::new(scope, "fatal").unwrap();
-    let fatal_val: _ = v8::Boolean::new(scope, false);
+    let fatal_val: _ = v8::Boolean::new(scope, fatal);
     decoder_obj.set(scope, fatal_key.into(), fatal_val.into());
     // Set ignoreBOM property
     let ignore_bom_key: _ = v8::String::new(scope, "ignoreBOM").unwrap();
-    let ignore_bom_val: _ = v8::Boolean::new(scope, false);
+    let ignore_bom_val: _ = v8::Boolean::new(scope, ignore_bom);
     decoder_obj.set(scope, ignore_bom_key.into(), ignore_bom_val.into());
     // Add decode method
     let decode_key: _ = v8::String::new(scope, "decode").unwrap();
@@ -178,6 +214,17 @@ fn text_decoder_decode(
     mut retval: v8::ReturnValue,
 ) {
     let input: _ = args.get(0);
+    let this_obj = args.this();
+    let fatal_key: _ = v8::String::new(scope, "fatal").unwrap();
+    let fatal = this_obj
+        .get(scope, fatal_key.into())
+        .map(|value| value.to_boolean(scope).is_true())
+        .unwrap_or(false);
+    let ignore_bom_key: _ = v8::String::new(scope, "ignoreBOM").unwrap();
+    let ignore_bom = this_obj
+        .get(scope, ignore_bom_key.into())
+        .map(|value| value.to_boolean(scope).is_true())
+        .unwrap_or(false);
     // Handle undefined/null input
     if input.is_undefined() || input.is_null() {
         let empty: _ = v8::String::new(scope, "").unwrap();
@@ -224,18 +271,34 @@ fn text_decoder_decode(
         return;
     };
     // Decode UTF-8 bytes to string
-    match String::from_utf8(bytes) {
-        Ok(s) => {
-            let result: _ = v8::String::new(scope, &s).unwrap();
-            retval.set(result.into());
+    let encoding_rs_encoding = encoding_rs::Encoding::for_label(b"utf-8").unwrap();
+    let decoded = if fatal {
+        match encoding_rs_encoding.decode_without_bom_handling_and_without_replacement(&bytes) {
+            Some(decoded) => {
+                let mut decoded = decoded.into_owned();
+                if !ignore_bom && decoded.starts_with('\u{feff}') {
+                    decoded.remove(0);
+                }
+                decoded
+            }
+            None => {
+                let error: _ =
+                    v8::String::new(scope, "The encoded data was not valid UTF-8").unwrap();
+                let error_obj: _ = v8::Exception::type_error(scope, error);
+                scope.throw_exception(error_obj.into());
+                return;
+            }
         }
-        Err(e) => {
-            // Handle invalid UTF-8 - use replacement character
-            let s: _ = String::from_utf8_lossy(e.as_bytes());
-            let result: _ = v8::String::new(scope, &s).unwrap();
-            retval.set(result.into());
-        }
-    }
+    } else if ignore_bom {
+        encoding_rs_encoding
+            .decode_without_bom_handling(&bytes)
+            .0
+            .into_owned()
+    } else {
+        encoding_rs_encoding.decode(&bytes).0.into_owned()
+    };
+    let result: _ = v8::String::new(scope, &decoded).unwrap();
+    retval.set(result.into());
 }
 /// atob - decode base64 string
 fn atob_callback(
