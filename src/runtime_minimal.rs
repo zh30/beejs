@@ -4098,10 +4098,10 @@ impl MinimalRuntime {
     pub fn new_fast() -> Result<Self> {
         crate::initialize_v8()?;
 
-        // 最小初始堆 (64MB) + 较小的最大堆 (512MB)
-        // 这种配置可以减少启动时的内存分配开销
+        // 极致低延迟启动：16MB 初始堆 + 256MB 最大堆
+        // 这种配置最小化了进程创建时 V8 堆内存预分配与映射的系统开销
         let create_params =
-            v8::CreateParams::default().heap_limits(64 * 1024 * 1024, 512 * 1024 * 1024);
+            v8::CreateParams::default().heap_limits(16 * 1024 * 1024, 256 * 1024 * 1024);
 
         let mut isolate = v8::Isolate::new(create_params);
 

@@ -107,9 +107,13 @@ fn buffer_from_callback(
             _ => string.as_bytes().to_vec(),
         };
         let buffer: _ = v8::ArrayBuffer::new(scope, bytes.len());
-        // Fixed: ArrayBuffer created successfully
-        // Note: Direct data manipulation requires newer V8 APIs (0.32+)
-        // For now, we create the structure and store metadata
+        if !bytes.is_empty() {
+            let store = buffer.get_backing_store();
+            let slice = unsafe {
+                std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len())
+            };
+            slice.copy_from_slice(&bytes);
+        }
         let length_key: _ = v8::String::new(scope, "_length").unwrap();
         let len_val: _ = v8::Integer::new(scope, bytes.len() as i32).into();
         buffer.set(scope, length_key.into(), len_val);

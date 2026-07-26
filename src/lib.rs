@@ -57,40 +57,20 @@ pub mod performance_reporter;
 #[cfg(feature = "observability")]
 pub mod monitor;
 
-// pub mod runtime_lite;  // Temporarily disabled - compilation issues
-// pub mod runtime_core;  // Temporarily disabled - compilation issues
 pub mod event_loop;
 pub mod permissions;
-pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution // v0.2.0: 异步事件循环实现
-                         // pub mod v8_context_pool;  // Temporarily disabled - compilation issues
-                         // pub mod v8_engine;  // Temporarily disabled - compilation issues
-                         // pub mod smart_cache;  // Temporarily disabled - compilation issues
-                         // pub mod lib_minimal;
-                         // pub mod memory_pool;  // Temporarily disabled - compilation issues
-                         // pub mod nodejs_core;  // Temporarily disabled - compilation issues in many sub-modules
-pub mod nodejs_core; // v0.3.50: Enabled for path and fs modules
-                     // pub mod process_pool;  // Temporarily disabled - compilation issues
-pub mod v8_snapshot; // v0.3.232: Enabled for builtin warmup functionality
-                     // pub mod startup_optimizer;  // Temporarily disabled - compilation issues
-                     // pub mod nodejs_polyfill;  // Temporarily disabled for Stage 60
-                     // pub mod jit_optimizer;  // Temporarily disabled - compilation issues
-                     // pub mod inline_cache;  // Temporarily disabled - compilation issues
-                     // pub mod nodejs;  // Temporarily disabled for Stage 60
-                     // pub mod code_analyzer;  // Temporarily disabled - compilation issues
-                     // pub mod module_loader;  // Temporarily disabled - compilation issues
-pub mod package_manager; // v0.3.101: Package manager - now enabled with fs fix
-pub mod watcher; // v0.3.100: Hot reload module - now enabled
-pub mod watcher_websocket; // v0.3.103: WebSocket hot reload for cross-client broadcasting
-                           // pub mod repl;  // Temporarily disabled - compilation issues
-                           // pub mod cli;  // Stage 93: CLI tools - Temporarily disabled due to compilation errors
-                           // pub mod edge;  // Temporarily disabled - incomplete implementation
-pub mod web_api; // Stage 75: Web Streams API for AI workloads - enabled
+pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution
+pub mod nodejs_core;     // Core Node.js compatible modules (fs, path, crypto, http, net, timers)
+pub mod v8_snapshot;    // V8 snapshot and warmup system
+pub mod package_manager; // Package manager
+pub mod watcher;         // File watcher for hot reload
+pub mod watcher_websocket; // WebSocket hot reload
+pub mod web_api;         // Web standards API (Streams, Blob, Worker, Crypto)
 
 #[cfg(feature = "observability")]
 pub mod observability;
 
-// pub mod runtime_config;  // Temporarily disabled - compilation issues
-pub mod ecosystem_lite; // v0.3.233: Enabled for package manager tests
+pub mod ecosystem_lite;
 
 #[cfg(feature = "enterprise")]
 pub mod security;
@@ -105,64 +85,16 @@ pub mod ai_inference;
 pub mod multilang;
 
 #[cfg(feature = "multilang")]
-pub mod platform; // Stage 88 Phase 2: 跨平台运行时
+pub mod platform;
 
 #[cfg(feature = "cloudnative")]
 pub mod cloud_native;
 
-// Enterprise stage modules are retained in src/enterprise but are not part of
-// the v0.1 public runtime surface.
-// #[cfg(feature = "enterprise")]
-// pub mod enterprise;
-
-pub mod error; // Stage 89 Phase 2: 统一错误处理系统
-pub mod fallback; // Stage 89 Phase 2: 优雅降级机制
-                  // pub mod concurrent_execution;  // Temporarily disabled - compilation issues
-                  // pub mod shared_memory;  // Temporarily disabled - compilation issues
-                  // pub mod shared_object_cache;  // Temporarily disabled - compilation issues
-                  // pub mod memory_mapped_file;  // Temporarily disabled - compilation issues
-                  // pub mod lock_free_temp;  // Temporarily disabled - compilation issues
-                  // pub mod network;  // Temporarily disabled - compilation issues
-                  // pub mod zero_copy;  // Temporarily disabled - compilation issues
-                  // pub mod string_interner;  // Temporarily disabled - compilation issues
-                  // pub mod distributed;  // Temporarily disabled - compilation issues
-                  // pub mod isolate_prewarmer;  // Temporarily disabled - compilation issues
-                  // pub mod precompiled_cache;  // Moved to startup module
-                  // pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化 (moved to inline mod at line 21-35)
-                  // pub mod optimization;  // Stage 78 Phase 4: 极致性能监控 (temporarily disabled)
-                  // pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
-                  // pub mod ecosystem;  // Stage 80: 生态系统完善 (moved to Stage 91 Phase 3)
-                  // pub mod profiler;  // Temporarily disabled due to compilation issues
-                  // pub mod code_cache;  // Temporarily disabled due to compilation issues
-                  // pub mod stage_38_smart_process_pool;  // Temporarily disabled - compilation issues
-                  // pub mod cloud;  // Temporarily disabled - compilation issues
-                  // pub mod wasm_optimized;  // Temporarily disabled - compilation issues
-                  // pub mod wasm_integration;  // Temporarily disabled - compilation issues
-                  // pub mod wasm;  // Temporarily disabled - compilation issues
-                  // pub mod io;  // Temporarily disabled - compilation issues
-                  // pub mod realtime;  // Temporarily disabled - compilation issues
-                  // pub mod quantum_computing;  // Temporarily disabled - compilation issues
-                  // pub mod neural_network;  // Temporarily disabled - compilation issues
-                  // pub mod metaverse;  // Temporarily disabled - compilation issues
-                  // pub mod holographic;  // Temporarily disabled - compilation issues
-                  // pub mod immersive_interaction;  // Temporarily disabled - compilation issues
-                  // pub mod distributed_metaverse;  // Temporarily disabled - compilation issues
-                  // pub mod startup;  // Temporarily disabled - compilation issues
-                  // pub mod tools;  // Temporarily disabled - compilation issues
-                  // Stage 43.0: 完整生态系统与极致性能优化
-                  // pub mod nodejs_core;  // Temporarily disabled for Stage 60
-                  // pub mod bundler;  // Temporarily disabled - compilation issues
-                  // pub mod plugin;  // Temporarily disabled - compilation issues
-                  // pub mod jit;  // Temporarily disabled - compilation issues
-pub mod memory; // Temporarily disabled - compilation issues
-                // pub mod simd;  // Temporarily disabled - compilation issues
-                // pub mod package;  // Temporarily disabled - compilation issues
-                // Stage 48: TypeScript 支持
-pub mod typescript; // v0.3.102: TypeScript 转译支持
-                    // pub mod stage_48_optimized_process_pool;
-                    // pub mod stage_48_ai_workload_optimizer;
-                    // Stage 56.4: Testing Framework
-pub mod testing; // v0.3.251: Testing framework enabled
+pub mod error;    // Unified error handling system
+pub mod fallback; // Fallback mechanisms
+pub mod memory;   // Memory management
+pub mod typescript; // TypeScript transpilation support
+pub mod testing;  // Testing framework support
                  // 重新导出 REPL 相关类型
                  // pub use repl::{Repl, ReplConfig};  // Temporarily disabled
                  // 重新导出 WebAssembly 相关类型
