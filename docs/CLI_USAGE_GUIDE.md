@@ -98,6 +98,22 @@ bee test examples/testing/math.test.js --update-snapshots
 
 `--update-snapshots` 会更新 file-mode 的 `expect(value).toMatchSnapshot()`，也会为缺失或不匹配的 `expect(value).toMatchInlineSnapshot()` 写回测试源文件。file snapshot 位于测试文件同目录的 `__snapshots__/<test-file>.snap`；snapshot 文件读取/写入和 inline snapshot 源文件写入都会进入文件系统权限 broker。
 
+### 内置断言库 (Matchers)
+
+`bee test` 内置支持以下 Jest 风格断言：
+
+- **相等性比较**：`expect(a).toBe(b)`, `expect(a).toEqual(b)`, `expect(a).toStrictEqual(b)`
+- **真值断言**：`expect(a).toBeTruthy()`, `expect(a).toBeFalsy()`
+- **数值比较**：`expect(a).toBeGreaterThan(b)`, `expect(a).toBeLessThan(b)`, `expect(a).toBeGreaterThanOrEqual(b)`, `expect(a).toBeLessThanOrEqual(b)`
+- **对象与属性**：`expect(obj).toHaveProperty("key")`, `expect(obj).toMatchObject({ key: val })`
+- **异常捕获**：`expect(fn).toThrow()`
+
+## Node.js & Web API 兼容说明
+
+- **Node.js 模块**：支持 `fs` (`fs.promises`), `crypto`, `events`, `path`, `buffer`, `process`, `timers`, `http`, `net`, `os`, `url`, `querystring`, `stream`, `readline`, `child_process`, CommonJS `require`。
+- **Web API 标准**：支持 `fetch` (带 Headers/Response/bodyUsed), `WebSocket`, `Web Crypto` (AES-GCM, AES-CBC, AES-CTR, ECDSA, ECDH, RSA, SHA-1/256/384/512, wrapKey/unwrapKey), `URL` / `URLSearchParams`, `Streams`, `TextEncoder` / `TextDecoder`, `Blob`, `FormData`, `AbortController`。
+
+
 ## Bundle
 
 ```bash
