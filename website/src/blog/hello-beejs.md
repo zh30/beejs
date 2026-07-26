@@ -27,7 +27,7 @@ For v0.1, performance claims must come from fresh, reproducible benchmark runs. 
 ## Try It
 
 ```bash
-curl -fsSL https://beejs.zhanghe.dev/install.sh | sh
+curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 bee --version
 bee eval "1 + 1"
 bee run hello.js

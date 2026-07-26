@@ -12,7 +12,7 @@ usage() {
 Beejs installer
 
 Usage:
-  curl -fsSL https://raw.githubusercontent.com/zh30/beejs/main/install.sh | sh
+  curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 
 Environment variables:
   BEEJS_VERSION     Version tag to install (example: v0.1.0 or 0.1.0)

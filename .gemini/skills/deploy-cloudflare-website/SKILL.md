@@ -81,7 +81,7 @@ pnpm run deploy:dry-run
 pnpm run deploy
 ```
 
-上线域名：`https://beejs-website.nanhetech.workers.dev`
+上线域名：`https://bee.zhanghe.dev`
 
 ---
 

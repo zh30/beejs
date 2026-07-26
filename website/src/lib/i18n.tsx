@@ -27,7 +27,7 @@ const copy = {
       statusValue: 'Operational',
       stage: 'v0.1.0',
       contact: 'Contact',
-      email: 'support@beejs.zhanghe.dev',
+      email: 'support@bee.zhanghe.dev',
       rights: 'All rights reserved.',
     },
     home: {
@@ -145,7 +145,7 @@ const copy = {
             'Prebuilt release archives currently target macOS x86_64, macOS arm64, and Linux x86_64. Other platforms can build from source with Rust.',
           ],
           code: [
-            '$ curl -fsSL https://beejs.zhanghe.dev/install.sh | sh',
+            '$ curl -fsSL https://bee.zhanghe.dev/install.sh | sh',
             '$ bee --version',
           ],
         },
@@ -263,7 +263,7 @@ const copy = {
       statusValue: '运行中',
       stage: 'v0.1.0',
       contact: '联系',
-      email: 'support@beejs.zhanghe.dev',
+      email: 'support@bee.zhanghe.dev',
       rights: '保留所有权利。',
     },
     home: {
@@ -378,7 +378,7 @@ const copy = {
           subtitle: '使用预编译包或从源码构建。',
           body: ['预编译发布产物当前覆盖 macOS x86_64、macOS arm64 和 Linux x86_64。其他平台可通过 Rust 从源码构建。'],
           code: [
-            '$ curl -fsSL https://beejs.zhanghe.dev/install.sh | sh',
+            '$ curl -fsSL https://bee.zhanghe.dev/install.sh | sh',
             '$ bee --version',
           ],
         },

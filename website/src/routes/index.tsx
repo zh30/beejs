@@ -24,7 +24,7 @@ export default function HomeComponent() {
   const home = copy.home
   const [copied, setCopied] = useState(false)
 
-  const installCommand = 'curl -fsSL https://beejs-website.nanhetech.workers.dev/install.sh | sh'
+  const installCommand = 'curl -fsSL https://bee.zhanghe.dev/install.sh | sh'
 
   const handleCopy = () => {
     navigator.clipboard.writeText(installCommand)
