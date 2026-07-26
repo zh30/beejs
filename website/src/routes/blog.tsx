@@ -80,66 +80,71 @@ export default function BlogComponent() {
 
   if (slug) {
     const post = allPosts.find((p) => p.slug === slug)
-    if (!post) return <div className="text-hud-text text-center py-24">{copy.blog.notFound}</div>
+    if (!post) return <div className="text-zinc-300 text-center py-24">{copy.blog.notFound}</div>
     return <BlogPostView post={post} />
   }
 
   return (
-    <div className="relative min-h-screen bg-hud-void">
-      <div className="absolute inset-0 hud-grid opacity-25 pointer-events-none" />
-      <div className="scanline" />
-
-      <div className="max-w-6xl mx-auto py-20 px-4 md:px-8 relative z-10">
-        <header className="mb-16">
-          <div className="flex items-center gap-4 mb-6">
-            <BeeLogo className="w-12 h-12" />
-            <span className="hud-tag">{copy.blog.title}</span>
+    <div className="relative min-h-screen pt-10 pb-24">
+      <div className="max-w-5xl mx-auto px-6 relative z-10">
+        <header className="mb-14 text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border-amber-500/20 text-xs font-mono text-amber-400 mb-6">
+            <BeeLogo className="w-4 h-4" />
+            <span>{copy.blog.title}</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-display uppercase tracking-[0.2em]">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-display tracking-tight">
             {copy.blog.title}
           </h1>
-          <p className="text-hud-muted mt-4 max-w-2xl">{copy.blog.subtitle}</p>
+          <p className="mt-4 text-base text-zinc-400 font-normal leading-relaxed">
+            {copy.blog.subtitle}
+          </p>
         </header>
 
-        <div className="relative pl-6">
-          <div className="absolute left-2 top-0 bottom-0 w-px bg-hud-line/70" />
-          <div className="space-y-8">
-            {allPosts.map((post, index) => (
-              <motion.article
-                key={post.slug}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                className="hud-panel-soft p-6 md:p-8 relative"
-              >
-                <div className="absolute left-[-14px] top-8 w-3 h-3 rounded-full border border-hud-accent bg-hud-void" />
-                <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-[0.35em] text-hud-muted mb-4">
-                  <span className="px-3 py-1 border border-hud-line/80">{post.tag}</span>
-                  <span className="flex items-center gap-2">
-                    <Calendar className="w-3 h-3" /> {post.date}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Clock className="w-3 h-3" /> {post.readTime}
-                  </span>
-                </div>
-                <h2 className="text-2xl md:text-3xl font-display uppercase tracking-[0.18em]">
-                  <Link to={`/blog/${post.slug}`} className="hover:text-hud-accent transition-colors">
-                    {post.title}
-                  </Link>
-                </h2>
-                <p className="text-hud-muted text-sm leading-relaxed mt-4 max-w-3xl">
-                  {post.excerpt}
-                </p>
+        <div className="grid grid-cols-1 gap-6">
+          {allPosts.map((post, i) => (
+            <motion.article
+              key={post.slug}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.1 }}
+              className="glass-card rounded-2xl p-8 border-zinc-800 hover:border-amber-500/30 transition-all group"
+            >
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-4">
+                <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
+                  {post.tag}
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {post.date}
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  {post.readTime}
+                </span>
+              </div>
+
+              <h2 className="text-2xl font-bold text-white font-display tracking-tight group-hover:text-amber-300 transition-colors">
+                <Link to={`/blog/${post.slug}`}>{post.title}</Link>
+              </h2>
+
+              <p className="mt-3 text-sm text-zinc-400 leading-relaxed font-normal">{post.excerpt}</p>
+
+              <div className="mt-6 flex items-center justify-between pt-4 border-t border-zinc-800/60">
+                <span className="text-xs text-zinc-500 flex items-center gap-1 font-mono">
+                  <User className="w-3.5 h-3.5" /> {post.author}
+                </span>
                 <Link
                   to={`/blog/${post.slug}`}
-                  className="inline-flex items-center gap-3 mt-6 text-[10px] uppercase tracking-[0.4em] text-hud-accent"
+                  className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 font-sans group/link"
                 >
-                  {copy.blog.readMore} <ArrowRight className="w-4 h-4" />
+                  <span>{copy.blog.readMore}</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
                 </Link>
-              </motion.article>
-            ))}
-          </div>
+              </div>
+            </motion.article>
+          ))}
         </div>
       </div>
     </div>
@@ -150,52 +155,44 @@ function BlogPostView({ post }: { post: Post }) {
   const { copy } = useLang()
 
   return (
-    <div className="relative min-h-screen bg-hud-void">
-      <div className="absolute inset-0 hud-grid opacity-25 pointer-events-none" />
-      <div className="scanline" />
+    <div className="relative min-h-screen pt-10 pb-24">
+      <div className="max-w-3xl mx-auto px-6 relative z-10">
+        <Link
+          to="/blog"
+          className="inline-flex items-center text-xs font-mono text-zinc-400 hover:text-amber-400 transition-colors mb-8"
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" /> {copy.blog.back}
+        </Link>
 
-      <div className="max-w-4xl mx-auto py-20 px-4 md:px-8 relative z-10">
-        <header className="mb-12">
-          <Link
-            to="/blog"
-            className="inline-flex items-center text-[10px] uppercase tracking-[0.4em] text-hud-muted hover:text-hud-text transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" /> {copy.blog.back}
-          </Link>
-
-          <div className="mt-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.35em] text-hud-muted">
-            <span className="px-3 py-1 border border-hud-line/80">{copy.blog.tagLabel}</span>
-            <span className="text-hud-accent">{post.tag}</span>
+        <article className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-800">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-6">
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
+              {post.tag}
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5" />
+              {post.date}
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {post.readTime}
+            </span>
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-display uppercase tracking-[0.18em] mt-6">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white font-display tracking-tight leading-tight">
             {post.title}
           </h1>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-[10px] uppercase tracking-[0.35em] text-hud-muted">
-            <span className="flex items-center gap-2">
-              <Calendar className="w-3 h-3" /> {copy.blog.timestamp}: {post.date}
-            </span>
-            <span className="flex items-center gap-2">
-              <User className="w-3 h-3" /> {copy.blog.operator}: {post.author}
-            </span>
-            <span className="flex items-center gap-2">
-              <Clock className="w-3 h-3" /> {copy.blog.readTime}: {post.readTime}
-            </span>
+          <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono mt-4 pb-8 border-b border-zinc-800">
+            <User className="w-3.5 h-3.5 text-zinc-500" />
+            <span>By {post.author}</span>
           </div>
-        </header>
 
-        <article
-          className="prose prose-invert max-w-none
-            prose-headings:text-hud-text prose-headings:font-[var(--font-display)] prose-headings:uppercase prose-headings:tracking-[0.15em]
-            prose-p:text-hud-muted prose-p:leading-relaxed
-            prose-a:text-hud-accent hover:prose-a:text-hud-text
-            prose-code:text-hud-accent prose-code:bg-hud-panel/70 prose-code:px-1.5 prose-code:rounded-sm
-            prose-pre:bg-hud-panel/90 prose-pre:border prose-pre:border-hud-line/60
-            prose-strong:text-hud-text
-          "
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+          <div className="prose prose-invert max-w-none mt-8 prose-headings:font-display prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-amber-400 prose-code:text-amber-300 prose-pre:bg-[#0a0b0e] prose-pre:border prose-pre:border-zinc-800">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+          </div>
         </article>
       </div>
     </div>

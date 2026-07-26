@@ -36,40 +36,38 @@ export default function DocsComponent() {
     manual.sections[section as keyof typeof manual.sections] || manual.sections.introduction
 
   return (
-    <div className="relative min-h-screen bg-hud-void">
-      <div className="absolute inset-0 hud-grid opacity-30 pointer-events-none" />
-      <div className="scanline" />
-
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-20 relative z-10">
+    <div className="relative min-h-screen pt-10 pb-24">
+      <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-10">
-          <aside className="hud-panel-soft p-6 h-fit sticky top-28">
+          {/* Sidebar */}
+          <aside className="glass-panel rounded-2xl p-6 h-fit sticky top-24 border-zinc-800">
             <Link
               to="/"
-              className="inline-flex items-center text-[10px] uppercase tracking-[0.4em] text-hud-muted hover:text-hud-text transition-colors"
+              className="inline-flex items-center text-xs font-mono text-zinc-400 hover:text-amber-400 transition-colors mb-6"
             >
-              <ArrowLeft className="w-3 h-3 mr-2" /> {manual.backToHome}
+              <ArrowLeft className="w-3.5 h-3.5 mr-2" /> {manual.backToHome}
             </Link>
-            <div className="mt-8">
+            <div>
               {manual.groups.map((group) => (
-                <div key={group.title} className="mb-8">
-                  <h4 className="text-[10px] uppercase tracking-[0.4em] text-hud-muted mb-4">
+                <div key={group.title} className="mb-6">
+                  <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-3 font-semibold">
                     {group.title}
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {group.items.map((item) => (
                       <Link
                         key={item.id}
                         to={`/docs/${item.id}`}
-                        className={`flex items-center justify-between px-3 py-2 border border-transparent text-xs uppercase tracking-[0.3em] transition-all ${
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                           section === item.id
-                            ? 'text-hud-text border-hud-accent/50 bg-hud-panel/80'
-                            : 'text-hud-muted hover:text-hud-text hover:border-hud-line/80'
+                            ? 'text-white bg-amber-500/10 border border-amber-500/20 shadow-sm font-semibold'
+                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                         }`}
                       >
-                        <span className="flex items-center gap-2">
-                          <span className="text-hud-accent/80">{iconMap[item.id]}</span>
-                          {item.label}
+                        <span className={section === item.id ? 'text-amber-400' : 'text-zinc-500'}>
+                          {iconMap[item.id]}
                         </span>
+                        <span>{item.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -78,12 +76,13 @@ export default function DocsComponent() {
             </div>
           </aside>
 
+          {/* Main Doc Content */}
           <motion.main
             key={section}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="hud-panel p-8 md:p-12"
+            transition={{ duration: 0.3 }}
+            className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-800"
           >
             <ManualSection {...content} kicker={manual.title} />
           </motion.main>
@@ -99,51 +98,38 @@ function ManualSection({
   body,
   list,
   code,
-  cards,
   kicker,
 }: {
   title: string
-  subtitle?: string
-  body?: readonly string[]
-  list?: readonly string[]
-  code?: readonly string[]
-  cards?: readonly { readonly title: string; readonly desc: string }[]
+  subtitle: string
+  body: string
+  list?: string[]
+  code?: string
   kicker: string
 }) {
   return (
-    <div>
-      <header className="mb-10">
-        <p className="hud-tag">{kicker}</p>
-        <h1 className="text-3xl md:text-4xl font-display uppercase tracking-[0.18em] mt-4">
-          {title}
-        </h1>
-        {subtitle ? <p className="text-hud-muted mt-3">{subtitle}</p> : null}
-      </header>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
+        <span>{kicker}</span>
+        <span className="text-zinc-600">/</span>
+        <span className="text-zinc-300 font-semibold">{title}</span>
+      </div>
 
-      {body?.map((paragraph, index) => (
-        <p key={`${paragraph}-${index}`} className="text-sm md:text-base text-hud-muted leading-relaxed mb-6">
-          {paragraph}
-        </p>
-      ))}
+      <h1 className="text-3xl md:text-4xl font-extrabold text-white font-display tracking-tight">
+        {title}
+      </h1>
 
-      {cards && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
-          {cards.map((card) => (
-            <div key={card.title} className="hud-panel-soft p-6">
-              <h3 className="text-lg font-display uppercase tracking-[0.18em]">
-                {card.title}
-              </h3>
-              <p className="text-sm text-hud-muted mt-3">{card.desc}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <p className="text-base text-zinc-300 leading-relaxed font-normal">{subtitle}</p>
+
+      <div className="h-px w-full bg-zinc-800/80 my-6" />
+
+      <p className="text-sm text-zinc-400 leading-relaxed">{body}</p>
 
       {list && (
         <ul className="space-y-3 my-6">
-          {list.map((item, index) => (
-            <li key={`${item}-${index}`} className="flex items-start gap-3 text-sm text-hud-muted">
-              <span className="text-hud-accent">—</span>
+          {list.map((item) => (
+            <li key={item} className="flex items-start gap-3 text-sm text-zinc-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-2 shrink-0" />
               <span>{item}</span>
             </li>
           ))}
@@ -151,15 +137,8 @@ function ManualSection({
       )}
 
       {code && (
-        <div className="space-y-3 mt-6">
-          {code.map((snippet, index) => (
-            <pre
-              key={`${snippet}-${index}`}
-              className="hud-panel-soft p-4 text-xs text-hud-text font-mono overflow-x-auto"
-            >
-              <code>{snippet}</code>
-            </pre>
-          ))}
+        <div className="rounded-xl overflow-hidden bg-[#0a0b0e] border border-zinc-800/80 p-5 font-mono text-xs text-zinc-300 overflow-x-auto leading-relaxed shadow-inner">
+          <pre>{code}</pre>
         </div>
       )}
     </div>
