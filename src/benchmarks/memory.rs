@@ -10,7 +10,6 @@
 use std::sync::{Arc, Mutex};
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
-use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 use tokio::task;
 /// 内存使用基准测试套件
@@ -102,9 +101,9 @@ impl MemoryBenchmark {
             // 模拟内存池使用
             let pool: _ = Arc::new(Mutex::new(Vec::<u8>::new()));
             for _ in 0..100 {
-                let _chunk: _ = pool.lock().unwrap();
+                let guard: _ = pool.lock().unwrap();
                 // 保持锁一小段时间来模拟实际使用
-                std::hint::black_box(_chunk);
+                drop(std::hint::black_box(guard));
             }
         })
     }
@@ -158,6 +157,8 @@ impl MemoryBenchmark {
                         ],
                     });
                 }
+                let checksum: i32 = tree.iter().map(Node::total_value).sum();
+                let _ = std::hint::black_box(checksum);
                 tree
             },
         )
@@ -255,6 +256,12 @@ impl Default for MemoryBenchmark {
 struct Node {
     value: i32,
     children: Vec<Node>,
+}
+
+impl Node {
+    fn total_value(&self) -> i32 {
+        self.value + self.children.iter().map(Self::total_value).sum::<i32>()
+    }
 }
 /// 获取当前内存使用量（简化实现）
 fn get_current_memory() -> usize {

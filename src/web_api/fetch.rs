@@ -206,28 +206,8 @@ fn fetch_callback(
             // Extract headers from Request object
             let headers_key = v8::String::new(scope, "headers").unwrap().into();
             if let Some(headers_val) = input_obj.get(scope, headers_key) {
-                if headers_val.is_object() {
-                    if let Some(headers_obj) = headers_val.to_object(scope) {
-                        let keys_array = headers_obj.get_own_property_names(scope);
-                        if let Some(keys_array) = keys_array {
-                            let keys_len = keys_array.length();
-                            for i in 0..keys_len {
-                                if let Some(key) = keys_array.get_index(scope, i) {
-                                    if let Some(key_str) = key.to_string(scope) {
-                                        let key_name = key_str.to_rust_string_lossy(scope);
-                                        if let Some(val) = headers_obj.get(scope, key) {
-                                            if let Some(val_str) = val.to_string(scope) {
-                                                request_headers.insert(
-                                                    key_name,
-                                                    val_str.to_rust_string_lossy(scope),
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                for (name, value) in header_entries_from_value(scope, headers_val) {
+                    request_headers.insert(name, value);
                 }
             }
 
@@ -271,28 +251,8 @@ fn fetch_callback(
             // Parse headers
             let headers_key = v8::String::new(scope, "headers").unwrap().into();
             if let Some(headers_val) = init_obj.get(scope, headers_key) {
-                if headers_val.is_object() {
-                    if let Some(headers_obj) = headers_val.to_object(scope) {
-                        let keys_array = headers_obj.get_own_property_names(scope);
-                        if let Some(keys_array) = keys_array {
-                            let keys_len = keys_array.length();
-                            for i in 0..keys_len {
-                                if let Some(key) = keys_array.get_index(scope, i) {
-                                    if let Some(key_str) = key.to_string(scope) {
-                                        let key_name = key_str.to_rust_string_lossy(scope);
-                                        if let Some(val) = headers_obj.get(scope, key) {
-                                            if let Some(val_str) = val.to_string(scope) {
-                                                headers.insert(
-                                                    key_name,
-                                                    val_str.to_rust_string_lossy(scope),
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                for (name, value) in header_entries_from_value(scope, headers_val) {
+                    headers.insert(name, value);
                 }
             }
 
@@ -342,7 +302,7 @@ fn fetch_callback(
         .keys()
         .any(|header| header.eq_ignore_ascii_case("content-type"));
     if !content_type.is_empty() && !has_content_type_header {
-        headers.insert("Content-Type".to_string(), content_type);
+        headers.insert(normalize_header_name("Content-Type"), content_type);
     }
 
     // Execute fetch synchronously in a blocking task
@@ -386,46 +346,9 @@ fn fetch_callback(
             response_obj.set(scope, url_key.into(), url_val);
 
             // Store body in cache for json() and text() methods
-            let response_id = next_response_id();
             let body_vec = response.body.unwrap_or_default();
-            let body_str = String::from_utf8_lossy(&body_vec);
-            let mut cache = get_response_cache().lock().unwrap();
-            cache.insert(response_id, (response.url.clone(), body_vec.clone()));
-            drop(cache);
-
-            let response_id_key: _ = v8::String::new(scope, "__beejsResponseId").unwrap();
-            let response_id_val: _ =
-                v8::Integer::new_from_unsigned(scope, response_id as u32).into();
-            response_obj.set(scope, response_id_key.into(), response_id_val);
-
-            // Add body string for direct access
-            let body_key: _ = v8::String::new(scope, "body").unwrap();
-            let body_val: _ = v8::String::new(scope, &body_str).unwrap().into();
-            response_obj.set(scope, body_key.into(), body_val);
-
-            // Add json() method
-            let json_template: _ = v8::FunctionTemplate::new(scope, json_callback);
-            let json_func: _ = json_template.get_function(scope).unwrap();
-            let json_key: _ = v8::String::new(scope, "json").unwrap();
-            response_obj.set(scope, json_key.into(), json_func.into());
-
-            // Add text() method
-            let text_template: _ = v8::FunctionTemplate::new(scope, text_callback);
-            let text_func: _ = text_template.get_function(scope).unwrap();
-            let text_key: _ = v8::String::new(scope, "text").unwrap();
-            response_obj.set(scope, text_key.into(), text_func.into());
-
-            // v0.3.344: Add arrayBuffer() method (Body mixin)
-            let array_buffer_template: _ = v8::FunctionTemplate::new(scope, array_buffer_callback);
-            let array_buffer_func: _ = array_buffer_template.get_function(scope).unwrap();
-            let array_buffer_key: _ = v8::String::new(scope, "arrayBuffer").unwrap();
-            response_obj.set(scope, array_buffer_key.into(), array_buffer_func.into());
-
-            // v0.3.344: Add blob() method (Body mixin)
-            let blob_template: _ = v8::FunctionTemplate::new(scope, blob_callback);
-            let blob_func: _ = blob_template.get_function(scope).unwrap();
-            let blob_key: _ = v8::String::new(scope, "blob").unwrap();
-            response_obj.set(scope, blob_key.into(), blob_func.into());
+            store_response_body(scope, response_obj, response.url.clone(), body_vec);
+            attach_response_body_methods(scope, response_obj);
 
             // v0.3.348: Add type property (response type) - use actual response type
             let type_key: _ = v8::String::new(scope, "type").unwrap();
@@ -446,61 +369,14 @@ fn fetch_callback(
                 v8::Boolean::new(scope, response.body_used).into();
             response_obj.set(scope, body_used_key.into(), body_used_val);
 
-            // v0.3.348: Add clone() method - use a simple function that copies properties
-            let clone_key: _ = v8::String::new(scope, "clone").unwrap();
-            let clone_template: _ = v8::FunctionTemplate::new(
-                scope,
-                |scope: &mut v8::HandleScope,
-                 args: v8::FunctionCallbackArguments,
-                 mut rv: v8::ReturnValue| {
-                    // Get the original response object
-                    let this_obj: v8::Local<v8::Object> = args.this();
-
-                    // Clone the response object properties
-                    let cloned_obj: v8::Local<v8::Object> = v8::Object::new(scope);
-
-                    // Copy all properties by getting all property names
-                    let key_names = [
-                        "status",
-                        "ok",
-                        "statusText",
-                        "url",
-                        "type",
-                        "redirected",
-                        "body",
-                        "headers",
-                        "__beejsResponseId",
-                    ];
-
-                    for name in &key_names {
-                        let key_local = v8::String::new(scope, name).unwrap().into();
-                        if let Some(val) = this_obj.get(scope, key_local) {
-                            cloned_obj.set(scope, key_local, val);
-                        }
-                    }
-
-                    // Copy methods
-                    let methods = ["json", "text", "arrayBuffer", "blob"];
-                    for method_name in &methods {
-                        let key_local = v8::String::new(scope, method_name).unwrap().into();
-                        if let Some(method_val) = this_obj.get(scope, key_local) {
-                            cloned_obj.set(scope, key_local, method_val);
-                        }
-                    }
-
-                    rv.set(cloned_obj.into());
-                },
-            );
-            let clone_func: v8::Local<v8::Function> = clone_template.get_function(scope).unwrap();
-            response_obj.set(scope, clone_key.into(), clone_func.into());
+            // v0.3.348: Add clone() method
+            attach_response_clone_method(scope, response_obj);
 
             // Add headers (v0.3.348: enhanced with proper Headers object)
-            let headers_obj: _ = v8::Object::new(scope);
-            for (key, value) in response.headers {
-                let header_key: _ = v8::String::new(scope, &key).unwrap();
-                let header_val: _ = v8::String::new(scope, &value).unwrap().into();
-                headers_obj.set(scope, header_key.into(), header_val);
-            }
+            let headers_obj = create_headers_object_with_entries(
+                scope,
+                response.headers.into_iter().collect::<Vec<_>>(),
+            );
             let headers_key: _ = v8::String::new(scope, "headers").unwrap();
             response_obj.set(scope, headers_key.into(), headers_obj.into());
             retval.set(response_obj.into());
@@ -819,7 +695,7 @@ fn request_constructor_callback(
     let mut init_integrity = String::new();
     let mut init_keepalive = false;
     let mut init_body: Option<String> = None;
-    let init_headers: Vec<(String, String)> = Vec::new();
+    let mut init_headers: Vec<(String, String)> = Vec::new();
 
     // Parse init object (second argument) for additional properties
     // Note: args.get(1) returns undefined if not provided, so we need to check
@@ -832,6 +708,12 @@ fn request_constructor_callback(
                 if let Some(method_str) = method_val.to_string(scope) {
                     method = method_str.to_rust_string_lossy(scope);
                 }
+            }
+
+            // Parse headers
+            let headers_key = v8::String::new(scope, "headers").unwrap().into();
+            if let Some(headers_val) = init.get(scope, headers_key) {
+                init_headers = header_entries_from_value(scope, headers_val);
             }
 
             // Parse cache
@@ -914,7 +796,7 @@ fn request_constructor_callback(
     let request_data = RequestData {
         url: url.clone(),
         method: method.clone(),
-        headers: init_headers,
+        headers: init_headers.clone(),
         body: init_body.clone(),
         cache: init_cache.clone(),
         credentials: init_credentials.clone(),
@@ -939,9 +821,9 @@ fn request_constructor_callback(
     let method_val = v8::String::new(scope, &method).unwrap().into();
     request_obj.set(scope, method_key, method_val);
 
-    // Set headers property (empty object for now)
+    // Set headers property
     let headers_key = v8::String::new(scope, "headers").unwrap().into();
-    let headers_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+    let headers_obj = create_headers_object_with_entries(scope, init_headers.clone());
     request_obj.set(scope, headers_key, headers_obj.into());
 
     // Set body property
@@ -1139,12 +1021,41 @@ fn response_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let status: u32 = args
-        .get(0)
-        .to_integer(scope)
-        .map(|i| i.value() as u32)
-        .unwrap_or(200);
-    let body: _ = args.get(1);
+    let body: _ = args.get(0);
+    let init: _ = args.get(1);
+
+    let mut status: u32 = 200;
+    let mut status_text = String::new();
+    let mut header_entries: Vec<(String, String)> = Vec::new();
+
+    if init.is_object() {
+        if let Some(init_obj) = init.to_object(scope) {
+            let status_key = v8::String::new(scope, "status").unwrap().into();
+            if let Some(status_val) = init_obj.get(scope, status_key) {
+                if !status_val.is_undefined() {
+                    if let Some(status_int) = status_val.to_integer(scope) {
+                        status = status_int.value() as u32;
+                    }
+                }
+            }
+
+            let status_text_key = v8::String::new(scope, "statusText").unwrap().into();
+            if let Some(status_text_val) = init_obj.get(scope, status_text_key) {
+                if status_text_val.is_string() {
+                    status_text = status_text_val
+                        .to_string(scope)
+                        .unwrap()
+                        .to_rust_string_lossy(scope);
+                }
+            }
+
+            let headers_key = v8::String::new(scope, "headers").unwrap().into();
+            if let Some(headers_val) = init_obj.get(scope, headers_key) {
+                header_entries = header_entries_from_value(scope, headers_val);
+            }
+        }
+    }
+
     let response_obj: _ = v8::Object::new(scope);
     let status_key: _ = v8::String::new(scope, "status").unwrap();
     let status_val: _ = v8::Integer::new_from_unsigned(scope, status).into();
@@ -1152,18 +1063,238 @@ fn response_constructor_callback(
     let ok_key: _ = v8::String::new(scope, "ok").unwrap();
     let ok_key_val: _ = v8::Boolean::new(scope, status >= 200 && status < 300).into();
     response_obj.set(scope, ok_key.into(), ok_key_val);
-    if body.is_string() {
-        let body_text: _ = body.to_string(scope).unwrap().to_rust_string_lossy(scope);
-        let body_key: _ = v8::String::new(scope, "body").unwrap();
-        let body_val: _ = v8::String::new(scope, &body_text).unwrap().into();
-        response_obj.set(scope, body_key.into(), body_val);
-    }
+
+    let status_text_key: _ = v8::String::new(scope, "statusText").unwrap();
+    let status_text_val: v8::Local<v8::Value> =
+        v8::String::new(scope, &status_text).unwrap().into();
+    response_obj.set(scope, status_text_key.into(), status_text_val);
+
+    let url_key: _ = v8::String::new(scope, "url").unwrap();
+    let url_val: v8::Local<v8::Value> = v8::String::new(scope, "").unwrap().into();
+    response_obj.set(scope, url_key.into(), url_val);
+
+    let type_key: _ = v8::String::new(scope, "type").unwrap();
+    let type_val: v8::Local<v8::Value> = v8::String::new(scope, "default").unwrap().into();
+    response_obj.set(scope, type_key.into(), type_val);
+
+    let redirected_key: _ = v8::String::new(scope, "redirected").unwrap();
+    let redirected_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+    response_obj.set(scope, redirected_key.into(), redirected_val);
+
+    let body_vec = body_value_to_bytes(scope, body);
+    store_response_body(scope, response_obj, String::new(), body_vec);
+    attach_response_body_methods(scope, response_obj);
+
+    let body_used_key: _ = v8::String::new(scope, "bodyUsed").unwrap();
+    let body_used_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+    response_obj.set(scope, body_used_key.into(), body_used_val);
+
+    let headers_obj = create_headers_object_with_entries(scope, header_entries);
+    let headers_key: _ = v8::String::new(scope, "headers").unwrap();
+    response_obj.set(scope, headers_key.into(), headers_obj.into());
+
+    attach_response_clone_method(scope, response_obj);
+
     retval.set(response_obj.into());
 }
+
+fn body_value_to_bytes(scope: &mut v8::HandleScope, body: v8::Local<v8::Value>) -> Vec<u8> {
+    if body.is_null_or_undefined() {
+        Vec::new()
+    } else {
+        body.to_string(scope)
+            .map(|body| body.to_rust_string_lossy(scope).into_bytes())
+            .unwrap_or_default()
+    }
+}
+
+fn header_entries_from_value(
+    scope: &mut v8::HandleScope,
+    headers_val: v8::Local<v8::Value>,
+) -> Vec<(String, String)> {
+    if !headers_val.is_object() {
+        return Vec::new();
+    }
+
+    let Some(headers_obj) = headers_val.to_object(scope) else {
+        return Vec::new();
+    };
+
+    if let Some(index) = headers_cache_index_from_object(scope, headers_obj) {
+        let cache = get_headers_cache().lock().unwrap();
+        return cache.get(&index).cloned().unwrap_or_default();
+    }
+
+    if headers_val.is_array() {
+        if let Ok(headers_array) = v8::Local::<v8::Array>::try_from(headers_val) {
+            return header_entries_from_sequence(scope, headers_array);
+        }
+    }
+
+    let Some(keys_array) = headers_obj.get_own_property_names(scope) else {
+        return Vec::new();
+    };
+
+    let mut entries = Vec::new();
+    for i in 0..keys_array.length() {
+        let Some(key) = keys_array.get_index(scope, i) else {
+            continue;
+        };
+        let Some(key_str) = key.to_string(scope) else {
+            continue;
+        };
+        let Some(value) = headers_obj.get(scope, key) else {
+            continue;
+        };
+        if value.is_function() {
+            continue;
+        }
+        let Some(value_str) = value.to_string(scope) else {
+            continue;
+        };
+        entries.push((
+            normalize_header_name(&key_str.to_rust_string_lossy(scope)),
+            value_str.to_rust_string_lossy(scope),
+        ));
+    }
+
+    entries
+}
+
+fn normalize_header_name(name: &str) -> String {
+    name.to_ascii_lowercase()
+}
+
+fn header_entries_from_sequence(
+    scope: &mut v8::HandleScope,
+    headers_array: v8::Local<v8::Array>,
+) -> Vec<(String, String)> {
+    let mut entries = Vec::new();
+
+    for i in 0..headers_array.length() {
+        let Some(pair_val) = headers_array.get_index(scope, i) else {
+            continue;
+        };
+        if !pair_val.is_array() {
+            continue;
+        }
+        let Ok(pair_array) = v8::Local::<v8::Array>::try_from(pair_val) else {
+            continue;
+        };
+        let Some(name_val) = pair_array.get_index(scope, 0) else {
+            continue;
+        };
+        let Some(value_val) = pair_array.get_index(scope, 1) else {
+            continue;
+        };
+        let Some(name) = name_val.to_string(scope) else {
+            continue;
+        };
+        let Some(value) = value_val.to_string(scope) else {
+            continue;
+        };
+
+        entries.push((
+            normalize_header_name(&name.to_rust_string_lossy(scope)),
+            value.to_rust_string_lossy(scope),
+        ));
+    }
+
+    entries
+}
+
+fn headers_cache_index_from_object(
+    scope: &mut v8::HandleScope,
+    headers_obj: v8::Local<v8::Object>,
+) -> Option<usize> {
+    headers_obj
+        .get_internal_field(scope, 0)
+        .and_then(|value| value.to_integer(scope))
+        .map(|index| index.value() as usize)
+}
+
+fn headers_entries_for_object(
+    scope: &mut v8::HandleScope,
+    headers_obj: v8::Local<v8::Object>,
+) -> Vec<(String, String)> {
+    headers_cache_index_from_object(scope, headers_obj)
+        .and_then(|index| get_headers_cache().lock().unwrap().get(&index).cloned())
+        .unwrap_or_default()
+}
+
+fn headers_keys_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: &[(String, String)],
+) -> v8::Local<'a, v8::Array> {
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (index, (name, _)) in entries.iter().enumerate() {
+        let value = v8::String::new(scope, name).unwrap().into();
+        array.set_index(scope, index as u32, value);
+    }
+    array
+}
+
+fn headers_values_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: &[(String, String)],
+) -> v8::Local<'a, v8::Array> {
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (index, (_, header_value)) in entries.iter().enumerate() {
+        let value = v8::String::new(scope, header_value).unwrap().into();
+        array.set_index(scope, index as u32, value);
+    }
+    array
+}
+
+fn headers_entries_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: &[(String, String)],
+) -> v8::Local<'a, v8::Array> {
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (index, (name, header_value)) in entries.iter().enumerate() {
+        let pair = v8::Array::new(scope, 2);
+        let name_value = v8::String::new(scope, name).unwrap().into();
+        let header_value = v8::String::new(scope, header_value).unwrap().into();
+        pair.set_index(scope, 0, name_value);
+        pair.set_index(scope, 1, header_value);
+        array.set_index(scope, index as u32, pair.into());
+    }
+    array
+}
+
+fn symbol_iterator_value<'a>(scope: &mut v8::HandleScope<'a>) -> Option<v8::Local<'a, v8::Value>> {
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+    let symbol_key: v8::Local<v8::Value> = v8::String::new(scope, "Symbol")?.into();
+    let symbol_value = global.get(scope, symbol_key)?;
+    let symbol_object = symbol_value.to_object(scope)?;
+    let iterator_key: v8::Local<v8::Value> = v8::String::new(scope, "iterator")?.into();
+    symbol_object.get(scope, iterator_key)
+}
+
+fn iterator_from_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    array: v8::Local<'a, v8::Array>,
+) -> v8::Local<'a, v8::Value> {
+    let Some(iterator_key) = symbol_iterator_value(scope) else {
+        return array.into();
+    };
+    let Some(array_iterator) = array.get(scope, iterator_key) else {
+        return array.into();
+    };
+    let Ok(array_iterator_func) = v8::Local::<v8::Function>::try_from(array_iterator) else {
+        return array.into();
+    };
+
+    array_iterator_func
+        .call(scope, array.into(), &[])
+        .unwrap_or_else(|| array.into())
+}
+
 /// Headers constructor callback - uses ObjectTemplate with internal fields
 fn headers_constructor_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     // Create ObjectTemplate with internal field for storing headers index
@@ -1191,8 +1322,9 @@ fn headers_constructor_callback(
     headers_obj.set_internal_field(0, index_val);
 
     // Initialize headers data for this index
+    let initial_entries = header_entries_from_value(scope, args.get(0));
     let mut cache = get_headers_cache().lock().unwrap();
-    cache.insert(index, Vec::new());
+    cache.insert(index, initial_entries);
     drop(cache);
 
     // Add get() method
@@ -1212,7 +1344,7 @@ fn headers_constructor_callback(
                 .unwrap_or(usize::MAX);
 
             let name = if let Some(name_val) = args.get(0).to_string(scope) {
-                name_val.to_rust_string_lossy(scope).to_lowercase()
+                normalize_header_name(&name_val.to_rust_string_lossy(scope))
             } else {
                 rv.set(v8::null(scope).into());
                 return;
@@ -1255,7 +1387,7 @@ fn headers_constructor_callback(
                 .unwrap_or(usize::MAX);
 
             let name = if let Some(name_val) = args.get(0).to_string(scope) {
-                name_val.to_rust_string_lossy(scope)
+                normalize_header_name(&name_val.to_rust_string_lossy(scope))
             } else {
                 return;
             };
@@ -1266,12 +1398,10 @@ fn headers_constructor_callback(
                 return;
             };
 
-            let name_lower = name.to_lowercase();
-
             let mut cache = get_headers_cache().lock().unwrap();
             if let Some(headers) = cache.get_mut(&index) {
                 // Remove existing headers with same name (case-insensitive)
-                headers.retain(|(key, _)| key.to_lowercase() != name_lower);
+                headers.retain(|(key, _)| key != &name);
                 // Add new header
                 headers.push((name, value));
             }
@@ -1297,7 +1427,7 @@ fn headers_constructor_callback(
                 .unwrap_or(usize::MAX);
 
             let name = if let Some(name_val) = args.get(0).to_string(scope) {
-                name_val.to_rust_string_lossy(scope).to_lowercase()
+                normalize_header_name(&name_val.to_rust_string_lossy(scope))
             } else {
                 rv.set(v8::Boolean::new(scope, false).into());
                 return;
@@ -1306,7 +1436,7 @@ fn headers_constructor_callback(
             let cache = get_headers_cache().lock().unwrap();
             let has_header = cache
                 .get(&index)
-                .map(|headers| headers.iter().any(|(key, _)| key.to_lowercase() == name))
+                .map(|headers| headers.iter().any(|(key, _)| key == &name))
                 .unwrap_or(false);
 
             rv.set(v8::Boolean::new(scope, has_header).into());
@@ -1330,14 +1460,14 @@ fn headers_constructor_callback(
                 .unwrap_or(usize::MAX);
 
             let name = if let Some(name_val) = args.get(0).to_string(scope) {
-                name_val.to_rust_string_lossy(scope).to_lowercase()
+                normalize_header_name(&name_val.to_rust_string_lossy(scope))
             } else {
                 return;
             };
 
             let mut cache = get_headers_cache().lock().unwrap();
             if let Some(headers) = cache.get_mut(&index) {
-                headers.retain(|(key, _)| key.to_lowercase() != name);
+                headers.retain(|(key, _)| key != &name);
             }
         },
     );
@@ -1359,7 +1489,7 @@ fn headers_constructor_callback(
                 .unwrap_or(usize::MAX);
 
             let name = if let Some(name_val) = args.get(0).to_string(scope) {
-                name_val.to_rust_string_lossy(scope)
+                normalize_header_name(&name_val.to_rust_string_lossy(scope))
             } else {
                 return;
             };
@@ -1379,7 +1509,232 @@ fn headers_constructor_callback(
     let append_func = append_func_template.get_function(scope).unwrap();
     headers_obj.set(scope, append_key, append_func.into());
 
+    // Add keys() method
+    let keys_key = v8::String::new(scope, "keys").unwrap().into();
+    let keys_func_template = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            let entries = headers_entries_for_object(scope, args.this());
+            let array = headers_keys_array(scope, &entries);
+            rv.set(iterator_from_array(scope, array));
+        },
+    );
+    let keys_func = keys_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, keys_key, keys_func.into());
+
+    // Add values() method
+    let values_key = v8::String::new(scope, "values").unwrap().into();
+    let values_func_template = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            let entries = headers_entries_for_object(scope, args.this());
+            let array = headers_values_array(scope, &entries);
+            rv.set(iterator_from_array(scope, array));
+        },
+    );
+    let values_func = values_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, values_key, values_func.into());
+
+    // Add entries() method
+    let entries_key = v8::String::new(scope, "entries").unwrap().into();
+    let entries_func_template = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            let entries = headers_entries_for_object(scope, args.this());
+            let array = headers_entries_array(scope, &entries);
+            rv.set(iterator_from_array(scope, array));
+        },
+    );
+    let entries_func = entries_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, entries_key, entries_func.into());
+
+    // Add [Symbol.iterator]() method
+    let iterator_func_template = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            let entries = headers_entries_for_object(scope, args.this());
+            let array = headers_entries_array(scope, &entries);
+            rv.set(iterator_from_array(scope, array));
+        },
+    );
+    let iterator_func = iterator_func_template.get_function(scope).unwrap();
+    if let Some(iterator_key) = symbol_iterator_value(scope) {
+        headers_obj.set(scope, iterator_key, iterator_func.into());
+    }
+
+    // Add forEach() method
+    let for_each_key = v8::String::new(scope, "forEach").unwrap().into();
+    let for_each_func_template = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+            let callback_val = args.get(0);
+            let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_val) else {
+                return;
+            };
+
+            let this_obj = args.this();
+            let entries = headers_entries_for_object(scope, this_obj);
+            let this_arg = args.get(1);
+            let receiver = if this_arg.is_undefined() {
+                v8::undefined(scope).into()
+            } else {
+                this_arg
+            };
+
+            for (name, header_value) in entries {
+                let value_arg: v8::Local<v8::Value> =
+                    v8::String::new(scope, &header_value).unwrap().into();
+                let name_arg: v8::Local<v8::Value> = v8::String::new(scope, &name).unwrap().into();
+                let owner_arg: v8::Local<v8::Value> = this_obj.into();
+                let _ = callback.call(scope, receiver, &[value_arg, name_arg, owner_arg]);
+            }
+        },
+    );
+    let for_each_func = for_each_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, for_each_key, for_each_func.into());
+
     retval.set(headers_obj.into());
+}
+
+fn create_headers_object_with_entries<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: Vec<(String, String)>,
+) -> v8::Local<'a, v8::Object> {
+    let mut headers_obj = v8::Object::new(scope);
+
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+    let headers_ctor_key = v8::String::new(scope, "Headers").unwrap().into();
+    if let Some(headers_ctor) = global.get(scope, headers_ctor_key) {
+        if headers_ctor.is_function() {
+            let headers_ctor_func: v8::Local<v8::Function> = headers_ctor.try_into().unwrap();
+            if let Some(created_headers) = headers_ctor_func.new_instance(scope, &[]) {
+                headers_obj = created_headers;
+            }
+        }
+    }
+
+    let set_key = v8::String::new(scope, "set").unwrap().into();
+    let set_func = headers_obj
+        .get(scope, set_key)
+        .and_then(|value| v8::Local::<v8::Function>::try_from(value).ok());
+
+    if let Some(set_func) = set_func {
+        for (name, value) in entries {
+            let name_value: v8::Local<v8::Value> = v8::String::new(scope, &name).unwrap().into();
+            let header_value: v8::Local<v8::Value> = v8::String::new(scope, &value).unwrap().into();
+            let _ = set_func.call(scope, headers_obj.into(), &[name_value, header_value]);
+        }
+    } else {
+        for (name, value) in entries {
+            let header_key = v8::String::new(scope, &name).unwrap().into();
+            let header_val = v8::String::new(scope, &value).unwrap().into();
+            headers_obj.set(scope, header_key, header_val);
+        }
+    }
+
+    headers_obj
+}
+
+fn store_response_body(
+    scope: &mut v8::HandleScope,
+    response_obj: v8::Local<v8::Object>,
+    url: String,
+    body_vec: Vec<u8>,
+) {
+    let response_id = next_response_id();
+    let body_str = String::from_utf8_lossy(&body_vec).to_string();
+    let mut cache = get_response_cache().lock().unwrap();
+    cache.insert(response_id, (url, body_vec));
+    drop(cache);
+
+    let response_id_key: _ = v8::String::new(scope, "__beejsResponseId").unwrap();
+    let response_id_val: _ = v8::Integer::new_from_unsigned(scope, response_id as u32).into();
+    response_obj.set(scope, response_id_key.into(), response_id_val);
+
+    let body_key: _ = v8::String::new(scope, "body").unwrap();
+    let body_val: _ = v8::String::new(scope, &body_str).unwrap().into();
+    response_obj.set(scope, body_key.into(), body_val);
+}
+
+fn attach_response_body_methods(scope: &mut v8::HandleScope, response_obj: v8::Local<v8::Object>) {
+    let json_template: _ = v8::FunctionTemplate::new(scope, json_callback);
+    let json_func: _ = json_template.get_function(scope).unwrap();
+    let json_key: _ = v8::String::new(scope, "json").unwrap();
+    response_obj.set(scope, json_key.into(), json_func.into());
+
+    let text_template: _ = v8::FunctionTemplate::new(scope, text_callback);
+    let text_func: _ = text_template.get_function(scope).unwrap();
+    let text_key: _ = v8::String::new(scope, "text").unwrap();
+    response_obj.set(scope, text_key.into(), text_func.into());
+
+    let array_buffer_template: _ = v8::FunctionTemplate::new(scope, array_buffer_callback);
+    let array_buffer_func: _ = array_buffer_template.get_function(scope).unwrap();
+    let array_buffer_key: _ = v8::String::new(scope, "arrayBuffer").unwrap();
+    response_obj.set(scope, array_buffer_key.into(), array_buffer_func.into());
+
+    let blob_template: _ = v8::FunctionTemplate::new(scope, blob_callback);
+    let blob_func: _ = blob_template.get_function(scope).unwrap();
+    let blob_key: _ = v8::String::new(scope, "blob").unwrap();
+    response_obj.set(scope, blob_key.into(), blob_func.into());
+}
+
+fn attach_response_clone_method(scope: &mut v8::HandleScope, response_obj: v8::Local<v8::Object>) {
+    let clone_key: _ = v8::String::new(scope, "clone").unwrap();
+    let clone_template: _ = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            let this_obj: v8::Local<v8::Object> = args.this();
+
+            if response_body_is_used(scope, this_obj) {
+                throw_response_body_already_consumed(scope);
+                return;
+            }
+
+            let cloned_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+            let key_names = [
+                "status",
+                "ok",
+                "statusText",
+                "url",
+                "type",
+                "redirected",
+                "body",
+                "bodyUsed",
+                "headers",
+                "__beejsResponseId",
+            ];
+
+            for name in &key_names {
+                let key_local = v8::String::new(scope, name).unwrap().into();
+                if let Some(val) = this_obj.get(scope, key_local) {
+                    cloned_obj.set(scope, key_local, val);
+                }
+            }
+
+            let methods = ["json", "text", "arrayBuffer", "blob", "clone"];
+            for method_name in &methods {
+                let key_local = v8::String::new(scope, method_name).unwrap().into();
+                if let Some(method_val) = this_obj.get(scope, key_local) {
+                    cloned_obj.set(scope, key_local, method_val);
+                }
+            }
+
+            rv.set(cloned_obj.into());
+        },
+    );
+    let clone_func: v8::Local<v8::Function> = clone_template.get_function(scope).unwrap();
+    response_obj.set(scope, clone_key.into(), clone_func.into());
 }
 
 /// json() method callback for Response objects
@@ -1391,7 +1746,20 @@ fn json_callback(
     // Get the this object (response object)
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    if let Some(body) = response_body_for_object(scope, this_obj) {
+    let body = match consume_response_body_for_object(scope, this_obj) {
+        Ok(Some(body)) => body,
+        Ok(None) => {
+            // No cached response found
+            let error: v8::Local<v8::Value> = v8::String::new(scope, "Response body not available")
+                .unwrap()
+                .into();
+            retval.set(error);
+            return;
+        }
+        Err(()) => return,
+    };
+
+    {
         // Try to parse and format JSON prettily
         let body_str = String::from_utf8_lossy(&body);
 
@@ -1406,12 +1774,6 @@ fn json_callback(
             let result: v8::Local<v8::Value> = v8::String::new(scope, &body_str).unwrap().into();
             retval.set(result);
         }
-    } else {
-        // No cached response found
-        let error: v8::Local<v8::Value> = v8::String::new(scope, "Response body not available")
-            .unwrap()
-            .into();
-        retval.set(error);
     }
 }
 
@@ -1424,17 +1786,22 @@ fn text_callback(
     // Get the this object (response object)
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    if let Some(body) = response_body_for_object(scope, this_obj) {
-        let body_str = String::from_utf8_lossy(&body);
-        let result: v8::Local<v8::Value> = v8::String::new(scope, &body_str).unwrap().into();
-        retval.set(result);
-    } else {
-        // No cached response found
-        let error: v8::Local<v8::Value> = v8::String::new(scope, "Response body not available")
-            .unwrap()
-            .into();
-        retval.set(error);
-    }
+    let body = match consume_response_body_for_object(scope, this_obj) {
+        Ok(Some(body)) => body,
+        Ok(None) => {
+            // No cached response found
+            let error: v8::Local<v8::Value> = v8::String::new(scope, "Response body not available")
+                .unwrap()
+                .into();
+            retval.set(error);
+            return;
+        }
+        Err(()) => return,
+    };
+
+    let body_str = String::from_utf8_lossy(&body);
+    let result: v8::Local<v8::Value> = v8::String::new(scope, &body_str).unwrap().into();
+    retval.set(result);
 }
 
 /// arrayBuffer() method callback for Response objects (Body mixin)
@@ -1447,20 +1814,25 @@ fn array_buffer_callback(
     // Get the this object (response object)
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    if let Some(body) = response_body_for_object(scope, this_obj) {
-        // Create an ArrayBuffer from the body bytes
-        let buffer = v8::ArrayBuffer::new(scope, body.len());
-        let store = buffer.get_backing_store();
-        let store_ptr = store.as_ref().as_ptr() as *mut u8;
-        unsafe {
-            std::ptr::copy_nonoverlapping(body.as_ptr(), store_ptr, body.len());
+    let body = match consume_response_body_for_object(scope, this_obj) {
+        Ok(Some(body)) => body,
+        Ok(None) => {
+            // No cached response found - return empty ArrayBuffer
+            let buffer = v8::ArrayBuffer::new(scope, 0);
+            retval.set(buffer.into());
+            return;
         }
-        retval.set(buffer.into());
-    } else {
-        // No cached response found - return empty ArrayBuffer
-        let buffer = v8::ArrayBuffer::new(scope, 0);
-        retval.set(buffer.into());
+        Err(()) => return,
+    };
+
+    // Create an ArrayBuffer from the body bytes
+    let buffer = v8::ArrayBuffer::new(scope, body.len());
+    let store = buffer.get_backing_store();
+    let store_ptr = store.as_ref().as_ptr() as *mut u8;
+    unsafe {
+        std::ptr::copy_nonoverlapping(body.as_ptr(), store_ptr, body.len());
     }
+    retval.set(buffer.into());
 }
 
 /// blob() method callback for Response objects (Body mixin)
@@ -1473,44 +1845,82 @@ fn blob_callback(
     // Get the this object (response object)
     let this_obj: v8::Local<v8::Object> = args.this();
 
-    if let Some(body) = response_body_for_object(scope, this_obj) {
-        // Create a blob-like object with size and type properties
-        let blob_obj = v8::Object::new(scope);
+    let body = match consume_response_body_for_object(scope, this_obj) {
+        Ok(Some(body)) => body,
+        Ok(None) => {
+            // No cached response found - return empty blob
+            let blob_obj = v8::Object::new(scope);
+            let size_key = v8::String::new(scope, "size").unwrap().into();
+            let size_val = v8::Integer::new_from_unsigned(scope, 0).into();
+            blob_obj.set(scope, size_key, size_val);
 
-        // Set size property
-        let size_key = v8::String::new(scope, "size").unwrap().into();
-        let size_val = v8::Integer::new_from_unsigned(scope, body.len() as u32).into();
-        blob_obj.set(scope, size_key, size_val);
+            let type_key = v8::String::new(scope, "type").unwrap().into();
+            let type_val = v8::String::new(scope, "application/octet-stream")
+                .unwrap()
+                .into();
+            blob_obj.set(scope, type_key, type_val);
 
-        // Set type property (content-type)
-        let type_key = v8::String::new(scope, "type").unwrap().into();
-        let type_val = v8::String::new(scope, "application/octet-stream")
-            .unwrap()
-            .into();
-        blob_obj.set(scope, type_key, type_val);
+            retval.set(blob_obj.into());
+            return;
+        }
+        Err(()) => return,
+    };
 
-        // Set arrayBuffer method that returns the body as ArrayBuffer
-        let array_buffer_template = v8::FunctionTemplate::new(scope, array_buffer_callback);
-        let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
-        let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap().into();
-        blob_obj.set(scope, array_buffer_key, array_buffer_func.into());
+    // Create a blob-like object with size and type properties
+    let blob_obj = v8::Object::new(scope);
 
-        retval.set(blob_obj.into());
-    } else {
-        // No cached response found - return empty blob
-        let blob_obj = v8::Object::new(scope);
-        let size_key = v8::String::new(scope, "size").unwrap().into();
-        let size_val = v8::Integer::new_from_unsigned(scope, 0).into();
-        blob_obj.set(scope, size_key, size_val);
+    // Set size property
+    let size_key = v8::String::new(scope, "size").unwrap().into();
+    let size_val = v8::Integer::new_from_unsigned(scope, body.len() as u32).into();
+    blob_obj.set(scope, size_key, size_val);
 
-        let type_key = v8::String::new(scope, "type").unwrap().into();
-        let type_val = v8::String::new(scope, "application/octet-stream")
-            .unwrap()
-            .into();
-        blob_obj.set(scope, type_key, type_val);
+    // Set type property (content-type)
+    let type_key = v8::String::new(scope, "type").unwrap().into();
+    let type_val = v8::String::new(scope, "application/octet-stream")
+        .unwrap()
+        .into();
+    blob_obj.set(scope, type_key, type_val);
 
-        retval.set(blob_obj.into());
+    // Set arrayBuffer method that returns the body as ArrayBuffer
+    let array_buffer_template = v8::FunctionTemplate::new(scope, array_buffer_callback);
+    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
+    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap().into();
+    blob_obj.set(scope, array_buffer_key, array_buffer_func.into());
+
+    retval.set(blob_obj.into());
+}
+
+fn consume_response_body_for_object(
+    scope: &mut v8::HandleScope,
+    response_obj: v8::Local<v8::Object>,
+) -> std::result::Result<Option<Vec<u8>>, ()> {
+    if response_body_is_used(scope, response_obj) {
+        throw_response_body_already_consumed(scope);
+        return Err(());
     }
+
+    let body = response_body_for_object(scope, response_obj);
+    if body.is_some() {
+        let body_used_key = v8::String::new(scope, "bodyUsed").unwrap().into();
+        let body_used_val = v8::Boolean::new(scope, true).into();
+        response_obj.set(scope, body_used_key, body_used_val);
+    }
+
+    Ok(body)
+}
+
+fn response_body_is_used(scope: &mut v8::HandleScope, response_obj: v8::Local<v8::Object>) -> bool {
+    let body_used_key = v8::String::new(scope, "bodyUsed").unwrap().into();
+    response_obj
+        .get(scope, body_used_key)
+        .map(|value| value.is_true())
+        .unwrap_or(false)
+}
+
+fn throw_response_body_already_consumed(scope: &mut v8::HandleScope) {
+    let message = v8::String::new(scope, "Response body already consumed").unwrap();
+    let error = v8::Exception::type_error(scope, message);
+    scope.throw_exception(error.into());
 }
 
 fn response_body_for_object(

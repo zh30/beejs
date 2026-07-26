@@ -111,8 +111,8 @@ bee bundle <entry> --outfile dist/bundle.js
 bee debug <file>
 bee serve --host localhost --port 3000
 bee init [name]
-bee create js my-app
-bee create ts my-ts-app
+bee create my-app js
+bee create my-ts-app ts
 bee add <package>
 bee remove <package>
 bee install

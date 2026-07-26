@@ -3,7 +3,49 @@ use serial_test::serial;
 
 #[test]
 #[serial]
-fn test_subtle_encrypt_aes_cbc_unimplemented_rejects() {
+fn test_crypto_key_internal_key_data_is_not_visible_to_js() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const hmacKey = await crypto.subtle.generateKey(
+                { name: 'HMAC', hash: 'SHA-256', length: 256 },
+                true,
+                ['sign', 'verify']
+            );
+            const aesKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const hmacHidden = hmacKey.__beejs_key_data__ === undefined
+                && !Object.prototype.hasOwnProperty.call(hmacKey, '__beejs_key_data__')
+                && !Object.getOwnPropertyNames(hmacKey).includes('__beejs_key_data__');
+            const aesHidden = aesKey.__beejs_key_data__ === undefined
+                && !Object.prototype.hasOwnProperty.call(aesKey, '__beejs_key_data__')
+                && !Object.getOwnPropertyNames(aesKey).includes('__beejs_key_data__');
+
+            const data = new TextEncoder().encode('opaque key material');
+            const signature = await crypto.subtle.sign({ name: 'HMAC' }, hmacKey, data);
+            const verified = await crypto.subtle.verify({ name: 'HMAC' }, hmacKey, signature, data);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, data);
+            const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ciphertext);
+
+            return hmacHidden
+                && aesHidden
+                && verified
+                && new TextDecoder().decode(plaintext) === 'opaque key material';
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_subtle_encrypt_aes_cbc_without_iv_rejects() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         (async () => {
@@ -15,13 +57,14 @@ fn test_subtle_encrypt_aes_cbc_unimplemented_rejects() {
 
             try {
                 await crypto.subtle.encrypt(
-                    { name: 'AES-CBC', iv: new Uint8Array(16) },
+                    { name: 'AES-CBC' },
                     key,
                     new Uint8Array([1, 2, 3, 4])
                 );
                 return false;
-            } catch (_) {
-                return true;
+            } catch (error) {
+                return String(error && error.message ? error.message : error)
+                    .includes('iv');
             }
         })();
     "#;
@@ -32,7 +75,7 @@ fn test_subtle_encrypt_aes_cbc_unimplemented_rejects() {
 
 #[test]
 #[serial]
-fn test_subtle_decrypt_aes_cbc_unimplemented_rejects() {
+fn test_subtle_decrypt_aes_cbc_with_short_iv_rejects() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         (async () => {
@@ -44,13 +87,14 @@ fn test_subtle_decrypt_aes_cbc_unimplemented_rejects() {
 
             try {
                 await crypto.subtle.decrypt(
-                    { name: 'AES-CBC', iv: new Uint8Array(16) },
+                    { name: 'AES-CBC', iv: new Uint8Array(8) },
                     key,
-                    new Uint8Array([0, 0, 0, 0, 1, 2, 3, 4])
+                    new Uint8Array(16)
                 );
                 return false;
-            } catch (_) {
-                return true;
+            } catch (error) {
+                return String(error && error.message ? error.message : error)
+                    .includes('iv');
             }
         })();
     "#;
@@ -61,19 +105,154 @@ fn test_subtle_decrypt_aes_cbc_unimplemented_rejects() {
 
 #[test]
 #[serial]
-fn test_rsa_generate_key_unimplemented_rejects() {
+fn test_subtle_encrypt_aes_ctr_without_counter_rejects() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-CTR', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            try {
+                await crypto.subtle.encrypt(
+                    { name: 'AES-CTR', length: 64 },
+                    key,
+                    new Uint8Array([1, 2, 3, 4])
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message ? error.message : error)
+                    .includes('counter');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_subtle_decrypt_aes_ctr_with_invalid_length_rejects() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-CTR', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            try {
+                await crypto.subtle.decrypt(
+                    { name: 'AES-CTR', counter: new Uint8Array(16), length: 0 },
+                    key,
+                    new Uint8Array([1, 2, 3, 4])
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message ? error.message : error)
+                    .includes('length');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_subtle_generate_key_rejects_invalid_aes_length() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         (async () => {
             try {
                 await crypto.subtle.generateKey(
-                    { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+                    { name: 'AES-GCM', length: 64 },
                     true,
                     ['encrypt', 'decrypt']
                 );
                 return false;
             } catch (error) {
-                return String(error && error.message ? error.message : error).includes('not implemented');
+                return String(error && error.message ? error.message : error)
+                    .includes('length');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_subtle_generate_key_rejects_missing_aes_length() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.generateKey(
+                    { name: 'AES-CBC' },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message ? error.message : error)
+                    .includes('length');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_subtle_import_key_rejects_invalid_raw_aes_key_length() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.importKey(
+                    'raw',
+                    new Uint8Array(15),
+                    { name: 'AES-CBC' },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (error) {
+                return String(error && error.message ? error.message : error)
+                    .includes('length');
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_unsupported_rsa_generate_key_algorithm_rejects() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            try {
+                await crypto.subtle.generateKey(
+                    { name: 'RSA-PSS', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+                    true,
+                    []
+                );
+                return false;
+            } catch (error) {
+                const message = String(error && error.message ? error.message : error);
+                return message.includes('unsupported algorithm') || message.includes('not implemented');
             }
         })();
     "#;

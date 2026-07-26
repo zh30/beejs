@@ -8,14 +8,25 @@ use std::sync::{Arc, Mutex};
 
 /// URL-encode a string for use in query strings
 fn url_encode(value: &str) -> String {
-    utf8_percent_encode(value, NON_ALPHANUMERIC).collect()
+    utf8_percent_encode(value, NON_ALPHANUMERIC)
+        .collect::<String>()
+        .replace("%20", "+")
 }
 
 /// URL-decode a string from query string
 fn url_decode(value: &str) -> String {
-    percent_encoding::percent_decode_str(value)
+    let plus_normalized = value.replace('+', " ");
+    percent_encoding::percent_decode_str(&plus_normalized)
         .decode_utf8_lossy()
         .to_string()
+}
+
+fn throw_type_error(scope: &mut v8::HandleScope, message: &str) {
+    let Some(message) = v8::String::new(scope, message) else {
+        return;
+    };
+    let error = v8::Exception::type_error(scope, message);
+    scope.throw_exception(error);
 }
 
 /// Parse a query string into key-value pairs
@@ -36,6 +47,56 @@ fn parse_query_string(query: &str) -> Vec<(String, String)> {
         }
     }
     pairs
+}
+
+fn parse_sequence_pairs(
+    scope: &mut v8::HandleScope,
+    sequence: v8::Local<v8::Array>,
+) -> Result<Vec<(String, String)>, ()> {
+    let mut pairs = Vec::new();
+
+    for i in 0..sequence.length() {
+        let Some(pair_val) = sequence.get_index(scope, i) else {
+            throw_type_error(scope, "URLSearchParams sequence pair is missing");
+            return Err(());
+        };
+        if !pair_val.is_array() {
+            throw_type_error(scope, "URLSearchParams sequence pair must be an array");
+            return Err(());
+        }
+        let Ok(pair_array) = v8::Local::<v8::Array>::try_from(pair_val) else {
+            throw_type_error(scope, "URLSearchParams sequence pair must be an array");
+            return Err(());
+        };
+        if pair_array.length() != 2 {
+            throw_type_error(
+                scope,
+                "URLSearchParams sequence pair must contain exactly two items",
+            );
+            return Err(());
+        }
+        let key_val = match pair_array.get_index(scope, 0) {
+            Some(value) => value,
+            None => v8::undefined(scope).into(),
+        };
+        let value_val = match pair_array.get_index(scope, 1) {
+            Some(value) => value,
+            None => v8::undefined(scope).into(),
+        };
+        let Some(key) = key_val.to_string(scope) else {
+            return Err(());
+        };
+        let Some(value) = value_val.to_string(scope) else {
+            return Err(());
+        };
+
+        pairs.push((
+            key.to_rust_string_lossy(scope),
+            value.to_rust_string_lossy(scope),
+        ));
+    }
+
+    Ok(pairs)
 }
 
 /// Convert key-value pairs to query string
@@ -88,6 +149,69 @@ fn set_params_data(
     this_obj.set(scope, data_key.into(), external.into());
 }
 
+fn symbol_iterator_value<'a>(scope: &mut v8::HandleScope<'a>) -> Option<v8::Local<'a, v8::Value>> {
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+    let symbol_key: v8::Local<v8::Value> = v8::String::new(scope, "Symbol")?.into();
+    let symbol_value = global.get(scope, symbol_key)?;
+    let symbol_object = symbol_value.to_object(scope)?;
+    let iterator_key: v8::Local<v8::Value> = v8::String::new(scope, "iterator")?.into();
+    symbol_object.get(scope, iterator_key)
+}
+
+fn object_has_iterator(scope: &mut v8::HandleScope, object: v8::Local<v8::Object>) -> bool {
+    let Some(iterator_key) = symbol_iterator_value(scope) else {
+        return false;
+    };
+    object
+        .get(scope, iterator_key)
+        .map(|iterator| iterator.is_function())
+        .unwrap_or(false)
+}
+
+fn array_from_iterable<'scope, 'value>(
+    scope: &mut v8::HandleScope<'scope>,
+    iterable: v8::Local<'value, v8::Value>,
+) -> Option<v8::Local<'scope, v8::Array>> {
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+    let array_key: v8::Local<v8::Value> = v8::String::new(scope, "Array")?.into();
+    let array_value = global.get(scope, array_key)?;
+    let array_object = array_value.to_object(scope)?;
+    let from_key: v8::Local<v8::Value> = v8::String::new(scope, "from")?.into();
+    let from_value = array_object.get(scope, from_key)?;
+    let Ok(from_fn) = v8::Local::<v8::Function>::try_from(from_value) else {
+        throw_type_error(scope, "Array.from is not available");
+        return None;
+    };
+    let result = from_fn.call(scope, array_object.into(), &[iterable])?;
+    if !result.is_array() {
+        throw_type_error(
+            scope,
+            "URLSearchParams iterable init did not produce an array",
+        );
+        return None;
+    }
+    v8::Local::<v8::Array>::try_from(result).ok()
+}
+
+fn set_iterator_returns_self(scope: &mut v8::HandleScope, iterator: v8::Local<v8::Object>) {
+    let Some(iterator_key) = symbol_iterator_value(scope) else {
+        return;
+    };
+    let Some(iterator_fn) = v8::Function::new(
+        scope,
+        |_scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            retval.set(args.this().into());
+        },
+    ) else {
+        return;
+    };
+    iterator.set(scope, iterator_key, iterator_fn.into());
+}
+
 /// URLSearchParams constructor callback
 fn url_search_params_constructor(
     scope: &mut v8::HandleScope,
@@ -127,37 +251,56 @@ fn url_search_params_constructor(
                 &init_str
             };
             pairs = parse_query_string(query);
-        } else if init_arg.is_object() {
-            // Parse from object - use simple property enumeration
-            if let Some(obj) = init_arg.to_object(scope) {
-                let prop_names = obj.get_own_property_names(scope);
-                let prop_names = match prop_names {
-                    Some(names) => names,
-                    None => v8::Array::new(scope, 0),
+        } else if init_arg.is_array() {
+            if let Ok(sequence) = v8::Local::<v8::Array>::try_from(init_arg) {
+                let Ok(parsed_pairs) = parse_sequence_pairs(scope, sequence) else {
+                    return;
                 };
+                pairs = parsed_pairs;
+            }
+        } else if init_arg.is_object() {
+            if let Some(obj) = init_arg.to_object(scope) {
+                if let Some(data) = get_params_data(scope, &obj) {
+                    pairs = data.lock().unwrap().clone();
+                } else if object_has_iterator(scope, obj) {
+                    let Some(sequence) = array_from_iterable(scope, init_arg) else {
+                        return;
+                    };
+                    let Ok(parsed_pairs) = parse_sequence_pairs(scope, sequence) else {
+                        return;
+                    };
+                    pairs = parsed_pairs;
+                } else {
+                    // Parse from record object - use simple property enumeration
+                    let prop_names = obj.get_own_property_names(scope);
+                    let prop_names = match prop_names {
+                        Some(names) => names,
+                        None => v8::Array::new(scope, 0),
+                    };
 
-                for i in 0..prop_names.length() {
-                    let key = match prop_names.get_index(scope, i) {
-                        Some(k) => k,
-                        None => continue,
-                    };
-                    let key_str = if let Some(s) = key.to_string(scope) {
-                        s.to_rust_string_lossy(scope)
-                    } else {
-                        continue;
-                    };
+                    for i in 0..prop_names.length() {
+                        let key = match prop_names.get_index(scope, i) {
+                            Some(k) => k,
+                            None => continue,
+                        };
+                        let key_str = if let Some(s) = key.to_string(scope) {
+                            s.to_rust_string_lossy(scope)
+                        } else {
+                            continue;
+                        };
 
-                    let value = match obj.get(scope, key) {
-                        Some(v) => v,
-                        None => continue,
-                    };
-                    let value_str = if let Some(s) = value.to_string(scope) {
-                        s.to_rust_string_lossy(scope)
-                    } else {
-                        continue;
-                    };
+                        let value = match obj.get(scope, key) {
+                            Some(v) => v,
+                            None => continue,
+                        };
+                        let value_str = if let Some(s) = value.to_string(scope) {
+                            s.to_rust_string_lossy(scope)
+                        } else {
+                            continue;
+                        };
 
-                    pairs.push((key_str, value_str));
+                        pairs.push((key_str, value_str));
+                    }
                 }
             }
         }
@@ -384,13 +527,19 @@ fn url_search_params_constructor(
                 let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
                 let pairs = data.lock().unwrap();
                 let len = pairs.len();
+                let this_arg = args.get(1);
+                let receiver = if this_arg.is_undefined() {
+                    v8::undefined(scope).into()
+                } else {
+                    this_arg
+                };
                 for i in 0..len {
                     if let Some((ref key, ref value)) = pairs.get(i) {
                         let key_val = v8::String::new(scope, key).unwrap().into();
                         let value_val = v8::String::new(scope, value).unwrap().into();
                         let _ = callback_fn.call(
                             scope,
-                            this_obj.into(),
+                            receiver,
                             &[value_val, key_val, this_obj.into()],
                         );
                     }
@@ -502,6 +651,7 @@ fn url_search_params_constructor(
 
                 let next_key = v8::String::new(scope, "next").unwrap();
                 iterator.set(scope, next_key.into(), next_fn.into());
+                set_iterator_returns_self(scope, iterator);
 
                 retval.set(iterator.into());
             } else {
@@ -613,6 +763,7 @@ fn url_search_params_constructor(
 
                 let next_key = v8::String::new(scope, "next").unwrap();
                 iterator.set(scope, next_key.into(), next_fn.into());
+                set_iterator_returns_self(scope, iterator);
 
                 retval.set(iterator.into());
             } else {
@@ -730,6 +881,7 @@ fn url_search_params_constructor(
 
                 let next_key = v8::String::new(scope, "next").unwrap();
                 iterator.set(scope, next_key.into(), next_fn.into());
+                set_iterator_returns_self(scope, iterator);
 
                 retval.set(iterator.into());
             } else {
@@ -740,6 +892,9 @@ fn url_search_params_constructor(
     .unwrap();
     let entries_key = v8::String::new(scope, "entries").unwrap().into();
     params_obj.set(scope, entries_key, entries_fn.into());
+    if let Some(iterator_key) = symbol_iterator_value(scope) {
+        params_obj.set(scope, iterator_key, entries_fn.into());
+    }
 
     // Set the object as the return value
     retval.set(params_obj.into());
@@ -808,7 +963,7 @@ mod tests {
 
     #[test]
     fn test_url_encode() {
-        assert_eq!(url_encode("foo bar"), "foo%20bar");
+        assert_eq!(url_encode("foo bar"), "foo+bar");
         assert_eq!(url_encode("a=b&c=d"), "a%3Db%26c%3Dd");
     }
 

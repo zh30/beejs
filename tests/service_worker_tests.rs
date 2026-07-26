@@ -61,6 +61,37 @@ mod service_worker_tests {
     }
 
     #[test]
+    fn test_service_worker_register_fails_closed_until_lifecycle_exists() {
+        let script = r#"
+            if (typeof navigator === 'undefined' || typeof navigator.serviceWorker === 'undefined') {
+                console.log('ERROR: navigator.serviceWorker not defined');
+            } else {
+                const result = navigator.serviceWorker.register('./test-sw.js');
+                if (!result || typeof result.then !== 'function') {
+                    console.log('ERROR: register did not return a Promise');
+                } else {
+                    result.then(
+                        registration => {
+                            console.log('ERROR: registration resolved fake object: ' + Object.keys(registration).join(','));
+                        },
+                        error => {
+                            const message = String(error && error.message || error);
+                            console.log(message === 'ServiceWorker registration is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                        }
+                    );
+                }
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "ServiceWorker register should fail closed until lifecycle support exists: {}",
+            stdout
+        );
+    }
+
+    #[test]
     fn test_service_worker_register_returns_promise() {
         // Test that navigator.serviceWorker.register returns a Promise
         let script = r#"
@@ -85,18 +116,14 @@ mod service_worker_tests {
     }
 
     #[test]
-    fn test_service_worker_registration_has_scope() {
-        // Test that registration object has scope property
+    fn test_service_worker_register_rejects_instead_of_scope_shell() {
         let script = r#"
             if (typeof navigator !== 'undefined' && typeof navigator.serviceWorker !== 'undefined') {
                 navigator.serviceWorker.register('./test-sw.js').then(registration => {
-                    if (registration && typeof registration.scope === 'string') {
-                        console.log('SUCCESS: registration.scope exists: ' + registration.scope);
-                    } else {
-                        console.log('ERROR: registration.scope not found');
-                    }
+                    console.log('ERROR: registration resolved fake scope: ' + registration.scope);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'ServiceWorker registration is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: navigator.serviceWorker not defined');
@@ -106,24 +133,20 @@ mod service_worker_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Registration should have scope: {}",
+            "ServiceWorker register should reject instead of resolving a scope shell: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_service_worker_registration_has_installing() {
-        // Test that registration object has installing property
+    fn test_service_worker_register_rejects_instead_of_installing_shell() {
         let script = r#"
             if (typeof navigator !== 'undefined' && typeof navigator.serviceWorker !== 'undefined') {
                 navigator.serviceWorker.register('./test-sw.js').then(registration => {
-                    if ('installing' in registration) {
-                        console.log('SUCCESS: registration.installing property exists');
-                    } else {
-                        console.log('ERROR: registration.installing not found');
-                    }
+                    console.log('ERROR: registration resolved fake installing: ' + ('installing' in registration));
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'ServiceWorker registration is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: navigator.serviceWorker not defined');
@@ -133,24 +156,20 @@ mod service_worker_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Registration should have installing: {}",
+            "ServiceWorker register should reject instead of resolving an installing shell: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_service_worker_registration_has_active() {
-        // Test that registration object has active property
+    fn test_service_worker_register_rejects_instead_of_active_shell() {
         let script = r#"
             if (typeof navigator !== 'undefined' && typeof navigator.serviceWorker !== 'undefined') {
                 navigator.serviceWorker.register('./test-sw.js').then(registration => {
-                    if ('active' in registration) {
-                        console.log('SUCCESS: registration.active property exists');
-                    } else {
-                        console.log('ERROR: registration.active not found');
-                    }
+                    console.log('ERROR: registration resolved fake active: ' + ('active' in registration));
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'ServiceWorker registration is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: navigator.serviceWorker not defined');
@@ -160,7 +179,7 @@ mod service_worker_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Registration should have active: {}",
+            "ServiceWorker register should reject instead of resolving an active shell: {}",
             stdout
         );
     }
@@ -290,20 +309,16 @@ mod cache_api_tests {
     }
 
     #[test]
-    fn test_caches_open_returns_cache() {
-        // Test that caches.open() returns a Promise that resolves to a Cache object
+    fn test_caches_open_rejects_until_cache_backend_exists() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 const result = caches.open('test-cache');
                 if (result && typeof result.then === 'function') {
                     result.then(cache => {
-                        if (cache && typeof cache === 'object') {
-                            console.log('SUCCESS: caches.open() returns a Promise resolving to Cache');
-                        } else {
-                            console.log('ERROR: Promise did not resolve to Cache object');
-                        }
+                        console.log('ERROR: caches.open resolved fake Cache: ' + Object.keys(cache).join(','));
                     }).catch(e => {
-                        console.log('ERROR: ' + e.message);
+                        const message = String(e && e.message || e);
+                        console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                     });
                 } else {
                     console.log('ERROR: caches.open() does not return a Promise');
@@ -316,7 +331,45 @@ mod cache_api_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "caches.open should return Promise: {}",
+            "caches.open should reject instead of resolving a fake Cache: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_cache_storage_observation_methods_return_promises() {
+        let script = r#"
+            if (typeof caches === 'undefined') {
+                console.log('ERROR: caches not defined');
+            } else {
+                const keysPromise = caches.keys();
+                const hasPromise = caches.has('test-cache');
+                const deletePromise = caches.delete('test-cache');
+                if (!keysPromise || typeof keysPromise.then !== 'function') {
+                    console.log('ERROR: caches.keys did not return a Promise');
+                } else if (!hasPromise || typeof hasPromise.then !== 'function') {
+                    console.log('ERROR: caches.has did not return a Promise');
+                } else if (!deletePromise || typeof deletePromise.then !== 'function') {
+                    console.log('ERROR: caches.delete did not return a Promise');
+                } else {
+                    Promise.all([keysPromise, hasPromise, deletePromise]).then(values => {
+                        const keys = values[0];
+                        const has = values[1];
+                        const deleted = values[2];
+                        console.log(Array.isArray(keys) && keys.length === 0 && has === false && deleted === false
+                            ? 'SUCCESS'
+                            : 'ERROR: unexpected values ' + JSON.stringify(values));
+                    }).catch(error => {
+                        console.log('ERROR: ' + String(error && error.message || error));
+                    });
+                }
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "CacheStorage keys/has/delete should use Promise shape with empty state: {}",
             stdout
         );
     }
@@ -327,18 +380,14 @@ mod cache_object_tests {
     use super::*;
 
     #[test]
-    fn test_cache_add_all_exists() {
-        // Test that Cache.addAll exists
+    fn test_cache_add_all_fake_object_is_not_exposed() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 caches.open('test-cache').then(cache => {
-                    if (typeof cache.addAll === 'function') {
-                        console.log('SUCCESS: Cache.addAll is a function');
-                    } else {
-                        console.log('ERROR: Cache.addAll not found');
-                    }
+                    console.log('ERROR: fake Cache.addAll exposed: ' + typeof cache.addAll);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: caches not defined');
@@ -348,24 +397,20 @@ mod cache_object_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Cache.addAll should exist: {}",
+            "Cache.addAll should not be exposed through a fake Cache: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_cache_match_exists() {
-        // Test that Cache.match exists
+    fn test_cache_match_fake_object_is_not_exposed() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 caches.open('test-cache').then(cache => {
-                    if (typeof cache.match === 'function') {
-                        console.log('SUCCESS: Cache.match is a function');
-                    } else {
-                        console.log('ERROR: Cache.match not found');
-                    }
+                    console.log('ERROR: fake Cache.match exposed: ' + typeof cache.match);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: caches not defined');
@@ -375,24 +420,20 @@ mod cache_object_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Cache.match should exist: {}",
+            "Cache.match should not be exposed through a fake Cache: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_cache_put_exists() {
-        // Test that Cache.put exists
+    fn test_cache_put_fake_object_is_not_exposed() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 caches.open('test-cache').then(cache => {
-                    if (typeof cache.put === 'function') {
-                        console.log('SUCCESS: Cache.put is a function');
-                    } else {
-                        console.log('ERROR: Cache.put not found');
-                    }
+                    console.log('ERROR: fake Cache.put exposed: ' + typeof cache.put);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: caches not defined');
@@ -402,24 +443,20 @@ mod cache_object_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Cache.put should exist: {}",
+            "Cache.put should not be exposed through a fake Cache: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_cache_delete_exists() {
-        // Test that Cache.delete exists
+    fn test_cache_delete_fake_object_is_not_exposed() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 caches.open('test-cache').then(cache => {
-                    if (typeof cache.delete === 'function') {
-                        console.log('SUCCESS: Cache.delete is a function');
-                    } else {
-                        console.log('ERROR: Cache.delete not found');
-                    }
+                    console.log('ERROR: fake Cache.delete exposed: ' + typeof cache.delete);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: caches not defined');
@@ -429,24 +466,20 @@ mod cache_object_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Cache.delete should exist: {}",
+            "Cache.delete should not be exposed through a fake Cache: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_cache_keys_exists() {
-        // Test that Cache.keys exists
+    fn test_cache_keys_fake_object_is_not_exposed() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 caches.open('test-cache').then(cache => {
-                    if (typeof cache.keys === 'function') {
-                        console.log('SUCCESS: Cache.keys is a function');
-                    } else {
-                        console.log('ERROR: Cache.keys not found');
-                    }
+                    console.log('ERROR: fake Cache.keys exposed: ' + typeof cache.keys);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: caches not defined');
@@ -456,7 +489,7 @@ mod cache_object_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Cache.keys should exist: {}",
+            "Cache.keys should not be exposed through a fake Cache: {}",
             stdout
         );
     }
@@ -467,29 +500,14 @@ mod integration_tests {
     use super::*;
 
     #[test]
-    fn test_full_service_worker_registration_flow() {
-        // Test complete registration flow with all expected properties
+    fn test_service_worker_registration_flow_fails_closed() {
         let script = r#"
             if (typeof navigator !== 'undefined' && typeof navigator.serviceWorker !== 'undefined') {
                 navigator.serviceWorker.register('./sw.js').then(registration => {
-                    // Check all expected properties
-                    const hasScope = typeof registration.scope === 'string';
-                    const hasInstalling = 'installing' in registration;
-                    const hasActive = 'active' in registration;
-                    const hasWaiting = 'waiting' in registration;
-
-                    if (hasScope && hasInstalling && hasActive && hasWaiting) {
-                        console.log('SUCCESS: Full registration flow works');
-                        console.log('Scope: ' + registration.scope);
-                    } else {
-                        console.log('ERROR: Missing properties');
-                        console.log('hasScope: ' + hasScope);
-                        console.log('hasInstalling: ' + hasInstalling);
-                        console.log('hasActive: ' + hasActive);
-                        console.log('hasWaiting: ' + hasWaiting);
-                    }
+                    console.log('ERROR: registration resolved fake object: ' + Object.keys(registration).join(','));
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'ServiceWorker registration is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: ServiceWorker not supported');
@@ -499,30 +517,20 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Full flow should work: {}",
+            "ServiceWorker registration flow should fail closed until lifecycle support exists: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_cache_operations_flow() {
-        // Test complete cache operations flow
+    fn test_cache_operations_flow_fails_closed_until_backend_exists() {
         let script = r#"
             if (typeof caches !== 'undefined') {
                 caches.open('my-cache').then(cache => {
-                    const hasAddAll = typeof cache.addAll === 'function';
-                    const hasMatch = typeof cache.match === 'function';
-                    const hasPut = typeof cache.put === 'function';
-                    const hasDelete = typeof cache.delete === 'function';
-                    const hasKeys = typeof cache.keys === 'function';
-
-                    if (hasAddAll && hasMatch && hasPut && hasDelete && hasKeys) {
-                        console.log('SUCCESS: Cache operations flow works');
-                    } else {
-                        console.log('ERROR: Missing cache methods');
-                    }
+                    console.log('ERROR: fake Cache operations exposed: ' + Object.keys(cache).join(','));
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'Cache API is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: Cache API not supported');
@@ -532,25 +540,20 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Cache flow should work: {}",
+            "Cache flow should fail closed until a real backend exists: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_service_worker_register_with_scope_option() {
-        // Test registration with scope option
+    fn test_service_worker_register_with_scope_option_fails_closed() {
         let script = r#"
             if (typeof navigator !== 'undefined' && typeof navigator.serviceWorker !== 'undefined') {
                 navigator.serviceWorker.register('./sw.js', { scope: '/app/' }).then(registration => {
-                    if (registration.scope.includes('/app/')) {
-                        console.log('SUCCESS: Custom scope is respected');
-                    } else {
-                        console.log('ERROR: Custom scope not applied');
-                        console.log('Got: ' + registration.scope);
-                    }
+                    console.log('ERROR: registration resolved fake scoped object: ' + registration.scope);
                 }).catch(e => {
-                    console.log('ERROR: ' + e.message);
+                    const message = String(e && e.message || e);
+                    console.log(message === 'ServiceWorker registration is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 });
             } else {
                 console.log('ERROR: ServiceWorker not supported');
@@ -560,7 +563,7 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "Scope option should work: {}",
+            "ServiceWorker register with a scope option should fail closed: {}",
             stdout
         );
     }

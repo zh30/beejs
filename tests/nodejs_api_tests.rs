@@ -104,6 +104,179 @@ fn test_process_next_tick_error_handling() {
 
 #[test]
 #[serial]
+fn test_child_process_exec_returns_real_stdout() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        const child = childProcess.exec("printf beejs-child-process");
+        `${child.stdout}|${child.stderr}|${child.exitCode}`;
+    "#,
+    );
+    assert!(result.is_ok(), "child_process.exec failed: {:?}", result);
+    assert_eq!(
+        result.unwrap().trim(),
+        "beejs-child-process||0",
+        "exec should expose real stdout/stderr/exitCode"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_exec_invokes_callback_with_output() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        let observed = "pending";
+        childProcess.exec("printf beejs-callback", (error, stdout, stderr) => {
+            observed = `${error === null}:${stdout}:${stderr}`;
+        });
+        observed;
+    "#,
+    );
+    assert!(result.is_ok(), "child_process.exec failed: {:?}", result);
+    assert_eq!(
+        result.unwrap().trim(),
+        "true:beejs-callback:",
+        "exec callback should receive null error plus real stdout/stderr"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_exec_file_returns_real_stdout() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        const child = childProcess.execFile("/bin/echo", ["beejs-exec-file"]);
+        `${child.stdout}|${child.stderr}|${child.exitCode}`;
+    "#,
+    );
+    assert!(
+        result.is_ok(),
+        "child_process.execFile failed: {:?}",
+        result
+    );
+    assert_eq!(
+        result.unwrap().trim(),
+        "beejs-exec-file\n||0",
+        "execFile should expose real stdout/stderr/exitCode"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_exec_file_invokes_callback_with_output() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        let observed = "pending";
+        childProcess.execFile("/bin/echo", ["beejs-file-callback"], (error, stdout, stderr) => {
+            observed = `${error === null}:${stdout}:${stderr}`;
+        });
+        observed;
+    "#,
+    );
+    assert!(
+        result.is_ok(),
+        "child_process.execFile failed: {:?}",
+        result
+    );
+    assert_eq!(
+        result.unwrap().trim(),
+        "true:beejs-file-callback\n:",
+        "execFile callback should receive null error plus real stdout/stderr"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_exec_callback_receives_error_on_nonzero_exit() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        let observed = "pending";
+        childProcess.exec("echo beejs-error >&2; exit 7", (error, stdout, stderr) => {
+            observed = `${!!error}:${error && error.code}:${stdout}:${stderr}:done`;
+        });
+        observed;
+    "#,
+    );
+    assert!(result.is_ok(), "child_process.exec failed: {:?}", result);
+    assert_eq!(
+        result.unwrap().trim(),
+        "true:7::beejs-error\n:done",
+        "exec callback should receive an Error with code and real stderr on non-zero exit"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_spawn_returns_real_stdout() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        const child = childProcess.spawn("/bin/echo", ["beejs-spawn"]);
+        `${child.stdout}|${child.stderr}|${child.exitCode}`;
+    "#,
+    );
+    assert!(result.is_ok(), "child_process.spawn failed: {:?}", result);
+    assert_eq!(
+        result.unwrap().trim(),
+        "beejs-spawn\n||0",
+        "spawn should expose real stdout/stderr/exitCode"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_spawn_reports_nonzero_exit() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        const child = childProcess.spawn("sh", ["-c", "echo beejs-spawn-error >&2; exit 9"]);
+        `${child.stdout}:${child.stderr}:done:${child.exitCode}`;
+    "#,
+    );
+    assert!(result.is_ok(), "child_process.spawn failed: {:?}", result);
+    assert_eq!(
+        result.unwrap().trim(),
+        ":beejs-spawn-error\n:done:9",
+        "spawn should expose real stderr and non-zero exitCode"
+    );
+}
+
+#[test]
+#[serial]
+fn test_child_process_spawn_exit_event_receives_exit_code() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let result = runtime.execute_code(
+        r#"
+        const childProcess = require("child_process");
+        let observed = "pending";
+        const child = childProcess.spawn("sh", ["-c", "exit 6"]);
+        child.on("exit", (code, signal) => {
+            observed = `${code}:${signal === null}`;
+        });
+        observed;
+    "#,
+    );
+    assert!(result.is_ok(), "child_process.spawn failed: {:?}", result);
+    assert_eq!(
+        result.unwrap().trim(),
+        "6:true",
+        "spawn exit event should receive the real exit code and null signal"
+    );
+}
+
+#[test]
+#[serial]
 fn test_path_join() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
     let result = runtime.execute_code(r#"path.join("foo", "bar", "baz")"#);
@@ -248,8 +421,8 @@ fn test_fs_stat_sync() {
     let file = NamedTempFile::new().unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
-    // fs.statSync returns an object with isFile property
-    let code = format!(r#"fs.statSync("{}").isFile"#, path);
+    // fs.statSync returns a Stats object with isFile() method
+    let code = format!(r#"fs.statSync("{}").isFile()"#, path);
     let result = runtime.execute_code(&code);
     assert!(result.is_ok());
     let result_str = result.unwrap();

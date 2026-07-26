@@ -64,20 +64,25 @@ mod broadcast_channel_tests {
         );
     }
 
-    /// Test 3: postMessage and message event
+    /// Test 3: postMessage delivers to same-name peers, not the sender
     #[test]
     fn test_post_message() {
         let output = Command::new(beejs_path())
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
-                let received = null;
-                channel.onmessage = (event) => {
-                    received = event.data;
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
+                let senderReceived = null;
+                let peerReceived = null;
+                sender.onmessage = (event) => {
+                    senderReceived = event.data;
                 };
-                channel.postMessage('hello');
-                received === 'hello'
+                peer.onmessage = (event) => {
+                    peerReceived = event.data;
+                };
+                sender.postMessage('hello');
+                senderReceived === null && peerReceived === 'hello'
             "#,
             ])
             .output()
@@ -86,7 +91,7 @@ mod broadcast_channel_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("true"),
-            "Expected message to be received. Got: {}",
+            "Expected same-name peer delivery without sender self-delivery. Got: {}",
             stdout
         );
     }
@@ -98,12 +103,13 @@ mod broadcast_channel_tests {
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
                 let received = null;
-                channel.onmessage = (event) => {
+                peer.onmessage = (event) => {
                     received = event.data;
                 };
-                channel.postMessage({ text: 'hello', count: 42 });
+                sender.postMessage({ text: 'hello', count: 42 });
                 received !== null && received.text === 'hello' && received.count === 42
             "#,
             ])
@@ -125,12 +131,13 @@ mod broadcast_channel_tests {
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
                 let received = null;
-                channel.onmessage = (event) => {
+                peer.onmessage = (event) => {
                     received = event.data;
                 };
-                channel.postMessage([1, 2, 3, 4, 5]);
+                sender.postMessage([1, 2, 3, 4, 5]);
                 received !== null && Array.isArray(received) && received.length === 5
             "#,
             ])
@@ -152,12 +159,13 @@ mod broadcast_channel_tests {
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
                 let received = null;
-                channel.addEventListener('message', (event) => {
+                peer.addEventListener('message', (event) => {
                     received = event.data;
                 });
-                channel.postMessage('via listener');
+                sender.postMessage('via listener');
                 received === 'via listener'
             "#,
             ])
@@ -172,23 +180,22 @@ mod broadcast_channel_tests {
         );
     }
 
-    /// Test 7: removeEventListener API exists
+    /// Test 7: removeEventListener removes the matching listener
     #[test]
     fn test_remove_event_listener() {
         let output = Command::new(beejs_path())
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
                 let callCount = 0;
-                channel.onmessage = () => callCount++;
-                channel.postMessage('first');
-                // removeEventListener exists but is a placeholder (listeners persist)
-                // This is a known limitation for this implementation
-                channel.removeEventListener('message', () => {});
-                channel.postMessage('second');
-                // In our implementation, removeEventListener is a placeholder
-                callCount === 2
+                const listener = () => callCount++;
+                peer.addEventListener('message', listener);
+                sender.postMessage('first');
+                peer.removeEventListener('message', listener);
+                sender.postMessage('second');
+                callCount === 1
             "#,
             ])
             .output()
@@ -197,24 +204,27 @@ mod broadcast_channel_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("true"),
-            "Expected removeEventListener API to exist. Got: {}",
+            "Expected removeEventListener to remove the matching listener. Got: {}",
             stdout
         );
     }
 
-    /// Test 8: close method
+    /// Test 8: close method removes the channel from future delivery
     #[test]
     fn test_close() {
         let output = Command::new(beejs_path())
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
-                channel.close();
-                // After close, posting should not throw but should be no-op
-                channel.postMessage('after close');
-                // Verify close doesn't throw
-                true
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
+                let received = false;
+                peer.onmessage = () => {
+                    received = true;
+                };
+                peer.close();
+                sender.postMessage('after close');
+                received === false
             "#,
             ])
             .output()
@@ -223,7 +233,7 @@ mod broadcast_channel_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("true"),
-            "Expected close to work without error. Got: {}",
+            "Expected close to prevent future delivery. Got: {}",
             stdout
         );
     }
@@ -235,12 +245,13 @@ mod broadcast_channel_tests {
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
                 let origin = null;
-                channel.onmessage = (event) => {
+                peer.onmessage = (event) => {
                     origin = event.origin;
                 };
-                channel.postMessage('test');
+                sender.postMessage('test');
                 // Origin should be empty string or 'null' for same-origin
                 origin === '' || origin === 'null'
             "#,
@@ -263,12 +274,13 @@ mod broadcast_channel_tests {
             .args([
                 "eval",
                 r#"
-                const channel = new BroadcastChannel('test');
+                const sender = new BroadcastChannel('test');
+                const peer = new BroadcastChannel('test');
                 let dataValue = null;
-                channel.onmessage = (event) => {
+                peer.onmessage = (event) => {
                     dataValue = event.data;
                 };
-                channel.postMessage({ key: 'value', num: 123 });
+                sender.postMessage({ key: 'value', num: 123 });
                 dataValue !== null && dataValue.key === 'value' && dataValue.num === 123
             "#,
             ])
@@ -295,9 +307,11 @@ mod broadcast_channel_tests {
                 channel.onmessageerror = (event) => {
                     errorReceived = true;
                 };
-                // For BroadcastChannel, messageerror is typically for deserialization errors
-                // This test just verifies the event handler exists
-                true
+                channel.addEventListener('messageerror', () => {
+                    errorReceived = true;
+                });
+                channel.postMessage('normal message');
+                errorReceived === false
             "#,
             ])
             .output()
@@ -306,7 +320,7 @@ mod broadcast_channel_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("true"),
-            "Expected test to pass. Got: {}",
+            "Expected normal postMessage not to dispatch messageerror. Got: {}",
             stdout
         );
     }
@@ -355,7 +369,7 @@ mod broadcast_channel_tests {
         );
     }
 
-    /// Test 14: Multiple channels with same name are independent
+    /// Test 14: Multiple channels with same name receive peer messages only
     #[test]
     fn test_multiple_channels_same_name() {
         let output = Command::new(beejs_path())
@@ -370,11 +384,10 @@ mod broadcast_channel_tests {
                 channel1.onmessage = () => count1++;
                 channel2.onmessage = () => count2++;
 
-                // Each channel posts to its own listeners only (independent in this implementation)
                 channel1.postMessage('from1');
                 channel2.postMessage('from2');
 
-                // Both channels received their own messages
+                // Each channel receives the other channel's message, not its own.
                 count1 === 1 && count2 === 1
             "#,
             ])
@@ -384,7 +397,113 @@ mod broadcast_channel_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("true"),
-            "Expected each channel to work independently. Got: {}",
+            "Expected same-name channels to receive peer messages only. Got: {}",
+            stdout
+        );
+    }
+
+    /// Test 15: channels with different names are isolated for delivery
+    #[test]
+    fn test_different_name_channels_are_isolated() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const sender = new BroadcastChannel('alpha');
+                const other = new BroadcastChannel('beta');
+                let received = false;
+                other.onmessage = () => {
+                    received = true;
+                };
+                sender.postMessage('isolated');
+                received === false
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "Expected different-name channels to be isolated. Got: {}",
+            stdout
+        );
+    }
+
+    /// Test 16: object payloads are delivered as structured clones, not shared references
+    #[test]
+    fn test_post_message_object_payload_is_cloned() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const sender = new BroadcastChannel('clone-object');
+                const peer = new BroadcastChannel('clone-object');
+                const payload = {
+                    nested: { value: 1 },
+                    items: ['a', 'b'],
+                    buffer: new Uint8Array([7, 8, 9])
+                };
+                let received = null;
+                peer.onmessage = (event) => {
+                    received = event.data;
+                    received.nested.value = 99;
+                    received.items.push('peer');
+                    received.buffer[0] = 42;
+                };
+                sender.postMessage(payload);
+                received !== null &&
+                    received !== payload &&
+                    received.nested !== payload.nested &&
+                    received.items !== payload.items &&
+                    received.buffer !== payload.buffer &&
+                    received.nested.value === 99 &&
+                    payload.nested.value === 1 &&
+                    payload.items.length === 2 &&
+                    payload.buffer[0] === 7
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "Expected BroadcastChannel object payload to be structured-cloned. Got: {}",
+            stdout
+        );
+    }
+
+    /// Test 17: uncloneable payloads fail closed and do not dispatch message events
+    #[test]
+    fn test_post_message_uncloneable_payload_throws_without_dispatch() {
+        let output = Command::new(beejs_path())
+            .args([
+                "eval",
+                r#"
+                const sender = new BroadcastChannel('clone-error');
+                const peer = new BroadcastChannel('clone-error');
+                let delivered = false;
+                let threwDataCloneError = false;
+                peer.onmessage = () => {
+                    delivered = true;
+                };
+                try {
+                    sender.postMessage({ fn: function nope() {} });
+                } catch (error) {
+                    threwDataCloneError = error.name === 'DataCloneError' ||
+                        String(error.message).includes('Function cannot be cloned');
+                }
+                threwDataCloneError && delivered === false
+            "#,
+            ])
+            .output()
+            .expect("Failed to run bee");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("true"),
+            "Expected uncloneable BroadcastChannel payload to throw before dispatch. Got: {}",
             stdout
         );
     }

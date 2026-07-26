@@ -9,22 +9,19 @@
 // - 详细性能报告生成
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 /// Stub type for MemoryStats (normally from benchmarks module)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryStats {
     pub allocated: usize,
     pub used: usize,
 }
 
 /// Stub type for BenchmarkResult (normally from benchmarks module)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
     pub test_name: String,
     pub duration_ns: u64,
@@ -33,7 +30,7 @@ pub struct BenchmarkResult {
 }
 
 /// Stub type for PerformanceDelta (normally from benchmarks module)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceDelta {
     pub delta_ns: i64,
     pub delta_percent: f64,

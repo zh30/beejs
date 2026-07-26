@@ -33,6 +33,56 @@ fn test_get_random_values_returns_input_typed_array() {
 
 #[test]
 #[serial]
+fn test_get_random_values_only_fills_typed_array_view_window() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        const buffer = new ArrayBuffer(8);
+        const all = new Uint8Array(buffer);
+        all.fill(7);
+        const view = new Uint8Array(buffer, 2, 3);
+        const output = crypto.getRandomValues(view);
+
+        output === view &&
+          all[0] === 7 &&
+          all[1] === 7 &&
+          all[5] === 7 &&
+          all[6] === 7 &&
+          all[7] === 7 &&
+          (all[2] !== 7 || all[3] !== 7 || all[4] !== 7);
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "crypto.getRandomValues must only mutate the TypedArray view range"
+    );
+}
+
+#[test]
+#[serial]
+fn test_get_random_values_rejects_float_typed_arrays() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        try {
+            crypto.getRandomValues(new Float32Array(4));
+            false;
+        } catch (error) {
+            error instanceof TypeError &&
+              String(error && error.message ? error.message : error).includes('integer');
+        }
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap().trim(),
+        "true",
+        "crypto.getRandomValues must reject Float32Array/Float64Array inputs"
+    );
+}
+
+#[test]
+#[serial]
 fn test_subtle_digest_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof crypto.subtle.digest");

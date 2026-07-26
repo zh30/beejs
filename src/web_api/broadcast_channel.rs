@@ -5,6 +5,96 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 
+const REGISTRY_PRIVATE_KEY: &str = "BeeJS.BroadcastChannel#registry";
+
+fn get_broadcast_registry<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, v8::Array> {
+    let global = scope.get_current_context().global(scope);
+    let key_name = v8::String::new(scope, REGISTRY_PRIVATE_KEY).unwrap();
+    let key = v8::Private::for_api(scope, Some(key_name));
+
+    if let Some(registry_val) = global.get_private(scope, key) {
+        if let Ok(registry) = v8::Local::<v8::Array>::try_from(registry_val) {
+            return registry;
+        }
+    }
+
+    let registry = v8::Array::new(scope, 0);
+    let key_name = v8::String::new(scope, REGISTRY_PRIVATE_KEY).unwrap();
+    let key = v8::Private::for_api(scope, Some(key_name));
+    global.set_private(scope, key, registry.into());
+    registry
+}
+
+fn get_string_property(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    name: &str,
+) -> Option<String> {
+    let key = v8::String::new(scope, name).unwrap();
+    object
+        .get(scope, key.into())
+        .map(|value| value.to_rust_string_lossy(scope))
+}
+
+fn is_channel_closed(scope: &mut v8::HandleScope, channel: v8::Local<v8::Object>) -> bool {
+    let closed_key = v8::String::new(scope, "_closed").unwrap();
+    channel
+        .get(scope, closed_key.into())
+        .is_some_and(|value| value.is_true())
+}
+
+fn dispatch_message_event(
+    scope: &mut v8::HandleScope,
+    target: v8::Local<v8::Object>,
+    message: v8::Local<v8::Value>,
+) {
+    let event_obj = v8::Object::new(scope);
+
+    let type_key = v8::String::new(scope, "type").unwrap();
+    let message_type = v8::String::new(scope, "message").unwrap();
+    event_obj.set(scope, type_key.into(), message_type.into());
+
+    let data_key = v8::String::new(scope, "data").unwrap();
+    event_obj.set(scope, data_key.into(), message);
+
+    let origin_key = v8::String::new(scope, "origin").unwrap();
+    let empty_origin = v8::String::new(scope, "").unwrap();
+    event_obj.set(scope, origin_key.into(), empty_origin.into());
+
+    let last_event_id_key = v8::String::new(scope, "lastEventId").unwrap();
+    event_obj.set(scope, last_event_id_key.into(), empty_origin.into());
+
+    let onmessage_key = v8::String::new(scope, "onmessage").unwrap();
+    if let Some(onmessage_val) = target.get(scope, onmessage_key.into()) {
+        if let Ok(onmessage_fn) = v8::Local::<v8::Function>::try_from(onmessage_val) {
+            let _ = onmessage_fn.call(scope, target.into(), &[event_obj.into()]);
+        }
+    }
+
+    let listeners_key = v8::String::new(scope, "_listeners").unwrap();
+    let Some(listeners_val) = target.get(scope, listeners_key.into()) else {
+        return;
+    };
+    let Ok(listeners_obj) = v8::Local::<v8::Object>::try_from(listeners_val) else {
+        return;
+    };
+    let message_key = v8::String::new(scope, "message").unwrap();
+    let Some(message_listeners_val) = listeners_obj.get(scope, message_key.into()) else {
+        return;
+    };
+    let Ok(listeners_array) = v8::Local::<v8::Array>::try_from(message_listeners_val) else {
+        return;
+    };
+
+    for i in 0..listeners_array.length() {
+        if let Some(listener) = listeners_array.get_index(scope, i) {
+            if let Ok(listener_fn) = v8::Local::<v8::Function>::try_from(listener) {
+                let _ = listener_fn.call(scope, target.into(), &[event_obj.into()]);
+            }
+        }
+    }
+}
+
 /// Setup BroadcastChannel API in V8 context
 pub fn setup_broadcast_channel_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -31,10 +121,16 @@ pub fn setup_broadcast_channel_api(
             let name_value = v8::String::new(scope, &name).unwrap();
             channel_obj.set(scope, name_key.into(), name_value.into());
 
-            // Create listeners array stored on the object
+            // Create listener buckets stored on the object
             let listeners_key = v8::String::new(scope, "_listeners").unwrap();
-            let listeners_array: v8::Local<v8::Array> = v8::Array::new(scope, 0);
-            channel_obj.set(scope, listeners_key.into(), listeners_array.into());
+            let listeners_obj: v8::Local<v8::Object> = v8::Object::new(scope);
+            let message_key = v8::String::new(scope, "message").unwrap();
+            let message_array: v8::Local<v8::Array> = v8::Array::new(scope, 0);
+            listeners_obj.set(scope, message_key.into(), message_array.into());
+            let messageerror_key = v8::String::new(scope, "messageerror").unwrap();
+            let messageerror_array: v8::Local<v8::Array> = v8::Array::new(scope, 0);
+            listeners_obj.set(scope, messageerror_key.into(), messageerror_array.into());
+            channel_obj.set(scope, listeners_key.into(), listeners_obj.into());
 
             // Create closed flag
             let closed_key = v8::String::new(scope, "_closed").unwrap();
@@ -44,7 +140,7 @@ pub fn setup_broadcast_channel_api(
             // Create postMessage function
             let post_message_fn = v8::FunctionTemplate::new(
                 scope,
-                |_scope: &mut v8::HandleScope,
+                |scope: &mut v8::HandleScope,
                  args: v8::FunctionCallbackArguments,
                  _rv: v8::ReturnValue| {
                     if args.length() == 0 {
@@ -54,64 +150,85 @@ pub fn setup_broadcast_channel_api(
                     let message = args.get(0);
                     let this_obj = args.this();
 
-                    // Check if channel is closed
-                    let closed_key = v8::String::new(_scope, "_closed").unwrap();
-                    if let Some(closed_val) = this_obj.get(_scope, closed_key.into()) {
-                        if closed_val.is_true() {
-                            return;
-                        }
+                    if is_channel_closed(scope, this_obj) {
+                        return;
                     }
 
-                    // Create MessageEvent object
-                    let event_obj = v8::Object::new(_scope);
+                    let Some(sender_name) = get_string_property(scope, this_obj, "name") else {
+                        return;
+                    };
 
-                    // Set event properties
-                    let type_key = v8::String::new(_scope, "type").unwrap();
-                    let message_type = v8::String::new(_scope, "message").unwrap();
-                    event_obj.set(_scope, type_key.into(), message_type.into());
+                    let global = scope.get_current_context().global(scope);
+                    let structured_clone_key = v8::String::new(scope, "structuredClone").unwrap();
+                    let Some(structured_clone_value) =
+                        global.get(scope, structured_clone_key.into())
+                    else {
+                        let error_message =
+                            v8::String::new(scope, "structuredClone is unavailable").unwrap();
+                        let error = v8::Exception::error(scope, error_message);
+                        scope.throw_exception(error);
+                        return;
+                    };
+                    let Ok(structured_clone_fn) =
+                        v8::Local::<v8::Function>::try_from(structured_clone_value)
+                    else {
+                        let error_message =
+                            v8::String::new(scope, "structuredClone is unavailable").unwrap();
+                        let error = v8::Exception::error(scope, error_message);
+                        scope.throw_exception(error);
+                        return;
+                    };
 
-                    let data_key = v8::String::new(_scope, "data").unwrap();
-                    event_obj.set(_scope, data_key.into(), message);
+                    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
+                    let Some(first_cloned_message) =
+                        structured_clone_fn.call(scope, undefined, &[message])
+                    else {
+                        return;
+                    };
 
-                    let origin_key = v8::String::new(_scope, "origin").unwrap();
-                    let empty_origin = v8::String::new(_scope, "").unwrap();
-                    event_obj.set(_scope, origin_key.into(), empty_origin.into());
+                    let registry = get_broadcast_registry(scope);
+                    let sender_value: v8::Local<v8::Value> = this_obj.into();
+                    let mut targets: Vec<v8::Local<v8::Object>> = Vec::new();
 
-                    let last_event_id_key = v8::String::new(_scope, "lastEventId").unwrap();
-                    event_obj.set(_scope, last_event_id_key.into(), empty_origin.into());
-
-                    // First, check onmessage property (for simple usage)
-                    let onmessage_key = v8::String::new(_scope, "onmessage").unwrap();
-                    if let Some(onmessage_val) = this_obj.get(_scope, onmessage_key.into()) {
-                        if onmessage_val.is_function() {
-                            if let Ok(onmessage_fn) =
-                                v8::Local::<v8::Function>::try_from(onmessage_val)
-                            {
-                                let _ =
-                                    onmessage_fn.call(_scope, this_obj.into(), &[event_obj.into()]);
-                            }
+                    for i in 0..registry.length() {
+                        let Some(target_val) = registry.get_index(scope, i) else {
+                            continue;
+                        };
+                        if target_val.strict_equals(sender_value) {
+                            continue;
                         }
-                    }
-
-                    // Then, get listeners from addEventListener and call them
-                    let listeners_key = v8::String::new(_scope, "_listeners").unwrap();
-                    if let Some(listeners_val) = this_obj.get(_scope, listeners_key.into()) {
-                        if let Ok(listeners_array) = v8::Local::<v8::Array>::try_from(listeners_val)
+                        let Ok(target) = v8::Local::<v8::Object>::try_from(target_val) else {
+                            continue;
+                        };
+                        if is_channel_closed(scope, target) {
+                            continue;
+                        }
+                        if get_string_property(scope, target, "name").as_deref()
+                            == Some(sender_name.as_str())
                         {
-                            for i in 0..listeners_array.length() {
-                                if let Some(listener) = listeners_array.get_index(_scope, i) {
-                                    if let Ok(listener_fn) =
-                                        v8::Local::<v8::Function>::try_from(listener)
-                                    {
-                                        let _ = listener_fn.call(
-                                            _scope,
-                                            this_obj.into(),
-                                            &[event_obj.into()],
-                                        );
-                                    }
-                                }
-                            }
+                            targets.push(target);
                         }
+                    }
+
+                    if targets.is_empty() {
+                        return;
+                    }
+
+                    let mut cloned_messages: Vec<v8::Local<v8::Value>> =
+                        Vec::with_capacity(targets.len());
+                    cloned_messages.push(first_cloned_message);
+                    while cloned_messages.len() < targets.len() {
+                        let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
+                        let Some(cloned_message) =
+                            structured_clone_fn.call(scope, undefined, &[message])
+                        else {
+                            return;
+                        };
+                        cloned_messages.push(cloned_message);
+                    }
+
+                    for (target, cloned_message) in targets.into_iter().zip(cloned_messages) {
+                        dispatch_message_event(scope, target, cloned_message);
                     }
                 },
             );
@@ -149,15 +266,26 @@ pub fn setup_broadcast_channel_api(
                     let listener = args.get(1);
                     let this_obj = args.this();
 
-                    if event_type == "message" || event_type == "messageerror" {
-                        // Add to listeners array on the object
+                    if (event_type == "message" || event_type == "messageerror")
+                        && listener.is_function()
+                    {
+                        // Add to the event-specific listener array on the object
                         let listeners_key = v8::String::new(_scope, "_listeners").unwrap();
                         if let Some(listeners_val) = this_obj.get(_scope, listeners_key.into()) {
-                            if let Ok(listeners_array) =
-                                v8::Local::<v8::Array>::try_from(listeners_val)
+                            if let Ok(listeners_obj) =
+                                v8::Local::<v8::Object>::try_from(listeners_val)
                             {
-                                let length = listeners_array.length();
-                                listeners_array.set_index(_scope, length, listener);
+                                let event_key = v8::String::new(_scope, &event_type).unwrap();
+                                if let Some(listeners_array_val) =
+                                    listeners_obj.get(_scope, event_key.into())
+                                {
+                                    if let Ok(listeners_array) =
+                                        v8::Local::<v8::Array>::try_from(listeners_array_val)
+                                    {
+                                        let length = listeners_array.length();
+                                        listeners_array.set_index(_scope, length, listener);
+                                    }
+                                }
                             }
                         }
                     }
@@ -181,10 +309,45 @@ pub fn setup_broadcast_channel_api(
                         return;
                     }
 
-                    // Note: Full implementation would track and remove specific listeners
-                    // For now, this is a placeholder
-                    let _event_type = args.get(0);
-                    let _listener = args.get(1);
+                    let event_type = args.get(0).to_rust_string_lossy(_scope);
+                    let listener = args.get(1);
+                    if (event_type != "message" && event_type != "messageerror")
+                        || !listener.is_function()
+                    {
+                        return;
+                    }
+
+                    let this_obj = args.this();
+                    let listeners_key = v8::String::new(_scope, "_listeners").unwrap();
+                    let Some(listeners_val) = this_obj.get(_scope, listeners_key.into()) else {
+                        return;
+                    };
+                    let Ok(listeners_obj) = v8::Local::<v8::Object>::try_from(listeners_val) else {
+                        return;
+                    };
+                    let event_key = v8::String::new(_scope, &event_type).unwrap();
+                    let Some(listeners_array_val) = listeners_obj.get(_scope, event_key.into())
+                    else {
+                        return;
+                    };
+                    let Ok(listeners_array) = v8::Local::<v8::Array>::try_from(listeners_array_val)
+                    else {
+                        return;
+                    };
+
+                    let filtered = v8::Array::new(_scope, 0);
+                    let mut filtered_len = 0;
+                    for i in 0..listeners_array.length() {
+                        if let Some(existing_listener) = listeners_array.get_index(_scope, i) {
+                            if !existing_listener.strict_equals(listener) {
+                                filtered.set_index(_scope, filtered_len, existing_listener);
+                                filtered_len += 1;
+                            }
+                        }
+                    }
+
+                    let event_key = v8::String::new(_scope, &event_type).unwrap();
+                    listeners_obj.set(_scope, event_key.into(), filtered.into());
                 },
             );
             let remove_event_listener_instance =
@@ -210,30 +373,42 @@ pub fn setup_broadcast_channel_api(
                             if let Some(type_val) = event_obj.get(_scope, type_key.into()) {
                                 let event_type = type_val.to_rust_string_lossy(_scope);
 
-                                if event_type == "message" {
-                                    // Get listeners and call them
+                                if event_type == "message" || event_type == "messageerror" {
+                                    // Get event-specific listeners and call them
                                     let listeners_key =
                                         v8::String::new(_scope, "_listeners").unwrap();
                                     if let Some(listeners_val) =
                                         this_obj.get(_scope, listeners_key.into())
                                     {
-                                        if let Ok(listeners_array) =
-                                            v8::Local::<v8::Array>::try_from(listeners_val)
+                                        if let Ok(listeners_obj) =
+                                            v8::Local::<v8::Object>::try_from(listeners_val)
                                         {
-                                            for i in 0..listeners_array.length() {
-                                                if let Some(listener) =
-                                                    listeners_array.get_index(_scope, i)
+                                            let event_key =
+                                                v8::String::new(_scope, &event_type).unwrap();
+                                            if let Some(listeners_array_val) =
+                                                listeners_obj.get(_scope, event_key.into())
+                                            {
+                                                if let Ok(listeners_array) =
+                                                    v8::Local::<v8::Array>::try_from(
+                                                        listeners_array_val,
+                                                    )
                                                 {
-                                                    if let Ok(listener_fn) =
-                                                        v8::Local::<v8::Function>::try_from(
-                                                            listener,
-                                                        )
-                                                    {
-                                                        let _ = listener_fn.call(
-                                                            _scope,
-                                                            this_obj.into(),
-                                                            &[event_obj.into()],
-                                                        );
+                                                    for i in 0..listeners_array.length() {
+                                                        if let Some(listener) =
+                                                            listeners_array.get_index(_scope, i)
+                                                        {
+                                                            if let Ok(listener_fn) =
+                                                                v8::Local::<v8::Function>::try_from(
+                                                                    listener,
+                                                                )
+                                                            {
+                                                                let _ = listener_fn.call(
+                                                                    _scope,
+                                                                    this_obj.into(),
+                                                                    &[event_obj.into()],
+                                                                );
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -261,6 +436,9 @@ pub fn setup_broadcast_channel_api(
             // Set onmessageerror property
             let onmessageerror_key = v8::String::new(scope, "onmessageerror").unwrap();
             channel_obj.set(scope, onmessageerror_key.into(), undefined_val.into());
+
+            let registry = get_broadcast_registry(scope);
+            registry.set_index(scope, registry.length(), channel_obj.into());
 
             retval.set(channel_obj.into());
         },

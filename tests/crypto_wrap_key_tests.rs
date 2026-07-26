@@ -75,6 +75,52 @@ fn test_wrap_key_returns_array_buffer() {
 
 #[test]
 #[serial]
+fn test_wrap_key_jwk_wraps_json_jwk_payload() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.generateKey(
+                { name: 'HMAC', hash: 'SHA-256', length: 256 },
+                true,
+                ['sign', 'verify']
+            );
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey', 'decrypt']
+            );
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const wrapped = await crypto.subtle.wrapKey(
+                'jwk',
+                key,
+                wrappingKey,
+                { name: 'AES-GCM', iv }
+            );
+            const plaintext = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                wrappingKey,
+                wrapped
+            );
+
+            try {
+                const jwk = JSON.parse(new TextDecoder().decode(plaintext));
+                return jwk.kty === 'oct'
+                    && jwk.alg === 'HS256'
+                    && typeof jwk.k === 'string'
+                    && jwk.key_ops.includes('sign')
+                    && jwk.key_ops.includes('verify');
+            } catch (_) {
+                return false;
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
 fn test_unwrap_key_returns_promise() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
@@ -172,6 +218,116 @@ fn test_wrap_unwrap_aes_key_round_trip() {
     "#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_wrap_unwrap_aes_key_with_aes_kw_round_trip() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-KW', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            const wrapped = await crypto.subtle.wrapKey(
+                'raw',
+                keyToWrap,
+                wrappingKey,
+                { name: 'AES-KW' }
+            );
+
+            const unwrappedKey = await crypto.subtle.unwrapKey(
+                'raw',
+                wrapped,
+                wrappingKey,
+                { name: 'AES-KW' },
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const testData = new TextEncoder().encode('AES-KW round trip');
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encrypted = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                unwrappedKey,
+                testData
+            );
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                unwrappedKey,
+                encrypted
+            );
+
+            return wrapped.byteLength === 40
+                && new TextDecoder().decode(decrypted) === 'AES-KW round trip';
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(
+        result.is_ok(),
+        "AES-KW wrap/unwrap should execute without throwing: {result:?}"
+    );
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_unwrap_key_with_aes_kw_rejects_tampered_data() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const keyToWrap = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            const wrappingKey = await crypto.subtle.generateKey(
+                { name: 'AES-KW', length: 256 },
+                true,
+                ['wrapKey', 'unwrapKey']
+            );
+
+            const wrapped = new Uint8Array(await crypto.subtle.wrapKey(
+                'raw',
+                keyToWrap,
+                wrappingKey,
+                { name: 'AES-KW' }
+            ));
+            wrapped[wrapped.length - 1] ^= 0xff;
+
+            try {
+                await crypto.subtle.unwrapKey(
+                    'raw',
+                    wrapped,
+                    wrappingKey,
+                    { name: 'AES-KW' },
+                    { name: 'AES-GCM', length: 256 },
+                    true,
+                    ['encrypt', 'decrypt']
+                );
+                return false;
+            } catch (_) {
+                return true;
+            }
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(
+        result.is_ok(),
+        "AES-KW unwrap should reject tampered data without crashing: {result:?}"
+    );
     assert_eq!(result.unwrap().trim(), "true");
 }
 

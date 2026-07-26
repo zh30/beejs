@@ -47,6 +47,74 @@ fn ensure_fs_permission(scope: &mut v8::HandleScope, action: PermissionAction, p
     }
 }
 
+fn get_stats_flag(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>, key: &str) -> bool {
+    let key = v8::String::new(scope, key).unwrap();
+    this.get(scope, key.into())
+        .map(|value| value.to_boolean(scope).boolean_value(scope))
+        .unwrap_or(false)
+}
+
+fn stats_is_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let is_file = get_stats_flag(scope, args.this(), "__isFile");
+    retval.set(v8::Boolean::new(scope, is_file).into());
+}
+
+fn stats_is_directory_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let is_directory = get_stats_flag(scope, args.this(), "__isDirectory");
+    retval.set(v8::Boolean::new(scope, is_directory).into());
+}
+
+fn create_stats_object<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    metadata: &std::fs::Metadata,
+) -> v8::Local<'a, v8::Object> {
+    let stat_obj = v8::Object::new(scope);
+
+    let is_file_state_key = v8::String::new(scope, "__isFile").unwrap();
+    let is_file_state = v8::Boolean::new(scope, metadata.is_file());
+    stat_obj.set(scope, is_file_state_key.into(), is_file_state.into());
+
+    let is_dir_state_key = v8::String::new(scope, "__isDirectory").unwrap();
+    let is_dir_state = v8::Boolean::new(scope, metadata.is_dir());
+    stat_obj.set(scope, is_dir_state_key.into(), is_dir_state.into());
+
+    let is_file_func = v8::FunctionTemplate::new(scope, stats_is_file_callback);
+    let is_file_instance = is_file_func.get_function(scope).unwrap();
+    let is_file_key = v8::String::new(scope, "isFile").unwrap();
+    stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
+
+    let is_dir_func = v8::FunctionTemplate::new(scope, stats_is_directory_callback);
+    let is_dir_instance = is_dir_func.get_function(scope).unwrap();
+    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
+    stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
+
+    let size_key = v8::String::new(scope, "size").unwrap();
+    let size_value = v8::Number::new(scope, metadata.len() as f64);
+    stat_obj.set(scope, size_key.into(), size_value.into());
+
+    let mode_key = v8::String::new(scope, "mode").unwrap();
+    let mode_value = v8::Number::new(scope, 420.0_f64);
+    stat_obj.set(scope, mode_key.into(), mode_value.into());
+
+    let mtime_key = v8::String::new(scope, "mtime").unwrap();
+    if let Ok(modified) = metadata.modified() {
+        if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
+            let mtime_value = v8::Number::new(scope, duration.as_secs() as f64 * 1000.0);
+            stat_obj.set(scope, mtime_key.into(), mtime_value.into());
+        }
+    }
+
+    stat_obj
+}
+
 /// 设置fs API到全局作用域
 pub fn setup_fs_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -153,11 +221,23 @@ fn create_fs_promises<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::
     let write_file_key = v8::String::new(scope, "writeFile").unwrap();
     promises_obj.set(scope, write_file_key.into(), write_file_instance.into());
 
+    // appendFile
+    let append_file_func = v8::FunctionTemplate::new(scope, fs_promises_append_file_callback);
+    let append_file_instance = append_file_func.get_function(scope).unwrap();
+    let append_file_key = v8::String::new(scope, "appendFile").unwrap();
+    promises_obj.set(scope, append_file_key.into(), append_file_instance.into());
+
     // mkdir
     let mkdir_func = v8::FunctionTemplate::new(scope, fs_promises_mkdir_callback);
     let mkdir_instance = mkdir_func.get_function(scope).unwrap();
     let mkdir_key = v8::String::new(scope, "mkdir").unwrap();
     promises_obj.set(scope, mkdir_key.into(), mkdir_instance.into());
+
+    // rmdir
+    let rmdir_func = v8::FunctionTemplate::new(scope, fs_promises_rmdir_callback);
+    let rmdir_instance = rmdir_func.get_function(scope).unwrap();
+    let rmdir_key = v8::String::new(scope, "rmdir").unwrap();
+    promises_obj.set(scope, rmdir_key.into(), rmdir_instance.into());
 
     // readdir
     let readdir_func = v8::FunctionTemplate::new(scope, fs_promises_readdir_callback);
@@ -359,38 +439,7 @@ fn fs_stat_sync_callback(
 
     match std::fs::metadata(&path) {
         Ok(metadata) => {
-            // 创建 stat 对象
-            let stat_obj = v8::Object::new(scope);
-
-            // isFile
-            let is_file_key = v8::String::new(scope, "isFile").unwrap();
-            let is_file_value = v8::Boolean::new(scope, metadata.is_file());
-            stat_obj.set(scope, is_file_key.into(), is_file_value.into());
-
-            // isDirectory
-            let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
-            let is_dir_value = v8::Boolean::new(scope, metadata.is_dir());
-            stat_obj.set(scope, is_dir_key.into(), is_dir_value.into());
-
-            // size
-            let size_key = v8::String::new(scope, "size").unwrap();
-            let size_value = v8::Number::new(scope, metadata.len() as f64);
-            stat_obj.set(scope, size_key.into(), size_value.into());
-
-            // mode (permissions) - 使用 0o644 转换为十进制 420
-            let mode_key = v8::String::new(scope, "mode").unwrap();
-            let mode_value = v8::Number::new(scope, 420.0_f64);
-            stat_obj.set(scope, mode_key.into(), mode_value.into());
-
-            // mtime (modified time as timestamp)
-            let mtime_key = v8::String::new(scope, "mtime").unwrap();
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(duration) = modified.duration_since(std::time::UNIX_EPOCH) {
-                    let mtime_value = v8::Number::new(scope, duration.as_secs() as f64 * 1000.0);
-                    stat_obj.set(scope, mtime_key.into(), mtime_value.into());
-                }
-            }
-
+            let stat_obj = create_stats_object(scope, &metadata);
             retval.set(stat_obj.into());
         }
         Err(e) => {
@@ -882,6 +931,49 @@ fn fs_promises_read_file_callback(
     let then_key = v8::String::new(scope, "then").unwrap();
     thenable_obj.set(scope, then_key.into(), then_instance.into());
 
+    let catch_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_rejected = args.get(0);
+
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Read, &path_str) {
+                return;
+            }
+
+            if let Err(error) = std::fs::read(&path_str) {
+                if on_rejected.is_function() {
+                    if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                        let error_msg = format!("Error reading file: {}", error);
+                        let error_val = v8::String::new(scope, &error_msg).unwrap();
+                        let undefined = v8::undefined(scope);
+                        let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                        if let Some(r) = result {
+                            let result_key = v8::String::new(scope, "__result__").unwrap();
+                            this.set(scope, result_key.into(), r);
+                        }
+                    }
+                }
+            }
+
+            retval.set(this.into());
+        },
+    );
+    let catch_instance = catch_func.get_function(scope).unwrap();
+    let catch_key = v8::String::new(scope, "catch").unwrap();
+    thenable_obj.set(scope, catch_key.into(), catch_instance.into());
+
     retval.set(thenable_obj.into());
 }
 
@@ -988,6 +1080,112 @@ fn fs_promises_write_file_callback(
     retval.set(thenable_obj.into());
 }
 
+/// fs.promises.appendFile(path, data, options) - v0.3.66
+fn fs_promises_append_file_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let data: String = args
+        .get(1)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    let thenable_obj = v8::Object::new(scope);
+
+    let path_val = v8::String::new(scope, &path).unwrap();
+    let data_val = v8::String::new(scope, &data).unwrap();
+    let path_key = v8::String::new(scope, "__path").unwrap();
+    let data_key = v8::String::new(scope, "__data").unwrap();
+    thenable_obj.set(scope, path_key.into(), path_val.into());
+    thenable_obj.set(scope, data_key.into(), data_val.into());
+
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
+
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let data_key = v8::String::new(scope, "__data").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let data_val = this
+                .get(scope, data_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            let data_str = data_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
+
+            let append_result = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path_str)
+                .and_then(|mut file| file.write_all(data_str.as_bytes()));
+
+            match append_result {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(error) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error appending file: {}", error);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+            }
+
+            retval.set(this.into());
+        },
+    );
+
+    let then_instance = then_func.get_function(scope).unwrap();
+    let then_key = v8::String::new(scope, "then").unwrap();
+    thenable_obj.set(scope, then_key.into(), then_instance.into());
+
+    retval.set(thenable_obj.into());
+}
+
 /// fs.promises.mkdir(path, options) - v0.3.64
 fn fs_promises_mkdir_callback(
     scope: &mut v8::HandleScope,
@@ -1063,6 +1261,90 @@ fn fs_promises_mkdir_callback(
                 }
             }
             // v0.3.64: Return this thenable so execute_code can access __result__
+            retval.set(this.into());
+        },
+    );
+
+    let then_instance = then_func.get_function(scope).unwrap();
+    let then_key = v8::String::new(scope, "then").unwrap();
+    thenable_obj.set(scope, then_key.into(), then_instance.into());
+
+    retval.set(thenable_obj.into());
+}
+
+/// fs.promises.rmdir(path) - v0.3.66
+fn fs_promises_rmdir_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path: String = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    let thenable_obj = v8::Object::new(scope);
+
+    let path_val = v8::String::new(scope, &path).unwrap();
+    let path_key = v8::String::new(scope, "__path").unwrap();
+    thenable_obj.set(scope, path_key.into(), path_val.into());
+
+    let then_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let this = args.this();
+            let on_fulfilled = args.get(0);
+
+            let path_key = v8::String::new(scope, "__path").unwrap();
+            let path_val = this
+                .get(scope, path_key.into())
+                .unwrap_or(v8::undefined(scope).into());
+            let path_str = path_val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+
+            if !ensure_fs_permission(scope, PermissionAction::Write, &path_str) {
+                return;
+            }
+
+            match std::fs::remove_dir(&path_str) {
+                Ok(()) => {
+                    if on_fulfilled.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+                Err(error) => {
+                    let on_rejected = args.get(1);
+                    if on_rejected.is_function() {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_rejected) {
+                            let error_msg = format!("Error removing directory: {}", error);
+                            let error_val = v8::String::new(scope, &error_msg).unwrap();
+                            let undefined = v8::undefined(scope);
+                            let result = func.call(scope, undefined.into(), &[error_val.into()]);
+                            if let Some(r) = result {
+                                let result_key = v8::String::new(scope, "__result__").unwrap();
+                                this.set(scope, result_key.into(), r);
+                            }
+                        }
+                    }
+                }
+            }
+
             retval.set(this.into());
         },
     );
@@ -1211,48 +1493,7 @@ fn fs_promises_stat_callback(
 
             match std::fs::metadata(&path_str) {
                 Ok(metadata) => {
-                    let stat_obj = v8::Object::new(scope);
-                    let is_file = metadata.is_file();
-                    let is_dir = metadata.is_dir();
-
-                    // v0.3.64: isFile should be a function that returns a boolean
-                    // Use integer flag instead of closure to avoid V8 FunctionTemplate issues
-                    // Note: These flags are stored for potential future use with cross-beam scope
-                    let _is_file_flag: i32 = if is_file { 1 } else { 0 };
-                    let _is_dir_flag: i32 = if is_dir { 1 } else { 0 };
-
-                    let is_file_func = v8::FunctionTemplate::new(
-                        scope,
-                        |scope: &mut v8::HandleScope,
-                         _args: v8::FunctionCallbackArguments,
-                         mut retval: v8::ReturnValue| {
-                            // Use persistent state via closure capture (V8 restriction workaround)
-                            // We can't use the flags directly, so just return true for now
-                            // This is a limitation of the current implementation
-                            retval.set(v8::Boolean::new(scope, true).into());
-                        },
-                    );
-                    let is_file_instance = is_file_func.get_function(scope).unwrap();
-                    let is_file_key = v8::String::new(scope, "isFile").unwrap();
-                    stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
-
-                    // isDirectory function
-                    let is_dir_func = v8::FunctionTemplate::new(
-                        scope,
-                        |scope: &mut v8::HandleScope,
-                         _args: v8::FunctionCallbackArguments,
-                         mut retval: v8::ReturnValue| {
-                            retval.set(v8::Boolean::new(scope, false).into());
-                        },
-                    );
-                    let is_dir_instance = is_dir_func.get_function(scope).unwrap();
-                    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
-                    stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
-
-                    // size as a number (not a function)
-                    let size_key = v8::String::new(scope, "size").unwrap();
-                    let size_val = v8::Number::new(scope, metadata.len() as f64);
-                    stat_obj.set(scope, size_key.into(), size_val.into());
+                    let stat_obj = create_stats_object(scope, &metadata);
 
                     if on_fulfilled.is_function() {
                         if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {

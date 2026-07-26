@@ -121,6 +121,13 @@ pub struct PackageManager {
     config: PackageManagerConfig,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+struct SemverTriple {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
 /// Resolve caret range (^1.2.3 -> >=1.2.3 <2.0.0)
 fn resolve_caret_range(versions: Vec<String>, base: &str) -> String {
     // Simple implementation - return latest compatible version
@@ -206,6 +213,78 @@ fn resolve_less_than(versions: Vec<String>, max: &str) -> String {
         .last()
         .map(|s| s.to_string())
         .unwrap_or_else(|| max.to_string())
+}
+
+fn dependency_request_matches_locked_version(requested: &str, locked: &str) -> bool {
+    let requested = requested.trim();
+    let locked = locked.trim();
+    if requested == "*" || requested.eq_ignore_ascii_case("latest") {
+        return true;
+    }
+
+    if requested == locked {
+        return true;
+    }
+
+    if let Some(base) = requested.strip_prefix('^') {
+        return semver_caret_matches(base, locked);
+    }
+    if let Some(base) = requested.strip_prefix('~') {
+        return semver_tilde_matches(base, locked);
+    }
+    if let Some(base) = requested.strip_prefix('=') {
+        return locked == base.trim();
+    }
+
+    false
+}
+
+fn semver_caret_matches(base: &str, locked: &str) -> bool {
+    let Some(base) = parse_semver_triplet(base) else {
+        return false;
+    };
+    let Some(locked) = parse_semver_triplet(locked) else {
+        return false;
+    };
+
+    if locked < base {
+        return false;
+    }
+    if base.major > 0 {
+        return locked.major == base.major;
+    }
+    if base.minor > 0 {
+        return locked.major == 0 && locked.minor == base.minor;
+    }
+    locked.major == 0 && locked.minor == 0 && locked.patch == base.patch
+}
+
+fn semver_tilde_matches(base: &str, locked: &str) -> bool {
+    let Some(base) = parse_semver_triplet(base) else {
+        return false;
+    };
+    let Some(locked) = parse_semver_triplet(locked) else {
+        return false;
+    };
+
+    locked >= base && locked.major == base.major && locked.minor == base.minor
+}
+
+fn parse_semver_triplet(version: &str) -> Option<SemverTriple> {
+    let core = version
+        .trim()
+        .trim_start_matches('v')
+        .split(['-', '+'])
+        .next()?;
+    let mut parts = core.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next().unwrap_or("0").parse().ok()?;
+    let patch = parts.next().unwrap_or("0").parse().ok()?;
+    Some(SemverTriple {
+        major,
+        minor,
+        patch,
+    })
 }
 
 fn validate_package_archive_path(path: &Path, entry_type: tar::EntryType) -> Result<PathBuf> {
@@ -340,6 +419,63 @@ fn verify_sha1_shasum(tarball_path: &Path, shasum: &str) -> Result<()> {
     }
 }
 
+fn validate_locked_dependency_dist(
+    name: &str,
+    version: &str,
+    locked: Option<&LockedDependency>,
+    registry_tarball_url: &str,
+    registry_integrity: Option<&str>,
+) -> Result<()> {
+    let Some(locked) = locked else {
+        return Ok(());
+    };
+
+    if locked.version.trim() != version {
+        return Err(anyhow!(
+            "package-lock.json version mismatch for package '{}': install resolved '{}' but lockfile pins '{}'",
+            name,
+            version,
+            locked.version
+        ));
+    }
+
+    if let Some(locked_resolved) = locked
+        .resolved
+        .as_deref()
+        .filter(|resolved| !resolved.trim().is_empty())
+    {
+        if locked_resolved.trim() != registry_tarball_url {
+            return Err(anyhow!(
+                "package-lock.json resolved mismatch for package '{}': lockfile pins '{}' but registry metadata reports '{}'",
+                name,
+                locked_resolved,
+                registry_tarball_url
+            ));
+        }
+    }
+
+    if let Some(locked_integrity) = locked
+        .integrity
+        .as_deref()
+        .filter(|integrity| !integrity.trim().is_empty())
+    {
+        if let Some(registry_integrity) =
+            registry_integrity.filter(|integrity| !integrity.trim().is_empty())
+        {
+            if locked_integrity.trim() != registry_integrity.trim() {
+                return Err(anyhow!(
+                    "package-lock.json integrity mismatch for package '{}': lockfile pins '{}' but registry metadata reports '{}'",
+                    name,
+                    locked_integrity,
+                    registry_integrity
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn check_fs_read_permission(path: &Path) -> Result<()> {
     crate::permissions::check_global_permission(
         crate::permissions::PermissionKind::FileSystem,
@@ -432,6 +568,15 @@ impl PackageManager {
 
     /// Download package tarball from npm registry
     pub fn download_package(&self, name: &str, version: &str) -> Result<PathBuf> {
+        self.download_package_with_locked_dependency(name, version, None)
+    }
+
+    fn download_package_with_locked_dependency(
+        &self,
+        name: &str,
+        version: &str,
+        locked: Option<&LockedDependency>,
+    ) -> Result<PathBuf> {
         let cached_path = self
             .config
             .cache_dir
@@ -468,9 +613,20 @@ impl PackageManager {
             .get("shasum")
             .and_then(|s| s.as_str())
             .map(|s| s.to_string());
+        validate_locked_dependency_dist(name, version, locked, &tarball_url, integrity.as_deref())?;
+        let locked_integrity = locked
+            .and_then(|locked| locked.integrity.as_deref())
+            .filter(|integrity| !integrity.trim().is_empty());
+        let verification_integrity = locked_integrity.or(integrity.as_deref());
+        let verification_shasum = if locked_integrity.is_some() {
+            None
+        } else {
+            shasum.as_deref()
+        };
 
         if cached_path.exists() {
-            match verify_package_tarball(&cached_path, integrity.as_deref(), shasum.as_deref()) {
+            match verify_package_tarball(&cached_path, verification_integrity, verification_shasum)
+            {
                 Ok(()) => return Ok(cached_path),
                 Err(e) => {
                     let _ = fs::remove_file(&cached_path);
@@ -515,7 +671,7 @@ impl PackageManager {
         }
 
         if let Err(e) =
-            verify_package_tarball(&tarball_path, integrity.as_deref(), shasum.as_deref())
+            verify_package_tarball(&tarball_path, verification_integrity, verification_shasum)
         {
             let _ = fs::remove_file(&tarball_path);
             return Err(e);
@@ -660,11 +816,33 @@ impl PackageManager {
 
     /// Install a single package
     pub fn install_package(&self, name: &str, version_range: &str) -> Result<ResolutionResult> {
-        // Resolve version
-        let version = self.resolve_version(name, version_range)?;
+        self.install_package_with_locked_dependency(name, version_range, None)
+    }
+
+    fn install_package_with_locked_dependency(
+        &self,
+        name: &str,
+        version_range: &str,
+        locked: Option<&LockedDependency>,
+    ) -> Result<ResolutionResult> {
+        self.check_package_install_write_permissions(name)?;
+
+        let version = if let Some(locked) = locked {
+            if !dependency_request_matches_locked_version(version_range, &locked.version) {
+                return Err(anyhow!(
+                    "package-lock.json version mismatch for package '{}': package.json requests '{}' but lockfile pins '{}'",
+                    name,
+                    version_range,
+                    locked.version
+                ));
+            }
+            locked.version.clone()
+        } else {
+            self.resolve_version(name, version_range)?
+        };
 
         // Download tarball
-        let tarball_path = self.download_package(name, &version)?;
+        let tarball_path = self.download_package_with_locked_dependency(name, &version, locked)?;
 
         // Extract to node_modules
         self.extract_package(&tarball_path, name)?;
@@ -717,11 +895,17 @@ impl PackageManager {
         package_json: &PackageJson,
     ) -> Result<Vec<ResolutionResult>> {
         let mut results = Vec::new();
+        let package_lock = self.read_existing_package_lock()?;
+        let locked_deps = package_lock
+            .as_ref()
+            .and_then(|lock| lock.dependencies.as_ref());
+
         // Install regular dependencies
         if let Some(deps) = &package_json.dependencies {
             for (name, version) in deps {
+                let locked = locked_deps.and_then(|deps| deps.get(name));
                 let resolution = self
-                    .install_package(name, version)
+                    .install_package_with_locked_dependency(name, version, locked)
                     .map_err(|e| anyhow!("Failed to install {}@{}: {}", name, version, e))?;
                 results.push(resolution);
             }
@@ -729,8 +913,9 @@ impl PackageManager {
         // Install dev dependencies
         if let Some(deps) = &package_json.dev_dependencies {
             for (name, version) in deps {
+                let locked = locked_deps.and_then(|deps| deps.get(name));
                 let resolution = self
-                    .install_package(name, version)
+                    .install_package_with_locked_dependency(name, version, locked)
                     .map_err(|e| anyhow!("Failed to install dev {}@{}: {}", name, version, e))?;
                 results.push(resolution);
             }
@@ -738,7 +923,8 @@ impl PackageManager {
         // Install optional dependencies
         if let Some(deps) = &package_json.optional_dependencies {
             for (name, version) in deps {
-                match self.install_package(name, version) {
+                let locked = locked_deps.and_then(|deps| deps.get(name));
+                match self.install_package_with_locked_dependency(name, version, locked) {
                     Ok(resolution) => results.push(resolution),
                     Err(e) => {
                         tracing::debug!("Failed to install optional {}@{}: {}", name, version, e)
@@ -793,6 +979,7 @@ impl PackageManager {
     pub fn get_installed_packages(&self) -> Result<Vec<PackageVersion>> {
         let mut packages = Vec::new();
         if self.config.node_modules_dir.exists() {
+            check_fs_read_permission(&self.config.node_modules_dir)?;
             for entry in fs::read_dir(&self.config.node_modules_dir)
                 .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
             {
@@ -823,8 +1010,10 @@ impl PackageManager {
     /// Clean cache
     pub fn clean_cache(&self) -> Result<()> {
         if self.config.cache_dir.exists() {
+            check_fs_write_permission(&self.config.cache_dir)?;
             fs::remove_dir_all(&self.config.cache_dir)
                 .map_err(|e| anyhow!("Failed to clean cache: {}", e))?;
+            check_fs_write_permission(&self.config.cache_dir)?;
             fs::create_dir_all(&self.config.cache_dir)
                 .map_err(|e| anyhow!("Failed to recreate cache directory: {}", e))?;
         }
@@ -833,6 +1022,18 @@ impl PackageManager {
     /// Get configuration
     pub fn config(&self) -> &PackageManagerConfig {
         &self.config
+    }
+
+    fn check_package_install_write_permissions(&self, package_name: &str) -> Result<()> {
+        check_fs_write_permission(&self.config.node_modules_dir)?;
+
+        let target_dir = self.config.node_modules_dir.join(package_name);
+        if let Some(parent) = target_dir.parent() {
+            check_fs_write_permission(parent)?;
+        }
+        check_fs_write_permission(&target_dir)?;
+
+        Ok(())
     }
 }
 
@@ -881,13 +1082,23 @@ pub struct InstalledPackage {
 impl PackageManager {
     /// Read and parse existing package-lock.json
     pub fn read_package_lock(&self) -> Result<PackageLock> {
-        let lock_path = self.config.node_modules_dir.join("package-lock.json");
+        let lock_path = self.package_lock_read_path()?;
 
-        if !lock_path.exists() {
-            return Err(anyhow!("package-lock.json not found at {:?}", lock_path));
+        self.read_package_lock_at(&lock_path)
+    }
+
+    fn read_existing_package_lock(&self) -> Result<Option<PackageLock>> {
+        for candidate in self.package_lock_read_candidates() {
+            if candidate.exists() {
+                return self.read_package_lock_at(&candidate).map(Some);
+            }
         }
 
-        check_fs_read_permission(&lock_path)?;
+        Ok(None)
+    }
+
+    fn read_package_lock_at(&self, lock_path: &Path) -> Result<PackageLock> {
+        check_fs_read_permission(lock_path)?;
         let content = fs::read_to_string(&lock_path)
             .map_err(|e| anyhow!("Failed to read package-lock.json: {}", e))?;
 
@@ -903,6 +1114,45 @@ impl PackageManager {
         }
 
         Ok(lock)
+    }
+
+    fn package_lock_read_candidates(&self) -> Vec<PathBuf> {
+        let mut candidates = Vec::new();
+
+        if self
+            .config
+            .node_modules_dir
+            .file_name()
+            .is_some_and(|name| name == "node_modules")
+        {
+            if let Some(project_dir) = self.config.node_modules_dir.parent() {
+                candidates.push(project_dir.join("package-lock.json"));
+            }
+        }
+
+        let legacy_path = self.config.node_modules_dir.join("package-lock.json");
+        if !candidates.iter().any(|path| path == &legacy_path) {
+            candidates.push(legacy_path);
+        }
+
+        candidates
+    }
+
+    fn package_lock_read_path(&self) -> Result<PathBuf> {
+        let candidates = self.package_lock_read_candidates();
+
+        for candidate in &candidates {
+            if candidate.exists() {
+                return Ok(candidate.clone());
+            }
+        }
+
+        let searched = candidates
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        Err(anyhow!("package-lock.json not found at {}", searched))
     }
 
     /// Generate package-lock.json from installed packages
@@ -1055,8 +1305,14 @@ impl PackageManager {
 
         // Collect nested dependencies
         let mut nested_deps = Vec::new();
-        if let Some(nested) = path.join("node_modules").read_dir().ok() {
-            for entry in nested.flatten() {
+        let nested_node_modules = path.join("node_modules");
+        if nested_node_modules.exists() {
+            check_fs_read_permission(&nested_node_modules)?;
+            for entry in fs::read_dir(&nested_node_modules)
+                .map_err(|e| anyhow!("Failed to read nested node_modules: {}", e))?
+            {
+                let entry =
+                    entry.map_err(|e| anyhow!("Failed to read nested directory entry: {}", e))?;
                 if let Some(pkg) = self.scan_installed_package(&entry.path())? {
                     nested_deps.push(pkg);
                 }
@@ -1075,6 +1331,13 @@ impl PackageManager {
 
     /// Install a package with exact version (--save-exact behavior)
     pub fn install_package_exact(&self, name: &str, version: &str) -> Result<ResolutionResult> {
+        let package_json_path = PathBuf::from("package.json");
+        if package_json_path.exists() {
+            check_fs_read_permission(&package_json_path)?;
+            check_fs_write_permission(&package_json_path)?;
+        }
+        self.check_package_install_write_permissions(name)?;
+
         // Resolve to exact version first
         let exact_version = self.resolve_version(name, version)?;
 
@@ -1083,7 +1346,6 @@ impl PackageManager {
         self.extract_package(&tarball_path, name)?;
 
         // If package.json exists in current directory, update it with exact version
-        let package_json_path = PathBuf::from("package.json");
         if package_json_path.exists() {
             let mut package = self.parse_package_json(&package_json_path)?;
 
@@ -1104,6 +1366,7 @@ impl PackageManager {
             // Write back with exact version
             let content = serde_json::to_string_pretty(&package)
                 .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
+            check_fs_write_permission(&package_json_path)?;
             fs::write(&package_json_path, content)
                 .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
         }
@@ -1206,6 +1469,7 @@ impl PackageManager {
 
         // Scan node_modules and remove undeclared packages
         if self.config.node_modules_dir.exists() {
+            check_fs_read_permission(&self.config.node_modules_dir)?;
             for entry in fs::read_dir(&self.config.node_modules_dir)
                 .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
             {
@@ -1232,6 +1496,7 @@ impl PackageManager {
                                 tracing::info!("Removing undeclared package: {}", pkg_name);
 
                                 // Remove the package directory
+                                check_fs_write_permission(&path)?;
                                 fs::remove_dir_all(&path)
                                     .map_err(|e| anyhow!("Failed to remove {}: {}", pkg_name, e))?;
 
@@ -1243,58 +1508,59 @@ impl PackageManager {
             }
 
             // Handle scoped packages (@org/pkg) - check if parent @org is declared
-            let org_dirs: std::collections::HashSet<String> =
-                if let Ok(entries) = fs::read_dir(&self.config.node_modules_dir) {
-                    entries
-                        .filter_map(|e| e.ok())
-                        .filter_map(|e| {
-                            let name = e.file_name().to_str()?.to_string();
-                            if name.starts_with('@') && e.path().is_dir() {
-                                Some(name)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect()
-                } else {
-                    std::collections::HashSet::new()
-                };
+            check_fs_read_permission(&self.config.node_modules_dir)?;
+            let mut org_dirs: std::collections::HashSet<String> = std::collections::HashSet::new();
+            for entry in fs::read_dir(&self.config.node_modules_dir)
+                .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
+            {
+                let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                let name = entry.file_name().to_str().map(|s| s.to_string());
+                if let Some(name) = name {
+                    if name.starts_with('@') && entry.path().is_dir() {
+                        org_dirs.insert(name);
+                    }
+                }
+            }
 
             for org in org_dirs {
                 // Check if this org/pkg should exist
                 let org_path = self.config.node_modules_dir.join(&org);
                 let mut org_has_valid_pkgs = false;
 
-                if let Ok(pkg_entries) = fs::read_dir(&org_path) {
-                    for pkg_entry in pkg_entries.flatten() {
-                        if pkg_entry.path().is_dir() {
-                            let pkg_name = pkg_entry.file_name().to_str().unwrap_or("").to_string();
-                            let full_name = format!("{}/{}", org, pkg_name);
+                check_fs_read_permission(&org_path)?;
+                for pkg_entry in fs::read_dir(&org_path)
+                    .map_err(|e| anyhow!("Failed to read scoped package directory: {}", e))?
+                {
+                    let pkg_entry = pkg_entry
+                        .map_err(|e| anyhow!("Failed to read scoped package entry: {}", e))?;
+                    let pkg_path = pkg_entry.path();
+                    if pkg_path.is_dir() {
+                        let pkg_name = pkg_entry.file_name().to_str().unwrap_or("").to_string();
+                        let full_name = format!("{}/{}", org, pkg_name);
 
-                            if declared_deps.contains(&full_name) {
-                                org_has_valid_pkgs = true;
-                            } else {
-                                // Remove this package
-                                tracing::info!("Removing undeclared package: {}", full_name);
-                                if let Err(e) = fs::remove_dir_all(pkg_entry.path()) {
-                                    tracing::warn!("Failed to remove {}: {}", full_name, e);
-                                } else {
-                                    removed.push(full_name);
-                                }
-                            }
+                        if declared_deps.contains(&full_name) {
+                            org_has_valid_pkgs = true;
+                        } else {
+                            // Remove this package
+                            tracing::info!("Removing undeclared package: {}", full_name);
+                            check_fs_write_permission(&pkg_path)?;
+                            fs::remove_dir_all(&pkg_path)
+                                .map_err(|e| anyhow!("Failed to remove {}: {}", full_name, e))?;
+                            removed.push(full_name);
                         }
                     }
                 }
 
                 // Remove empty @org directory
                 if !org_has_valid_pkgs {
-                    if let Ok(entries) = fs::read_dir(&org_path) {
-                        if entries.count() == 0 {
-                            tracing::info!("Removing empty scope directory: {}", org);
-                            if let Err(e) = fs::remove_dir(&org_path) {
-                                tracing::warn!("Failed to remove empty scope {}: {}", org, e);
-                            }
-                        }
+                    check_fs_read_permission(&org_path)?;
+                    let entries = fs::read_dir(&org_path)
+                        .map_err(|e| anyhow!("Failed to read scoped package directory: {}", e))?;
+                    if entries.count() == 0 {
+                        tracing::info!("Removing empty scope directory: {}", org);
+                        check_fs_write_permission(&org_path)?;
+                        fs::remove_dir(&org_path)
+                            .map_err(|e| anyhow!("Failed to remove empty scope {}: {}", org, e))?;
                     }
                 }
             }

@@ -240,3 +240,95 @@ fn test_sign_and_verify_workflow() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().trim(), "true");
 }
+
+#[test]
+#[serial]
+fn test_crypto_constants_exposes_rsa_pkcs1_pss_padding() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        typeof crypto.constants.RSA_PKCS1_PSS_PADDING === 'number';
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_create_sign_rsa_pss_with_options_round_trip() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const pss = {
+            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+            saltLength: 32
+        };
+
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('pss message');
+        const signature = sign.sign({ key: privateKey, ...pss }, 'base64');
+
+        const verify = crypto.createVerify('RSA-SHA256');
+        verify.update('pss message');
+        verify.verify({ key: publicKey, ...pss }, signature, 'base64') === true;
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_create_verify_rsa_pss_rejects_pkcs1_signature() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('same message');
+        const pkcs1Signature = sign.sign(privateKey, 'base64');
+
+        const verify = crypto.createVerify('RSA-SHA256');
+        verify.update('same message');
+        verify.verify({
+            key: publicKey,
+            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+            saltLength: 32
+        }, pkcs1Signature, 'base64') === false;
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_create_verify_rsa_pss_wrong_salt_length_returns_false() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048
+        });
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update('salt length message');
+        const signature = sign.sign({
+            key: privateKey,
+            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+            saltLength: 32
+        }, 'base64');
+
+        const verify = crypto.createVerify('RSA-SHA256');
+        verify.update('salt length message');
+        verify.verify({
+            key: publicKey,
+            padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+            saltLength: 20
+        }, signature, 'base64') === false;
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}

@@ -18,11 +18,21 @@ fn cleanup_global_state() {
 fn test_settimeout_zero_delay_executes() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    // setTimeout with delay=0 executes immediately (simplified implementation)
+    // setTimeout with delay=0 executes in the timer phase after synchronous code.
     let result = runtime
-        .execute_code("let executed = false; setTimeout(() => { executed = true; }, 0); executed;")
+        .execute_code(
+            r#"
+        new Promise((resolve) => {
+            let executed = false;
+            setTimeout(() => {
+                executed = true;
+                resolve(executed);
+            }, 0);
+        });
+    "#,
+        )
         .unwrap();
-    assert_eq!(result.trim(), "true"); // Timer executes immediately for delay=0
+    assert_eq!(result.trim(), "true");
 }
 
 #[test]

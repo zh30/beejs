@@ -243,7 +243,9 @@ fn test_ecdsa_p384_public_key_is_uncompressed_point() {
                     true,
                     ['sign', 'verify']
                 );
-                const publicBytes = new Uint8Array(keyPair.publicKey.__beejs_key_data__);
+                const publicBytes = new Uint8Array(
+                    await crypto.subtle.exportKey('raw', keyPair.publicKey)
+                );
                 return publicBytes.length === 97 && publicBytes[0] === 4;
             } catch (error) {
                 return String(error && error.message ? error.message : error);
@@ -267,7 +269,9 @@ fn test_ecdsa_p521_public_key_is_uncompressed_point() {
                     true,
                     ['sign', 'verify']
                 );
-                const publicBytes = new Uint8Array(keyPair.publicKey.__beejs_key_data__);
+                const publicBytes = new Uint8Array(
+                    await crypto.subtle.exportKey('raw', keyPair.publicKey)
+                );
                 return publicBytes.length === 133 && publicBytes[0] === 4;
             } catch (error) {
                 return String(error && error.message ? error.message : error);

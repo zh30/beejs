@@ -30,6 +30,61 @@ fn append_blob_part(scope: &mut v8::HandleScope, part: v8::Local<v8::Value>, dat
     }
 }
 
+fn array_buffer_from_bytes<'scope>(
+    scope: &mut v8::HandleScope<'scope>,
+    bytes: &[u8],
+) -> v8::Local<'scope, v8::ArrayBuffer> {
+    let array_buffer = v8::ArrayBuffer::new(scope, bytes.len());
+    if !bytes.is_empty() {
+        let backing_store = array_buffer.get_backing_store();
+        let ptr = backing_store.data() as *mut u8;
+        if !ptr.is_null() {
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, bytes.len()) };
+            slice.copy_from_slice(bytes);
+        }
+    }
+    array_buffer
+}
+
+fn bytes_from_array_buffer_value(value: v8::Local<v8::Value>) -> Option<Vec<u8>> {
+    let buffer = v8::Local::<v8::ArrayBuffer>::try_from(value).ok()?;
+    let len = buffer.byte_length();
+    if len == 0 {
+        return Some(Vec::new());
+    }
+    let backing_store = buffer.get_backing_store();
+    let ptr = backing_store.data() as *const u8;
+    if ptr.is_null() {
+        return None;
+    }
+    Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+}
+
+fn blob_object_bytes(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+) -> Option<Vec<u8>> {
+    let bytes_key = v8::String::new(scope, "blobBytes")?;
+    object
+        .get(scope, bytes_key.into())
+        .and_then(bytes_from_array_buffer_value)
+}
+
+fn set_blob_data_properties(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    data: &[u8],
+) {
+    let bytes_key = v8::String::new(scope, "blobBytes").unwrap();
+    let bytes_buffer = array_buffer_from_bytes(scope, data);
+    object.set(scope, bytes_key.into(), bytes_buffer.into());
+
+    let data_str = String::from_utf8_lossy(data);
+    let data_key = v8::String::new(scope, "blobData").unwrap();
+    let data_v8 = v8::String::new(scope, &data_str).unwrap();
+    object.set(scope, data_key.into(), data_v8.into());
+}
+
 /// Setup Blob and File APIs in V8 context
 pub fn setup_blob_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -129,14 +184,8 @@ fn blob_constructor(
     let stream_template: _ = v8::FunctionTemplate::new(scope, blob_stream);
     let stream_func: _ = stream_template.get_function(scope).unwrap();
     this.set(scope, stream_key.into(), stream_func.into());
-    // Store data internally AFTER adding methods
-    if !data.is_empty() {
-        let data_str: _ = String::from_utf8_lossy(&data);
-        // Use a less common property name
-        let data_key: _ = v8::String::new(scope, "blobData").unwrap();
-        let data_v8: _ = v8::String::new(scope, &data_str).unwrap();
-        this.set(scope, data_key.into(), data_v8.into());
-    }
+    // Store bytes internally AFTER adding methods.
+    set_blob_data_properties(scope, this, &data);
     // Don't return anything - use the default instance
 }
 /// File constructor callback (extends Blob)
@@ -225,12 +274,8 @@ fn file_constructor(
     }
     let last_modified_val: _ = v8::Number::new(scope, last_modified);
     this.set(scope, last_modified_key.into(), last_modified_val.into());
-    // Store data internally
-    if !data.is_empty() {
-        let data_key: _ = v8::String::new(scope, "blobData").unwrap();
-        let data_str: _ = v8::String::new(scope, &String::from_utf8_lossy(&data)).unwrap();
-        this.set(scope, data_key.into(), data_str.into());
-    }
+    // Store bytes internally.
+    set_blob_data_properties(scope, this, &data);
     // Add methods to File (inherits from Blob)
     let text_key: _ = v8::String::new(scope, "text").unwrap();
     let text_template: _ = v8::FunctionTemplate::new(scope, blob_text);
@@ -256,14 +301,29 @@ fn blob_array_buffer(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // Get the Blob object (this)
     let this: v8::Local<v8::Object> = args.this();
-    // Get the internal data stored in the Blob
-    let data_key: _ = v8::String::new(scope, "_data").unwrap();
+
+    if let Some(bytes) = blob_object_bytes(scope, this) {
+        let array_buffer = array_buffer_from_bytes(scope, &bytes);
+        retval.set(array_buffer.into());
+        return;
+    }
+
+    // Fallback for older Blob objects created before blobBytes existed.
+    let data_key: _ = v8::String::new(scope, "blobData").unwrap();
     let data_val: _ = this.get(scope, data_key.into());
     if let Some(data) = data_val {
-        if data.is_array_buffer() {
-            retval.set(data);
+        if data.is_string() {
+            let data_string = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let bytes = data_string.as_bytes();
+            let array_buffer = v8::ArrayBuffer::new(scope, bytes.len());
+            if !bytes.is_empty() {
+                let backing_store = array_buffer.get_backing_store();
+                for (i, byte) in bytes.iter().enumerate() {
+                    backing_store[i].set(*byte);
+                }
+            }
+            retval.set(array_buffer.into());
             return;
         }
     }
@@ -339,37 +399,33 @@ fn blob_slice(
             String::new()
         }
     };
-    // Get the source data
-    let data_key: _ = v8::String::new(scope, "blobData").unwrap();
-    let data_val: _ = this.get(scope, data_key.into());
-    let sliced_string: _ = if let Some(data) = data_val {
-        if data.is_string() {
-            let data_str: _ = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
-            let len: _ = data_str.len() as i64;
-            let start_usize: _ = if start < 0 {
-                ((len + start) as usize).min(len as usize)
-            } else {
-                start as usize
-            }
-            .min(len as usize);
-            let end_usize: _ = if end == i64::MAX {
-                len as usize
-            } else if end < 0 {
-                ((len + end) as usize).min(len as usize)
-            } else {
-                end as usize
-            }
-            .min(len as usize);
-            if end_usize > start_usize {
-                Some(data_str[start_usize..end_usize].to_string())
-            } else {
-                Some(String::new())
-            }
-        } else {
-            Some(String::new())
-        }
+    // Get and slice source bytes.
+    let data = blob_object_bytes(scope, this).unwrap_or_else(|| {
+        let data_key = v8::String::new(scope, "blobData").unwrap();
+        this.get(scope, data_key.into())
+            .and_then(|data| {
+                data.to_string(scope)
+                    .map(|value| value.to_rust_string_lossy(scope).into_bytes())
+            })
+            .unwrap_or_default()
+    });
+    let len = data.len() as i64;
+    let start_usize = if start < 0 {
+        (len + start).clamp(0, len) as usize
     } else {
-        Some(String::new())
+        start.min(len) as usize
+    };
+    let end_usize = if end == i64::MAX {
+        len as usize
+    } else if end < 0 {
+        (len + end).clamp(0, len) as usize
+    } else {
+        end.min(len) as usize
+    };
+    let sliced_bytes = if end_usize > start_usize {
+        data[start_usize..end_usize].to_vec()
+    } else {
+        Vec::new()
     };
     // Create new Blob object with sliced data
     let blob_obj: _ = v8::Object::new(scope);
@@ -383,22 +439,12 @@ fn blob_slice(
         blob_obj.set(scope, is_file_key.into(), true_value.into());
     }
     let size_key: _ = v8::String::new(scope, "size").unwrap();
-    let size_val: _ = v8::Number::new(
-        scope,
-        sliced_string.as_ref().map(|d| d.len()).unwrap_or(0) as f64,
-    );
+    let size_val: _ = v8::Number::new(scope, sliced_bytes.len() as f64);
     blob_obj.set(scope, size_key.into(), size_val.into());
     let type_key: _ = v8::String::new(scope, "type").unwrap();
     let type_val: _ = v8::String::new(scope, &content_type).unwrap();
     blob_obj.set(scope, type_key.into(), type_val.into());
-    // Store the sliced string data
-    if let Some(data) = sliced_string {
-        if !data.is_empty() {
-            let data_key: _ = v8::String::new(scope, "blobData").unwrap();
-            let data_str: _ = v8::String::new(scope, &data).unwrap();
-            blob_obj.set(scope, data_key.into(), data_str.into());
-        }
-    }
+    set_blob_data_properties(scope, blob_obj, &sliced_bytes);
     // Add methods to sliced Blob
     let text_key: _ = v8::String::new(scope, "text").unwrap();
     let text_template: _ = v8::FunctionTemplate::new(scope, blob_text);

@@ -168,6 +168,11 @@ impl BenchmarkRunner {
         file_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
+        crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::FileSystem,
+            crate::permissions::PermissionAction::Write,
+            crate::permissions::ResourceId::Path(std::path::PathBuf::from(file_path)),
+        )?;
         let mut file = std::fs::File::create(file_path)?;
         writeln!(file, "Benchmark Results")?;
         writeln!(file, "=================")?;
@@ -248,7 +253,18 @@ impl BuiltinBenchmarks {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permissions::{
+        global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+    };
     use crate::testing::perf::ConsolePerfTestReporter;
+    use serial_test::serial;
+    use tempfile::TempDir;
+
+    fn reset_global_broker() {
+        *global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
+    }
 
     #[test]
     fn test_benchmark_runner() {
@@ -302,6 +318,57 @@ mod tests {
         assert!(comparison.contains("test1"));
         assert!(comparison.contains("test2"));
     }
+
+    #[test]
+    #[serial]
+    fn save_results_uses_global_file_write_broker_before_creating_report() {
+        let temp_dir = TempDir::new().unwrap();
+        let output_path = temp_dir.path().join("benchmark-report.txt");
+        let config = BenchmarkConfig::default();
+        let reporter = Box::new(ConsolePerfTestReporter::new(false));
+        let runner = BenchmarkRunner::new(config, reporter);
+        let results = vec![BenchmarkResult {
+            name: "blocked".to_string(),
+            group: None,
+            results: Vec::new(),
+            summary: BenchmarkSummary {
+                total_tests: 1,
+                passed_tests: 1,
+                failed_tests: 0,
+                fastest: Some("blocked".to_string()),
+                slowest: Some("blocked".to_string()),
+                average_ops_per_second: 1.0,
+            },
+        }];
+
+        {
+            let mut broker = global_resource_broker()
+                .write()
+                .expect("resource broker lock should not be poisoned");
+            *broker = ResourceBroker::default();
+            broker.deny(
+                PermissionKind::FileSystem,
+                PermissionAction::Write,
+                ResourceId::Path(output_path.clone()),
+            );
+        }
+
+        let result = runner.save_results(&results, output_path.to_str().unwrap());
+
+        reset_global_broker();
+
+        let error = result.expect_err("denied benchmark report write must fail");
+        assert!(
+            error.to_string().contains("permission denied"),
+            "expected permission denied, got: {error}"
+        );
+        assert!(
+            !output_path.exists(),
+            "denied benchmark report write must not create {}",
+            output_path.display()
+        );
+    }
+
     #[test]
     fn test_builtin_benchmarks() {
         let fib_benchmark: _ = BuiltinBenchmarks::fibonacci_benchmark(20);

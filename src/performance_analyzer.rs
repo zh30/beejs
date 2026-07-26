@@ -3,7 +3,6 @@
 // and other performance metrics.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
 use std::time::Instant;
 
 /// Performance metrics for a single execution

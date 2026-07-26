@@ -98,17 +98,14 @@ impl ParallelExecutor {
         } else {
             timeout
         };
-        // TODO: Execute actual test using V8 in a separate thread
-        // For now, simulate test execution
-        // In real implementation, we would:
-        // 1. Spawn a thread to run the test
-        // 2. Use crossbeam::channel to detect timeout
-        // 3. Execute V8 test function
-        // 4. Collect results
         let duration: _ = start.elapsed();
+        result.passed = false;
+        result.error = Some(
+            "parallel V8 test execution is not implemented; refusing to report an unexecuted test as passed"
+                .to_string(),
+        );
         // Check if test exceeded timeout
         if duration > test_timeout {
-            result.passed = false;
             result.error = Some(format!("Test timeout: exceeded {:?}", test_timeout));
         }
         result.duration = duration;

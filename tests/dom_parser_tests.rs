@@ -204,19 +204,49 @@ mod tests {
         assert_eq!(result.unwrap().trim(), "true");
     }
 
-    /// 测试默认内容类型（text/html）
+    /// 测试缺失内容类型会抛 TypeError
     #[test]
     #[serial]
-    fn test_default_content_type() {
+    fn test_missing_content_type_throws() {
         let code = r#"
             const parser = new DOMParser();
-            const doc = DOMParser.prototype.parseFromString('<html></html>');
-            typeof doc.body === 'object'
+            try {
+                DOMParser.prototype.parseFromString('<html></html>');
+                false;
+            } catch (error) {
+                error instanceof TypeError;
+            }
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
-        assert!(result.is_ok(), "Default content type should be text/html");
+        assert!(
+            result.is_ok(),
+            "Missing DOMParser content type should be catchable"
+        );
+        assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// 测试非法内容类型会抛 TypeError
+    #[test]
+    #[serial]
+    fn test_invalid_content_type_throws() {
+        let code = r#"
+            const parser = new DOMParser();
+            try {
+                DOMParser.prototype.parseFromString('<x/>', 'text/plain');
+                false;
+            } catch (error) {
+                error instanceof TypeError;
+            }
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(
+            result.is_ok(),
+            "Invalid DOMParser content type should be catchable"
+        );
         assert_eq!(result.unwrap().trim(), "true");
     }
 }

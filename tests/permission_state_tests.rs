@@ -16,6 +16,24 @@ fn reset_global_broker() {
         .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
 }
 
+struct CurrentDirGuard {
+    original: std::path::PathBuf,
+}
+
+impl CurrentDirGuard {
+    fn switch_to(path: &std::path::Path) -> Self {
+        let original = std::env::current_dir().expect("failed to read current directory");
+        std::env::set_current_dir(path).expect("failed to switch current directory");
+        Self { original }
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.original);
+    }
+}
+
 #[test]
 fn broker_allows_by_default_for_compatibility() {
     let broker = ResourceBroker::default();
@@ -139,6 +157,34 @@ fn broker_normalizes_equivalent_paths_before_checking_rules() {
 }
 
 #[test]
+fn broker_normalizes_relative_nonexistent_path_against_absolute_rule() {
+    let temp = tempfile::tempdir().unwrap();
+    let _cwd = CurrentDirGuard::switch_to(temp.path());
+    let cache_path = temp.path().join(".beejs_cache");
+
+    let mut broker = ResourceBroker::default();
+    broker.deny(
+        PermissionKind::FileSystem,
+        PermissionAction::Write,
+        ResourceId::Any,
+    );
+    broker.allow(
+        PermissionKind::FileSystem,
+        PermissionAction::Write,
+        ResourceId::Path(cache_path),
+    );
+
+    assert_eq!(
+        broker.check(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(".beejs_cache".into()),
+        ),
+        PermissionDecision::Allow
+    );
+}
+
+#[test]
 fn broker_can_gate_environment_variables_by_key() {
     let mut broker = ResourceBroker::default();
     broker.deny(
@@ -162,6 +208,102 @@ fn broker_can_gate_environment_variables_by_key() {
             ResourceId::Name("PATH".into()),
         ),
         PermissionDecision::Allow
+    );
+}
+
+#[test]
+fn broker_allows_network_host_exception_to_wildcard_deny() {
+    let mut broker = ResourceBroker::default();
+    broker.deny(
+        PermissionKind::Network,
+        PermissionAction::Connect,
+        ResourceId::Any,
+    );
+    broker.allow(
+        PermissionKind::Network,
+        PermissionAction::Connect,
+        ResourceId::Name("allowed.example".to_string()),
+    );
+
+    assert_eq!(
+        broker.check(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Url("wss://allowed.example/socket".to_string()),
+        ),
+        PermissionDecision::Allow
+    );
+    assert_eq!(
+        broker.check(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Url("wss://blocked.example/socket".to_string()),
+        ),
+        PermissionDecision::Deny
+    );
+}
+
+#[test]
+fn broker_allows_exact_network_url_exception_to_wildcard_deny() {
+    let mut broker = ResourceBroker::default();
+    broker.deny(
+        PermissionKind::Network,
+        PermissionAction::Connect,
+        ResourceId::Any,
+    );
+    broker.allow(
+        PermissionKind::Network,
+        PermissionAction::Connect,
+        ResourceId::Url("wss://allowed.example/socket".to_string()),
+    );
+
+    assert_eq!(
+        broker.check(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Url("wss://allowed.example/socket".to_string()),
+        ),
+        PermissionDecision::Allow
+    );
+    assert_eq!(
+        broker.check(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Url("wss://allowed.example/other".to_string()),
+        ),
+        PermissionDecision::Deny
+    );
+}
+
+#[test]
+fn broker_keeps_network_connect_and_listen_rules_separate() {
+    let mut broker = ResourceBroker::default();
+    broker.deny(
+        PermissionKind::Network,
+        PermissionAction::Listen,
+        ResourceId::Any,
+    );
+    broker.allow(
+        PermissionKind::Network,
+        PermissionAction::Connect,
+        ResourceId::Name("127.0.0.1".to_string()),
+    );
+
+    assert_eq!(
+        broker.check(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Url("http://127.0.0.1:3000/".to_string()),
+        ),
+        PermissionDecision::Allow
+    );
+    assert_eq!(
+        broker.check(
+            PermissionKind::Network,
+            PermissionAction::Listen,
+            ResourceId::Url("http://127.0.0.1:3000/".to_string()),
+        ),
+        PermissionDecision::Deny
     );
 }
 
@@ -292,6 +434,122 @@ fn require_fs_read_file_sync_uses_global_permission_broker() {
     assert!(
         result.contains("permission denied"),
         "require(\"fs\") must not bypass broker deny, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn esm_dependency_import_uses_global_file_read_broker() {
+    let temp = tempfile::tempdir().unwrap();
+    let app_dir = temp.path().join("app");
+    fs::create_dir_all(&app_dir).unwrap();
+    let main_path = app_dir.join("main.mjs");
+    let dependency_path = app_dir.join("secret.mjs");
+    fs::write(
+        &dependency_path,
+        r#"
+        globalThis.__esmDeniedDependencyExecuted = true;
+        export const secret = "classified";
+        "#,
+    )
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(dependency_path.clone()),
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    runtime.set_main_module_path(&main_path);
+    let error = runtime
+        .execute_code(
+            r#"
+            import { secret } from './secret.mjs';
+            globalThis.__esmDeniedSecret = secret;
+            "#,
+        )
+        .expect_err("denied ESM dependency import must fail")
+        .to_string();
+
+    reset_global_broker();
+
+    assert!(
+        error.contains("permission denied"),
+        "ESM dependency loading must surface broker deny, got: {error}"
+    );
+
+    let leak_check = runtime
+        .execute_code(
+            r#"
+            globalThis.__esmDeniedDependencyExecuted === undefined &&
+            globalThis.__esmDeniedSecret === undefined
+            "#,
+        )
+        .unwrap();
+    assert_eq!(
+        leak_check.trim(),
+        "true",
+        "denied ESM dependency must not execute side effects"
+    );
+}
+
+#[test]
+#[serial]
+fn esm_fs_builtin_import_uses_global_file_read_broker() {
+    let temp = tempfile::tempdir().unwrap();
+    let app_dir = temp.path().join("app");
+    fs::create_dir_all(&app_dir).unwrap();
+    let main_path = app_dir.join("main.mjs");
+    let secret_path = app_dir.join("secret.txt");
+    fs::write(&secret_path, "classified-value").unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(secret_path.clone()),
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    runtime.set_main_module_path(&main_path);
+    let error = runtime
+        .execute_code(&format!(
+            r#"
+            import {{ readFileSync }} from 'fs';
+            export const forceNativeModule = true;
+            globalThis.__esmDeniedFsRead = readFileSync("{}", "utf8");
+            "#,
+            path_for_js(&secret_path)
+        ))
+        .expect_err("denied ESM fs read must fail")
+        .to_string();
+
+    reset_global_broker();
+
+    assert!(
+        error.contains("permission denied"),
+        "ESM fs builtin import must surface broker deny, got: {error}"
+    );
+
+    let leak_check = runtime
+        .execute_code("globalThis.__esmDeniedFsRead === undefined")
+        .unwrap();
+    assert_eq!(
+        leak_check.trim(),
+        "true",
+        "denied ESM fs read must not leak file contents"
     );
 }
 
@@ -890,6 +1148,90 @@ fn dns_lookup_uses_global_network_permission_broker() {
     assert!(
         result.contains("permission denied"),
         "dns.lookup must fail before resolver I/O when Network/Connect is denied, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn node_http_request_uses_global_network_permission_broker() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Connect,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            try {
+                const req = http.request({
+                    hostname: "127.0.0.1",
+                    port: 9,
+                    path: "/permission-test"
+                });
+                req.end();
+                "allowed";
+            } catch (error) {
+                String(error && error.message ? error.message : error);
+            }
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert!(
+        result.contains("permission denied"),
+        "http.request().end must fail before network I/O when Network/Connect is denied, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn node_http_server_listen_uses_global_network_permission_broker() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Network,
+            PermissionAction::Listen,
+            ResourceId::Any,
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            const server = http.createServer();
+            try {
+                server.listen(0, "127.0.0.1");
+                `allowed:${server.listening}`;
+            } catch (error) {
+                `${String(error && error.message ? error.message : error)}:${server.listening}`;
+            }
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert!(
+        result.contains("permission denied"),
+        "http.createServer().listen must fail before bind when Network/Listen is denied, got: {result}"
+    );
+    assert!(
+        result.ends_with(":false"),
+        "denied http server listen must not mark the server as listening, got: {result}"
     );
 }
 

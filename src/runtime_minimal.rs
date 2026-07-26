@@ -6,20 +6,24 @@ use anyhow::Result;
 use base64::Engine;
 use chrono::Datelike;
 use once_cell::sync::Lazy;
-use openssl::bn::{BigNum, BigNumContext};
+use openssl::bn::{BigNum, BigNumContext, BigNumRef};
 use openssl::derive::Deriver;
 use openssl::ec::{EcGroup, EcGroupRef, EcKey, EcPoint, PointConversionForm};
 use openssl::hash::MessageDigest;
 use openssl::nid::Nid;
-use openssl::pkey::{PKey, Private};
+use openssl::pkey::{Id, PKey, Private, Public};
 use openssl::rsa::{Padding, Rsa};
-use openssl::sign::{Signer, Verifier};
+use openssl::sign::{RsaPssSaltlen, Signer, Verifier};
+use openssl::symm::Cipher;
 use rand::Rng;
 use reqwest;
 use rusty_v8 as v8;
 use serde_json;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use url::Url;
@@ -72,6 +76,25 @@ thread_local! {
     static PREPEND_ONCE_LISTENERS: Mutex<HashMap<String, Vec<v8::Global<v8::Function>>>> = Mutex::new(HashMap::new());
 }
 
+#[derive(Default)]
+struct EsmModuleLoadState {
+    modules_by_path: HashMap<PathBuf, v8::Global<v8::Module>>,
+    source_fingerprints_by_path: HashMap<PathBuf, [u8; 32]>,
+    paths_by_script_id: HashMap<i32, PathBuf>,
+    cjs_synthetic_exports_by_identity: HashMap<i32, v8::Global<v8::Value>>,
+    cjs_synthetic_named_exports_by_identity: HashMap<i32, Vec<String>>,
+    pending_error: Option<String>,
+}
+
+enum EsmDynamicImportError<'scope> {
+    Message(String),
+    Value(v8::Local<'scope, v8::Value>),
+}
+
+thread_local! {
+    static ESM_MODULE_LOAD_STATE: RefCell<Option<EsmModuleLoadState>> = const { RefCell::new(None) };
+}
+
 // v0.3.242: Max listeners storage per event type (for process.setMaxListeners)
 thread_local! {
     static MAX_LISTENERS: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
@@ -105,6 +128,10 @@ static LEGACY_FS_FALLBACK_ENABLED: AtomicBool = AtomicBool::new(false);
 
 fn legacy_fs_fallback_enabled() -> bool {
     LEGACY_FS_FALLBACK_ENABLED.load(Ordering::Relaxed)
+}
+
+fn remaining_timer_drain_ms(start: std::time::Instant, limit_ms: u64) -> u64 {
+    limit_ms.saturating_sub(start.elapsed().as_millis() as u64)
 }
 
 fn serde_json_value_to_v8<'scope>(
@@ -426,6 +453,9 @@ fn encode_string_to_bytes(s: &str, encoding: &str) -> Vec<u8> {
         "utf8" | "utf-8" | "utf8mb4" => s.as_bytes().to_vec(),
         "hex" => hex::decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
         "base64" => engine.decode(s).unwrap_or_else(|_| s.as_bytes().to_vec()),
+        "base64url" => base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(s.trim_end_matches('='))
+            .unwrap_or_else(|_| s.as_bytes().to_vec()),
         "latin1" | "ascii" | "binary" => s.bytes().collect(),
         _ => s.as_bytes().to_vec(), // Default to UTF-8
     }
@@ -488,6 +518,1143 @@ fn create_buffer_wrapper<'s>(
     wrapper
 }
 
+fn get_string_property(
+    scope: &mut v8::HandleScope,
+    obj: v8::Local<v8::Object>,
+    name: &str,
+) -> Option<String> {
+    let key = v8::String::new(scope, name)?.into();
+    obj.get(scope, key).and_then(|value| {
+        if value.is_undefined() || value.is_null() {
+            None
+        } else {
+            value
+                .to_string(scope)
+                .map(|value| value.to_rust_string_lossy(scope))
+        }
+    })
+}
+
+fn string_from_v8_value(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> String {
+    value
+        .to_string(scope)
+        .map(|value| value.to_rust_string_lossy(scope))
+        .unwrap_or_default()
+}
+
+fn string_vec_from_v8_array_value(
+    scope: &mut v8::HandleScope,
+    value: v8::Local<v8::Value>,
+) -> Vec<String> {
+    if !value.is_array() {
+        return Vec::new();
+    }
+
+    let Ok(array) = v8::Local::<v8::Array>::try_from(value) else {
+        return Vec::new();
+    };
+
+    let mut values = Vec::new();
+    for index in 0..array.length() {
+        if let Some(value) = array.get_index(scope, index) {
+            values.push(string_from_v8_value(scope, value));
+        }
+    }
+    values
+}
+
+fn run_shell_command(command: &str) -> std::io::Result<std::process::Output> {
+    #[cfg(windows)]
+    {
+        Command::new("cmd").args(["/C", command]).output()
+    }
+
+    #[cfg(not(windows))]
+    {
+        Command::new("sh").arg("-c").arg(command).output()
+    }
+}
+
+struct ChildProcessOutput {
+    stdout: String,
+    stderr: String,
+    exit_code: i32,
+}
+
+fn child_process_output_from_result(
+    output: std::io::Result<std::process::Output>,
+) -> ChildProcessOutput {
+    match output {
+        Ok(output) => ChildProcessOutput {
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            exit_code: output.status.code().unwrap_or(1),
+        },
+        Err(error) => ChildProcessOutput {
+            stdout: String::new(),
+            stderr: error.to_string(),
+            exit_code: 1,
+        },
+    }
+}
+
+fn child_process_output_object<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    output: &ChildProcessOutput,
+) -> v8::Local<'s, v8::Object> {
+    let child_obj = v8::Object::new(scope);
+
+    let stdout_key = v8::String::new(scope, "stdout").unwrap();
+    let stdout_val = v8::String::new(scope, &output.stdout).unwrap();
+    child_obj.set(scope, stdout_key.into(), stdout_val.into());
+
+    let stderr_key = v8::String::new(scope, "stderr").unwrap();
+    let stderr_val = v8::String::new(scope, &output.stderr).unwrap();
+    child_obj.set(scope, stderr_key.into(), stderr_val.into());
+
+    let pid_key = v8::String::new(scope, "pid").unwrap();
+    let pid_val = v8::Integer::new(scope, 0);
+    child_obj.set(scope, pid_key.into(), pid_val.into());
+
+    let killed_key = v8::String::new(scope, "killed").unwrap();
+    let killed_val = v8::Boolean::new(scope, false);
+    child_obj.set(scope, killed_key.into(), killed_val.into());
+
+    let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
+    let exit_code_val = v8::Integer::new(scope, output.exit_code);
+    child_obj.set(scope, exit_code_key.into(), exit_code_val.into());
+
+    let signal_key = v8::String::new(scope, "signal").unwrap();
+    let signal_val = v8::null(scope);
+    child_obj.set(scope, signal_key.into(), signal_val.into());
+
+    let on_template = v8::FunctionTemplate::new(scope, child_process_on_callback);
+    let on_func = on_template.get_function(scope).unwrap();
+    let on_key = v8::String::new(scope, "on").unwrap();
+    child_obj.set(scope, on_key.into(), on_func.into());
+
+    child_obj
+}
+
+fn child_process_error_value<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    exit_code: i32,
+) -> v8::Local<'s, v8::Value> {
+    if exit_code == 0 {
+        return v8::null(scope).into();
+    }
+
+    let message = format!("Command failed with exit code {}", exit_code);
+    let message_val = v8::String::new(scope, &message).unwrap();
+    let error_val = v8::Exception::error(scope, message_val);
+    if let Ok(error_obj) = v8::Local::<v8::Object>::try_from(error_val) {
+        let code_key = v8::String::new(scope, "code").unwrap();
+        let code_val = v8::Integer::new(scope, exit_code);
+        error_obj.set(scope, code_key.into(), code_val.into());
+    }
+    error_val
+}
+
+fn call_child_process_callback(
+    scope: &mut v8::HandleScope,
+    callback_value: v8::Local<v8::Value>,
+    output: &ChildProcessOutput,
+) {
+    if !callback_value.is_function() {
+        return;
+    }
+
+    let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_value) else {
+        return;
+    };
+
+    let error = child_process_error_value(scope, output.exit_code);
+    let stdout = v8::String::new(scope, &output.stdout).unwrap();
+    let stderr = v8::String::new(scope, &output.stderr).unwrap();
+    let undefined = v8::undefined(scope);
+    let callback_args: [v8::Local<v8::Value>; 3] = [error, stdout.into(), stderr.into()];
+    let _ = callback.call(scope, undefined.into(), &callback_args);
+}
+
+fn child_process_on_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this = args.this();
+    let event = string_from_v8_value(scope, args.get(0));
+    let listener = args.get(1);
+    if !listener.is_function() {
+        retval.set(this.into());
+        return;
+    }
+
+    if event == "exit" || event == "close" {
+        if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+            let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
+            let exit_code = this
+                .get(scope, exit_code_key.into())
+                .unwrap_or_else(|| v8::null(scope).into());
+            let signal_key = v8::String::new(scope, "signal").unwrap();
+            let signal = this
+                .get(scope, signal_key.into())
+                .unwrap_or_else(|| v8::null(scope).into());
+            let call_args: [v8::Local<v8::Value>; 2] = [exit_code, signal];
+            let _ = listener_func.call(scope, this.into(), &call_args);
+        }
+    }
+
+    retval.set(this.into());
+}
+
+fn get_i64_property(
+    scope: &mut v8::HandleScope,
+    obj: v8::Local<v8::Object>,
+    name: &str,
+) -> Option<i64> {
+    let key = v8::String::new(scope, name)?.into();
+    obj.get(scope, key)
+        .and_then(|value| value.integer_value(scope))
+}
+
+fn key_export_options_from_arg(
+    scope: &mut v8::HandleScope,
+    arg: v8::Local<v8::Value>,
+) -> (String, Option<String>, bool) {
+    if arg.is_undefined() || arg.is_null() {
+        return ("pem".to_string(), None, false);
+    }
+
+    if arg.is_object() && !arg.is_string() {
+        if let Ok(obj) = v8::Local::<v8::Object>::try_from(arg) {
+            let format = get_string_property(scope, obj, "format")
+                .unwrap_or_else(|| "pem".to_string())
+                .to_ascii_lowercase();
+            let key_type = get_string_property(scope, obj, "type").map(|s| s.to_ascii_lowercase());
+            return (format, key_type, true);
+        }
+    }
+
+    let format = arg
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_else(|| "pem".to_string())
+        .to_ascii_lowercase();
+    (format, None, false)
+}
+
+#[derive(Clone)]
+struct PrivateKeyEncodingOptions {
+    key_type: String,
+    format: String,
+    cipher: Option<String>,
+    passphrase: Option<Vec<u8>>,
+}
+
+#[derive(Clone)]
+struct PublicKeyEncodingOptions {
+    key_type: String,
+    format: String,
+}
+
+enum GeneratedPublicKey {
+    Pem(String),
+    Der(Vec<u8>),
+    Jwk(serde_json::Value),
+}
+
+enum GeneratedPrivateKey {
+    Pem(String),
+    Der(Vec<u8>),
+    Jwk(serde_json::Value),
+}
+
+const ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS: &str = "ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS";
+const CRYPTO_INCOMPATIBLE_KEY_OPTIONS_MESSAGE: &str =
+    "The selected key encoding pkcs1 can only be used for RSA keys.";
+
+fn is_crypto_incompatible_key_options_error(error_message: &str) -> bool {
+    error_message.contains("PKCS#1")
+        && error_message.contains("requires an RSA key")
+        && error_message.to_ascii_lowercase().contains("public key")
+}
+
+fn crypto_incompatible_key_options_error<'s>(
+    scope: &mut v8::HandleScope<'s>,
+) -> v8::Local<'s, v8::Value> {
+    let message = v8::String::new(scope, CRYPTO_INCOMPATIBLE_KEY_OPTIONS_MESSAGE).unwrap();
+    let error = v8::Exception::error(scope, message);
+    if let Ok(error_obj) = v8::Local::<v8::Object>::try_from(error) {
+        let code_key = v8::String::new(scope, "code").unwrap().into();
+        let code_value = v8::String::new(scope, ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS)
+            .unwrap()
+            .into();
+        error_obj.set(scope, code_key, code_value);
+    }
+    error
+}
+
+fn private_key_encoding_options_from_object(
+    scope: &mut v8::HandleScope,
+    encoding_obj: v8::Local<v8::Object>,
+) -> Result<PrivateKeyEncodingOptions, String> {
+    let key_type = get_string_property(scope, encoding_obj, "type")
+        .unwrap_or_else(|| "pkcs8".to_string())
+        .to_ascii_lowercase();
+    let format = get_string_property(scope, encoding_obj, "format")
+        .unwrap_or_else(|| "pem".to_string())
+        .to_ascii_lowercase();
+    let cipher =
+        get_string_property(scope, encoding_obj, "cipher").map(|value| value.to_ascii_lowercase());
+
+    let passphrase_key = v8::String::new(scope, "passphrase")
+        .ok_or_else(|| "failed to allocate passphrase key".to_string())?;
+    let passphrase = match encoding_obj.get(scope, passphrase_key.into()) {
+        Some(value) if !value.is_undefined() && !value.is_null() => {
+            Some(get_bytes_from_value(scope, value, None)?)
+        }
+        _ => None,
+    };
+
+    Ok(PrivateKeyEncodingOptions {
+        key_type,
+        format,
+        cipher,
+        passphrase,
+    })
+}
+
+fn private_key_encoding_options_from_options(
+    scope: &mut v8::HandleScope,
+    options: v8::Local<v8::Value>,
+) -> Result<Option<PrivateKeyEncodingOptions>, String> {
+    if !options.is_object() {
+        return Ok(None);
+    }
+
+    let options_obj = v8::Local::<v8::Object>::try_from(options)
+        .map_err(|_| "privateKeyEncoding options must be an object".to_string())?;
+    let encoding_key = v8::String::new(scope, "privateKeyEncoding")
+        .ok_or_else(|| "failed to allocate privateKeyEncoding key".to_string())?;
+    let Some(encoding_value) = options_obj.get(scope, encoding_key.into()) else {
+        return Ok(None);
+    };
+    if encoding_value.is_undefined() || encoding_value.is_null() {
+        return Ok(None);
+    }
+    if !encoding_value.is_object() {
+        return Err("privateKeyEncoding must be an object".to_string());
+    }
+
+    let encoding_obj = v8::Local::<v8::Object>::try_from(encoding_value)
+        .map_err(|_| "privateKeyEncoding must be an object".to_string())?;
+    private_key_encoding_options_from_object(scope, encoding_obj).map(Some)
+}
+
+fn public_key_encoding_options_from_object(
+    scope: &mut v8::HandleScope,
+    encoding_obj: v8::Local<v8::Object>,
+) -> Result<PublicKeyEncodingOptions, String> {
+    let key_type = get_string_property(scope, encoding_obj, "type")
+        .unwrap_or_else(|| "spki".to_string())
+        .to_ascii_lowercase();
+    let format = get_string_property(scope, encoding_obj, "format")
+        .unwrap_or_else(|| "pem".to_string())
+        .to_ascii_lowercase();
+
+    Ok(PublicKeyEncodingOptions { key_type, format })
+}
+
+fn public_key_encoding_options_from_options(
+    scope: &mut v8::HandleScope,
+    options: v8::Local<v8::Value>,
+) -> Result<Option<PublicKeyEncodingOptions>, String> {
+    if !options.is_object() {
+        return Ok(None);
+    }
+
+    let options_obj = v8::Local::<v8::Object>::try_from(options)
+        .map_err(|_| "publicKeyEncoding options must be an object".to_string())?;
+    let encoding_key = v8::String::new(scope, "publicKeyEncoding")
+        .ok_or_else(|| "failed to allocate publicKeyEncoding key".to_string())?;
+    let Some(encoding_value) = options_obj.get(scope, encoding_key.into()) else {
+        return Ok(None);
+    };
+    if encoding_value.is_undefined() || encoding_value.is_null() {
+        return Ok(None);
+    }
+    if !encoding_value.is_object() {
+        return Err("publicKeyEncoding must be an object".to_string());
+    }
+
+    let encoding_obj = v8::Local::<v8::Object>::try_from(encoding_value)
+        .map_err(|_| "publicKeyEncoding must be an object".to_string())?;
+    public_key_encoding_options_from_object(scope, encoding_obj).map(Some)
+}
+
+fn private_key_encoding_cipher(cipher_name: &str) -> Option<Cipher> {
+    match cipher_name.to_ascii_lowercase().as_str() {
+        "aes-128-cbc" => Some(Cipher::aes_128_cbc()),
+        "aes-192-cbc" => Some(Cipher::aes_192_cbc()),
+        "aes-256-cbc" => Some(Cipher::aes_256_cbc()),
+        _ => None,
+    }
+}
+
+fn base64url_uint_from_bignum(value: &BigNumRef) -> String {
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(value.to_vec())
+}
+
+fn jwk_field_string(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+    field: &str,
+) -> Result<String, String> {
+    get_string_property(scope, jwk_obj, field).ok_or_else(|| format!("JWK {} is required", field))
+}
+
+fn jwk_bignum_from_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+    field: &str,
+) -> Result<BigNum, String> {
+    let value = jwk_field_string(scope, jwk_obj, field)?;
+    if value.contains('=') {
+        return Err(format!("JWK {} must be unpadded base64url", field));
+    }
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(value.as_bytes())
+        .map_err(|error| format!("JWK {} is invalid base64url: {}", field, error))?;
+    if bytes.is_empty() {
+        return Err(format!("JWK {} must not be empty", field));
+    }
+    BigNum::from_slice(&bytes)
+        .map_err(|error| format!("JWK {} is invalid integer: {}", field, error))
+}
+
+fn rsa_public_jwk_from_pem(public_key_pem: &str) -> Result<serde_json::Value, String> {
+    let rsa = Rsa::public_key_from_pem(public_key_pem.as_bytes()).map_err(|error| {
+        format!(
+            "publicKeyEncoding JWK export requires an RSA public key: {}",
+            error
+        )
+    })?;
+    let mut jwk = serde_json::Map::new();
+    jwk.insert(
+        "kty".to_string(),
+        serde_json::Value::String("RSA".to_string()),
+    );
+    jwk.insert(
+        "n".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(rsa.n())),
+    );
+    jwk.insert(
+        "e".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(rsa.e())),
+    );
+    Ok(serde_json::Value::Object(jwk))
+}
+
+fn rsa_private_jwk_from_pem(private_key_pem: &str) -> Result<serde_json::Value, String> {
+    let rsa = Rsa::private_key_from_pem(private_key_pem.as_bytes()).map_err(|error| {
+        format!(
+            "privateKeyEncoding JWK export requires an RSA private key: {}",
+            error
+        )
+    })?;
+    let p = rsa
+        .p()
+        .ok_or_else(|| "privateKeyEncoding JWK export missing RSA p".to_string())?;
+    let q = rsa
+        .q()
+        .ok_or_else(|| "privateKeyEncoding JWK export missing RSA q".to_string())?;
+    let dp = rsa
+        .dmp1()
+        .ok_or_else(|| "privateKeyEncoding JWK export missing RSA dp".to_string())?;
+    let dq = rsa
+        .dmq1()
+        .ok_or_else(|| "privateKeyEncoding JWK export missing RSA dq".to_string())?;
+    let qi = rsa
+        .iqmp()
+        .ok_or_else(|| "privateKeyEncoding JWK export missing RSA qi".to_string())?;
+
+    let mut jwk = serde_json::Map::new();
+    jwk.insert(
+        "kty".to_string(),
+        serde_json::Value::String("RSA".to_string()),
+    );
+    jwk.insert(
+        "n".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(rsa.n())),
+    );
+    jwk.insert(
+        "e".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(rsa.e())),
+    );
+    jwk.insert(
+        "d".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(rsa.d())),
+    );
+    jwk.insert(
+        "p".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(p)),
+    );
+    jwk.insert(
+        "q".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(q)),
+    );
+    jwk.insert(
+        "dp".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(dp)),
+    );
+    jwk.insert(
+        "dq".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(dq)),
+    );
+    jwk.insert(
+        "qi".to_string(),
+        serde_json::Value::String(base64url_uint_from_bignum(qi)),
+    );
+    Ok(serde_json::Value::Object(jwk))
+}
+
+fn rsa_public_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    let kty = jwk_field_string(scope, jwk_obj, "kty")?;
+    if kty != "RSA" {
+        return Err(format!("unsupported JWK kty '{}'. Supported: RSA", kty));
+    }
+    let n = jwk_bignum_from_object(scope, jwk_obj, "n")?;
+    let e = jwk_bignum_from_object(scope, jwk_obj, "e")?;
+    let rsa = Rsa::from_public_components(n, e)
+        .map_err(|error| format!("invalid RSA public JWK: {}", error))?;
+    let pem = rsa
+        .public_key_to_pem()
+        .map_err(|error| format!("RSA public JWK PEM export failed: {}", error))?;
+    String::from_utf8(pem)
+        .map_err(|error| format!("RSA public JWK PEM is invalid UTF-8: {}", error))
+}
+
+fn rsa_private_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    let kty = jwk_field_string(scope, jwk_obj, "kty")?;
+    if kty != "RSA" {
+        return Err(format!("unsupported JWK kty '{}'. Supported: RSA", kty));
+    }
+    let n = jwk_bignum_from_object(scope, jwk_obj, "n")?;
+    let e = jwk_bignum_from_object(scope, jwk_obj, "e")?;
+    let d = jwk_bignum_from_object(scope, jwk_obj, "d")?;
+    let p = jwk_bignum_from_object(scope, jwk_obj, "p")?;
+    let q = jwk_bignum_from_object(scope, jwk_obj, "q")?;
+    let dp = jwk_bignum_from_object(scope, jwk_obj, "dp")?;
+    let dq = jwk_bignum_from_object(scope, jwk_obj, "dq")?;
+    let qi = jwk_bignum_from_object(scope, jwk_obj, "qi")?;
+    let rsa = Rsa::from_private_components(n, e, d, p, q, dp, dq, qi)
+        .map_err(|error| format!("invalid RSA private JWK: {}", error))?;
+    let pem = rsa
+        .private_key_to_pem()
+        .map_err(|error| format!("RSA private JWK PEM export failed: {}", error))?;
+    String::from_utf8(pem)
+        .map_err(|error| format!("RSA private JWK PEM is invalid UTF-8: {}", error))
+}
+
+fn ec_jwk_curve_from_nid(nid: Nid) -> Option<(&'static str, usize)> {
+    match nid {
+        Nid::X9_62_PRIME256V1 => Some(("P-256", 32)),
+        Nid::SECP384R1 => Some(("P-384", 48)),
+        Nid::SECP521R1 => Some(("P-521", 66)),
+        _ => None,
+    }
+}
+
+fn ec_jwk_group_from_curve(crv: &str) -> Result<(EcGroup, usize), String> {
+    let (nid, size) = match crv {
+        "P-256" => (Nid::X9_62_PRIME256V1, 32),
+        "P-384" => (Nid::SECP384R1, 48),
+        "P-521" => (Nid::SECP521R1, 66),
+        _ => {
+            return Err(format!(
+                "unsupported JWK crv '{}'. Supported: P-256, P-384, P-521",
+                crv
+            ))
+        }
+    };
+    let group = EcGroup::from_curve_name(nid)
+        .map_err(|error| format!("EC JWK curve setup failed: {}", error))?;
+    Ok((group, size))
+}
+
+fn base64url_fixed_uint_from_bignum(value: &BigNumRef, size: usize) -> String {
+    base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .encode(left_pad_private_key(value.to_vec(), size))
+}
+
+fn ec_public_coordinates(
+    group: &EcGroupRef,
+    point: &openssl::ec::EcPointRef,
+) -> Result<(BigNum, BigNum), String> {
+    let mut ctx =
+        BigNumContext::new().map_err(|error| format!("EC JWK BigNum context failed: {}", error))?;
+    let mut x = BigNum::new().map_err(|error| format!("EC JWK x allocation failed: {}", error))?;
+    let mut y = BigNum::new().map_err(|error| format!("EC JWK y allocation failed: {}", error))?;
+    point
+        .affine_coordinates(group, &mut x, &mut y, &mut ctx)
+        .map_err(|error| format!("EC JWK coordinate export failed: {}", error))?;
+    Ok((x, y))
+}
+
+fn ec_public_jwk_from_pem(public_key_pem: &str) -> Result<serde_json::Value, String> {
+    let key = PKey::<Public>::public_key_from_pem(public_key_pem.as_bytes()).map_err(|error| {
+        format!(
+            "publicKeyEncoding JWK export requires a valid public key: {}",
+            error
+        )
+    })?;
+    let ec_key = key.ec_key().map_err(|error| {
+        format!(
+            "publicKeyEncoding JWK export requires an EC public key: {}",
+            error
+        )
+    })?;
+    let nid = ec_key
+        .group()
+        .curve_name()
+        .ok_or_else(|| "publicKeyEncoding JWK export requires a named EC curve".to_string())?;
+    let (crv, size) = ec_jwk_curve_from_nid(nid)
+        .ok_or_else(|| "publicKeyEncoding JWK export unsupported EC curve".to_string())?;
+    let (x, y) = ec_public_coordinates(ec_key.group(), ec_key.public_key())?;
+
+    let mut jwk = serde_json::Map::new();
+    jwk.insert(
+        "kty".to_string(),
+        serde_json::Value::String("EC".to_string()),
+    );
+    jwk.insert(
+        "crv".to_string(),
+        serde_json::Value::String(crv.to_string()),
+    );
+    jwk.insert(
+        "x".to_string(),
+        serde_json::Value::String(base64url_fixed_uint_from_bignum(&x, size)),
+    );
+    jwk.insert(
+        "y".to_string(),
+        serde_json::Value::String(base64url_fixed_uint_from_bignum(&y, size)),
+    );
+    Ok(serde_json::Value::Object(jwk))
+}
+
+fn ec_private_jwk_from_pem(private_key_pem: &str) -> Result<serde_json::Value, String> {
+    let key =
+        PKey::<Private>::private_key_from_pem(private_key_pem.as_bytes()).map_err(|error| {
+            format!(
+                "privateKeyEncoding JWK export requires a valid private key: {}",
+                error
+            )
+        })?;
+    let ec_key = key.ec_key().map_err(|error| {
+        format!(
+            "privateKeyEncoding JWK export requires an EC private key: {}",
+            error
+        )
+    })?;
+    let nid = ec_key
+        .group()
+        .curve_name()
+        .ok_or_else(|| "privateKeyEncoding JWK export requires a named EC curve".to_string())?;
+    let (crv, size) = ec_jwk_curve_from_nid(nid)
+        .ok_or_else(|| "privateKeyEncoding JWK export unsupported EC curve".to_string())?;
+    let (x, y) = ec_public_coordinates(ec_key.group(), ec_key.public_key())?;
+
+    let mut jwk = serde_json::Map::new();
+    jwk.insert(
+        "kty".to_string(),
+        serde_json::Value::String("EC".to_string()),
+    );
+    jwk.insert(
+        "crv".to_string(),
+        serde_json::Value::String(crv.to_string()),
+    );
+    jwk.insert(
+        "x".to_string(),
+        serde_json::Value::String(base64url_fixed_uint_from_bignum(&x, size)),
+    );
+    jwk.insert(
+        "y".to_string(),
+        serde_json::Value::String(base64url_fixed_uint_from_bignum(&y, size)),
+    );
+    jwk.insert(
+        "d".to_string(),
+        serde_json::Value::String(base64url_fixed_uint_from_bignum(ec_key.private_key(), size)),
+    );
+    Ok(serde_json::Value::Object(jwk))
+}
+
+fn ec_jwk_bignum_from_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+    field: &str,
+    size: usize,
+) -> Result<BigNum, String> {
+    let value = jwk_field_string(scope, jwk_obj, field)?;
+    if value.contains('=') {
+        return Err(format!("JWK {} must be unpadded base64url", field));
+    }
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(value.as_bytes())
+        .map_err(|error| format!("JWK {} is invalid base64url: {}", field, error))?;
+    if bytes.is_empty() || bytes.len() > size {
+        return Err(format!("JWK {} has invalid length", field));
+    }
+    BigNum::from_slice(&bytes)
+        .map_err(|error| format!("JWK {} is invalid integer: {}", field, error))
+}
+
+fn ec_public_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    let kty = jwk_field_string(scope, jwk_obj, "kty")?;
+    if kty != "EC" {
+        return Err(format!("unsupported JWK kty '{}'. Supported: EC", kty));
+    }
+    let crv = jwk_field_string(scope, jwk_obj, "crv")?;
+    let (group, size) = ec_jwk_group_from_curve(&crv)?;
+    let x = ec_jwk_bignum_from_object(scope, jwk_obj, "x", size)?;
+    let y = ec_jwk_bignum_from_object(scope, jwk_obj, "y", size)?;
+    let ec_key = EcKey::from_public_key_affine_coordinates(&group, &x, &y)
+        .map_err(|error| format!("invalid EC public JWK: {}", error))?;
+    ec_key
+        .check_key()
+        .map_err(|error| format!("invalid EC public JWK: {}", error))?;
+    let key = PKey::from_ec_key(ec_key)
+        .map_err(|error| format!("EC public JWK key setup failed: {}", error))?;
+    let pem = key
+        .public_key_to_pem()
+        .map_err(|error| format!("EC public JWK PEM export failed: {}", error))?;
+    String::from_utf8(pem).map_err(|error| format!("EC public JWK PEM is invalid UTF-8: {}", error))
+}
+
+fn ec_private_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    let kty = jwk_field_string(scope, jwk_obj, "kty")?;
+    if kty != "EC" {
+        return Err(format!("unsupported JWK kty '{}'. Supported: EC", kty));
+    }
+    let crv = jwk_field_string(scope, jwk_obj, "crv")?;
+    let (group, size) = ec_jwk_group_from_curve(&crv)?;
+    let x = ec_jwk_bignum_from_object(scope, jwk_obj, "x", size)?;
+    let y = ec_jwk_bignum_from_object(scope, jwk_obj, "y", size)?;
+    let d = ec_jwk_bignum_from_object(scope, jwk_obj, "d", size)?;
+    let public_key = EcKey::from_public_key_affine_coordinates(&group, &x, &y)
+        .map_err(|error| format!("invalid EC private JWK public point: {}", error))?;
+    let ec_key = EcKey::from_private_components(&group, &d, public_key.public_key())
+        .map_err(|error| format!("invalid EC private JWK: {}", error))?;
+    ec_key
+        .check_key()
+        .map_err(|error| format!("invalid EC private JWK: {}", error))?;
+    let key = PKey::from_ec_key(ec_key)
+        .map_err(|error| format!("EC private JWK key setup failed: {}", error))?;
+    let pem = key
+        .private_key_to_pem_pkcs8()
+        .map_err(|error| format!("EC private JWK PEM export failed: {}", error))?;
+    String::from_utf8(pem)
+        .map_err(|error| format!("EC private JWK PEM is invalid UTF-8: {}", error))
+}
+
+fn okp_jwk_curve_from_id(id: Id) -> Option<(&'static str, usize)> {
+    match id {
+        Id::ED25519 => Some(("Ed25519", 32)),
+        Id::ED448 => Some(("Ed448", 57)),
+        _ => None,
+    }
+}
+
+fn okp_jwk_id_from_curve(crv: &str) -> Result<(Id, usize), String> {
+    match crv {
+        "Ed25519" => Ok((Id::ED25519, 32)),
+        "Ed448" => Ok((Id::ED448, 57)),
+        _ => Err(format!(
+            "unsupported JWK crv '{}'. Supported: Ed25519, Ed448",
+            crv
+        )),
+    }
+}
+
+fn okp_jwk_bytes_from_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+    field: &str,
+    size: usize,
+) -> Result<Vec<u8>, String> {
+    let value = jwk_field_string(scope, jwk_obj, field)?;
+    if value.contains('=') {
+        return Err(format!("JWK {} must be unpadded base64url", field));
+    }
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(value.as_bytes())
+        .map_err(|error| format!("JWK {} is invalid base64url: {}", field, error))?;
+    if bytes.len() != size {
+        return Err(format!("JWK {} has invalid length", field));
+    }
+    Ok(bytes)
+}
+
+fn okp_public_jwk_from_pem(public_key_pem: &str) -> Result<serde_json::Value, String> {
+    let key = PKey::<Public>::public_key_from_pem(public_key_pem.as_bytes()).map_err(|error| {
+        format!(
+            "publicKeyEncoding JWK export requires a valid public key: {}",
+            error
+        )
+    })?;
+    let (crv, _size) = okp_jwk_curve_from_id(key.id())
+        .ok_or_else(|| "publicKeyEncoding JWK export unsupported OKP key type".to_string())?;
+    let raw_public_key = key.raw_public_key().map_err(|error| {
+        format!(
+            "publicKeyEncoding JWK export raw public key failed: {}",
+            error
+        )
+    })?;
+
+    let mut jwk = serde_json::Map::new();
+    jwk.insert(
+        "crv".to_string(),
+        serde_json::Value::String(crv.to_string()),
+    );
+    jwk.insert(
+        "x".to_string(),
+        serde_json::Value::String(
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_public_key),
+        ),
+    );
+    jwk.insert(
+        "kty".to_string(),
+        serde_json::Value::String("OKP".to_string()),
+    );
+    Ok(serde_json::Value::Object(jwk))
+}
+
+fn okp_private_jwk_from_pem(private_key_pem: &str) -> Result<serde_json::Value, String> {
+    let key =
+        PKey::<Private>::private_key_from_pem(private_key_pem.as_bytes()).map_err(|error| {
+            format!(
+                "privateKeyEncoding JWK export requires a valid private key: {}",
+                error
+            )
+        })?;
+    let (crv, _size) = okp_jwk_curve_from_id(key.id())
+        .ok_or_else(|| "privateKeyEncoding JWK export unsupported OKP key type".to_string())?;
+    let raw_private_key = key.raw_private_key().map_err(|error| {
+        format!(
+            "privateKeyEncoding JWK export raw private key failed: {}",
+            error
+        )
+    })?;
+    let raw_public_key = key.raw_public_key().map_err(|error| {
+        format!(
+            "privateKeyEncoding JWK export raw public key failed: {}",
+            error
+        )
+    })?;
+
+    let mut jwk = serde_json::Map::new();
+    jwk.insert(
+        "crv".to_string(),
+        serde_json::Value::String(crv.to_string()),
+    );
+    jwk.insert(
+        "d".to_string(),
+        serde_json::Value::String(
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_private_key),
+        ),
+    );
+    jwk.insert(
+        "x".to_string(),
+        serde_json::Value::String(
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw_public_key),
+        ),
+    );
+    jwk.insert(
+        "kty".to_string(),
+        serde_json::Value::String("OKP".to_string()),
+    );
+    Ok(serde_json::Value::Object(jwk))
+}
+
+fn okp_public_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    let kty = jwk_field_string(scope, jwk_obj, "kty")?;
+    if kty != "OKP" {
+        return Err(format!("unsupported JWK kty '{}'. Supported: OKP", kty));
+    }
+    let crv = jwk_field_string(scope, jwk_obj, "crv")?;
+    let (id, size) = okp_jwk_id_from_curve(&crv)?;
+    let x = okp_jwk_bytes_from_object(scope, jwk_obj, "x", size)?;
+    let key = PKey::public_key_from_raw_bytes(&x, id)
+        .map_err(|error| format!("invalid OKP public JWK: {}", error))?;
+    let pem = key
+        .public_key_to_pem()
+        .map_err(|error| format!("OKP public JWK PEM export failed: {}", error))?;
+    String::from_utf8(pem)
+        .map_err(|error| format!("OKP public JWK PEM is invalid UTF-8: {}", error))
+}
+
+fn okp_private_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    let kty = jwk_field_string(scope, jwk_obj, "kty")?;
+    if kty != "OKP" {
+        return Err(format!("unsupported JWK kty '{}'. Supported: OKP", kty));
+    }
+    let crv = jwk_field_string(scope, jwk_obj, "crv")?;
+    let (id, size) = okp_jwk_id_from_curve(&crv)?;
+    let _x = okp_jwk_bytes_from_object(scope, jwk_obj, "x", size)?;
+    let d = okp_jwk_bytes_from_object(scope, jwk_obj, "d", size)?;
+    let key = PKey::private_key_from_raw_bytes(&d, id)
+        .map_err(|error| format!("invalid OKP private JWK: {}", error))?;
+    let pem = key
+        .private_key_to_pem_pkcs8()
+        .map_err(|error| format!("OKP private JWK PEM export failed: {}", error))?;
+    String::from_utf8(pem)
+        .map_err(|error| format!("OKP private JWK PEM is invalid UTF-8: {}", error))
+}
+
+fn public_jwk_from_pem(public_key_pem: &str) -> Result<serde_json::Value, String> {
+    let key = PKey::<Public>::public_key_from_pem(public_key_pem.as_bytes())
+        .map_err(|error| format!("publicKeyEncoding JWK export invalid public key: {}", error))?;
+    match key.id() {
+        Id::RSA => rsa_public_jwk_from_pem(public_key_pem),
+        Id::EC => ec_public_jwk_from_pem(public_key_pem),
+        Id::ED25519 | Id::ED448 => okp_public_jwk_from_pem(public_key_pem),
+        _ => Err("publicKeyEncoding JWK export unsupported key type".to_string()),
+    }
+}
+
+fn private_jwk_from_pem(private_key_pem: &str) -> Result<serde_json::Value, String> {
+    let key =
+        PKey::<Private>::private_key_from_pem(private_key_pem.as_bytes()).map_err(|error| {
+            format!(
+                "privateKeyEncoding JWK export invalid private key: {}",
+                error
+            )
+        })?;
+    match key.id() {
+        Id::RSA => rsa_private_jwk_from_pem(private_key_pem),
+        Id::EC => ec_private_jwk_from_pem(private_key_pem),
+        Id::ED25519 | Id::ED448 => okp_private_jwk_from_pem(private_key_pem),
+        _ => Err("privateKeyEncoding JWK export unsupported key type".to_string()),
+    }
+}
+
+fn public_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    match jwk_field_string(scope, jwk_obj, "kty")?.as_str() {
+        "RSA" => rsa_public_pem_from_jwk_object(scope, jwk_obj),
+        "EC" => ec_public_pem_from_jwk_object(scope, jwk_obj),
+        "OKP" => okp_public_pem_from_jwk_object(scope, jwk_obj),
+        kty => Err(format!(
+            "unsupported JWK kty '{}'. Supported: RSA, EC, OKP",
+            kty
+        )),
+    }
+}
+
+fn private_pem_from_jwk_object(
+    scope: &mut v8::HandleScope,
+    jwk_obj: v8::Local<v8::Object>,
+) -> Result<String, String> {
+    match jwk_field_string(scope, jwk_obj, "kty")?.as_str() {
+        "RSA" => rsa_private_pem_from_jwk_object(scope, jwk_obj),
+        "EC" => ec_private_pem_from_jwk_object(scope, jwk_obj),
+        "OKP" => okp_private_pem_from_jwk_object(scope, jwk_obj),
+        kty => Err(format!(
+            "unsupported JWK kty '{}'. Supported: RSA, EC, OKP",
+            kty
+        )),
+    }
+}
+
+fn format_generated_public_key(
+    public_key_pem: &str,
+    options: Option<&PublicKeyEncodingOptions>,
+) -> Result<GeneratedPublicKey, String> {
+    let Some(options) = options else {
+        return Ok(GeneratedPublicKey::Pem(public_key_pem.to_string()));
+    };
+
+    if options.key_type != "spki" && options.key_type != "pkcs1" {
+        return Err(format!(
+            "unsupported publicKeyEncoding type '{}'. Supported: spki, pkcs1",
+            options.key_type
+        ));
+    }
+
+    match options.format.as_str() {
+        "pem" => public_key_pem_from_pem(public_key_pem, &options.key_type)
+            .map(GeneratedPublicKey::Pem)
+            .map_err(|error| format!("publicKeyEncoding PEM export failed: {}", error)),
+        "der" => public_key_der_from_pem(public_key_pem, &options.key_type)
+            .map(GeneratedPublicKey::Der)
+            .map_err(|error| format!("publicKeyEncoding DER export failed: {}", error)),
+        "jwk" => public_jwk_from_pem(public_key_pem).map(GeneratedPublicKey::Jwk),
+        _ => Err(format!(
+            "unsupported publicKeyEncoding format '{}'. Supported: pem, der, jwk",
+            options.format
+        )),
+    }
+}
+
+fn generated_public_key_to_v8<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    public_key: GeneratedPublicKey,
+) -> v8::Local<'s, v8::Value> {
+    match public_key {
+        GeneratedPublicKey::Pem(pem) => v8::String::new(scope, &pem).unwrap().into(),
+        GeneratedPublicKey::Der(der) => create_buffer_wrapper(scope, &der).into(),
+        GeneratedPublicKey::Jwk(jwk) => serde_json_value_to_v8(scope, &jwk),
+    }
+}
+
+fn format_generated_private_key_for_generate(
+    private_key_pem: &str,
+    options: Option<&PrivateKeyEncodingOptions>,
+) -> Result<GeneratedPrivateKey, String> {
+    let Some(options) = options else {
+        return Ok(GeneratedPrivateKey::Pem(private_key_pem.to_string()));
+    };
+
+    if options.key_type != "pkcs8" {
+        return Err(format!(
+            "generateKeyPair: unsupported privateKeyEncoding type '{}'. Supported: pkcs8",
+            options.key_type
+        ));
+    }
+
+    match options.format.as_str() {
+        "pem" => format_generated_private_key(private_key_pem, Some(options))
+            .map(GeneratedPrivateKey::Pem),
+        "der" => {
+            if options.cipher.is_some() || options.passphrase.is_some() {
+                return Err(
+                    "generateKeyPair: privateKeyEncoding cipher/passphrase require pem format"
+                        .to_string(),
+                );
+            }
+            private_key_der_from_pem(private_key_pem, &options.key_type)
+                .map(GeneratedPrivateKey::Der)
+                .map_err(|error| {
+                    format!(
+                        "generateKeyPair: privateKeyEncoding DER export failed: {}",
+                        error
+                    )
+                })
+        }
+        "jwk" => {
+            if options.cipher.is_some() || options.passphrase.is_some() {
+                return Err(
+                    "generateKeyPair: privateKeyEncoding cipher/passphrase require pem format"
+                        .to_string(),
+                );
+            }
+            private_jwk_from_pem(private_key_pem).map(GeneratedPrivateKey::Jwk)
+        }
+        _ => Err(format!(
+            "generateKeyPair: unsupported privateKeyEncoding format '{}'. Supported: pem, der, jwk",
+            options.format
+        )),
+    }
+}
+
+fn generated_private_key_to_v8<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    private_key: GeneratedPrivateKey,
+) -> v8::Local<'s, v8::Value> {
+    match private_key {
+        GeneratedPrivateKey::Pem(pem) => v8::String::new(scope, &pem).unwrap().into(),
+        GeneratedPrivateKey::Der(der) => create_buffer_wrapper(scope, &der).into(),
+        GeneratedPrivateKey::Jwk(jwk) => serde_json_value_to_v8(scope, &jwk),
+    }
+}
+
+fn format_generated_private_key(
+    private_key_pem: &str,
+    options: Option<&PrivateKeyEncodingOptions>,
+) -> Result<String, String> {
+    let Some(options) = options else {
+        return Ok(private_key_pem.to_string());
+    };
+
+    if options.format != "pem" {
+        return Err(format!(
+            "generateKeyPair: unsupported privateKeyEncoding format '{}'. Supported: pem",
+            options.format
+        ));
+    }
+    if options.key_type != "pkcs8" {
+        return Err(format!(
+            "generateKeyPair: unsupported privateKeyEncoding type '{}'. Supported: pkcs8",
+            options.key_type
+        ));
+    }
+
+    let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("generateKeyPair: invalid generated private key: {}", error))?;
+
+    match (&options.cipher, &options.passphrase) {
+        (Some(cipher_name), Some(passphrase)) => {
+            let cipher = private_key_encoding_cipher(cipher_name).ok_or_else(|| {
+                format!(
+                    "generateKeyPair: unsupported privateKeyEncoding cipher '{}'",
+                    cipher_name
+                )
+            })?;
+            let pem = key
+                .private_key_to_pem_pkcs8_passphrase(cipher, passphrase)
+                .map_err(|error| {
+                    format!(
+                        "generateKeyPair: encrypted private key export failed: {}",
+                        error
+                    )
+                })?;
+            String::from_utf8(pem).map_err(|error| {
+                format!(
+                    "generateKeyPair: encrypted private key PEM is invalid UTF-8: {}",
+                    error
+                )
+            })
+        }
+        (None, None) => {
+            let pem = key.private_key_to_pem_pkcs8().map_err(|error| {
+                format!(
+                    "generateKeyPair: private key PKCS8 export failed: {}",
+                    error
+                )
+            })?;
+            String::from_utf8(pem).map_err(|error| {
+                format!(
+                    "generateKeyPair: private key PEM is invalid UTF-8: {}",
+                    error
+                )
+            })
+        }
+        _ => Err(
+            "generateKeyPair: privateKeyEncoding cipher and passphrase must be provided together"
+                .to_string(),
+        ),
+    }
+}
+
 fn value_to_string_after_microtasks<'s>(
     scope: &mut v8::HandleScope<'s>,
     mut value: v8::Local<'s, v8::Value>,
@@ -516,7 +1683,11 @@ fn value_to_string_after_microtasks<'s>(
                     reason_str
                 ));
             }
-            v8::PromiseState::Pending => break,
+            v8::PromiseState::Pending => {
+                return Err(anyhow::anyhow!(
+                    "Pending Promise did not settle before runtime completion"
+                ));
+            }
         }
     }
 
@@ -1518,6 +2689,7 @@ fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
         "utf8" | "utf-8" | "utf8mb4" => String::from_utf8_lossy(bytes).to_string(),
         "hex" => hex::encode(bytes),
         "base64" => engine.encode(bytes),
+        "base64url" => base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes),
         "latin1" | "ascii" | "binary" => bytes.iter().map(|&b| b as char).collect(),
         _ => String::from_utf8_lossy(bytes).to_string(),
     }
@@ -1552,23 +2724,175 @@ fn generate_rsa_key_pair(modulus_length: usize) -> Result<(String, String), Stri
     Ok((public_key_pem, private_key_pem))
 }
 
-fn rsa_message_digest(algorithm: &str) -> Option<MessageDigest> {
-    match algorithm {
-        "RSA-SHA256" => Some(MessageDigest::sha256()),
-        "RSA-SHA512" => Some(MessageDigest::sha512()),
-        "RSA-SHA1" => Some(MessageDigest::sha1()),
-        "RSA-MD5" => Some(MessageDigest::md5()),
+fn generate_ed25519_key_pair() -> Result<(String, String), String> {
+    let key = PKey::generate_ed25519()
+        .map_err(|error| format!("generateKeyPair: Ed25519 key generation failed: {}", error))?;
+    let public_key_pem = String::from_utf8(key.public_key_to_pem().map_err(|error| {
+        format!(
+            "generateKeyPair: Ed25519 public key export failed: {}",
+            error
+        )
+    })?)
+    .map_err(|error| {
+        format!(
+            "generateKeyPair: Ed25519 public key PEM is invalid UTF-8: {}",
+            error
+        )
+    })?;
+    let private_key_pem = String::from_utf8(key.private_key_to_pem_pkcs8().map_err(|error| {
+        format!(
+            "generateKeyPair: Ed25519 private key export failed: {}",
+            error
+        )
+    })?)
+    .map_err(|error| {
+        format!(
+            "generateKeyPair: Ed25519 private key PEM is invalid UTF-8: {}",
+            error
+        )
+    })?;
+
+    Ok((public_key_pem, private_key_pem))
+}
+
+fn generate_ed448_key_pair() -> Result<(String, String), String> {
+    let key = PKey::generate_ed448()
+        .map_err(|error| format!("generateKeyPair: Ed448 key generation failed: {}", error))?;
+    let public_key_pem =
+        String::from_utf8(key.public_key_to_pem().map_err(|error| {
+            format!("generateKeyPair: Ed448 public key export failed: {}", error)
+        })?)
+        .map_err(|error| {
+            format!(
+                "generateKeyPair: Ed448 public key PEM is invalid UTF-8: {}",
+                error
+            )
+        })?;
+    let private_key_pem = String::from_utf8(key.private_key_to_pem_pkcs8().map_err(|error| {
+        format!(
+            "generateKeyPair: Ed448 private key export failed: {}",
+            error
+        )
+    })?)
+    .map_err(|error| {
+        format!(
+            "generateKeyPair: Ed448 private key PEM is invalid UTF-8: {}",
+            error
+        )
+    })?;
+
+    Ok((public_key_pem, private_key_pem))
+}
+
+fn signature_message_digest(algorithm: &str) -> Option<MessageDigest> {
+    match algorithm.to_ascii_uppercase().as_str() {
+        "RSA-SHA256" | "SHA256" => Some(MessageDigest::sha256()),
+        "RSA-SHA384" | "SHA384" => Some(MessageDigest::sha384()),
+        "RSA-SHA512" | "SHA512" => Some(MessageDigest::sha512()),
+        "RSA-SHA1" | "SHA1" => Some(MessageDigest::sha1()),
+        "RSA-MD5" | "MD5" => Some(MessageDigest::md5()),
         _ => None,
     }
 }
 
-fn sign_rsa_pem(algorithm: &str, private_key_pem: &str, data: &[u8]) -> Result<Vec<u8>, String> {
-    let digest = rsa_message_digest(algorithm)
+#[derive(Clone, Copy)]
+struct RsaSignatureOptions {
+    padding: Padding,
+    uses_pss: bool,
+    pss_salt_length: Option<i64>,
+}
+
+impl RsaSignatureOptions {
+    fn pkcs1() -> Self {
+        Self {
+            padding: Padding::PKCS1,
+            uses_pss: false,
+            pss_salt_length: None,
+        }
+    }
+}
+
+fn rsa_signature_options_from_node(
+    padding: Option<i64>,
+    salt_length: Option<i64>,
+) -> RsaSignatureOptions {
+    match padding {
+        Some(6) => RsaSignatureOptions {
+            padding: Padding::PKCS1_PSS,
+            uses_pss: true,
+            pss_salt_length: salt_length,
+        },
+        _ => RsaSignatureOptions {
+            padding: Padding::PKCS1,
+            uses_pss: false,
+            pss_salt_length: None,
+        },
+    }
+}
+
+fn rsa_pss_saltlen(value: i64) -> Result<RsaPssSaltlen, String> {
+    match value {
+        -1 => Ok(RsaPssSaltlen::DIGEST_LENGTH),
+        -2 => Ok(RsaPssSaltlen::MAXIMUM_LENGTH),
+        _ if value >= 0 && value <= i32::MAX as i64 => Ok(RsaPssSaltlen::custom(value as i32)),
+        _ => Err(format!("invalid RSA-PSS saltLength '{}'", value)),
+    }
+}
+
+fn get_signature_key_options(
+    scope: &mut v8::HandleScope,
+    key_value: v8::Local<v8::Value>,
+) -> Result<(String, RsaSignatureOptions), String> {
+    if key_value.is_string() {
+        let key = key_value
+            .to_string(scope)
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        return Ok((key, RsaSignatureOptions::pkcs1()));
+    }
+
+    if !key_value.is_object() {
+        return Err("key must be a PEM string or an object with a key property".to_string());
+    }
+
+    let key_obj = key_value
+        .to_object(scope)
+        .ok_or_else(|| "key must be an object".to_string())?;
+    let key = get_string_property(scope, key_obj, "key")
+        .or_else(|| get_string_property(scope, key_obj, "pem"))
+        .unwrap_or_default();
+    let padding = get_i64_property(scope, key_obj, "padding");
+    let salt_length = get_i64_property(scope, key_obj, "saltLength");
+
+    Ok((key, rsa_signature_options_from_node(padding, salt_length)))
+}
+
+fn sign_pem_private_key(
+    algorithm: &str,
+    private_key_pem: &str,
+    data: &[u8],
+    options: RsaSignatureOptions,
+) -> Result<Vec<u8>, String> {
+    let digest = signature_message_digest(algorithm)
         .ok_or_else(|| format!("sign: unsupported algorithm '{}'", algorithm))?;
     let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
         .map_err(|error| format!("sign: invalid private key: {}", error))?;
     let mut signer = Signer::new(digest, &key)
         .map_err(|error| format!("sign: signer setup failed: {}", error))?;
+    if key.id() == Id::RSA {
+        signer
+            .set_rsa_padding(options.padding)
+            .map_err(|error| format!("sign: RSA padding setup failed: {}", error))?;
+        if options.uses_pss {
+            if let Some(salt_length) = options.pss_salt_length {
+                signer
+                    .set_rsa_pss_saltlen(rsa_pss_saltlen(salt_length)?)
+                    .map_err(|error| format!("sign: RSA-PSS saltLength setup failed: {}", error))?;
+            }
+        }
+    } else if options.uses_pss {
+        return Err("sign: RSA-PSS padding requires an RSA private key".to_string());
+    }
     signer
         .update(data)
         .map_err(|error| format!("sign: signer update failed: {}", error))?;
@@ -1577,24 +2901,298 @@ fn sign_rsa_pem(algorithm: &str, private_key_pem: &str, data: &[u8]) -> Result<V
         .map_err(|error| format!("sign: signing failed: {}", error))
 }
 
-fn verify_rsa_pem(
+fn verify_pem_public_key(
     algorithm: &str,
     public_key_pem: &str,
     data: &[u8],
     signature: &[u8],
+    options: RsaSignatureOptions,
 ) -> Result<bool, String> {
-    let digest = rsa_message_digest(algorithm)
+    let digest = signature_message_digest(algorithm)
         .ok_or_else(|| format!("verify: unsupported algorithm '{}'", algorithm))?;
     let key = PKey::public_key_from_pem(public_key_pem.as_bytes())
         .map_err(|error| format!("verify: invalid public key: {}", error))?;
     let mut verifier = Verifier::new(digest, &key)
         .map_err(|error| format!("verify: verifier setup failed: {}", error))?;
+    if key.id() == Id::RSA {
+        verifier
+            .set_rsa_padding(options.padding)
+            .map_err(|error| format!("verify: RSA padding setup failed: {}", error))?;
+        if options.uses_pss {
+            if let Some(salt_length) = options.pss_salt_length {
+                verifier
+                    .set_rsa_pss_saltlen(rsa_pss_saltlen(salt_length)?)
+                    .map_err(|error| {
+                        format!("verify: RSA-PSS saltLength setup failed: {}", error)
+                    })?;
+            }
+        }
+    } else if options.uses_pss {
+        return Err("verify: RSA-PSS padding requires an RSA public key".to_string());
+    }
     verifier
         .update(data)
         .map_err(|error| format!("verify: verifier update failed: {}", error))?;
     verifier
         .verify(signature)
         .map_err(|error| format!("verify: verification failed: {}", error))
+}
+
+fn sign_one_shot_pem_private_key(
+    algorithm: Option<&str>,
+    private_key_pem: &str,
+    data: &[u8],
+    options: RsaSignatureOptions,
+) -> Result<Vec<u8>, String> {
+    match algorithm {
+        Some(algorithm) if !algorithm.is_empty() => {
+            sign_pem_private_key(algorithm, private_key_pem, data, options)
+        }
+        Some(_) => Err("sign: unsupported algorithm ''".to_string()),
+        None => {
+            let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
+                .map_err(|error| format!("sign: invalid private key: {}", error))?;
+            if key.id() != Id::ED25519 && key.id() != Id::ED448 {
+                return Err(
+                    "sign: null algorithm currently requires an Ed25519 or Ed448 private key"
+                        .to_string(),
+                );
+            }
+            let mut signer = Signer::new_without_digest(&key)
+                .map_err(|error| format!("sign: signer setup failed: {}", error))?;
+            signer
+                .sign_oneshot_to_vec(data)
+                .map_err(|error| format!("sign: signing failed: {}", error))
+        }
+    }
+}
+
+fn verify_one_shot_pem_public_key(
+    algorithm: Option<&str>,
+    public_key_pem: &str,
+    data: &[u8],
+    signature: &[u8],
+    options: RsaSignatureOptions,
+) -> Result<bool, String> {
+    match algorithm {
+        Some(algorithm) if !algorithm.is_empty() => {
+            verify_pem_public_key(algorithm, public_key_pem, data, signature, options)
+        }
+        Some(_) => Err("verify: unsupported algorithm ''".to_string()),
+        None => {
+            let key = public_pkey_from_pem(public_key_pem)
+                .map_err(|error| format!("verify: {}", error))?;
+            if key.id() != Id::ED25519 && key.id() != Id::ED448 {
+                return Err(
+                    "verify: null algorithm currently requires an Ed25519 or Ed448 public key"
+                        .to_string(),
+                );
+            }
+            let mut verifier = Verifier::new_without_digest(&key)
+                .map_err(|error| format!("verify: verifier setup failed: {}", error))?;
+            verifier
+                .verify_oneshot(signature, data)
+                .map_err(|error| format!("verify: verification failed: {}", error))
+        }
+    }
+}
+
+fn asymmetric_key_type_from_id(id: Id) -> Result<&'static str, String> {
+    match id {
+        Id::RSA => Ok("rsa"),
+        Id::EC => Ok("ec"),
+        Id::ED25519 => Ok("ed25519"),
+        Id::ED448 => Ok("ed448"),
+        _ => Err(format!("unsupported asymmetric key type {:?}", id)),
+    }
+}
+
+fn private_key_type_from_pem(private_key_pem: &str) -> Result<&'static str, String> {
+    let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("invalid private key: {}", error))?;
+    asymmetric_key_type_from_id(key.id())
+}
+
+fn public_key_type_from_pem(public_key_pem: &str) -> Result<&'static str, String> {
+    let key = public_pkey_from_pem(public_key_pem)?;
+    asymmetric_key_type_from_id(key.id())
+}
+
+fn public_pkey_from_pem(public_key_pem: &str) -> Result<PKey<Public>, String> {
+    match PKey::public_key_from_pem(public_key_pem.as_bytes()) {
+        Ok(key) => Ok(key),
+        Err(spki_error) => {
+            let rsa = Rsa::public_key_from_pem_pkcs1(public_key_pem.as_bytes()).map_err(
+                |pkcs1_error| {
+                    format!(
+                        "invalid public key: {}; invalid RSA PKCS#1 public key: {}",
+                        spki_error, pkcs1_error
+                    )
+                },
+            )?;
+            PKey::from_rsa(rsa).map_err(|error| format!("invalid RSA PKCS#1 public key: {}", error))
+        }
+    }
+}
+
+fn private_key_pem_from_passphrase(
+    private_key_pem: &str,
+    passphrase: &[u8],
+) -> Result<String, String> {
+    let key = PKey::private_key_from_pem_passphrase(private_key_pem.as_bytes(), passphrase)
+        .map_err(|error| format!("invalid encrypted private key: {}", error))?;
+    let pem = key
+        .private_key_to_pem_pkcs8()
+        .map_err(|error| format!("private key PEM export failed: {}", error))?;
+    String::from_utf8(pem).map_err(|error| format!("private key PEM is invalid UTF-8: {}", error))
+}
+
+fn private_key_der_from_pem(private_key_pem: &str, key_type: &str) -> Result<Vec<u8>, String> {
+    let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("export: invalid private key: {}", error))?;
+    match key_type {
+        "pkcs8" => key
+            .private_key_to_der()
+            .map_err(|error| format!("export: private key DER export failed: {}", error)),
+        _ => Err(format!(
+            "export: unsupported private key DER type '{}'. Supported: pkcs8",
+            key_type
+        )),
+    }
+}
+
+fn public_key_der_from_pem(public_key_pem: &str, key_type: &str) -> Result<Vec<u8>, String> {
+    let key = public_pkey_from_pem(public_key_pem).map_err(|error| format!("export: {}", error))?;
+    match key_type {
+        "spki" => key
+            .public_key_to_der()
+            .map_err(|error| format!("export: public key DER export failed: {}", error)),
+        "pkcs1" => {
+            let rsa = key.rsa().map_err(|error| {
+                format!(
+                    "export: public key PKCS#1 DER export requires an RSA key: {}",
+                    error
+                )
+            })?;
+            rsa.public_key_to_der_pkcs1()
+                .map_err(|error| format!("export: public key PKCS#1 DER export failed: {}", error))
+        }
+        _ => Err(format!(
+            "export: unsupported public key DER type '{}'. Supported: spki, pkcs1",
+            key_type
+        )),
+    }
+}
+
+fn public_key_pem_from_pem(public_key_pem: &str, key_type: &str) -> Result<String, String> {
+    let key = public_pkey_from_pem(public_key_pem).map_err(|error| format!("export: {}", error))?;
+    let pem = match key_type {
+        "spki" => key
+            .public_key_to_pem()
+            .map_err(|error| format!("export: public key PEM export failed: {}", error))?,
+        "pkcs1" => {
+            let rsa = key.rsa().map_err(|error| {
+                format!(
+                    "export: public key PKCS#1 PEM export requires an RSA key: {}",
+                    error
+                )
+            })?;
+            rsa.public_key_to_pem_pkcs1().map_err(|error| {
+                format!("export: public key PKCS#1 PEM export failed: {}", error)
+            })?
+        }
+        _ => {
+            return Err(format!(
+                "export: unsupported public key PEM type '{}'. Supported: spki, pkcs1",
+                key_type
+            ))
+        }
+    };
+    String::from_utf8(pem)
+        .map_err(|error| format!("export: public key PEM is invalid UTF-8: {}", error))
+}
+
+fn private_key_pem_from_der(private_key_der: &[u8], key_type: &str) -> Result<String, String> {
+    if key_type != "pkcs8" {
+        return Err(format!(
+            "unsupported private key DER type '{}'. Supported: pkcs8",
+            key_type
+        ));
+    }
+
+    let key = PKey::private_key_from_der(private_key_der)
+        .map_err(|error| format!("invalid private key DER: {}", error))?;
+    let pem = key
+        .private_key_to_pem_pkcs8()
+        .map_err(|error| format!("private key PEM export failed: {}", error))?;
+    String::from_utf8(pem).map_err(|error| format!("private key PEM is invalid UTF-8: {}", error))
+}
+
+fn public_key_pem_from_der(public_key_der: &[u8], key_type: &str) -> Result<String, String> {
+    let key = match key_type {
+        "spki" => PKey::public_key_from_der(public_key_der)
+            .map_err(|error| format!("invalid public key DER: {}", error))?,
+        "pkcs1" => {
+            let rsa = Rsa::public_key_from_der_pkcs1(public_key_der)
+                .map_err(|error| format!("invalid RSA PKCS#1 public key DER: {}", error))?;
+            PKey::from_rsa(rsa)
+                .map_err(|error| format!("invalid RSA PKCS#1 public key DER: {}", error))?
+        }
+        _ => {
+            return Err(format!(
+                "unsupported public key DER type '{}'. Supported: spki, pkcs1",
+                key_type
+            ))
+        }
+    };
+    let pem = key
+        .public_key_to_pem()
+        .map_err(|error| format!("public key PEM export failed: {}", error))?;
+    String::from_utf8(pem).map_err(|error| format!("public key PEM is invalid UTF-8: {}", error))
+}
+
+fn public_key_spki_pem_from_pem(public_key_pem: &str, key_type: &str) -> Result<String, String> {
+    let pem = match key_type {
+        "spki" => {
+            let key = public_pkey_from_pem(public_key_pem)?;
+            key.public_key_to_pem()
+                .map_err(|error| format!("public key PEM export failed: {}", error))?
+        }
+        "pkcs1" => {
+            let rsa = Rsa::public_key_from_pem_pkcs1(public_key_pem.as_bytes())
+                .map_err(|error| format!("invalid RSA PKCS#1 public key: {}", error))?;
+            let key = PKey::from_rsa(rsa)
+                .map_err(|error| format!("invalid RSA PKCS#1 public key: {}", error))?;
+            key.public_key_to_pem()
+                .map_err(|error| format!("public key PEM export failed: {}", error))?
+        }
+        _ => {
+            return Err(format!(
+                "unsupported public key PEM type '{}'. Supported: spki, pkcs1",
+                key_type
+            ))
+        }
+    };
+    String::from_utf8(pem).map_err(|error| format!("public key PEM is invalid UTF-8: {}", error))
+}
+
+fn public_key_spki_pem_from_private_pem(private_key_pem: &str) -> Result<String, String> {
+    let key = PKey::private_key_from_pem(private_key_pem.as_bytes())
+        .map_err(|error| format!("invalid private key: {}", error))?;
+    let pem = key
+        .public_key_to_pem()
+        .map_err(|error| format!("public key PEM export failed: {}", error))?;
+    String::from_utf8(pem).map_err(|error| format!("public key PEM is invalid UTF-8: {}", error))
+}
+
+fn public_key_spki_pem_from_any_pem(key_pem: &str, key_type: &str) -> Result<String, String> {
+    match public_key_spki_pem_from_pem(key_pem, key_type) {
+        Ok(pem) => Ok(pem),
+        Err(public_error) => match public_key_spki_pem_from_private_pem(key_pem) {
+            Ok(pem) => Ok(pem),
+            Err(private_error) => Err(format!("{}; {}", public_error, private_error)),
+        },
+    }
 }
 
 fn rsa_padding_from_node_constant(value: Option<i64>, default_padding: Padding) -> Padding {
@@ -1680,6 +3278,11 @@ fn get_bytes_from_value(
             "hex" => hex::decode(&text).map_err(|error| format!("invalid hex data: {}", error)),
             "base64" => base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &text)
                 .map_err(|error| format!("invalid base64 data: {}", error)),
+            "base64url" => base64::Engine::decode(
+                &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+                text.trim_end_matches('='),
+            )
+            .map_err(|error| format!("invalid base64url data: {}", error)),
             _ => Ok(text.into_bytes()),
         };
     }
@@ -1966,47 +3569,39 @@ fn ecdh_compute_secret(
 
 /// Generate EC key pair (v0.3.23)
 /// Returns (public_key_pem, private_key_pem)
-fn generate_ec_key_pair(named_curve: &str) -> (String, String) {
-    // Generate a mock EC key pair for demonstration
-    // In production, this would use actual EC key generation
+fn generate_ec_key_pair(named_curve: &str) -> Result<(String, String), String> {
+    let group = ecdh_group(named_curve)
+        .map_err(|error| error.replacen("createECDH", "generateKeyPair", 1))?;
+    let ec_key = EcKey::generate(&group)
+        .map_err(|error| format!("generateKeyPair: EC key generation failed: {}", error))?;
+    let key = PKey::from_ec_key(ec_key)
+        .map_err(|error| format!("generateKeyPair: EC key setup failed: {}", error))?;
 
-    // Generate random components
-    let private_hex = generate_hex_string(32);
-    let public_x = generate_hex_string(32);
-    let public_y = generate_hex_string(32);
+    let public_key_pem = String::from_utf8(
+        key.public_key_to_pem()
+            .map_err(|error| format!("generateKeyPair: EC public key export failed: {}", error))?,
+    )
+    .map_err(|error| {
+        format!(
+            "generateKeyPair: EC public key PEM is invalid UTF-8: {}",
+            error
+        )
+    })?;
+    let private_key_pem =
+        String::from_utf8(key.private_key_to_pem_pkcs8().map_err(|error| {
+            format!("generateKeyPair: EC private key export failed: {}", error)
+        })?)
+        .map_err(|error| {
+            format!(
+                "generateKeyPair: EC private key PEM is invalid UTF-8: {}",
+                error
+            )
+        })?;
 
-    // EC public key (SPKI format - simplified)
-    let public_key_pem = format!(
-        "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE{} {} {}\n-----END PUBLIC KEY-----",
-        &public_x[..16.min(public_x.len())],
-        public_x,
-        public_y
-    );
-
-    // EC private key (PKCS8 format - simplified)
-    let private_key_pem = format!(
-        "-----BEGIN PRIVATE KEY-----\n{} {} {} curve:{}\n-----END PRIVATE KEY-----",
-        private_hex, public_x, public_y, named_curve
-    );
-
-    (public_key_pem, private_key_pem)
+    Ok((public_key_pem, private_key_pem))
 }
 
-/// Generate a random hex string of approximately the given byte length
-fn generate_hex_string(byte_length: usize) -> String {
-    let mut rng = rand::thread_rng();
-    let hex_chars: String = std::iter::repeat(())
-        .take(byte_length * 2)
-        .map(|_| {
-            let c: u8 = rng.gen();
-            format!("{:02x}", c)
-        })
-        .collect();
-    hex_chars
-}
-
-/// Compute scrypt-derived key using PBKDF2-HMAC-SHA256 as underlying primitive
-/// This provides scrypt-like security properties with lower memory requirements
+/// Compute scrypt-derived key using OpenSSL's real memory-hard scrypt primitive.
 /// Parameters:
 /// - password: The secret key material
 /// - salt: Random salt value
@@ -2022,63 +3617,23 @@ fn compute_scrypt_derived_key(
     r: u32,
     p: u32,
 ) -> Result<Vec<u8>, String> {
-    // Compute effective iteration count based on scrypt parameters
-    // scrypt's memory hardness is simulated through multiple PBKDF2 rounds
-    // The formula roughly captures scrypt's memory*time trade-off
-    let memory_factor = r as usize * 64; // Block size contribution
-    let parallel_factor = p as usize; // Parallelization
-
-    // Scale iterations based on scrypt parameters
-    // Higher N = more iterations, higher r = more memory/time per block
-    let base_iterations: usize = 4096;
-    let n_scaled = (n as usize) / 1024;
-    let scaled_iterations = base_iterations
-        .saturating_mul(n_scaled)
-        .saturating_mul(memory_factor / 64)
-        .saturating_mul(parallel_factor);
-
-    // Clamp iterations to reasonable range for performance
-    let iterations = std::cmp::min(std::cmp::max(scaled_iterations, 1024), 1000000);
-
-    // Use PBKDF2-HMAC-SHA256 as the underlying primitive
-    let password_bytes = password.as_bytes();
-    let salt_bytes = salt.as_bytes();
-    let hash_len = 32usize; // SHA256 output size
-
-    // Calculate number of hash blocks needed
-    let block_count = (keylen + hash_len - 1) / hash_len;
     let mut derived_key = vec![0u8; keylen];
 
-    // Helper function to compute HMAC-SHA256
-    fn compute_hmac_sha256(data: &[u8], key: &[u8]) -> Vec<u8> {
-        use ring::hmac;
-
-        let signing_key = hmac::Key::new(hmac::HMAC_SHA256, key);
-        hmac::sign(&signing_key, data).as_ref().to_vec()
+    if n == 0 || r == 0 || p == 0 {
+        return Err("scrypt: N, r, and p must be greater than zero".to_string());
     }
 
-    for block_idx in 0..block_count {
-        // Create salt block with block number (similar to PBKDF2)
-        let mut salt_block = salt_bytes.to_vec();
-        let block_num: u32 = (block_idx + 1) as u32;
-        salt_block.extend_from_slice(&block_num.to_be_bytes());
-
-        // PBKDF2-SHA256 iterations
-        let mut u_prev = compute_hmac_sha256(&salt_block, password_bytes);
-        let mut t_block = u_prev.clone();
-
-        for _ in 1..iterations {
-            u_prev = compute_hmac_sha256(&u_prev, password_bytes);
-            for (t_byte, u_byte) in t_block.iter_mut().zip(&u_prev) {
-                *t_byte ^= u_byte;
-            }
-        }
-
-        // Copy to result (handling partial blocks)
-        let start = block_idx * hash_len;
-        let end = std::cmp::min(start + hash_len, keylen);
-        derived_key[start..end].copy_from_slice(&t_block[0..(end - start)]);
-    }
+    let maxmem = 64 * 1024 * 1024;
+    openssl::pkcs5::scrypt(
+        password.as_bytes(),
+        salt.as_bytes(),
+        n as u64,
+        r as u64,
+        p as u64,
+        maxmem,
+        &mut derived_key,
+    )
+    .map_err(|error| format!("scrypt: key derivation failed: {}", error))?;
 
     Ok(derived_key)
 }
@@ -2434,15 +3989,12 @@ pub fn v8_exception_to_runtime_error(
 
         // Extract location from stack trace
         let location = stack_trace.as_ref().and_then(|s| {
-            // Parse first line of stack trace for location
-            s.lines().next().and_then(|line| {
-                // Format is typically: "at functionName (file:line:col)"
-                if line.contains("at ") {
-                    Some(line.to_string())
-                } else {
-                    None
-                }
-            })
+            // V8 stack traces usually start with "Error: message"; the first
+            // useful source location is the first following "at ..." frame.
+            s.lines()
+                .map(str::trim)
+                .find(|line| line.starts_with("at "))
+                .map(ToString::to_string)
         });
 
         RuntimeError {
@@ -2489,6 +4041,8 @@ pub struct MinimalRuntime {
     process_argv: Vec<String>,
     main_module_dir: String,
     main_module_filename: String,
+    esm_module_cache: HashMap<PathBuf, v8::Global<v8::Module>>,
+    esm_module_cache_fingerprints: HashMap<PathBuf, [u8; 32]>,
     timer_drain_limit_ms: u64,
 }
 
@@ -2523,10 +4077,7 @@ impl MinimalRuntime {
         // Create a new isolate with optimized parameters
         let mut isolate = v8::Isolate::new(create_params);
 
-        // v0.3.270: 设置显式微任务策略
-        // Explicit 模式下，V8 只在调用 perform_microtask_checkpoint 时执行微任务
-        // 这样可以确保 nextTick 回调在 Promise microtasks 之前执行
-        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
+        Self::configure_isolate(&mut isolate);
 
         // v0.3.93: Context 将在第一次调用 get_context() 时创建
         Ok(Self {
@@ -2535,6 +4086,8 @@ impl MinimalRuntime {
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
+            esm_module_cache: HashMap::new(),
+            esm_module_cache_fingerprints: HashMap::new(),
             timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
         })
     }
@@ -2552,8 +4105,7 @@ impl MinimalRuntime {
 
         let mut isolate = v8::Isolate::new(create_params);
 
-        // v0.3.270: 设置显式微任务策略
-        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
+        Self::configure_isolate(&mut isolate);
 
         Ok(Self {
             isolate,
@@ -2561,6 +4113,8 @@ impl MinimalRuntime {
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
+            esm_module_cache: HashMap::new(),
+            esm_module_cache_fingerprints: HashMap::new(),
             timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
         })
     }
@@ -2575,8 +4129,7 @@ impl MinimalRuntime {
 
         let mut isolate = v8::Isolate::new(create_params);
 
-        // v0.3.270: 设置显式微任务策略
-        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
+        Self::configure_isolate(&mut isolate);
 
         Ok(Self {
             isolate,
@@ -2584,6 +4137,8 @@ impl MinimalRuntime {
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
+            esm_module_cache: HashMap::new(),
+            esm_module_cache_fingerprints: HashMap::new(),
             timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
         })
     }
@@ -2601,6 +4156,14 @@ impl MinimalRuntime {
 
     pub fn set_timer_drain_limit_ms(&mut self, limit_ms: u64) {
         self.timer_drain_limit_ms = limit_ms;
+    }
+
+    fn configure_isolate(isolate: &mut v8::OwnedIsolate) {
+        // v0.3.270: 设置显式微任务策略。Explicit 模式下，V8 只在调用
+        // perform_microtask_checkpoint 时执行微任务，确保 nextTick 回调在 Promise
+        // microtasks 之前执行。
+        isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
+        isolate.set_host_import_module_dynamically_callback(Self::esm_dynamic_import_callback);
     }
 
     pub fn set_main_module_path(&mut self, path: impl AsRef<std::path::Path>) {
@@ -2774,6 +4337,1885 @@ impl MinimalRuntime {
         let context = v8::Context::new(scope);
         let global_context = v8::Global::new(scope, context);
         self.context = Some(global_context);
+        self.esm_module_cache.clear();
+        self.esm_module_cache_fingerprints.clear();
+    }
+
+    fn should_execute_as_esm_module(code: &str, main_module_filename: &str) -> Result<bool> {
+        let main_module_path = Path::new(main_module_filename);
+        let module_format =
+            crate::nodejs_core::commonjs_resolver::classify_commonjs_file(main_module_path)?;
+        if module_format != crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::EsModule {
+            if matches!(
+                module_format,
+                crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::TypeScript
+                    | crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::TypeScriptJsx
+            ) {
+                return Ok(Self::has_esm_export_syntax(code)
+                    || Self::has_top_level_await_syntax(code)
+                    || !Self::static_import_specifiers(code).is_empty());
+            }
+            return Ok(false);
+        }
+
+        let has_export_syntax = Self::has_esm_export_syntax(code);
+        let has_await_syntax = Self::has_esm_await_syntax(code);
+        let import_specifiers = Self::static_import_specifiers(code);
+        if main_module_path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            == Some("mjs")
+        {
+            if has_export_syntax || has_await_syntax {
+                return Ok(true);
+            }
+
+            for specifier in import_specifiers {
+                if Self::static_import_targets_native_esm(&specifier, main_module_path)? {
+                    return Ok(true);
+                }
+            }
+
+            return Ok(false);
+        }
+
+        Ok(has_export_syntax || has_await_syntax || !import_specifiers.is_empty())
+    }
+
+    fn has_esm_export_syntax(code: &str) -> bool {
+        code.contains("export let ")
+            || code.contains("export const ")
+            || code.contains("export var ")
+            || code.contains("export function ")
+            || code.contains("export class ")
+            || code.contains("export default")
+            || code.contains("export {")
+    }
+
+    fn has_esm_await_syntax(code: &str) -> bool {
+        static AWAIT_TOKEN_RE: OnceLock<regex::Regex> = OnceLock::new();
+        AWAIT_TOKEN_RE
+            .get_or_init(|| regex::Regex::new(r"\bawait\b").expect("valid await token regex"))
+            .is_match(code)
+    }
+
+    fn has_top_level_await_syntax(code: &str) -> bool {
+        let bytes = code.as_bytes();
+        let mut index = 0;
+        let mut brace_depth = 0usize;
+
+        while index < bytes.len() {
+            match bytes[index] {
+                b'\'' | b'"' => {
+                    index = Self::skip_quoted_string(bytes, index, bytes[index]);
+                }
+                b'`' => {
+                    index = Self::skip_template_literal(bytes, index);
+                }
+                b'/' if bytes.get(index + 1) == Some(&b'/') => {
+                    index = Self::skip_line_comment(bytes, index);
+                }
+                b'/' if bytes.get(index + 1) == Some(&b'*') => {
+                    index = Self::skip_block_comment(bytes, index);
+                }
+                b'{' => {
+                    brace_depth += 1;
+                    index += 1;
+                }
+                b'}' => {
+                    brace_depth = brace_depth.saturating_sub(1);
+                    index += 1;
+                }
+                _ if brace_depth == 0 && Self::is_await_token_at(bytes, index) => {
+                    return true;
+                }
+                _ => {
+                    index += 1;
+                }
+            }
+        }
+
+        false
+    }
+
+    fn skip_quoted_string(bytes: &[u8], start: usize, quote: u8) -> usize {
+        let mut index = start + 1;
+        let mut escaped = false;
+        while index < bytes.len() {
+            let byte = bytes[index];
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == quote {
+                return index + 1;
+            }
+            index += 1;
+        }
+        index
+    }
+
+    fn skip_template_literal(bytes: &[u8], start: usize) -> usize {
+        let mut index = start + 1;
+        let mut escaped = false;
+        while index < bytes.len() {
+            let byte = bytes[index];
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'`' {
+                return index + 1;
+            }
+            index += 1;
+        }
+        index
+    }
+
+    fn skip_line_comment(bytes: &[u8], start: usize) -> usize {
+        let mut index = start + 2;
+        while index < bytes.len() && bytes[index] != b'\n' {
+            index += 1;
+        }
+        index
+    }
+
+    fn skip_block_comment(bytes: &[u8], start: usize) -> usize {
+        let mut index = start + 2;
+        while index + 1 < bytes.len() {
+            if bytes[index] == b'*' && bytes[index + 1] == b'/' {
+                return index + 2;
+            }
+            index += 1;
+        }
+        bytes.len()
+    }
+
+    fn is_await_token_at(bytes: &[u8], index: usize) -> bool {
+        if !bytes[index..].starts_with(b"await") {
+            return false;
+        }
+        let previous = index
+            .checked_sub(1)
+            .and_then(|previous| bytes.get(previous));
+        let next = bytes.get(index + "await".len());
+        !previous.is_some_and(|byte| Self::is_identifier_byte(*byte) || *byte == b'.')
+            && !next.is_some_and(|byte| Self::is_identifier_byte(*byte))
+    }
+
+    fn is_identifier_byte(byte: u8) -> bool {
+        byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'$'
+    }
+
+    fn static_import_specifiers(code: &str) -> Vec<String> {
+        static STATIC_IMPORT_SPECIFIER_RE: OnceLock<regex::Regex> = OnceLock::new();
+        STATIC_IMPORT_SPECIFIER_RE
+            .get_or_init(|| {
+                regex::Regex::new(r#"(?m)^\s*import\s+(?:[^;]*?\s+from\s+)?['"]([^'"]+)['"]"#)
+                    .expect("valid static import specifier regex")
+            })
+            .captures_iter(code)
+            .filter_map(|captures| {
+                captures
+                    .get(1)
+                    .map(|specifier| specifier.as_str().to_string())
+            })
+            .collect()
+    }
+
+    fn is_native_esm_source_path(path: &Path) -> Result<bool> {
+        let module_format = crate::nodejs_core::commonjs_resolver::classify_commonjs_file(path)?;
+        Ok(module_format == crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::EsModule)
+    }
+
+    fn static_import_targets_native_esm(specifier: &str, referrer_path: &Path) -> Result<bool> {
+        let specifier_path = Path::new(specifier);
+        if (specifier_path.is_absolute()
+            || specifier.starts_with("./")
+            || specifier.starts_with("../"))
+            && specifier_path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                == Some("mjs")
+        {
+            return Ok(true);
+        }
+
+        let Ok(module_path) = Self::resolve_esm_candidate_path(specifier, referrer_path) else {
+            return Ok(false);
+        };
+        Self::is_native_esm_source_path(&module_path)
+    }
+
+    fn normalized_module_path(path: &Path) -> PathBuf {
+        path.canonicalize().unwrap_or_else(|_| {
+            if let (Some(parent), Some(file_name)) = (path.parent(), path.file_name()) {
+                if let Ok(parent) = parent.canonicalize() {
+                    return parent.join(file_name);
+                }
+            }
+            path.to_path_buf()
+        })
+    }
+
+    fn resolve_esm_candidate_path(
+        specifier: &str,
+        referrer_path: &Path,
+    ) -> Result<PathBuf, String> {
+        if let Ok(url) = url::Url::parse(specifier) {
+            if url.scheme() != "file" {
+                return Err(format!(
+                    "Only file:// URL specifiers are supported for ES modules: {}",
+                    specifier
+                ));
+            }
+
+            let file_path = url
+                .to_file_path()
+                .map_err(|_| format!("Invalid file:// ES module URL '{}'", specifier))?;
+            return Self::resolve_esm_path_candidate(file_path, specifier);
+        }
+
+        let specifier_path = Path::new(specifier);
+        let candidate = if specifier_path.is_absolute() {
+            specifier_path.to_path_buf()
+        } else if specifier.starts_with("./") || specifier.starts_with("../") {
+            referrer_path
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(specifier_path)
+        } else {
+            let parent_dir = referrer_path.parent().unwrap_or_else(|| Path::new("."));
+            return match crate::nodejs_core::commonjs_resolver::resolve_esm_module(
+                specifier, parent_dir,
+            ) {
+                Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::File(path)) => {
+                    path.canonicalize().map_err(|error| {
+                        format!("Cannot resolve ES module '{}': {}", specifier, error)
+                    })
+                }
+                Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::Builtin(_)) => Err(
+                    format!("ESM builtin import '{}' is not supported yet", specifier),
+                ),
+                Err(error) => Err(error.to_string()),
+            };
+        };
+        Self::resolve_esm_path_candidate(candidate, specifier)
+    }
+
+    fn resolve_esm_path_candidate(candidate: PathBuf, specifier: &str) -> Result<PathBuf, String> {
+        let candidate = if candidate.extension().is_none() {
+            candidate.with_extension("mjs")
+        } else {
+            candidate
+        };
+
+        let resolved = candidate
+            .canonicalize()
+            .map_err(|error| format!("Cannot resolve ES module '{}': {}", specifier, error))?;
+
+        Ok(resolved)
+    }
+
+    fn create_esm_source<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        path: &Path,
+        code: &str,
+    ) -> Result<v8::script_compiler::Source, String> {
+        let source = v8::String::new(scope, code)
+            .ok_or_else(|| format!("Failed to create V8 source for '{}'", path.display()))?;
+        let resource_name = v8::String::new(scope, &path.to_string_lossy())
+            .ok_or_else(|| format!("Failed to create V8 resource name for '{}'", path.display()))?;
+        let source_map_url = v8::undefined(scope);
+        let origin = v8::ScriptOrigin::new(
+            scope,
+            resource_name.into(),
+            0,
+            0,
+            false,
+            0,
+            source_map_url.into(),
+            false,
+            false,
+            true,
+        );
+
+        Ok(v8::script_compiler::Source::new(source, Some(&origin)))
+    }
+
+    fn compile_esm_module_source<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        path: &Path,
+        code: &str,
+    ) -> Result<v8::Local<'scope, v8::Module>, String> {
+        let source = Self::create_esm_source(scope, path, code)?;
+        v8::script_compiler::compile_module(scope, source)
+            .ok_or_else(|| format!("Failed to compile ES module '{}'", path.display()))
+    }
+
+    fn esm_source_fingerprint(source: &[u8]) -> [u8; 32] {
+        *blake3::hash(source).as_bytes()
+    }
+
+    fn read_file_backed_esm_fingerprint(path: &Path) -> Result<[u8; 32], String> {
+        crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::FileSystem,
+            crate::permissions::PermissionAction::Read,
+            crate::permissions::ResourceId::Path(path.to_path_buf()),
+        )
+        .map_err(|error| error.to_string())?;
+
+        let source = std::fs::read(path)
+            .map_err(|error| format!("Error loading ES module '{}': {}", path.display(), error))?;
+        Ok(Self::esm_source_fingerprint(&source))
+    }
+
+    fn cached_esm_namespace_graph_is_fresh(
+        scope: &mut v8::HandleScope,
+        graph_fingerprints: v8::Local<v8::Object>,
+    ) -> Result<bool, String> {
+        let Some(property_names) = graph_fingerprints.get_own_property_names(scope) else {
+            return Ok(false);
+        };
+        if property_names.length() == 0 {
+            return Ok(false);
+        }
+
+        for index in 0..property_names.length() {
+            let Some(path_key) = property_names.get_index(scope, index) else {
+                return Ok(false);
+            };
+            let Some(path_string) = path_key.to_string(scope) else {
+                return Ok(false);
+            };
+            let path_string = path_string.to_rust_string_lossy(scope);
+
+            let Some(expected_fingerprint) = graph_fingerprints.get(scope, path_key) else {
+                return Ok(false);
+            };
+            let Some(expected_fingerprint) = expected_fingerprint.to_string(scope) else {
+                return Ok(false);
+            };
+            let expected_fingerprint = expected_fingerprint.to_rust_string_lossy(scope);
+
+            let actual_fingerprint =
+                Self::read_file_backed_esm_fingerprint(Path::new(&path_string))?;
+            if hex::encode(actual_fingerprint) != expected_fingerprint {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+
+    fn create_esm_namespace_graph_fingerprint_object<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        source_fingerprints: &[(PathBuf, [u8; 32])],
+    ) -> v8::Local<'scope, v8::Object> {
+        let graph_fingerprints = v8::Object::new(scope);
+        for (path, fingerprint) in source_fingerprints {
+            let path_key = v8::String::new(scope, &path.to_string_lossy()).unwrap();
+            let fingerprint_value = v8::String::new(scope, &hex::encode(fingerprint)).unwrap();
+            graph_fingerprints.set(scope, path_key.into(), fingerprint_value.into());
+        }
+        graph_fingerprints
+    }
+
+    fn prune_stale_esm_module_cache(
+        module_cache: &mut HashMap<PathBuf, v8::Global<v8::Module>>,
+        module_cache_fingerprints: &mut HashMap<PathBuf, [u8; 32]>,
+    ) {
+        let cached_paths: Vec<PathBuf> = module_cache.keys().cloned().collect();
+        let mut should_clear = false;
+
+        for path in cached_paths {
+            let Some(expected_fingerprint) = module_cache_fingerprints.get(&path) else {
+                should_clear = true;
+                break;
+            };
+
+            if crate::permissions::check_global_permission(
+                crate::permissions::PermissionKind::FileSystem,
+                crate::permissions::PermissionAction::Read,
+                crate::permissions::ResourceId::Path(path.clone()),
+            )
+            .is_err()
+            {
+                should_clear = true;
+                break;
+            }
+
+            match std::fs::read(&path) {
+                Ok(source) => {
+                    if Self::esm_source_fingerprint(&source) != *expected_fingerprint {
+                        should_clear = true;
+                        break;
+                    }
+                }
+                Err(_) => {
+                    should_clear = true;
+                    break;
+                }
+            }
+        }
+
+        if should_clear {
+            module_cache.clear();
+            module_cache_fingerprints.clear();
+        }
+    }
+
+    fn remember_esm_module(
+        scope: &mut v8::HandleScope,
+        path: &Path,
+        module: v8::Local<v8::Module>,
+        source_fingerprint: [u8; 32],
+    ) {
+        let script_id = module.script_id();
+        let module_global = v8::Global::new(scope, module);
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            if let Some(state) = state.borrow_mut().as_mut() {
+                state
+                    .modules_by_path
+                    .insert(path.to_path_buf(), module_global);
+                state
+                    .source_fingerprints_by_path
+                    .insert(path.to_path_buf(), source_fingerprint);
+                if let Some(script_id) = script_id {
+                    state
+                        .paths_by_script_id
+                        .insert(script_id, path.to_path_buf());
+                }
+            }
+        });
+    }
+
+    fn seed_esm_module_cache(
+        scope: &mut v8::HandleScope,
+        module_cache: &HashMap<PathBuf, v8::Global<v8::Module>>,
+        module_cache_fingerprints: &HashMap<PathBuf, [u8; 32]>,
+    ) {
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            let mut state = state.borrow_mut();
+            let Some(state) = state.as_mut() else {
+                return;
+            };
+
+            for (path, cached_module) in module_cache {
+                let Some(source_fingerprint) = module_cache_fingerprints.get(path) else {
+                    continue;
+                };
+                let module = v8::Local::new(scope, cached_module);
+                state
+                    .modules_by_path
+                    .insert(path.clone(), cached_module.clone());
+                state
+                    .source_fingerprints_by_path
+                    .insert(path.clone(), *source_fingerprint);
+                if let Some(script_id) = module.script_id() {
+                    state.paths_by_script_id.insert(script_id, path.clone());
+                }
+            }
+        });
+    }
+
+    fn persist_esm_module_cache(
+        module_cache: &mut HashMap<PathBuf, v8::Global<v8::Module>>,
+        module_cache_fingerprints: &mut HashMap<PathBuf, [u8; 32]>,
+        entry_path: &Path,
+    ) {
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            let state = state.borrow();
+            let Some(state) = state.as_ref() else {
+                return;
+            };
+
+            for (path, module) in &state.modules_by_path {
+                if path != entry_path {
+                    if let Some(source_fingerprint) = state.source_fingerprints_by_path.get(path) {
+                        module_cache.insert(path.clone(), module.clone());
+                        module_cache_fingerprints.insert(path.clone(), *source_fingerprint);
+                    }
+                }
+            }
+        });
+    }
+
+    fn set_esm_pending_error(message: String) {
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            if let Some(state) = state.borrow_mut().as_mut() {
+                state.pending_error = Some(message);
+            }
+        });
+    }
+
+    fn take_esm_pending_error() -> Option<String> {
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            state
+                .borrow_mut()
+                .as_mut()
+                .and_then(|state| state.pending_error.take())
+        })
+    }
+
+    fn ensure_esm_evaluation_settled(
+        scope: &mut v8::HandleScope,
+        value: v8::Local<v8::Value>,
+        module_path: &Path,
+        timer_drain_limit_ms: u64,
+    ) -> Result<(), String> {
+        if !value.is_promise() {
+            return Ok(());
+        }
+
+        let promise = v8::Local::<v8::Promise>::try_from(value).map_err(|_| {
+            format!(
+                "Failed to inspect ES module evaluation result for '{}'",
+                module_path.display()
+            )
+        })?;
+
+        let timer_drain_started_at = std::time::Instant::now();
+        let mut microtask_only_iterations = 0;
+
+        loop {
+            execute_next_tick_callbacks(scope);
+            scope.perform_microtask_checkpoint();
+            match promise.state() {
+                v8::PromiseState::Fulfilled => return Ok(()),
+                v8::PromiseState::Rejected => {
+                    let reason = promise.result(scope);
+                    let reason_str = reason
+                        .to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_else(|| "Unknown module rejection".to_string());
+                    return Err(format!(
+                        "ES module '{}' rejected during evaluation: {}",
+                        module_path.display(),
+                        reason_str
+                    ));
+                }
+                v8::PromiseState::Pending => {}
+            }
+
+            let remaining_ms =
+                remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms);
+            let timer_manager = crate::event_loop::get_async_timer_manager();
+            let has_fired_timers = timer_manager.has_fired_timers();
+            let has_scheduled_timers = timer_manager.has_scheduled_timers();
+            let has_zero_delay_timers =
+                has_scheduled_timers && crate::nodejs_core::timers::has_pending_zero_delay_timers();
+            let has_drainable_timers =
+                crate::nodejs_core::timers::has_pending_drainable_timers(remaining_ms);
+            let has_next_ticks = has_pending_next_ticks();
+
+            if has_next_ticks {
+                microtask_only_iterations = 0;
+                continue;
+            }
+
+            if has_fired_timers {
+                microtask_only_iterations = 0;
+                execute_fired_timers(scope);
+                continue;
+            }
+
+            if remaining_ms > 0 && (has_zero_delay_timers || has_drainable_timers) {
+                microtask_only_iterations = 0;
+                std::thread::sleep(std::time::Duration::from_millis(remaining_ms.min(25)));
+                execute_fired_timers(scope);
+                continue;
+            }
+
+            microtask_only_iterations += 1;
+            if microtask_only_iterations >= 32 {
+                break;
+            }
+        }
+
+        Err(format!(
+            "Pending top-level await in ES module '{}' did not settle before runtime completion",
+            module_path.display()
+        ))
+    }
+
+    fn throw_esm_loader_error(scope: &mut v8::HandleScope, message: String) {
+        Self::set_esm_pending_error(message.clone());
+        let error_message = v8::String::new(scope, &message).unwrap_or_else(|| {
+            v8::String::new(scope, "ES module loader error").expect("static V8 string")
+        });
+        let error = v8::Exception::type_error(scope, error_message);
+        scope.throw_exception(error);
+    }
+
+    fn esm_module_exception_value<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        module: v8::Local<v8::Module>,
+    ) -> v8::Local<'scope, v8::Value> {
+        let exception = module.get_exception();
+        let exception_global = v8::Global::new(scope, exception);
+        v8::Local::new(scope, exception_global)
+    }
+
+    fn ensure_dynamic_import_evaluation_settled<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        value: v8::Local<'scope, v8::Value>,
+        module_path: &Path,
+    ) -> Result<(), EsmDynamicImportError<'scope>> {
+        if !value.is_promise() {
+            return Ok(());
+        }
+
+        let promise = v8::Local::<v8::Promise>::try_from(value).map_err(|_| {
+            EsmDynamicImportError::Message(format!(
+                "Failed to inspect ES module evaluation result for '{}'",
+                module_path.display()
+            ))
+        })?;
+
+        for _ in 0..32 {
+            scope.perform_microtask_checkpoint();
+            match promise.state() {
+                v8::PromiseState::Fulfilled => return Ok(()),
+                v8::PromiseState::Rejected => {
+                    return Err(EsmDynamicImportError::Value(promise.result(scope)));
+                }
+                v8::PromiseState::Pending => {}
+            }
+        }
+
+        Err(EsmDynamicImportError::Message(format!(
+            "Pending top-level await in ES module '{}' did not settle before runtime completion",
+            module_path.display()
+        )))
+    }
+
+    fn instantiate_and_evaluate_esm_module_for_dynamic_import<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        module: v8::Local<'scope, v8::Module>,
+        module_path: &Path,
+    ) -> Result<(), EsmDynamicImportError<'scope>> {
+        if module.get_status() == v8::ModuleStatus::Uninstantiated {
+            match module.instantiate_module(scope, Self::esm_resolve_callback) {
+                Some(true) => {}
+                Some(false) | None => {
+                    return Err(EsmDynamicImportError::Message(
+                        Self::take_esm_pending_error().unwrap_or_else(|| {
+                            format!(
+                                "Failed to instantiate ES module '{}'",
+                                module_path.display()
+                            )
+                        }),
+                    ));
+                }
+            }
+        }
+
+        if module.get_status() == v8::ModuleStatus::Errored {
+            return Err(EsmDynamicImportError::Value(
+                Self::esm_module_exception_value(scope, module),
+            ));
+        }
+
+        if module.get_status() != v8::ModuleStatus::Evaluated {
+            let evaluation = module.evaluate(scope).ok_or_else(|| {
+                EsmDynamicImportError::Message(Self::take_esm_pending_error().unwrap_or_else(
+                    || format!("Failed to evaluate ES module '{}'", module_path.display()),
+                ))
+            })?;
+            Self::ensure_dynamic_import_evaluation_settled(scope, evaluation, module_path)?;
+        }
+
+        if module.get_status() == v8::ModuleStatus::Errored {
+            return Err(EsmDynamicImportError::Value(
+                Self::esm_module_exception_value(scope, module),
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn dynamic_import_referrer_path(
+        scope: &mut v8::HandleScope,
+        referrer: v8::Local<v8::ScriptOrModule>,
+    ) -> Result<PathBuf, String> {
+        let resource_name = referrer.get_resource_name();
+        if resource_name.is_undefined() || resource_name.is_null() {
+            return Err("Cannot resolve dynamic import from anonymous referrer".to_string());
+        }
+        let resource_name = resource_name
+            .to_string(scope)
+            .ok_or_else(|| "Cannot read dynamic import referrer resource name".to_string())?
+            .to_rust_string_lossy(scope);
+        if resource_name.is_empty() {
+            return Err("Cannot resolve dynamic import from empty referrer".to_string());
+        }
+        Ok(Self::normalized_module_path(Path::new(&resource_name)))
+    }
+
+    fn load_dynamic_import_module<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        specifier: &str,
+        referrer_path: &Path,
+    ) -> Result<(v8::Local<'scope, v8::Module>, PathBuf), String> {
+        if let Some(builtin_name) = Self::normalized_esm_builtin_name(specifier) {
+            let module_path = PathBuf::from(format!("beejs:builtin:{}", builtin_name));
+            let cached_module = ESM_MODULE_LOAD_STATE.with(|state| {
+                state
+                    .borrow()
+                    .as_ref()
+                    .and_then(|state| state.modules_by_path.get(&module_path).cloned())
+            });
+            if let Some(cached_module) = cached_module {
+                return Ok((v8::Local::new(scope, cached_module), module_path));
+            }
+
+            if let Some(module) = Self::create_esm_builtin_module(scope, builtin_name) {
+                let module_global = v8::Global::new(scope, module);
+                ESM_MODULE_LOAD_STATE.with(|state| {
+                    if let Some(state) = state.borrow_mut().as_mut() {
+                        state
+                            .modules_by_path
+                            .insert(module_path.clone(), module_global);
+                    }
+                });
+                return Ok((module, module_path));
+            }
+        }
+
+        let module_path = Self::resolve_esm_candidate_path(specifier, referrer_path)?;
+        let cached_module = ESM_MODULE_LOAD_STATE.with(|state| {
+            state
+                .borrow()
+                .as_ref()
+                .and_then(|state| state.modules_by_path.get(&module_path).cloned())
+        });
+        if let Some(cached_module) = cached_module {
+            return Ok((v8::Local::new(scope, cached_module), module_path));
+        }
+
+        let module_format = crate::nodejs_core::commonjs_resolver::classify_commonjs_file(
+            &module_path,
+        )
+        .map_err(|error| {
+            format!(
+                "Cannot classify ES module '{}': {}",
+                module_path.display(),
+                error
+            )
+        })?;
+        if module_format != crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::EsModule {
+            let module_fingerprint = Self::read_file_backed_esm_fingerprint(&module_path)?;
+            let module = Self::create_esm_commonjs_module(scope, &module_path)?;
+            Self::remember_esm_module(scope, &module_path, module, module_fingerprint);
+            return Ok((module, module_path));
+        }
+
+        crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::FileSystem,
+            crate::permissions::PermissionAction::Read,
+            crate::permissions::ResourceId::Path(module_path.clone()),
+        )
+        .map_err(|error| error.to_string())?;
+
+        let module_code = std::fs::read_to_string(&module_path).map_err(|error| {
+            format!(
+                "Cannot read ES module '{}': {}",
+                module_path.display(),
+                error
+            )
+        })?;
+
+        let module_fingerprint = Self::esm_source_fingerprint(module_code.as_bytes());
+        let module = Self::compile_esm_module_source(scope, &module_path, &module_code)?;
+        Self::remember_esm_module(scope, &module_path, module, module_fingerprint);
+
+        Ok((module, module_path))
+    }
+
+    fn resolve_dynamic_import_namespace<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        referrer: v8::Local<v8::ScriptOrModule>,
+        specifier: &str,
+    ) -> Result<v8::Local<'scope, v8::Value>, EsmDynamicImportError<'scope>> {
+        let referrer_path = Self::dynamic_import_referrer_path(scope, referrer)
+            .map_err(EsmDynamicImportError::Message)?;
+        let (module, module_path) =
+            Self::load_dynamic_import_module(scope, specifier, &referrer_path)
+                .map_err(EsmDynamicImportError::Message)?;
+        Self::instantiate_and_evaluate_esm_module_for_dynamic_import(scope, module, &module_path)?;
+        let namespace = module.get_module_namespace();
+        let namespace_global = v8::Global::new(scope, namespace);
+        Ok(v8::Local::new(scope, namespace_global))
+    }
+
+    fn reject_dynamic_import(
+        scope: &mut v8::HandleScope,
+        resolver: v8::Local<v8::PromiseResolver>,
+        message: String,
+    ) {
+        let message = v8::String::new(scope, &message).unwrap_or_else(|| {
+            v8::String::new(scope, "Dynamic import failed").expect("static V8 string")
+        });
+        let error = v8::Exception::error(scope, message);
+        resolver.reject(scope, error);
+    }
+
+    fn reject_dynamic_import_error<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        resolver: v8::Local<v8::PromiseResolver>,
+        error: EsmDynamicImportError<'scope>,
+    ) {
+        match error {
+            EsmDynamicImportError::Message(message) => {
+                Self::reject_dynamic_import(scope, resolver, message);
+            }
+            EsmDynamicImportError::Value(value) => {
+                resolver.reject(scope, value);
+            }
+        }
+    }
+
+    extern "C" fn esm_dynamic_import_callback(
+        context: v8::Local<v8::Context>,
+        referrer: v8::Local<v8::ScriptOrModule>,
+        specifier: v8::Local<v8::String>,
+        _import_assertions: v8::Local<v8::FixedArray>,
+    ) -> *mut v8::Promise {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let scope = &mut v8::EscapableHandleScope::new(scope);
+        let resolver = match v8::PromiseResolver::new(scope) {
+            Some(resolver) => resolver,
+            None => return std::ptr::null_mut(),
+        };
+        let promise = resolver.get_promise(scope);
+        let specifier = specifier.to_rust_string_lossy(scope);
+
+        {
+            let scope = &mut v8::TryCatch::new(scope);
+            let import_result = Self::resolve_dynamic_import_namespace(scope, referrer, &specifier);
+            if scope.has_caught() {
+                let exception = scope.exception().unwrap_or_else(|| {
+                    let message =
+                        v8::String::new(scope, "Dynamic import failed").expect("static V8 string");
+                    v8::Exception::error(scope, message)
+                });
+                resolver.reject(scope, exception);
+            } else {
+                match import_result {
+                    Ok(namespace) => {
+                        resolver.resolve(scope, namespace);
+                    }
+                    Err(error) => {
+                        Self::reject_dynamic_import_error(scope, resolver, error);
+                    }
+                }
+            }
+        }
+
+        let promise = scope.escape(promise);
+        &*promise as *const v8::Promise as *mut v8::Promise
+    }
+
+    fn normalized_esm_builtin_name(specifier: &str) -> Option<&str> {
+        let builtin_name = specifier.strip_prefix("node:").unwrap_or(specifier);
+        match builtin_name {
+            "path" | "fs" | "url" | "events" | "os" | "stream" | "process" | "crypto" => {
+                Some(builtin_name)
+            }
+            _ => None,
+        }
+    }
+
+    fn create_esm_builtin_module<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        specifier: &str,
+    ) -> Option<v8::Local<'scope, v8::Module>> {
+        let builtin_name = Self::normalized_esm_builtin_name(specifier)?;
+        match builtin_name {
+            "path" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "join").unwrap(),
+                    v8::String::new(scope, "resolve").unwrap(),
+                    v8::String::new(scope, "basename").unwrap(),
+                    v8::String::new(scope, "dirname").unwrap(),
+                    v8::String::new(scope, "extname").unwrap(),
+                    v8::String::new(scope, "normalize").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:path").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_path_builtin_synthetic_module,
+                ))
+            }
+            "fs" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "readFileSync").unwrap(),
+                    v8::String::new(scope, "writeFileSync").unwrap(),
+                    v8::String::new(scope, "existsSync").unwrap(),
+                    v8::String::new(scope, "mkdirSync").unwrap(),
+                    v8::String::new(scope, "readdirSync").unwrap(),
+                    v8::String::new(scope, "statSync").unwrap(),
+                    v8::String::new(scope, "unlinkSync").unwrap(),
+                    v8::String::new(scope, "renameSync").unwrap(),
+                    v8::String::new(scope, "rmdirSync").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:fs").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_fs_builtin_synthetic_module,
+                ))
+            }
+            "url" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "URL").unwrap(),
+                    v8::String::new(scope, "URLSearchParams").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:url").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_url_builtin_synthetic_module,
+                ))
+            }
+            "events" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "EventEmitter").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:events").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_events_builtin_synthetic_module,
+                ))
+            }
+            "os" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "platform").unwrap(),
+                    v8::String::new(scope, "arch").unwrap(),
+                    v8::String::new(scope, "cpus").unwrap(),
+                    v8::String::new(scope, "freemem").unwrap(),
+                    v8::String::new(scope, "totalmem").unwrap(),
+                    v8::String::new(scope, "uptime").unwrap(),
+                    v8::String::new(scope, "type").unwrap(),
+                    v8::String::new(scope, "release").unwrap(),
+                    v8::String::new(scope, "homedir").unwrap(),
+                    v8::String::new(scope, "tmpdir").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:os").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_os_builtin_synthetic_module,
+                ))
+            }
+            "stream" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "Readable").unwrap(),
+                    v8::String::new(scope, "Writable").unwrap(),
+                    v8::String::new(scope, "Transform").unwrap(),
+                    v8::String::new(scope, "Duplex").unwrap(),
+                    v8::String::new(scope, "pipeline").unwrap(),
+                    v8::String::new(scope, "passThrough").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:stream").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_stream_builtin_synthetic_module,
+                ))
+            }
+            "crypto" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "createHash").unwrap(),
+                    v8::String::new(scope, "createHmac").unwrap(),
+                    v8::String::new(scope, "createSign").unwrap(),
+                    v8::String::new(scope, "createVerify").unwrap(),
+                    v8::String::new(scope, "sign").unwrap(),
+                    v8::String::new(scope, "verify").unwrap(),
+                    v8::String::new(scope, "randomBytes").unwrap(),
+                    v8::String::new(scope, "randomBytesSync").unwrap(),
+                    v8::String::new(scope, "randomFillSync").unwrap(),
+                    v8::String::new(scope, "randomFill").unwrap(),
+                    v8::String::new(scope, "timingSafeEqual").unwrap(),
+                    v8::String::new(scope, "pbkdf2Sync").unwrap(),
+                    v8::String::new(scope, "pbkdf2").unwrap(),
+                    v8::String::new(scope, "getHashes").unwrap(),
+                    v8::String::new(scope, "createCipher").unwrap(),
+                    v8::String::new(scope, "createDecipher").unwrap(),
+                    v8::String::new(scope, "createCipheriv").unwrap(),
+                    v8::String::new(scope, "createDecipheriv").unwrap(),
+                    v8::String::new(scope, "publicEncrypt").unwrap(),
+                    v8::String::new(scope, "privateDecrypt").unwrap(),
+                    v8::String::new(scope, "privateEncrypt").unwrap(),
+                    v8::String::new(scope, "publicDecrypt").unwrap(),
+                    v8::String::new(scope, "generateKeyPairSync").unwrap(),
+                    v8::String::new(scope, "generateKeyPair").unwrap(),
+                    v8::String::new(scope, "constants").unwrap(),
+                    v8::String::new(scope, "scryptSync").unwrap(),
+                    v8::String::new(scope, "scrypt").unwrap(),
+                    v8::String::new(scope, "createDiffieHellman").unwrap(),
+                    v8::String::new(scope, "createECDH").unwrap(),
+                    v8::String::new(scope, "createPrivateKey").unwrap(),
+                    v8::String::new(scope, "createPublicKey").unwrap(),
+                    v8::String::new(scope, "createSecretKey").unwrap(),
+                    v8::String::new(scope, "hkdf").unwrap(),
+                    v8::String::new(scope, "hkdfSync").unwrap(),
+                    v8::String::new(scope, "getRandomValues").unwrap(),
+                    v8::String::new(scope, "randomUUID").unwrap(),
+                    v8::String::new(scope, "subtle").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:crypto").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_crypto_builtin_synthetic_module,
+                ))
+            }
+            "process" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "version").unwrap(),
+                    v8::String::new(scope, "versions").unwrap(),
+                    v8::String::new(scope, "platform").unwrap(),
+                    v8::String::new(scope, "arch").unwrap(),
+                    v8::String::new(scope, "pid").unwrap(),
+                    v8::String::new(scope, "ppid").unwrap(),
+                    v8::String::new(scope, "title").unwrap(),
+                    v8::String::new(scope, "env").unwrap(),
+                    v8::String::new(scope, "argv").unwrap(),
+                    v8::String::new(scope, "execArgv").unwrap(),
+                    v8::String::new(scope, "execPath").unwrap(),
+                    v8::String::new(scope, "cwd").unwrap(),
+                    v8::String::new(scope, "chdir").unwrap(),
+                    v8::String::new(scope, "umask").unwrap(),
+                    v8::String::new(scope, "abort").unwrap(),
+                    v8::String::new(scope, "config").unwrap(),
+                    v8::String::new(scope, "memoryUsage").unwrap(),
+                    v8::String::new(scope, "memory").unwrap(),
+                    v8::String::new(scope, "uptime").unwrap(),
+                    v8::String::new(scope, "hrtime").unwrap(),
+                    v8::String::new(scope, "exit").unwrap(),
+                    v8::String::new(scope, "exitCode").unwrap(),
+                    v8::String::new(scope, "nextTick").unwrap(),
+                    v8::String::new(scope, "features").unwrap(),
+                    v8::String::new(scope, "isBeejs").unwrap(),
+                    v8::String::new(scope, "browser").unwrap(),
+                    v8::String::new(scope, "release").unwrap(),
+                    v8::String::new(scope, "on").unwrap(),
+                    v8::String::new(scope, "off").unwrap(),
+                    v8::String::new(scope, "removeListener").unwrap(),
+                    v8::String::new(scope, "setMaxListeners").unwrap(),
+                    v8::String::new(scope, "getMaxListeners").unwrap(),
+                    v8::String::new(scope, "stdout").unwrap(),
+                    v8::String::new(scope, "stderr").unwrap(),
+                    v8::String::new(scope, "stdin").unwrap(),
+                    v8::String::new(scope, "cpuUsage").unwrap(),
+                    v8::String::new(scope, "kill").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:process").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_process_builtin_synthetic_module,
+                ))
+            }
+            _ => None,
+        }
+    }
+
+    fn evaluate_path_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let path_key = v8::String::new(scope, "path").unwrap();
+        let path_value = global
+            .get(scope, path_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, path_value)?;
+
+        let path_object = path_value.to_object(scope);
+        for export_name in [
+            "join",
+            "resolve",
+            "basename",
+            "dirname",
+            "extname",
+            "normalize",
+        ] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = path_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_fs_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let fs_key = v8::String::new(scope, "fs").unwrap();
+        let fs_value = global
+            .get(scope, fs_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, fs_value)?;
+
+        let fs_object = fs_value.to_object(scope);
+        for export_name in [
+            "readFileSync",
+            "writeFileSync",
+            "existsSync",
+            "mkdirSync",
+            "readdirSync",
+            "statSync",
+            "unlinkSync",
+            "renameSync",
+            "rmdirSync",
+        ] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = fs_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_url_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let url_module = v8::Object::new(scope);
+
+        for export_name in ["URL", "URLSearchParams"] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = global
+                .get(scope, export_key.into())
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            url_module.set(scope, export_key.into(), export_value);
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, url_module.into())?;
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_events_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let events_key = v8::String::new(scope, "events").unwrap();
+        let events_value = global
+            .get(scope, events_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+        let event_emitter_key = v8::String::new(scope, "EventEmitter").unwrap();
+        let event_emitter_value = events_value
+            .to_object(scope)
+            .and_then(|events_object| events_object.get(scope, event_emitter_key.into()))
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, event_emitter_value)?;
+        module.set_synthetic_module_export(scope, event_emitter_key, event_emitter_value)?;
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_os_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let os_key = v8::String::new(scope, "os").unwrap();
+        let os_value = global
+            .get(scope, os_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, os_value)?;
+
+        let os_object = os_value.to_object(scope);
+        for export_name in [
+            "platform", "arch", "cpus", "freemem", "totalmem", "uptime", "type", "release",
+            "homedir", "tmpdir",
+        ] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = os_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_stream_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let stream_key = v8::String::new(scope, "stream").unwrap();
+        let stream_value = global
+            .get(scope, stream_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, stream_value)?;
+
+        let stream_object = stream_value.to_object(scope);
+        for export_name in [
+            "Readable",
+            "Writable",
+            "Transform",
+            "Duplex",
+            "pipeline",
+            "passThrough",
+        ] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = stream_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_crypto_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let crypto_key = v8::String::new(scope, "crypto").unwrap();
+        let crypto_value = global
+            .get(scope, crypto_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, crypto_value)?;
+
+        let crypto_object = crypto_value.to_object(scope);
+        for export_name in [
+            "createHash",
+            "createHmac",
+            "createSign",
+            "createVerify",
+            "sign",
+            "verify",
+            "randomBytes",
+            "randomBytesSync",
+            "randomFillSync",
+            "randomFill",
+            "timingSafeEqual",
+            "pbkdf2Sync",
+            "pbkdf2",
+            "getHashes",
+            "createCipher",
+            "createDecipher",
+            "createCipheriv",
+            "createDecipheriv",
+            "publicEncrypt",
+            "privateDecrypt",
+            "privateEncrypt",
+            "publicDecrypt",
+            "generateKeyPairSync",
+            "generateKeyPair",
+            "constants",
+            "scryptSync",
+            "scrypt",
+            "createDiffieHellman",
+            "createECDH",
+            "createPrivateKey",
+            "createPublicKey",
+            "createSecretKey",
+            "hkdf",
+            "hkdfSync",
+            "getRandomValues",
+            "randomUUID",
+            "subtle",
+        ] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = crypto_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn evaluate_process_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let process_key = v8::String::new(scope, "process").unwrap();
+        let process_value = global
+            .get(scope, process_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, process_value)?;
+
+        let process_object = process_value.to_object(scope);
+        for export_name in [
+            "version",
+            "versions",
+            "platform",
+            "arch",
+            "pid",
+            "ppid",
+            "title",
+            "env",
+            "argv",
+            "execArgv",
+            "execPath",
+            "cwd",
+            "chdir",
+            "umask",
+            "abort",
+            "config",
+            "memoryUsage",
+            "memory",
+            "uptime",
+            "hrtime",
+            "exit",
+            "exitCode",
+            "nextTick",
+            "features",
+            "isBeejs",
+            "browser",
+            "release",
+            "on",
+            "off",
+            "removeListener",
+            "setMaxListeners",
+            "getMaxListeners",
+            "stdout",
+            "stderr",
+            "stdin",
+            "cpuUsage",
+            "kill",
+        ] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = process_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn require_commonjs_for_esm<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        module_path: &Path,
+    ) -> Result<v8::Local<'scope, v8::Value>, String> {
+        let context = scope.get_current_context();
+        let global = context.global(scope);
+        let require_key = v8::String::new(scope, "require")
+            .ok_or_else(|| "Failed to create require key".to_string())?;
+        let require_value = global
+            .get(scope, require_key.into())
+            .ok_or_else(|| "global require is not available".to_string())?;
+        let require_fn = v8::Local::<v8::Function>::try_from(require_value)
+            .map_err(|_| "global require is not callable".to_string())?;
+        let module_path_string = module_path.to_string_lossy().to_string();
+        let module_specifier = v8::String::new(scope, &module_path_string).ok_or_else(|| {
+            format!(
+                "Failed to create CommonJS specifier for '{}'",
+                module_path.display()
+            )
+        })?;
+        let undefined = v8::undefined(scope);
+        require_fn
+            .call(scope, undefined.into(), &[module_specifier.into()])
+            .ok_or_else(|| {
+                format!(
+                    "Failed to load CommonJS dependency '{}'",
+                    module_path.display()
+                )
+            })
+    }
+
+    fn commonjs_named_export_names(
+        scope: &mut v8::HandleScope,
+        exports: v8::Local<v8::Value>,
+    ) -> Vec<String> {
+        if !exports.is_object() {
+            return Vec::new();
+        }
+
+        let Some(exports_object) = exports.to_object(scope) else {
+            return Vec::new();
+        };
+        let Some(property_names) = exports_object.get_own_property_names(scope) else {
+            return Vec::new();
+        };
+
+        let mut export_names = Vec::new();
+        for index in 0..property_names.length() {
+            let Some(property_name) = property_names.get_index(scope, index) else {
+                continue;
+            };
+            let Some(property_name) = property_name.to_string(scope) else {
+                continue;
+            };
+            let property_name = property_name.to_rust_string_lossy(scope);
+            if property_name == "default" || export_names.contains(&property_name) {
+                continue;
+            }
+            export_names.push(property_name);
+        }
+
+        export_names
+    }
+
+    fn create_esm_commonjs_module<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        module_path: &Path,
+    ) -> Result<v8::Local<'scope, v8::Module>, String> {
+        let exports = Self::require_commonjs_for_esm(scope, module_path)?;
+        let named_export_names = Self::commonjs_named_export_names(scope, exports);
+        let mut export_names = Vec::with_capacity(named_export_names.len() + 1);
+        export_names.push(v8::String::new(scope, "default").unwrap());
+        for export_name in &named_export_names {
+            let export_name = v8::String::new(scope, export_name).ok_or_else(|| {
+                format!(
+                    "Failed to create CommonJS export name for '{}'",
+                    module_path.display()
+                )
+            })?;
+            export_names.push(export_name);
+        }
+        let module_name = v8::String::new(
+            scope,
+            &format!("beejs:commonjs:{}", module_path.to_string_lossy()),
+        )
+        .ok_or_else(|| {
+            format!(
+                "Failed to create CommonJS synthetic module name for '{}'",
+                module_path.display()
+            )
+        })?;
+        let module = v8::Module::create_synthetic_module(
+            scope,
+            module_name,
+            &export_names,
+            Self::evaluate_commonjs_synthetic_module,
+        );
+        let module_identity = module.get_identity_hash();
+        let exports_global = v8::Global::new(scope, exports);
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            if let Some(state) = state.borrow_mut().as_mut() {
+                state
+                    .cjs_synthetic_exports_by_identity
+                    .insert(module_identity, exports_global);
+                state
+                    .cjs_synthetic_named_exports_by_identity
+                    .insert(module_identity, named_export_names);
+            }
+        });
+        Ok(module)
+    }
+
+    fn evaluate_commonjs_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let module_identity = module.get_identity_hash();
+        let exports = ESM_MODULE_LOAD_STATE.with(|state| {
+            state.borrow().as_ref().and_then(|state| {
+                state
+                    .cjs_synthetic_exports_by_identity
+                    .get(&module_identity)
+                    .cloned()
+            })
+        });
+        let Some(exports) = exports else {
+            Self::throw_esm_loader_error(
+                scope,
+                "CommonJS synthetic module exports were not registered".to_string(),
+            );
+            return None;
+        };
+
+        let exports = v8::Local::new(scope, exports);
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, exports)?;
+
+        let named_export_names = ESM_MODULE_LOAD_STATE.with(|state| {
+            state
+                .borrow()
+                .as_ref()
+                .and_then(|state| {
+                    state
+                        .cjs_synthetic_named_exports_by_identity
+                        .get(&module_identity)
+                        .cloned()
+                })
+                .unwrap_or_default()
+        });
+        let exports_object = exports.to_object(scope);
+        for export_name in named_export_names {
+            let export_key = v8::String::new(scope, &export_name).unwrap();
+            let export_value = exports_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
+    }
+
+    fn esm_resolve_callback<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        specifier: v8::Local<'scope, v8::String>,
+        _import_assertions: v8::Local<'scope, v8::FixedArray>,
+        referrer: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Module>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let specifier = specifier.to_rust_string_lossy(scope);
+        let referrer_script_id = match referrer.script_id() {
+            Some(script_id) => script_id,
+            None => {
+                Self::throw_esm_loader_error(
+                    scope,
+                    format!(
+                        "Cannot resolve ES module '{}' from anonymous referrer",
+                        specifier
+                    ),
+                );
+                return None;
+            }
+        };
+
+        let referrer_path = ESM_MODULE_LOAD_STATE.with(|state| {
+            state
+                .borrow()
+                .as_ref()
+                .and_then(|state| state.paths_by_script_id.get(&referrer_script_id).cloned())
+        });
+        let Some(referrer_path) = referrer_path else {
+            Self::throw_esm_loader_error(
+                scope,
+                format!(
+                    "Cannot resolve ES module '{}' because the referrer is unknown",
+                    specifier
+                ),
+            );
+            return None;
+        };
+
+        if let Some(module) = Self::create_esm_builtin_module(scope, &specifier) {
+            return Some(module);
+        }
+
+        let module_path = match Self::resolve_esm_candidate_path(&specifier, &referrer_path) {
+            Ok(module_path) => module_path,
+            Err(error) => {
+                Self::throw_esm_loader_error(scope, error);
+                return None;
+            }
+        };
+        let module_format =
+            match crate::nodejs_core::commonjs_resolver::classify_commonjs_file(&module_path) {
+                Ok(module_format) => module_format,
+                Err(error) => {
+                    Self::throw_esm_loader_error(
+                        scope,
+                        format!(
+                            "Cannot classify ES module '{}': {}",
+                            module_path.display(),
+                            error
+                        ),
+                    );
+                    return None;
+                }
+            };
+        if module_format != crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::EsModule {
+            return match Self::create_esm_commonjs_module(scope, &module_path) {
+                Ok(module) => Some(module),
+                Err(error) => {
+                    Self::throw_esm_loader_error(scope, error);
+                    None
+                }
+            };
+        }
+
+        let cached_module = ESM_MODULE_LOAD_STATE.with(|state| {
+            state
+                .borrow()
+                .as_ref()
+                .and_then(|state| state.modules_by_path.get(&module_path).cloned())
+        });
+        if let Some(cached_module) = cached_module {
+            return Some(v8::Local::new(scope, cached_module));
+        }
+
+        if let Err(error) = crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::FileSystem,
+            crate::permissions::PermissionAction::Read,
+            crate::permissions::ResourceId::Path(module_path.clone()),
+        ) {
+            Self::throw_esm_loader_error(scope, error.to_string());
+            return None;
+        }
+
+        let module_code = match std::fs::read_to_string(&module_path) {
+            Ok(module_code) => module_code,
+            Err(error) => {
+                Self::throw_esm_loader_error(
+                    scope,
+                    format!(
+                        "Cannot read ES module '{}': {}",
+                        module_path.display(),
+                        error
+                    ),
+                );
+                return None;
+            }
+        };
+
+        let module_fingerprint = Self::esm_source_fingerprint(module_code.as_bytes());
+        let module = match Self::compile_esm_module_source(scope, &module_path, &module_code) {
+            Ok(module) => module,
+            Err(error) => {
+                Self::set_esm_pending_error(error);
+                return None;
+            }
+        };
+        Self::remember_esm_module(scope, &module_path, module, module_fingerprint);
+
+        Some(module)
+    }
+
+    fn execute_esm_module<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        code: &str,
+        main_module_filename: &str,
+        module_cache: &mut HashMap<PathBuf, v8::Global<v8::Module>>,
+        module_cache_fingerprints: &mut HashMap<PathBuf, [u8; 32]>,
+        timer_drain_limit_ms: u64,
+    ) -> Result<v8::Local<'scope, v8::Value>, String> {
+        let main_module_path = Self::normalized_module_path(Path::new(main_module_filename));
+        Self::prune_stale_esm_module_cache(module_cache, module_cache_fingerprints);
+
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            *state.borrow_mut() = Some(EsmModuleLoadState::default());
+        });
+        Self::seed_esm_module_cache(scope, module_cache, module_cache_fingerprints);
+
+        let result = (|| {
+            let module = Self::compile_esm_module_source(scope, &main_module_path, code)?;
+            Self::remember_esm_module(
+                scope,
+                &main_module_path,
+                module,
+                Self::esm_source_fingerprint(code.as_bytes()),
+            );
+
+            match module.instantiate_module(scope, Self::esm_resolve_callback) {
+                Some(true) => {}
+                Some(false) => {
+                    return Err(Self::take_esm_pending_error().unwrap_or_else(|| {
+                        format!(
+                            "Failed to instantiate ES module '{}'",
+                            main_module_path.display()
+                        )
+                    }));
+                }
+                None => {
+                    return Err(Self::take_esm_pending_error().unwrap_or_else(|| {
+                        format!(
+                            "Failed to instantiate ES module '{}'",
+                            main_module_path.display()
+                        )
+                    }));
+                }
+            }
+
+            let evaluation = module.evaluate(scope).ok_or_else(|| {
+                Self::take_esm_pending_error().unwrap_or_else(|| {
+                    format!(
+                        "Failed to evaluate ES module '{}'",
+                        main_module_path.display()
+                    )
+                })
+            })?;
+            Self::ensure_esm_evaluation_settled(
+                scope,
+                evaluation,
+                &main_module_path,
+                timer_drain_limit_ms,
+            )?;
+            Ok(evaluation)
+        })();
+
+        if result.is_ok() {
+            Self::persist_esm_module_cache(
+                module_cache,
+                module_cache_fingerprints,
+                &main_module_path,
+            );
+        }
+
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            *state.borrow_mut() = None;
+        });
+
+        result
+    }
+
+    fn execute_esm_module_namespace<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        code: &str,
+        main_module_filename: &str,
+        timer_drain_limit_ms: u64,
+    ) -> Result<(v8::Local<'scope, v8::Value>, Vec<(PathBuf, [u8; 32])>), String> {
+        let main_module_path = Self::normalized_module_path(Path::new(main_module_filename));
+
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            *state.borrow_mut() = Some(EsmModuleLoadState::default());
+        });
+
+        let result = (|| {
+            let module = Self::compile_esm_module_source(scope, &main_module_path, code)?;
+            Self::remember_esm_module(
+                scope,
+                &main_module_path,
+                module,
+                Self::esm_source_fingerprint(code.as_bytes()),
+            );
+
+            match module.instantiate_module(scope, Self::esm_resolve_callback) {
+                Some(true) => {}
+                Some(false) => {
+                    return Err(Self::take_esm_pending_error().unwrap_or_else(|| {
+                        format!(
+                            "Failed to instantiate ES module '{}'",
+                            main_module_path.display()
+                        )
+                    }));
+                }
+                None => {
+                    return Err(Self::take_esm_pending_error().unwrap_or_else(|| {
+                        format!(
+                            "Failed to instantiate ES module '{}'",
+                            main_module_path.display()
+                        )
+                    }));
+                }
+            }
+
+            let evaluation = module.evaluate(scope).ok_or_else(|| {
+                Self::take_esm_pending_error().unwrap_or_else(|| {
+                    format!(
+                        "Failed to evaluate ES module '{}'",
+                        main_module_path.display()
+                    )
+                })
+            })?;
+            Self::ensure_esm_evaluation_settled(
+                scope,
+                evaluation,
+                &main_module_path,
+                timer_drain_limit_ms,
+            )?;
+
+            let namespace = module.get_module_namespace();
+            let namespace_global = v8::Global::new(scope, namespace);
+            let source_fingerprints = ESM_MODULE_LOAD_STATE.with(|state| {
+                state
+                    .borrow()
+                    .as_ref()
+                    .map(|state| {
+                        state
+                            .source_fingerprints_by_path
+                            .iter()
+                            .map(|(path, fingerprint)| (path.clone(), *fingerprint))
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            });
+            Ok((v8::Local::new(scope, namespace_global), source_fingerprints))
+        })();
+
+        ESM_MODULE_LOAD_STATE.with(|state| {
+            *state.borrow_mut() = None;
+        });
+
+        result
+    }
+
+    fn compile_typescript_commonjs_module(code: &str, filename: &str) -> Result<String> {
+        let module_exports_marker = "__beejs_commonjs_module_exports__";
+        let module_export_assignment_pattern =
+            regex::Regex::new(r"(?s)\bmodule\s*\.\s*exports\b\s*=\s*.*?;").unwrap();
+        let mut module_export_statements = Vec::<(String, String)>::new();
+        let protected_assignments = module_export_assignment_pattern
+            .replace_all(code, |captures: &regex::Captures| {
+                let marker = format!(
+                    "__beejs_commonjs_export_statement_{}",
+                    module_export_statements.len()
+                );
+                module_export_statements.push((marker.clone(), captures[0].to_string()));
+                format!("{marker};")
+            })
+            .to_string();
+        let module_exports_pattern = regex::Regex::new(r"\bmodule\s*\.\s*exports\b").unwrap();
+        let protected_code = module_exports_pattern
+            .replace_all(&protected_assignments, module_exports_marker)
+            .to_string();
+        let output = crate::typescript::compile_typescript(&protected_code, filename)
+            .map_err(|error| anyhow::anyhow!(error))?;
+        let mut js_code = output
+            .js_code
+            .replace(module_exports_marker, "module.exports");
+        for (marker, statement) in module_export_statements {
+            js_code = js_code.replace(&marker, &statement);
+        }
+        Ok(js_code)
     }
 
     /// Transpile TypeScript to JavaScript by removing type annotations
@@ -3005,22 +6447,29 @@ impl MinimalRuntime {
         // v0.3.178: Remove type alias declarations
         // Pattern: "type AliasName = ..." - comment out entire type alias
         // Handle simple single-line type aliases
-        let type_alias_pattern =
-            regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*[^;]+;").unwrap();
+        let type_alias_pattern = regex::Regex::new(
+            r"(?m)(?:export\s+)?type\s+([A-Z][a-zA-Z0-9_]*)(?:\s*<[^=;]+>)?\s*=\s*[^;]+;",
+        )
+        .unwrap();
         js_code = type_alias_pattern
             .replace_all(&js_code, "/* type $1 */")
             .to_string();
 
         // Handle multi-line type aliases (type AliasName = { ... } or type AliasName = | ...)
-        let type_alias_multiline_pattern =
-            regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*\{[^}]*\}").unwrap();
+        let type_alias_multiline_pattern = regex::Regex::new(
+            r"(?m)(?:export\s+)?type\s+([A-Z][a-zA-Z0-9_]*)(?:\s*<[^=;]+>)?\s*=\s*\{[^}]*\}",
+        )
+        .unwrap();
         js_code = type_alias_multiline_pattern
             .replace_all(&js_code, "/* type $1 */")
             .to_string();
 
         // Handle union type aliases: "type Alias = A | B | C"
         let type_union_pattern =
-            regex::Regex::new(r"type\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*[^;]+(?:\|[^;]+)*;").unwrap();
+            regex::Regex::new(
+                r"(?m)(?:export\s+)?type\s+([A-Z][a-zA-Z0-9_]*)(?:\s*<[^=;]+>)?\s*=\s*[^;]+(?:\|[^;]+)*;",
+            )
+            .unwrap();
         js_code = type_union_pattern
             .replace_all(&js_code, "/* type $1 */")
             .to_string();
@@ -3919,27 +7368,7 @@ impl MinimalRuntime {
         let trailing_semicolon = regex::Regex::new(r";\s*}").unwrap();
         js_code = trailing_semicolon.replace_all(&js_code, "}").to_string();
 
-        // v0.3.195: Convert ESM import statements to CommonJS require
-        // Patterns:
-        // - "import default from 'module'" -> "const default = require('module')"
-        // - "import { named } from 'module'" -> "const { named } = require('module')"
-        // - "import * as ns from 'module'" -> "const ns = require('module')"
-        // - "import default, { named } from 'module'" -> "const default = require('module'), { named } = require('module')"
-        // - "import 'module'" -> "require('module')"
-        let esm_import_pattern = regex::Regex::new(
-            r"(?m)^\s*import\s+(?:(?:\{[^}]*\}|\*)(?:\s*,\s*(?:\{[^}]*\}|\*))?|[a-zA-Z_$][a-zA-Z0-9_$]*)\s*from\s*'([^']+)'\s*;?\s*$"
-        ).unwrap();
-        js_code = esm_import_pattern
-            .replace_all(&js_code, r"const /* ESM import */ = require('$1')")
-            .to_string();
-
-        // Also handle double-quoted imports (use r#"..."# to include " in raw string)
-        let esm_import_dq_pattern = regex::Regex::new(
-            r#"(?m)^\s*import\s+(?:(?:\{[^}]*\}|\*)(?:\s*,\s*(?:\{[^}]*\}|\*))?|[a-zA-Z_$][a-zA-Z0-9_$]*)\s*from\s*"([^"]+)"\s*;?\s*$"#
-        ).unwrap();
-        js_code = esm_import_dq_pattern
-            .replace_all(&js_code, r"const /* ESM import */ = require('$1')")
-            .to_string();
+        js_code = Self::rewrite_static_esm_imports_to_commonjs(&js_code);
 
         // v0.3.201: Remove Awaited utility type
         // Awaited<T> is a TypeScript 4.5+ utility type that unwraps Promise-like types
@@ -4150,6 +7579,118 @@ impl MinimalRuntime {
         Ok(js_code)
     }
 
+    fn rewrite_static_esm_imports_to_commonjs(code: &str) -> String {
+        static IMPORT_FROM_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
+        static SIDE_EFFECT_IMPORT_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
+
+        let import_from_pattern = IMPORT_FROM_PATTERN.get_or_init(|| {
+            regex::Regex::new(r#"(?m)^(\s*)import\s+(.+?)\s+from\s+['"]([^'"]+)['"]\s*;?\s*$"#)
+                .unwrap()
+        });
+        let side_effect_import_pattern = SIDE_EFFECT_IMPORT_PATTERN.get_or_init(|| {
+            regex::Regex::new(r#"(?m)^(\s*)import\s+['"]([^'"]+)['"]\s*;?\s*$"#).unwrap()
+        });
+
+        let code = import_from_pattern
+            .replace_all(code, |captures: &regex::Captures| {
+                let indent = captures
+                    .get(1)
+                    .map(|capture| capture.as_str())
+                    .unwrap_or("");
+                let bindings = captures
+                    .get(2)
+                    .map(|capture| capture.as_str())
+                    .unwrap_or("");
+                let specifier = captures
+                    .get(3)
+                    .map(|capture| capture.as_str())
+                    .unwrap_or("");
+                Self::rewrite_static_esm_import_clause(indent, bindings, specifier)
+            })
+            .to_string();
+
+        side_effect_import_pattern
+            .replace_all(&code, |captures: &regex::Captures| {
+                let indent = captures
+                    .get(1)
+                    .map(|capture| capture.as_str())
+                    .unwrap_or("");
+                let specifier = captures
+                    .get(2)
+                    .map(|capture| capture.as_str())
+                    .unwrap_or("");
+                let specifier_literal = serde_json::to_string(specifier).unwrap();
+                format!("{indent}require({specifier_literal});")
+            })
+            .to_string()
+    }
+
+    fn rewrite_static_esm_import_clause(indent: &str, bindings: &str, specifier: &str) -> String {
+        let specifier_literal = serde_json::to_string(specifier).unwrap();
+        let bindings = bindings.trim();
+
+        if let Some(namespace) = bindings.strip_prefix("* as ") {
+            return format!(
+                "{indent}const {} = require({});",
+                namespace.trim(),
+                specifier_literal
+            );
+        }
+
+        if bindings.starts_with('{') && bindings.ends_with('}') {
+            let named = Self::rewrite_esm_named_import_bindings(bindings);
+            return format!("{indent}const {named} = require({specifier_literal});");
+        }
+
+        if let Some((default_binding, rest)) = bindings.split_once(',') {
+            let default_binding = default_binding.trim();
+            let rest = rest.trim();
+            if let Some(namespace) = rest.strip_prefix("* as ") {
+                let namespace = namespace.trim();
+                return format!(
+                    "{indent}const {default_binding} = require({specifier_literal});\n{indent}const {namespace} = {default_binding};"
+                );
+            }
+            if rest.starts_with('{') && rest.ends_with('}') {
+                let named = Self::rewrite_esm_named_import_bindings(rest);
+                return format!(
+                    "{indent}const {default_binding} = require({specifier_literal});\n{indent}const {named} = {default_binding};"
+                );
+            }
+        }
+
+        format!("{indent}const {bindings} = require({specifier_literal});")
+    }
+
+    fn rewrite_esm_named_import_bindings(bindings: &str) -> String {
+        let inner = bindings
+            .trim()
+            .trim_start_matches('{')
+            .trim_end_matches('}')
+            .trim();
+
+        if inner.is_empty() {
+            return "{}".to_string();
+        }
+
+        let rewritten = inner
+            .split(',')
+            .filter_map(|binding| {
+                let binding = binding.trim();
+                if binding.is_empty() {
+                    return None;
+                }
+                if let Some((imported, local)) = binding.split_once(" as ") {
+                    return Some(format!("{}: {}", imported.trim(), local.trim()));
+                }
+                Some(binding.to_string())
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        format!("{{ {rewritten} }}")
+    }
+
     fn has_export_equals_statement(code: &str) -> bool {
         static EXPORT_EQUALS_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         EXPORT_EQUALS_PATTERN
@@ -4163,6 +7704,42 @@ impl MinimalRuntime {
             .get_or_init(|| {
                 regex::Regex::new(
                     r"(?m)^\s*(?:export\s+)?interface\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\s+extends\s+[^{]+)?\s*\{",
+                )
+                .unwrap()
+            })
+            .is_match(code)
+    }
+
+    fn has_mapped_type_declaration(code: &str) -> bool {
+        static MAPPED_TYPE_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
+        MAPPED_TYPE_PATTERN
+            .get_or_init(|| {
+                regex::Regex::new(
+                    r"(?ms)^\s*(?:export\s+)?type\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\s*<[^=;\n]+>)?\s*=\s*\{[^;]*\[\s*[A-Za-z_$][A-Za-z0-9_$]*\s+in\s+keyof\b",
+                )
+                .unwrap()
+            })
+            .is_match(code)
+    }
+
+    fn has_type_alias_declaration(code: &str) -> bool {
+        static TYPE_ALIAS_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
+        TYPE_ALIAS_PATTERN
+            .get_or_init(|| {
+                regex::Regex::new(
+                    r"(?m)^\s*(?:export\s+)?type\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\s*<[^=;\n]+>)?\s*=",
+                )
+                .unwrap()
+            })
+            .is_match(code)
+    }
+
+    fn has_keyof_type_usage(code: &str) -> bool {
+        static KEYOF_TYPE_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
+        KEYOF_TYPE_PATTERN
+            .get_or_init(|| {
+                regex::Regex::new(
+                    r"(?m)(^\s*(?:export\s+)?type\s+[A-Za-z_$][A-Za-z0-9_$]*(?:\s*<[^=;\n]+>)?\s*=.*\bkeyof\b|\bextends\s+keyof\b|\[\s*keyof\s+[A-Za-z_$][A-Za-z0-9_$<>]*\])",
                 )
                 .unwrap()
             })
@@ -4184,9 +7761,12 @@ impl MinimalRuntime {
         // v0.3.170: Enhanced TypeScript detection for module augmentation
         // Note: We avoid transpiling patterns that might exist in already-compiled JS
         // We look for patterns that are DEFINITELY TypeScript, not just JavaScript with colons
-        let has_raw_typescript = Self::has_interface_declaration(code)    // interface definition
+        let skip_runtime_typescript_transpile =
+            code.starts_with("// @beejs-no-runtime-typescript-transpile");
+        let has_raw_typescript = !skip_runtime_typescript_transpile
+            && (Self::has_interface_declaration(code)    // interface definition
             || code.contains("enum ")      // enum definition
-            || code.contains("type ")       // type alias
+            || Self::has_type_alias_declaration(code)       // type alias
             || code.contains(": string")    // type annotation with known type
             || code.contains(": number")
             || code.contains(": boolean")
@@ -4198,7 +7778,7 @@ impl MinimalRuntime {
             || code.contains("declare global")  // v0.3.170: global declaration block
             || code.contains("declare module \"") // v0.3.170: module declaration
             || Self::has_export_equals_statement(code) // v0.3.172: export = statement
-            || code.contains("keyof ")      // v0.3.174: keyof operator
+            || Self::has_keyof_type_usage(code)      // v0.3.174: keyof operator
             // NOTE: typeof is NOT included here because it's valid JavaScript
             // Removing typeof breaks JavaScript code that uses it for runtime type checking
             || code.contains("infer ")      // v0.3.175: infer keyword in conditional types
@@ -4206,11 +7786,11 @@ impl MinimalRuntime {
             || code.contains("abstract ")       // v0.3.176: abstract method or class
             || code.contains("export abstract") // v0.3.196: export abstract class
             || code.contains("this:")           // v0.3.183: this parameter type annotation
-            || code.contains(" in ") && code.contains("[")  // v0.3.184: mapped type [P in keyof T] pattern
-            || code.contains("keyof typeof")    // v0.3.185: keyof typeof pattern
+            || Self::has_mapped_type_declaration(code) // v0.3.184: mapped type [P in keyof T] pattern
+            || Self::has_keyof_type_usage(code)    // v0.3.185: keyof typeof pattern
             || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
             || code.contains(" extends ")       // v0.3.186: conditional type extends pattern
-            || (code.contains("type ") && code.contains("${"))  // v0.3.188: template literal type pattern
+            || (Self::has_type_alias_declaration(code) && code.contains("${"))  // v0.3.188: template literal type pattern
             || code.contains("[key:")   // v0.3.190: index signature [key: string]: T pattern
             || code.contains("import type")    // v0.3.193: import type statement
             || code.contains("export type")    // v0.3.193: export type statement
@@ -4250,9 +7830,14 @@ impl MinimalRuntime {
             || code.contains("NoInfer<")                // v0.3.212: NoInfer utility type
             || code.contains("Infer<")                   // v0.3.213: Infer utility type
             || code.contains("ThisType<")                 // v0.3.216: ThisType utility type
-            || code.contains("Mutable<"); // v0.3.218: Mutable utility type
+            || code.contains("Mutable<")); // v0.3.218: Mutable utility type
 
-        let js_code = if has_raw_typescript {
+        let should_execute_as_esm_module =
+            Self::should_execute_as_esm_module(code, &self.main_module_filename)?;
+
+        let js_code = if should_execute_as_esm_module {
+            code.to_string()
+        } else if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
             Self::transpile_typescript_to_js(code)?
         } else {
@@ -4300,6 +7885,7 @@ impl MinimalRuntime {
 
             setup_http_api(scope, &context)?;
             Self::setup_util_api(scope, &context)?;
+            crate::nodejs_core::querystring::setup_querystring_api(scope, &context)?;
             Self::setup_events_api(scope, &context)?;
             Self::setup_dns_api(scope, &context)?;
             setup_net_api(scope, &context)?;
@@ -4347,6 +7933,7 @@ impl MinimalRuntime {
             // v0.3.353: URLSearchParams API (query string manipulation)
             use crate::web_api::url_search_params::setup_url_search_params_api;
             setup_url_search_params_api(scope, &context);
+            Self::setup_live_url_search_params(scope)?;
 
             // v0.3.354: Web Crypto API (crypto.subtle for hashing, encryption)
             setup_web_crypto_api(scope, &context)?;
@@ -4370,41 +7957,68 @@ impl MinimalRuntime {
 
         Self::apply_process_argv(scope, &context, &self.process_argv)?;
 
-        // Compile and run the user's code exactly once. The returned value below
-        // is the V8 completion value from this script execution.
-        let code = v8::String::new(scope, &js_code)
-            .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
-
         // Use TryCatch for proper error handling
         let scope = &mut v8::TryCatch::new(scope);
 
-        // Compile the code
-        // v0.3.235: Enhanced error handling with detailed messages
-        let script = match v8::Script::compile(scope, code, None) {
-            Some(script) => script,
-            None => {
-                // Get the exception from TryCatch
-                let exception = scope.exception().unwrap_or_else(|| {
-                    v8::String::new(scope, "Unknown compilation error")
-                        .unwrap()
-                        .into()
-                });
+        // Compile and run the user's code exactly once. The returned value below
+        // is the V8 completion value from this execution.
+        let result = if should_execute_as_esm_module {
+            match Self::execute_esm_module(
+                scope,
+                &js_code,
+                &self.main_module_filename,
+                &mut self.esm_module_cache,
+                &mut self.esm_module_cache_fingerprints,
+                self.timer_drain_limit_ms,
+            ) {
+                Ok(result) => result,
+                Err(error_message) => {
+                    if scope.has_caught() {
+                        let exception = scope.exception().unwrap_or_else(|| {
+                            v8::String::new(scope, "Unknown module error")
+                                .unwrap()
+                                .into()
+                        });
+                        let runtime_error = v8_exception_to_runtime_error(scope, exception);
+                        return Err(anyhow::anyhow!(
+                            "[Beejs Error] {}: {}",
+                            runtime_error.code,
+                            runtime_error.message
+                        ));
+                    }
 
-                // v0.3.235: Create enhanced RuntimeError with structured information
-                let runtime_error = v8_exception_to_runtime_error(scope, exception);
-
-                return Err(anyhow::anyhow!("[Beejs Error] SyntaxError: {}\nHint: Check for missing parentheses, brackets, or invalid syntax.", runtime_error.message));
+                    return Err(anyhow::anyhow!(
+                        "[Beejs Error] MODULE_ERROR: {}",
+                        error_message
+                    ));
+                }
             }
-        };
+        } else {
+            let code = v8::String::new(scope, &js_code)
+                .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
+            let resource_name = v8::String::new(scope, &self.main_module_filename)
+                .ok_or_else(|| anyhow::anyhow!("Failed to create V8 script resource name"))?;
+            let source_map_url = v8::undefined(scope);
+            let script_origin = v8::ScriptOrigin::new(
+                scope,
+                resource_name.into(),
+                0,
+                0,
+                false,
+                0,
+                source_map_url.into(),
+                false,
+                false,
+                false,
+            );
 
-        // Run the script once and keep its completion value for the final result.
-        let result = match script.run(scope) {
-            Some(result) => result,
-            None => {
-                if scope.has_caught() {
-                    // Get the exception from TryCatch
+            // Compile the code
+            // v0.3.235: Enhanced error handling with detailed messages
+            let script = match v8::Script::compile(scope, code, Some(&script_origin)) {
+                Some(script) => script,
+                None => {
                     let exception = scope.exception().unwrap_or_else(|| {
-                        v8::String::new(scope, "Unknown runtime error")
+                        v8::String::new(scope, "Unknown compilation error")
                             .unwrap()
                             .into()
                     });
@@ -4412,65 +8026,90 @@ impl MinimalRuntime {
                     // v0.3.235: Create enhanced RuntimeError with structured information
                     let runtime_error = v8_exception_to_runtime_error(scope, exception);
 
-                    // v0.3.335: Call window.onerror handler if set
-                    // Extract error info for onerror
-                    let error_message = exception
-                        .to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "Unknown error").unwrap())
-                        .to_rust_string_lossy(scope);
-                    let error_location = runtime_error
-                        .location
-                        .clone()
-                        .unwrap_or_else(|| "".to_string());
-                    let (filename, lineno, colno) = if !error_location.is_empty() {
-                        // Try to parse location like "at line X column Y" or filename:line:column
-                        let parts: Vec<&str> = error_location.split(':').collect();
-                        if parts.len() >= 3 {
-                            (
-                                parts[0].to_string(),
-                                parts[1].parse().unwrap_or(0),
-                                parts[2].parse().unwrap_or(0),
-                            )
+                    return Err(anyhow::anyhow!("[Beejs Error] SyntaxError: {}\nHint: Check for missing parentheses, brackets, or invalid syntax.", runtime_error.message));
+                }
+            };
+
+            // Run the script once and keep its completion value for the final result.
+            match script.run(scope) {
+                Some(result) => result,
+                None => {
+                    if scope.has_caught() {
+                        // Get the exception from TryCatch
+                        let exception = scope.exception().unwrap_or_else(|| {
+                            v8::String::new(scope, "Unknown runtime error")
+                                .unwrap()
+                                .into()
+                        });
+
+                        // v0.3.235: Create enhanced RuntimeError with structured information
+                        let runtime_error = v8_exception_to_runtime_error(scope, exception);
+
+                        // v0.3.335: Call window.onerror handler if set
+                        // Extract error info for onerror
+                        let error_message = exception
+                            .to_string(scope)
+                            .unwrap_or_else(|| v8::String::new(scope, "Unknown error").unwrap())
+                            .to_rust_string_lossy(scope);
+                        let error_location = runtime_error
+                            .location
+                            .clone()
+                            .unwrap_or_else(|| "".to_string());
+                        let (filename, lineno, colno) = if !error_location.is_empty() {
+                            // Try to parse location like "at line X column Y" or filename:line:column
+                            let parts: Vec<&str> = error_location.split(':').collect();
+                            if parts.len() >= 3 {
+                                (
+                                    parts[0].to_string(),
+                                    parts[1].parse().unwrap_or(0),
+                                    parts[2].parse().unwrap_or(0),
+                                )
+                            } else {
+                                (error_location.clone(), 0, 0)
+                            }
                         } else {
-                            (error_location.clone(), 0, 0)
+                            ("".to_string(), 0, 0)
+                        };
+
+                        // Call window.onerror if set, and check if it handled the error
+                        let error_handled = call_onerror_handler(
+                            scope,
+                            &error_message,
+                            &filename,
+                            lineno as u32,
+                            colno as u32,
+                            Some(exception),
+                        );
+
+                        // If onerror handled the error (returned true), don't propagate the error
+                        if error_handled {
+                            // Return "undefined" as the string result since the error was handled
+                            return Ok("undefined".to_string());
                         }
+
+                        // Provide more helpful error message based on error type
+                        let hint = match runtime_error.error_type {
+                            RuntimeErrorType::ReferenceError => "\nHint: Make sure the variable or function is defined before using it.",
+                            RuntimeErrorType::TypeError => "\nHint: Check the types of values and ensure operations are valid (e.g., calling a function on null/undefined).",
+                            RuntimeErrorType::RangeError => "\nHint: Check array bounds or numeric ranges.",
+                            RuntimeErrorType::SyntaxError => "\nHint: Check the syntax of your code.",
+                            _ => "",
+                        };
+
+                        return Err(anyhow::anyhow!(
+                            "[Beejs Error] {}: {}{}{}",
+                            runtime_error.code,
+                            runtime_error.message,
+                            runtime_error
+                                .location
+                                .as_ref()
+                                .map(|location| format!("\nLocation: {location}"))
+                                .unwrap_or_default(),
+                            hint
+                        ));
                     } else {
-                        ("".to_string(), 0, 0)
-                    };
-
-                    // Call window.onerror if set, and check if it handled the error
-                    let error_handled = call_onerror_handler(
-                        scope,
-                        &error_message,
-                        &filename,
-                        lineno as u32,
-                        colno as u32,
-                        Some(exception),
-                    );
-
-                    // If onerror handled the error (returned true), don't propagate the error
-                    if error_handled {
-                        // Return "undefined" as the string result since the error was handled
-                        return Ok("undefined".to_string());
+                        return Err(anyhow::anyhow!("[Beejs Error] InternalError: Script execution returned no result\nHint: This may indicate an internal runtime issue."));
                     }
-
-                    // Provide more helpful error message based on error type
-                    let hint = match runtime_error.error_type {
-                        RuntimeErrorType::ReferenceError => "\nHint: Make sure the variable or function is defined before using it.",
-                        RuntimeErrorType::TypeError => "\nHint: Check the types of values and ensure operations are valid (e.g., calling a function on null/undefined).",
-                        RuntimeErrorType::RangeError => "\nHint: Check array bounds or numeric ranges.",
-                        RuntimeErrorType::SyntaxError => "\nHint: Check the syntax of your code.",
-                        _ => "",
-                    };
-
-                    return Err(anyhow::anyhow!(
-                        "[Beejs Error] {}: {}{}",
-                        runtime_error.code,
-                        runtime_error.message,
-                        hint
-                    ));
-                } else {
-                    return Err(anyhow::anyhow!("[Beejs Error] InternalError: Script execution returned no result\nHint: This may indicate an internal runtime issue."));
                 }
             }
         };
@@ -4492,6 +8131,7 @@ impl MinimalRuntime {
         // Note: setImmediate callbacks are processed AFTER this loop (in the "next iteration")
         //
         let timer_drain_limit_ms = self.timer_drain_limit_ms;
+        let timer_drain_started_at = std::time::Instant::now();
 
         loop {
             // Fast path: after sync code, nextTick and microtasks may be the only
@@ -4509,10 +8149,9 @@ impl MinimalRuntime {
                 let has_scheduled_timers = timer_manager.has_scheduled_timers();
                 let has_zero_delay_timers = has_scheduled_timers
                     && crate::nodejs_core::timers::has_pending_zero_delay_timers();
-                let has_drainable_timers =
-                    crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        timer_drain_limit_ms,
-                    );
+                let has_drainable_timers = crate::nodejs_core::timers::has_pending_drainable_timers(
+                    remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms),
+                );
                 let has_wait_until = crate::web_api::background_sync::has_pending_wait_until();
                 let has_wait_until_timers = has_scheduled_timers && has_wait_until;
                 timer_manager.has_fired_timers()
@@ -4537,10 +8176,9 @@ impl MinimalRuntime {
                 let has_scheduled = timer_manager.has_scheduled_timers();
                 let has_zero_delay_timers =
                     has_scheduled && crate::nodejs_core::timers::has_pending_zero_delay_timers();
-                let has_drainable_timers =
-                    crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        timer_drain_limit_ms,
-                    );
+                let has_drainable_timers = crate::nodejs_core::timers::has_pending_drainable_timers(
+                    remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms),
+                );
                 let has_wait_until = crate::web_api::background_sync::has_pending_wait_until();
                 let has_wait_until_timers = has_scheduled && has_wait_until;
                 let has_next_ticks = has_pending_next_ticks();
@@ -4598,8 +8236,8 @@ impl MinimalRuntime {
                 (has_scheduled_timers
                     && (crate::nodejs_core::timers::has_pending_zero_delay_timers()
                         || crate::web_api::background_sync::has_pending_wait_until()))
-                    || crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        timer_drain_limit_ms,
+                    || crate::nodejs_core::timers::has_pending_drainable_timers(
+                        remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms),
                     )
             };
             if timers_scheduled_in_microtasks {
@@ -4642,8 +8280,8 @@ impl MinimalRuntime {
                 (has_scheduled_timers
                     && (crate::nodejs_core::timers::has_pending_zero_delay_timers()
                         || crate::web_api::background_sync::has_pending_wait_until()))
-                    || crate::nodejs_core::timers::has_pending_drainable_timeout_timers(
-                        timer_drain_limit_ms,
+                    || crate::nodejs_core::timers::has_pending_drainable_timers(
+                        remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms),
                     )
             };
             // v0.3.339: Don't include has_pending_work in break condition since it's a stored value
@@ -5172,6 +8810,276 @@ impl MinimalRuntime {
             }
         }
 
+        Ok(())
+    }
+
+    fn setup_live_url_search_params(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
+        let bootstrap = r##"
+(function () {
+  const NativeURL = globalThis.URL;
+  if (typeof NativeURL !== "function" || NativeURL.__beejsLiveSearchParams === true) {
+    return;
+  }
+
+  function decodeQueryComponent(value) {
+    try {
+      return decodeURIComponent(String(value).replace(/\+/g, "%20"));
+    } catch (_error) {
+      return String(value);
+    }
+  }
+
+  function encodeQueryComponent(value) {
+    return encodeURIComponent(String(value));
+  }
+
+  function parseSearch(search) {
+    const text = String(search || "");
+    const query = text.charAt(0) === "?" ? text.slice(1) : text;
+    if (query === "") {
+      return [];
+    }
+    return query.split("&").filter((part) => part.length > 0).map((part) => {
+      const equalsIndex = part.indexOf("=");
+      if (equalsIndex === -1) {
+        return [decodeQueryComponent(part), ""];
+      }
+      return [
+        decodeQueryComponent(part.slice(0, equalsIndex)),
+        decodeQueryComponent(part.slice(equalsIndex + 1))
+      ];
+    });
+  }
+
+  function serializePairs(pairs) {
+    return pairs
+      .map(([key, value]) => `${encodeQueryComponent(key)}=${encodeQueryComponent(value)}`)
+      .join("&");
+  }
+
+  function createIterator(readValues) {
+    let index = 0;
+    const iterator = {
+      next() {
+        const values = readValues();
+        if (index >= values.length) {
+          return { done: true };
+        }
+        return { done: false, value: values[index++] };
+      }
+    };
+    if (typeof Symbol !== "undefined" && Symbol.iterator) {
+      iterator[Symbol.iterator] = function () {
+        return this;
+      };
+    }
+    return iterator;
+  }
+
+  function BeeURL(input, base) {
+    if (!(this instanceof BeeURL)) {
+      return new BeeURL(input, base);
+    }
+
+    const parsed = base === undefined
+      ? new NativeURL(String(input))
+      : new NativeURL(String(input), String(base));
+
+    const state = {
+      protocol: parsed.protocol || "",
+      host: parsed.host || "",
+      hostname: parsed.hostname || "",
+      port: parsed.port || "",
+      pathname: parsed.pathname || "",
+      hash: parsed.hash || "",
+      origin: parsed.origin || ""
+    };
+    const pairs = parseSearch(parsed.search || "");
+
+    const updateHref = () => {
+      const query = serializePairs(pairs);
+      state.search = query === "" ? "" : `?${query}`;
+      state.href = `${state.origin}${state.pathname}${state.search}${state.hash}`;
+    };
+
+    const replaceFromParsedUrl = (nextParsed) => {
+      state.protocol = nextParsed.protocol || "";
+      state.host = nextParsed.host || "";
+      state.hostname = nextParsed.hostname || "";
+      state.port = nextParsed.port || "";
+      state.pathname = nextParsed.pathname || "";
+      state.hash = nextParsed.hash || "";
+      state.origin = nextParsed.origin || "";
+      pairs.splice(0, pairs.length, ...parseSearch(nextParsed.search || ""));
+      updateHref();
+    };
+
+    const replaceSearch = (nextSearch) => {
+      pairs.splice(0, pairs.length, ...parseSearch(nextSearch));
+      updateHref();
+    };
+
+    const params = {
+      append(name, value) {
+        pairs.push([String(name), String(value)]);
+        updateHref();
+      },
+      delete(name) {
+        const key = String(name);
+        for (let i = pairs.length - 1; i >= 0; i--) {
+          if (pairs[i][0] === key) {
+            pairs.splice(i, 1);
+          }
+        }
+        updateHref();
+      },
+      get(name) {
+        const key = String(name);
+        const pair = pairs.find(([entryName]) => entryName === key);
+        return pair ? pair[1] : null;
+      },
+      getAll(name) {
+        const key = String(name);
+        return pairs.filter(([entryName]) => entryName === key).map(([, value]) => value);
+      },
+      has(name) {
+        const key = String(name);
+        return pairs.some(([entryName]) => entryName === key);
+      },
+      set(name, value) {
+        const key = String(name);
+        for (let i = pairs.length - 1; i >= 0; i--) {
+          if (pairs[i][0] === key) {
+            pairs.splice(i, 1);
+          }
+        }
+        pairs.push([key, String(value)]);
+        updateHref();
+      },
+      sort() {
+        pairs.sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+        updateHref();
+      },
+      forEach(callback, thisArg) {
+        if (typeof callback !== "function") {
+          return;
+        }
+        for (const [key, value] of pairs.slice()) {
+          callback.call(thisArg, value, key, params);
+        }
+      },
+      entries() {
+        return createIterator(() => pairs.map(([key, value]) => [key, value]));
+      },
+      keys() {
+        return createIterator(() => pairs.map(([key]) => key));
+      },
+      values() {
+        return createIterator(() => pairs.map(([, value]) => value));
+      },
+      toString() {
+        return serializePairs(pairs);
+      }
+    };
+
+    if (typeof Symbol !== "undefined" && Symbol.iterator) {
+      params[Symbol.iterator] = params.entries;
+    }
+
+    updateHref();
+
+    Object.defineProperties(this, {
+      href: {
+        enumerable: true,
+        get() {
+          return state.href;
+        },
+        set(value) {
+          replaceFromParsedUrl(new NativeURL(String(value)));
+        }
+      },
+      protocol: {
+        enumerable: true,
+        get() {
+          return state.protocol;
+        }
+      },
+      host: {
+        enumerable: true,
+        get() {
+          return state.host;
+        }
+      },
+      hostname: {
+        enumerable: true,
+        get() {
+          return state.hostname;
+        }
+      },
+      port: {
+        enumerable: true,
+        get() {
+          return state.port;
+        }
+      },
+      pathname: {
+        enumerable: true,
+        get() {
+          return state.pathname;
+        },
+        set(value) {
+          state.pathname = String(value) || "/";
+          updateHref();
+        }
+      },
+      search: {
+        enumerable: true,
+        get() {
+          return state.search;
+        },
+        set(value) {
+          replaceSearch(String(value || ""));
+        }
+      },
+      hash: {
+        enumerable: true,
+        get() {
+          return state.hash;
+        },
+        set(value) {
+          const next = String(value || "");
+          state.hash = next === "" ? "" : next.charAt(0) === "#" ? next : `#${next}`;
+          updateHref();
+        }
+      },
+      origin: {
+        enumerable: true,
+        get() {
+          return state.origin;
+        }
+      },
+      searchParams: {
+        enumerable: true,
+        value: params
+      }
+    });
+  }
+
+  BeeURL.prototype = Object.create(NativeURL.prototype || Object.prototype);
+  BeeURL.prototype.constructor = BeeURL;
+  Object.defineProperty(BeeURL, "name", { value: "URL" });
+  Object.defineProperty(BeeURL, "__beejsLiveSearchParams", { value: true });
+  globalThis.URL = BeeURL;
+})();
+"##;
+
+        let source = v8::String::new(scope, bootstrap)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create URL bootstrap source"))?;
+        let script = v8::Script::compile(scope, source, None)
+            .ok_or_else(|| anyhow::anyhow!("Failed to compile URL bootstrap"))?;
+        script
+            .run(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to run URL bootstrap"))?;
         Ok(())
     }
 
@@ -8254,7 +12162,18 @@ impl MinimalRuntime {
                     .unwrap_or_default();
 
                 // Validate algorithm
-                let valid_algorithms = ["RSA-SHA256", "RSA-SHA512", "RSA-SHA1", "RSA-MD5"];
+                let valid_algorithms = [
+                    "RSA-SHA256",
+                    "RSA-SHA384",
+                    "RSA-SHA512",
+                    "RSA-SHA1",
+                    "RSA-MD5",
+                    "SHA256",
+                    "SHA384",
+                    "SHA512",
+                    "SHA1",
+                    "MD5",
+                ];
                 if !valid_algorithms.contains(&algorithm.as_str()) {
                     let error_msg = format!(
                         "createSign: unsupported algorithm '{}'. Supported: {}",
@@ -8335,11 +12254,16 @@ impl MinimalRuntime {
                             return;
                         }
 
-                        let private_key = args
-                            .get(0)
-                            .to_string(scope)
-                            .map(|s| s.to_rust_string_lossy(scope))
-                            .unwrap_or_default();
+                        let (private_key, signature_options) =
+                            match get_signature_key_options(scope, args.get(0)) {
+                                Ok(options) => options,
+                                Err(error_message) => {
+                                    let error = v8::String::new(scope, &error_message).unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+                            };
                         let encoding = if args.length() >= 2 {
                             args.get(1)
                                 .to_string(scope)
@@ -8373,10 +12297,11 @@ impl MinimalRuntime {
                             }
                         }
 
-                        let signature_data = match sign_rsa_pem(
+                        let signature_data = match sign_pem_private_key(
                             &algorithm,
                             &private_key,
                             combined_data.as_bytes(),
+                            signature_options,
                         ) {
                             Ok(signature) => signature,
                             Err(error_message) => {
@@ -8451,7 +12376,18 @@ impl MinimalRuntime {
                     .unwrap_or_default();
 
                 // Validate algorithm
-                let valid_algorithms = ["RSA-SHA256", "RSA-SHA512", "RSA-SHA1", "RSA-MD5"];
+                let valid_algorithms = [
+                    "RSA-SHA256",
+                    "RSA-SHA384",
+                    "RSA-SHA512",
+                    "RSA-SHA1",
+                    "RSA-MD5",
+                    "SHA256",
+                    "SHA384",
+                    "SHA512",
+                    "SHA1",
+                    "MD5",
+                ];
                 if !valid_algorithms.contains(&algorithm.as_str()) {
                     let error_msg = format!(
                         "createVerify: unsupported algorithm '{}'. Supported: {}",
@@ -8530,11 +12466,16 @@ impl MinimalRuntime {
                             return;
                         }
 
-                        let public_key = args
-                            .get(0)
-                            .to_string(scope)
-                            .map(|s| s.to_rust_string_lossy(scope))
-                            .unwrap_or_default();
+                        let (public_key, signature_options) =
+                            match get_signature_key_options(scope, args.get(0)) {
+                                Ok(options) => options,
+                                Err(error_message) => {
+                                    let error = v8::String::new(scope, &error_message).unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+                            };
                         let signature = args
                             .get(1)
                             .to_string(scope)
@@ -8603,11 +12544,12 @@ impl MinimalRuntime {
                             _ => signature.as_bytes().to_vec(),
                         };
 
-                        let is_valid = match verify_rsa_pem(
+                        let is_valid = match verify_pem_public_key(
                             &algorithm,
                             &public_key,
                             combined_data.as_bytes(),
                             &signature_data,
+                            signature_options,
                         ) {
                             Ok(result) => result,
                             Err(error_message) => {
@@ -8639,6 +12581,168 @@ impl MinimalRuntime {
         };
         let create_verify_key = v8::String::new(scope, "createVerify").unwrap().into();
         crypto_obj.set(scope, create_verify_key, create_verify_fn.into());
+
+        // Add crypto.sign / crypto.verify one-shot APIs.
+        let sign_one_shot_fn_opt = v8::Function::new(
+            scope,
+            |scope: &mut v8::HandleScope,
+             args: v8::FunctionCallbackArguments,
+             mut retval: v8::ReturnValue| {
+                if args.length() < 3 {
+                    let error =
+                        v8::String::new(scope, "sign: algorithm, data, and key are required")
+                            .unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+
+                let algorithm_value = args.get(0);
+                let algorithm = if algorithm_value.is_null() || algorithm_value.is_undefined() {
+                    None
+                } else {
+                    Some(
+                        algorithm_value
+                            .to_string(scope)
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_default(),
+                    )
+                };
+
+                let data = match get_bytes_from_value(scope, args.get(1), None) {
+                    Ok(bytes) => bytes,
+                    Err(error_message) => {
+                        let error =
+                            v8::String::new(scope, &format!("sign: {}", error_message)).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let (private_key, signature_options) =
+                    match get_signature_key_options(scope, args.get(2)) {
+                        Ok(options) => options,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    };
+
+                let signature_data = match sign_one_shot_pem_private_key(
+                    algorithm.as_deref(),
+                    &private_key,
+                    &data,
+                    signature_options,
+                ) {
+                    Ok(signature) => signature,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let result = create_buffer_wrapper(scope, &signature_data);
+                retval.set(result.into());
+            },
+        );
+        let sign_one_shot_fn = match sign_one_shot_fn_opt {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let sign_one_shot_key = v8::String::new(scope, "sign").unwrap().into();
+        crypto_obj.set(scope, sign_one_shot_key, sign_one_shot_fn.into());
+
+        let verify_one_shot_fn_opt = v8::Function::new(
+            scope,
+            |scope: &mut v8::HandleScope,
+             args: v8::FunctionCallbackArguments,
+             mut retval: v8::ReturnValue| {
+                if args.length() < 4 {
+                    let error = v8::String::new(
+                        scope,
+                        "verify: algorithm, data, key, and signature are required",
+                    )
+                    .unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+
+                let algorithm_value = args.get(0);
+                let algorithm = if algorithm_value.is_null() || algorithm_value.is_undefined() {
+                    None
+                } else {
+                    Some(
+                        algorithm_value
+                            .to_string(scope)
+                            .map(|value| value.to_rust_string_lossy(scope))
+                            .unwrap_or_default(),
+                    )
+                };
+
+                let data = match get_bytes_from_value(scope, args.get(1), None) {
+                    Ok(bytes) => bytes,
+                    Err(error_message) => {
+                        let error =
+                            v8::String::new(scope, &format!("verify: {}", error_message)).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let (public_key, signature_options) =
+                    match get_signature_key_options(scope, args.get(2)) {
+                        Ok(options) => options,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    };
+
+                let signature_data = match get_bytes_from_value(scope, args.get(3), None) {
+                    Ok(bytes) => bytes,
+                    Err(error_message) => {
+                        let error =
+                            v8::String::new(scope, &format!("verify: {}", error_message)).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                let is_valid = match verify_one_shot_pem_public_key(
+                    algorithm.as_deref(),
+                    &public_key,
+                    &data,
+                    &signature_data,
+                    signature_options,
+                ) {
+                    Ok(result) => result,
+                    Err(error_message) => {
+                        let error = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::error(scope, error);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
+                };
+
+                retval.set(v8::Boolean::new(scope, is_valid).into());
+            },
+        );
+        let verify_one_shot_fn = match verify_one_shot_fn_opt {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+        let verify_one_shot_key = v8::String::new(scope, "verify").unwrap().into();
+        crypto_obj.set(scope, verify_one_shot_key, verify_one_shot_fn.into());
 
         // Add crypto.createHmac (v0.3.9)
         let create_hmac_fn = v8::Function::new(
@@ -8823,16 +12927,16 @@ impl MinimalRuntime {
                                 }
                             }
                             "sha1" => {
-                                // Simple HMAC-SHA1 implementation
+                                use sha1::Digest;
                                 let block_size = 64;
                                 let ipad = 0x36u8;
                                 let opad = 0x5cu8;
 
                                 let mut padded_key = key.as_bytes().to_vec();
                                 if padded_key.len() > block_size {
-                                    // If key is longer than block size, hash it first
-                                    let short_key = md5::compute(&padded_key);
-                                    padded_key = short_key.0.to_vec();
+                                    let mut hasher = sha1::Sha1::default();
+                                    hasher.update(&padded_key);
+                                    padded_key = hasher.finalize().to_vec();
                                 }
                                 padded_key.resize(block_size, 0);
 
@@ -8841,35 +12945,39 @@ impl MinimalRuntime {
                                     Vec::with_capacity(block_size + combined_data.len());
                                 inner_input.extend(padded_key.iter().map(|b| b ^ ipad));
                                 inner_input.extend(combined_data.as_bytes());
-                                let inner_hash = md5::compute(&inner_input);
+                                let mut inner_hasher = sha1::Sha1::default();
+                                inner_hasher.update(&inner_input);
+                                let inner_hash = inner_hasher.finalize();
 
                                 // Outer hash
-                                let mut outer_input = Vec::with_capacity(block_size + 16);
+                                let mut outer_input = Vec::with_capacity(block_size + 20);
                                 outer_input.extend(padded_key.iter().map(|b| b ^ opad));
-                                outer_input.extend(&inner_hash.0);
+                                outer_input.extend(inner_hash.as_slice());
 
-                                let hmac_result = md5::compute(&outer_input);
+                                let mut outer_hasher = sha1::Sha1::default();
+                                outer_hasher.update(&outer_input);
+                                let hmac_result = outer_hasher.finalize();
 
                                 match encoding.as_str() {
-                                    "hex" => format!("{:x}", hmac_result),
+                                    "hex" => hex::encode(&hmac_result),
                                     "base64" => base64::Engine::encode(
                                         &base64::engine::general_purpose::STANDARD,
-                                        &hmac_result.0,
+                                        &hmac_result,
                                     ),
                                     "buffer" => {
-                                        let ab = v8::ArrayBuffer::new(scope, hmac_result.0.len());
+                                        let ab = v8::ArrayBuffer::new(scope, hmac_result.len());
                                         let backing_store = ab.get_backing_store();
-                                        for (i, byte) in hmac_result.0.iter().enumerate() {
+                                        for (i, byte) in hmac_result.iter().enumerate() {
                                             backing_store[i].set(*byte);
                                         }
                                         if let Some(uint8_array) =
-                                            v8::Uint8Array::new(scope, ab, 0, hmac_result.0.len())
+                                            v8::Uint8Array::new(scope, ab, 0, hmac_result.len())
                                         {
                                             retval.set(uint8_array.into());
                                         }
                                         return;
                                     }
-                                    _ => format!("{:x}", hmac_result),
+                                    _ => hex::encode(&hmac_result),
                                 }
                             }
                             "sha256" => {
@@ -11188,6 +15296,36 @@ impl MinimalRuntime {
                     String::from("prime256v1")
                 };
 
+                let private_key_encoding =
+                    match private_key_encoding_options_from_options(scope, options) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("generateKeyPairSync: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj);
+                            return;
+                        }
+                    };
+
+                let public_key_encoding =
+                    match public_key_encoding_options_from_options(scope, options) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("generateKeyPairSync: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj);
+                            return;
+                        }
+                    };
+
                 // Generate key pair based on type
                 let (public_key_pem, private_key_pem) = match key_type.to_lowercase().as_str() {
                     "rsa" => match generate_rsa_key_pair(modulus_length) {
@@ -11199,12 +15337,75 @@ impl MinimalRuntime {
                             return;
                         }
                     },
-                    "ec" => generate_ec_key_pair(&named_curve),
+                    "ec" => match generate_ec_key_pair(&named_curve) {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    },
+                    "ed25519" => match generate_ed25519_key_pair() {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    },
+                    "ed448" => match generate_ed448_key_pair() {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let error = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
+                        }
+                    },
                     _ => {
                         // Unsupported key type - return error
-                        let error_msg = v8::String::new(scope, &format!("generateKeyPairSync: unsupported key type '{}'. Supported: rsa, ec", key_type)).unwrap();
+                        let error_msg = v8::String::new(scope, &format!("generateKeyPairSync: unsupported key type '{}'. Supported: rsa, ec, ed25519, ed448", key_type)).unwrap();
                         let error = v8::Exception::type_error(scope, error_msg);
                         scope.throw_exception(error);
+                        return;
+                    }
+                };
+                let public_key = match format_generated_public_key(
+                    &public_key_pem,
+                    public_key_encoding.as_ref(),
+                ) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error_obj = if is_crypto_incompatible_key_options_error(&error_message)
+                        {
+                            crypto_incompatible_key_options_error(scope)
+                        } else {
+                            let error = v8::String::new(
+                                scope,
+                                &format!("generateKeyPairSync: {}", error_message),
+                            )
+                            .unwrap();
+                            v8::Exception::type_error(scope, error)
+                        };
+                        scope.throw_exception(error_obj);
+                        return;
+                    }
+                };
+                let private_key = match format_generated_private_key_for_generate(
+                    &private_key_pem,
+                    private_key_encoding.as_ref(),
+                ) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let error = v8::String::new(
+                            scope,
+                            &format!("generateKeyPairSync: {}", error_message),
+                        )
+                        .unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error);
+                        scope.throw_exception(error_obj);
                         return;
                     }
                 };
@@ -11212,14 +15413,14 @@ impl MinimalRuntime {
                 // Create result object
                 let result_obj = v8::Object::new(scope);
 
-                // Set public key (always PEM for now)
+                // Set public key using the requested publicKeyEncoding format.
                 let public_key_key = v8::String::new(scope, "publicKey").unwrap().into();
-                let public_key_val = v8::String::new(scope, &public_key_pem).unwrap().into();
+                let public_key_val = generated_public_key_to_v8(scope, public_key);
                 result_obj.set(scope, public_key_key, public_key_val);
 
-                // Set private key (always PEM for now)
+                // Set private key using the requested privateKeyEncoding format.
                 let private_key_key = v8::String::new(scope, "privateKey").unwrap().into();
-                let private_key_val = v8::String::new(scope, &private_key_pem).unwrap().into();
+                let private_key_val = generated_private_key_to_v8(scope, private_key);
                 result_obj.set(scope, private_key_key, private_key_val);
 
                 retval.set(result_obj.into());
@@ -11325,9 +15526,59 @@ impl MinimalRuntime {
                     return;
                 }
 
+                let private_key_encoding =
+                    match private_key_encoding_options_from_options(scope, options) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let global = scope.get_current_context().global(scope);
+                            let error_msg = v8::String::new(
+                                scope,
+                                &format!("generateKeyPair: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error_msg);
+                            let callback_func =
+                                v8::Local::<v8::Function>::try_from(callback).unwrap();
+                            let null_val = v8::null(scope).into();
+                            let _ = callback_func.call(
+                                scope,
+                                global.into(),
+                                &[error_obj, null_val, null_val],
+                            );
+                            return;
+                        }
+                    };
+
+                let public_key_encoding =
+                    match public_key_encoding_options_from_options(scope, options) {
+                        Ok(value) => value,
+                        Err(error_message) => {
+                            let global = scope.get_current_context().global(scope);
+                            let error_msg = v8::String::new(
+                                scope,
+                                &format!("generateKeyPair: {}", error_message),
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error_msg);
+                            let callback_func =
+                                v8::Local::<v8::Function>::try_from(callback).unwrap();
+                            let null_val = v8::null(scope).into();
+                            let _ = callback_func.call(
+                                scope,
+                                global.into(),
+                                &[error_obj, null_val, null_val],
+                            );
+                            return;
+                        }
+                    };
+
                 // Validate key type
                 let key_type_lower = key_type.to_lowercase();
-                if key_type_lower != "rsa" && key_type_lower != "ec" {
+                if key_type_lower != "rsa"
+                    && key_type_lower != "ec"
+                    && key_type_lower != "ed25519"
+                    && key_type_lower != "ed448"
+                {
                     // For async API, call callback with error synchronously
                     let global = scope.get_current_context().global(scope);
 
@@ -11335,7 +15586,7 @@ impl MinimalRuntime {
                     let error_msg = v8::String::new(
                         scope,
                         &format!(
-                            "generateKeyPair: unsupported key type '{}'. Supported: rsa, ec",
+                            "generateKeyPair: unsupported key type '{}'. Supported: rsa, ec, ed25519, ed448",
                             key_type
                         ),
                     )
@@ -11379,8 +15630,107 @@ impl MinimalRuntime {
                             return;
                         }
                     }
+                } else if key_type_lower == "ec" {
+                    match generate_ec_key_pair(&named_curve) {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let global = scope.get_current_context().global(scope);
+                            let error_msg = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error_msg);
+                            let callback_func =
+                                v8::Local::<v8::Function>::try_from(callback).unwrap();
+                            let null_val = v8::null(scope).into();
+                            let _ = callback_func.call(
+                                scope,
+                                global.into(),
+                                &[error_obj, null_val, null_val],
+                            );
+                            return;
+                        }
+                    }
+                } else if key_type_lower == "ed25519" {
+                    match generate_ed25519_key_pair() {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let global = scope.get_current_context().global(scope);
+                            let error_msg = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error_msg);
+                            let callback_func =
+                                v8::Local::<v8::Function>::try_from(callback).unwrap();
+                            let null_val = v8::null(scope).into();
+                            let _ = callback_func.call(
+                                scope,
+                                global.into(),
+                                &[error_obj, null_val, null_val],
+                            );
+                            return;
+                        }
+                    }
                 } else {
-                    generate_ec_key_pair(&named_curve)
+                    match generate_ed448_key_pair() {
+                        Ok(pair) => pair,
+                        Err(error_message) => {
+                            let global = scope.get_current_context().global(scope);
+                            let error_msg = v8::String::new(scope, &error_message).unwrap();
+                            let error_obj = v8::Exception::error(scope, error_msg);
+                            let callback_func =
+                                v8::Local::<v8::Function>::try_from(callback).unwrap();
+                            let null_val = v8::null(scope).into();
+                            let _ = callback_func.call(
+                                scope,
+                                global.into(),
+                                &[error_obj, null_val, null_val],
+                            );
+                            return;
+                        }
+                    }
+                };
+                let public_key = match format_generated_public_key(
+                    &public_key_pem,
+                    public_key_encoding.as_ref(),
+                ) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let global = scope.get_current_context().global(scope);
+                        let error_obj = if is_crypto_incompatible_key_options_error(&error_message)
+                        {
+                            crypto_incompatible_key_options_error(scope)
+                        } else {
+                            let error_msg = v8::String::new(
+                                scope,
+                                &format!("generateKeyPair: {}", error_message),
+                            )
+                            .unwrap();
+                            v8::Exception::type_error(scope, error_msg)
+                        };
+                        let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+                        let null_val = v8::null(scope).into();
+                        let _ = callback_func.call(
+                            scope,
+                            global.into(),
+                            &[error_obj, null_val, null_val],
+                        );
+                        return;
+                    }
+                };
+                let private_key = match format_generated_private_key_for_generate(
+                    &private_key_pem,
+                    private_key_encoding.as_ref(),
+                ) {
+                    Ok(value) => value,
+                    Err(error_message) => {
+                        let global = scope.get_current_context().global(scope);
+                        let error_msg = v8::String::new(scope, &error_message).unwrap();
+                        let error_obj = v8::Exception::type_error(scope, error_msg);
+                        let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+                        let null_val = v8::null(scope).into();
+                        let _ = callback_func.call(
+                            scope,
+                            global.into(),
+                            &[error_obj, null_val, null_val],
+                        );
+                        return;
+                    }
                 };
 
                 // Call the callback directly (synchronously) - this is a fast synchronous operation
@@ -11389,16 +15739,16 @@ impl MinimalRuntime {
                 let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
                 let null_val = v8::null(scope).into();
 
-                // Create publicKey string (PEM format)
-                let public_key_str = v8::String::new(scope, &public_key_pem).unwrap().into();
-                // Create privateKey string (PEM format)
-                let private_key_str = v8::String::new(scope, &private_key_pem).unwrap().into();
+                // Create publicKey using the requested publicKeyEncoding format.
+                let public_key_val = generated_public_key_to_v8(scope, public_key);
+                // Create privateKey using the requested privateKeyEncoding format.
+                let private_key_val = generated_private_key_to_v8(scope, private_key);
 
                 // Call callback with (null, publicKey, privateKey)
                 let _ = callback_func.call(
                     scope,
                     global.into(),
-                    &[null_val, public_key_str, private_key_str],
+                    &[null_val, public_key_val, private_key_val],
                 );
             },
         );
@@ -11431,6 +15781,16 @@ impl MinimalRuntime {
         let rsa_no_padding_key = v8::String::new(scope, "RSA_NO_PADDING").unwrap().into();
         constants_obj.set(scope, rsa_no_padding_key, rsa_no_padding.into());
 
+        let rsa_pkcs1_pss_padding = v8::Integer::new(scope, 6);
+        let rsa_pkcs1_pss_padding_key = v8::String::new(scope, "RSA_PKCS1_PSS_PADDING")
+            .unwrap()
+            .into();
+        constants_obj.set(
+            scope,
+            rsa_pkcs1_pss_padding_key,
+            rsa_pkcs1_pss_padding.into(),
+        );
+
         let constants_key = v8::String::new(scope, "constants").unwrap().into();
         crypto_obj.set(scope, constants_key, constants_obj.into());
 
@@ -11461,46 +15821,45 @@ impl MinimalRuntime {
                     .map(|n| n.value() as usize)
                     .unwrap_or(32);
 
-                // Parse optional options object: { N: 16384, r: 8, p: 1 }
-                let mut n: u32 = 16384; // Default scrypt parameters (N=16384, r=8, p=1)
+                let mut n: u32 = 16384;
                 let mut r: u32 = 8;
                 let mut p: u32 = 1;
 
                 if args.length() > 3 {
                     let options = args.get(3);
-                    if options.is_object() {
+                    if options.is_object() && !options.is_function() {
                         let options_obj = options.to_object(scope).unwrap();
 
-                        // Get N parameter
                         let n_key = v8::String::new(scope, "N").unwrap();
                         if let Some(n_val) = options_obj.get(scope, n_key.into()) {
-                            if let Some(n_int) = n_val.to_integer(scope) {
-                                n = n_int.value() as u32;
+                            if !n_val.is_undefined() && !n_val.is_null() {
+                                if let Some(n_int) = n_val.to_integer(scope) {
+                                    n = n_int.value() as u32;
+                                }
                             }
                         }
 
-                        // Get r parameter
                         let r_key = v8::String::new(scope, "r").unwrap();
                         if let Some(r_val) = options_obj.get(scope, r_key.into()) {
-                            if let Some(r_int) = r_val.to_integer(scope) {
-                                r = r_int.value() as u32;
+                            if !r_val.is_undefined() && !r_val.is_null() {
+                                if let Some(r_int) = r_val.to_integer(scope) {
+                                    r = r_int.value() as u32;
+                                }
                             }
                         }
 
-                        // Get p parameter
                         let p_key = v8::String::new(scope, "p").unwrap();
                         if let Some(p_val) = options_obj.get(scope, p_key.into()) {
-                            if let Some(p_int) = p_val.to_integer(scope) {
-                                p = p_int.value() as u32;
+                            if !p_val.is_undefined() && !p_val.is_null() {
+                                if let Some(p_int) = p_val.to_integer(scope) {
+                                    p = p_int.value() as u32;
+                                }
                             }
                         }
                     }
                 }
 
-                // Simplified scrypt-like key derivation using PBKDF2-HMAC-SHA256
-                // This provides similar security properties to scrypt for most use cases
-                // In production, a full scrypt implementation with memory-hard function would be used
-                let result = compute_scrypt_derived_key(&password, &salt, keylen as usize, n, r, p);
+                let result = compute_scrypt_derived_key(&password, &salt, keylen, n, r, p);
 
                 match result {
                     Ok(key_bytes) => {
@@ -11530,8 +15889,7 @@ impl MinimalRuntime {
         let scrypt_sync_key = v8::String::new(scope, "scryptSync").unwrap().into();
         crypto_obj.set(scope, scrypt_sync_key, scrypt_sync_fn.into());
 
-        // scrypt - async version with Promise support
-
+        // scrypt - async version with Promise/callback support
         let scrypt_fn = v8::Function::new(
             scope,
             move |scope: &mut v8::HandleScope,
@@ -11560,24 +15918,30 @@ impl MinimalRuntime {
 
                 if args.length() > 3 {
                     let options = args.get(3);
-                    if options.is_object() {
+                    if options.is_object() && !options.is_function() {
                         let options_obj = options.to_object(scope).unwrap();
                         let n_key = v8::String::new(scope, "N").unwrap();
                         if let Some(n_val) = options_obj.get(scope, n_key.into()) {
-                            if let Some(n_int) = n_val.to_integer(scope) {
-                                n = n_int.value() as u32;
+                            if !n_val.is_undefined() && !n_val.is_null() {
+                                if let Some(n_int) = n_val.to_integer(scope) {
+                                    n = n_int.value() as u32;
+                                }
                             }
                         }
                         let r_key = v8::String::new(scope, "r").unwrap();
                         if let Some(r_val) = options_obj.get(scope, r_key.into()) {
-                            if let Some(r_int) = r_val.to_integer(scope) {
-                                r = r_int.value() as u32;
+                            if !r_val.is_undefined() && !r_val.is_null() {
+                                if let Some(r_int) = r_val.to_integer(scope) {
+                                    r = r_int.value() as u32;
+                                }
                             }
                         }
                         let p_key = v8::String::new(scope, "p").unwrap();
                         if let Some(p_val) = options_obj.get(scope, p_key.into()) {
-                            if let Some(p_int) = p_val.to_integer(scope) {
-                                p = p_int.value() as u32;
+                            if !p_val.is_undefined() && !p_val.is_null() {
+                                if let Some(p_int) = p_val.to_integer(scope) {
+                                    p = p_int.value() as u32;
+                                }
                             }
                         }
                     }
@@ -11630,11 +15994,11 @@ impl MinimalRuntime {
                                 let error =
                                     v8::String::new(scope, "Failed to create Uint8Array").unwrap();
                                 let error_obj = v8::Exception::type_error(scope, error);
-                                let error_val = v8::null(scope).into();
+                                let null_val = v8::null(scope).into();
                                 let _ = callback_func.call(
                                     scope,
                                     global.into(),
-                                    &[error_val, error_obj],
+                                    &[error_obj, null_val],
                                 );
                             }
                         }
@@ -11657,13 +16021,8 @@ impl MinimalRuntime {
                     None => return,
                 };
 
-                // Compute result synchronously (for reasonable parameters)
-                let async_n = if n > 65536 {
-                    std::cmp::max(1024, n / 64)
-                } else {
-                    n
-                };
-                let result = compute_scrypt_derived_key(&password, &salt, keylen, async_n, r, p);
+                // Compute result synchronously (for reasonable parameters).
+                let result = compute_scrypt_derived_key(&password, &salt, keylen, n, r, p);
 
                 match result {
                     Ok(key_bytes) => {
@@ -12333,10 +16692,90 @@ impl MinimalRuntime {
                     }
                 } else if key_input.is_object() {
                     if let Ok(obj) = v8::Local::<v8::Object>::try_from(key_input) {
+                        let format = get_string_property(scope, obj, "format")
+                            .unwrap_or_else(|| "pem".to_string())
+                            .to_ascii_lowercase();
+                        let key_type = get_string_property(scope, obj, "type")
+                            .unwrap_or_else(|| "pkcs8".to_string())
+                            .to_ascii_lowercase();
+                        let passphrase_key = v8::String::new(scope, "passphrase").unwrap();
+                        let passphrase = match obj.get(scope, passphrase_key.into()) {
+                            Some(value) if !value.is_undefined() && !value.is_null() => {
+                                match get_bytes_from_value(scope, value, None) {
+                                    Ok(bytes) => Some(bytes),
+                                    Err(error_message) => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            &format!(
+                                                "createPrivateKey: invalid passphrase: {}",
+                                                error_message
+                                            ),
+                                        )
+                                        .unwrap();
+                                        let error = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error);
+                                        return;
+                                    }
+                                }
+                            }
+                            _ => None,
+                        };
                         let key_str = v8::String::new(scope, "key").unwrap();
                         let key_prop = obj.get(scope, key_str.into());
-                        if let Some(k) = key_prop.and_then(|k| k.to_string(scope)) {
-                            pem_key = Some(k.to_rust_string_lossy(scope));
+                        if let Some(key_value) = key_prop {
+                            if format == "jwk" {
+                                match v8::Local::<v8::Object>::try_from(key_value)
+                                    .map_err(|_| "JWK key must be an object".to_string())
+                                    .and_then(|jwk| private_pem_from_jwk_object(scope, jwk))
+                                {
+                                    Ok(pem) => pem_key = Some(pem),
+                                    Err(error_message) => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            &format!("createPrivateKey: {}", error_message),
+                                        )
+                                        .unwrap();
+                                        let error = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error);
+                                        return;
+                                    }
+                                }
+                            } else if format == "der" || format == "buffer" {
+                                match get_bytes_from_value(scope, key_value, None)
+                                    .and_then(|bytes| private_key_pem_from_der(&bytes, &key_type))
+                                {
+                                    Ok(pem) => pem_key = Some(pem),
+                                    Err(error_message) => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            &format!("createPrivateKey: {}", error_message),
+                                        )
+                                        .unwrap();
+                                        let error = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error);
+                                        return;
+                                    }
+                                }
+                            } else if let Some(k) = key_value.to_string(scope) {
+                                let key_pem = k.to_rust_string_lossy(scope);
+                                if let Some(passphrase) = passphrase.as_deref() {
+                                    match private_key_pem_from_passphrase(&key_pem, passphrase) {
+                                        Ok(pem) => pem_key = Some(pem),
+                                        Err(error_message) => {
+                                            let error_msg = v8::String::new(
+                                                scope,
+                                                &format!("createPrivateKey: {}", error_message),
+                                            )
+                                            .unwrap();
+                                            let error = v8::Exception::type_error(scope, error_msg);
+                                            scope.throw_exception(error);
+                                            return;
+                                        }
+                                    }
+                                } else {
+                                    pem_key = Some(key_pem);
+                                }
+                            }
                         }
                     }
                 }
@@ -12352,15 +16791,16 @@ impl MinimalRuntime {
                     }
                 };
 
-                // Detect key type from PEM content
-                let key_type = if pem_key.contains("BEGIN RSA PRIVATE KEY") {
-                    "RSA"
-                } else if pem_key.contains("BEGIN EC PRIVATE KEY")
-                    || pem_key.contains("BEGIN PRIVATE KEY")
-                {
-                    "EC"
-                } else {
-                    "RSA"
+                let key_type = match private_key_type_from_pem(&pem_key) {
+                    Ok(key_type) => key_type,
+                    Err(error_message) => {
+                        let error_msg =
+                            v8::String::new(scope, &format!("createPrivateKey: {}", error_message))
+                                .unwrap();
+                        let error = v8::Exception::type_error(scope, error_msg);
+                        scope.throw_exception(error);
+                        return;
+                    }
                 };
 
                 // Create PrivateKey object with type information
@@ -12373,9 +16813,7 @@ impl MinimalRuntime {
 
                 // Set asymmetricKeyType property (Node.js style)
                 let asym_type_key = v8::String::new(scope, "asymmetricKeyType").unwrap().into();
-                let asym_type_val = v8::String::new(scope, &key_type.to_lowercase())
-                    .unwrap()
-                    .into();
+                let asym_type_val = v8::String::new(scope, key_type).unwrap().into();
                 private_key_obj.set(scope, asym_type_key, asym_type_val);
 
                 // Store the original PEM key
@@ -12389,11 +16827,8 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
-                        let format = args
-                            .get(0)
-                            .to_string(scope)
-                            .map(|s| s.to_rust_string_lossy(scope))
-                            .unwrap_or_else(|| "pem".to_string());
+                        let (format, export_type, options_was_object) =
+                            key_export_options_from_arg(scope, args.get(0));
 
                         let this_obj = args.this();
                         let pem_str_name = v8::String::new(scope, "pem").unwrap();
@@ -12403,14 +16838,72 @@ impl MinimalRuntime {
                             let pem_str = pem.to_rust_string_lossy(scope);
 
                             if format == "pem" {
-                                let result = v8::String::new(scope, &pem_str).unwrap();
+                                let mut exported_pem = pem_str.clone();
+                                if options_was_object {
+                                    match v8::Local::<v8::Object>::try_from(args.get(0))
+                                        .map_err(|_| {
+                                            "export: options must be an object".to_string()
+                                        })
+                                        .and_then(|obj| {
+                                            private_key_encoding_options_from_object(scope, obj)
+                                        })
+                                        .and_then(|options| {
+                                            format_generated_private_key(&pem_str, Some(&options))
+                                        }) {
+                                        Ok(value) => exported_pem = value,
+                                        Err(error_message) => {
+                                            let error =
+                                                v8::String::new(scope, &error_message).unwrap();
+                                            let error_obj = v8::Exception::type_error(scope, error);
+                                            scope.throw_exception(error_obj);
+                                            return;
+                                        }
+                                    }
+                                }
+                                let result = v8::String::new(scope, &exported_pem).unwrap();
                                 retval.set(result.into());
                             } else if format == "der" || format == "buffer" {
-                                let result = v8::String::new(scope, &pem_str).unwrap();
-                                retval.set(result.into());
+                                let key_type = match export_type {
+                                    Some(key_type) => key_type,
+                                    None if !options_was_object => "pkcs8".to_string(),
+                                    None => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            "export: type is required for DER export",
+                                        )
+                                        .unwrap();
+                                        let error_obj = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error_obj);
+                                        return;
+                                    }
+                                };
+                                match private_key_der_from_pem(&pem_str, &key_type) {
+                                    Ok(der) => {
+                                        let result = create_buffer_wrapper(scope, &der);
+                                        retval.set(result.into());
+                                    }
+                                    Err(error_message) => {
+                                        let error = v8::String::new(scope, &error_message).unwrap();
+                                        let error_obj = v8::Exception::type_error(scope, error);
+                                        scope.throw_exception(error_obj);
+                                    }
+                                }
+                            } else if format == "jwk" {
+                                match private_jwk_from_pem(&pem_str) {
+                                    Ok(jwk) => {
+                                        let result = serde_json_value_to_v8(scope, &jwk);
+                                        retval.set(result);
+                                    }
+                                    Err(error_message) => {
+                                        let error_msg = format!("export: {}", error_message);
+                                        let error = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::type_error(scope, error);
+                                        scope.throw_exception(error_obj);
+                                    }
+                                }
                             } else {
                                 let error_msg = format!(
-                                    "export: unsupported format '{}'. Supported: pem, der",
+                                    "export: unsupported format '{}'. Supported: pem, der, jwk",
                                     format
                                 );
                                 let error = v8::String::new(scope, &error_msg).unwrap();
@@ -12451,14 +16944,103 @@ impl MinimalRuntime {
 
                 if key_input.is_string() {
                     if let Some(s) = key_input.to_string(scope) {
-                        pem_key = Some(s.to_rust_string_lossy(scope));
+                        let key_pem = s.to_rust_string_lossy(scope);
+                        match public_key_spki_pem_from_any_pem(&key_pem, "spki") {
+                            Ok(pem) => pem_key = Some(pem),
+                            Err(error_message) => {
+                                let error_msg = v8::String::new(
+                                    scope,
+                                    &format!("createPublicKey: {}", error_message),
+                                )
+                                .unwrap();
+                                let error = v8::Exception::type_error(scope, error_msg);
+                                scope.throw_exception(error);
+                                return;
+                            }
+                        }
                     }
                 } else if key_input.is_object() {
                     if let Ok(obj) = v8::Local::<v8::Object>::try_from(key_input) {
-                        let pem_str = v8::String::new(scope, "pem").unwrap();
-                        let pem_prop = obj.get(scope, pem_str.into());
-                        if let Some(p) = pem_prop.and_then(|p| p.to_string(scope)) {
-                            pem_key = Some(p.to_rust_string_lossy(scope));
+                        let format = get_string_property(scope, obj, "format")
+                            .unwrap_or_else(|| "pem".to_string())
+                            .to_ascii_lowercase();
+                        let key_type = get_string_property(scope, obj, "type")
+                            .unwrap_or_else(|| "spki".to_string())
+                            .to_ascii_lowercase();
+                        let key_str = v8::String::new(scope, "key").unwrap();
+                        let key_prop = obj.get(scope, key_str.into());
+                        if let Some(key_value) =
+                            key_prop.filter(|value| !value.is_undefined() && !value.is_null())
+                        {
+                            if format == "jwk" {
+                                match v8::Local::<v8::Object>::try_from(key_value)
+                                    .map_err(|_| "JWK key must be an object".to_string())
+                                    .and_then(|jwk| public_pem_from_jwk_object(scope, jwk))
+                                {
+                                    Ok(pem) => pem_key = Some(pem),
+                                    Err(error_message) => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            &format!("createPublicKey: {}", error_message),
+                                        )
+                                        .unwrap();
+                                        let error = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error);
+                                        return;
+                                    }
+                                }
+                            } else if format == "der" || format == "buffer" {
+                                match get_bytes_from_value(scope, key_value, None)
+                                    .and_then(|bytes| public_key_pem_from_der(&bytes, &key_type))
+                                {
+                                    Ok(pem) => pem_key = Some(pem),
+                                    Err(error_message) => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            &format!("createPublicKey: {}", error_message),
+                                        )
+                                        .unwrap();
+                                        let error = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error);
+                                        return;
+                                    }
+                                }
+                            } else if let Some(k) = key_value.to_string(scope) {
+                                let key_pem = k.to_rust_string_lossy(scope);
+                                match public_key_spki_pem_from_any_pem(&key_pem, &key_type) {
+                                    Ok(pem) => pem_key = Some(pem),
+                                    Err(error_message) => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            &format!("createPublicKey: {}", error_message),
+                                        )
+                                        .unwrap();
+                                        let error = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+
+                        if let Some(pem) = get_string_property(scope, obj, "pem") {
+                            let pem_key_type = match key_type.as_str() {
+                                "private" | "public" => "spki",
+                                _ => &key_type,
+                            };
+                            match public_key_spki_pem_from_any_pem(&pem, pem_key_type) {
+                                Ok(public_pem) => pem_key = Some(public_pem),
+                                Err(error_message) => {
+                                    let error_msg = v8::String::new(
+                                        scope,
+                                        &format!("createPublicKey: {}", error_message),
+                                    )
+                                    .unwrap();
+                                    let error = v8::Exception::type_error(scope, error_msg);
+                                    scope.throw_exception(error);
+                                    return;
+                                }
+                            }
                         }
                     }
                 }
@@ -12474,15 +17056,16 @@ impl MinimalRuntime {
                     }
                 };
 
-                // Detect key type
-                let key_type = if pem_key.contains("BEGIN RSA PUBLIC KEY")
-                    || pem_key.contains("BEGIN PUBLIC KEY")
-                {
-                    "RSA"
-                } else if pem_key.contains("BEGIN EC PUBLIC KEY") {
-                    "EC"
-                } else {
-                    "RSA"
+                let key_type = match public_key_type_from_pem(&pem_key) {
+                    Ok(key_type) => key_type,
+                    Err(error_message) => {
+                        let error_msg =
+                            v8::String::new(scope, &format!("createPublicKey: {}", error_message))
+                                .unwrap();
+                        let error = v8::Exception::type_error(scope, error_msg);
+                        scope.throw_exception(error);
+                        return;
+                    }
                 };
 
                 // Create PublicKey object
@@ -12493,9 +17076,7 @@ impl MinimalRuntime {
                 public_key_obj.set(scope, type_key, type_val);
 
                 let asym_type_key = v8::String::new(scope, "asymmetricKeyType").unwrap().into();
-                let asym_type_val = v8::String::new(scope, &key_type.to_lowercase())
-                    .unwrap()
-                    .into();
+                let asym_type_val = v8::String::new(scope, key_type).unwrap().into();
                 public_key_obj.set(scope, asym_type_key, asym_type_val);
 
                 let pem_key_val = v8::String::new(scope, &pem_key).unwrap().into();
@@ -12508,11 +17089,8 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
-                        let _format = args
-                            .get(0)
-                            .to_string(scope)
-                            .map(|s| s.to_rust_string_lossy(scope))
-                            .unwrap_or_else(|| "pem".to_string());
+                        let (format, export_type, options_was_object) =
+                            key_export_options_from_arg(scope, args.get(0));
 
                         let this_obj = args.this();
                         let pem_str_name = v8::String::new(scope, "pem").unwrap();
@@ -12520,8 +17098,88 @@ impl MinimalRuntime {
 
                         if let Some(pem) = pem_prop.and_then(|p| p.to_string(scope)) {
                             let pem_lossy = pem.to_rust_string_lossy(scope);
-                            let result = v8::String::new(scope, &pem_lossy).unwrap();
-                            retval.set(result.into());
+                            if format == "pem" {
+                                let exported_pem = if options_was_object {
+                                    let key_type =
+                                        export_type.unwrap_or_else(|| "spki".to_string());
+                                    match public_key_pem_from_pem(&pem_lossy, &key_type) {
+                                        Ok(pem) => pem,
+                                        Err(error_message) => {
+                                            let error_obj =
+                                                if is_crypto_incompatible_key_options_error(
+                                                    &error_message,
+                                                ) {
+                                                    crypto_incompatible_key_options_error(scope)
+                                                } else {
+                                                    let error =
+                                                        v8::String::new(scope, &error_message)
+                                                            .unwrap();
+                                                    v8::Exception::type_error(scope, error)
+                                                };
+                                            scope.throw_exception(error_obj);
+                                            return;
+                                        }
+                                    }
+                                } else {
+                                    pem_lossy
+                                };
+                                let result = v8::String::new(scope, &exported_pem).unwrap();
+                                retval.set(result.into());
+                            } else if format == "der" || format == "buffer" {
+                                let key_type = match export_type {
+                                    Some(key_type) => key_type,
+                                    None if !options_was_object => "spki".to_string(),
+                                    None => {
+                                        let error_msg = v8::String::new(
+                                            scope,
+                                            "export: type is required for DER export",
+                                        )
+                                        .unwrap();
+                                        let error_obj = v8::Exception::type_error(scope, error_msg);
+                                        scope.throw_exception(error_obj);
+                                        return;
+                                    }
+                                };
+                                match public_key_der_from_pem(&pem_lossy, &key_type) {
+                                    Ok(der) => {
+                                        let result = create_buffer_wrapper(scope, &der);
+                                        retval.set(result.into());
+                                    }
+                                    Err(error_message) => {
+                                        let error_obj = if is_crypto_incompatible_key_options_error(
+                                            &error_message,
+                                        ) {
+                                            crypto_incompatible_key_options_error(scope)
+                                        } else {
+                                            let error =
+                                                v8::String::new(scope, &error_message).unwrap();
+                                            v8::Exception::type_error(scope, error)
+                                        };
+                                        scope.throw_exception(error_obj);
+                                    }
+                                }
+                            } else if format == "jwk" {
+                                match public_jwk_from_pem(&pem_lossy) {
+                                    Ok(jwk) => {
+                                        let result = serde_json_value_to_v8(scope, &jwk);
+                                        retval.set(result);
+                                    }
+                                    Err(error_message) => {
+                                        let error_msg = format!("export: {}", error_message);
+                                        let error = v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::type_error(scope, error);
+                                        scope.throw_exception(error_obj);
+                                    }
+                                }
+                            } else {
+                                let error_msg = format!(
+                                    "export: unsupported format '{}'. Supported: pem, der, jwk",
+                                    format
+                                );
+                                let error = v8::String::new(scope, &error_msg).unwrap();
+                                let error_obj = v8::Exception::type_error(scope, error);
+                                scope.throw_exception(error_obj);
+                            }
                         } else {
                             let error_msg =
                                 v8::String::new(scope, "export: no key material found").unwrap();
@@ -12911,52 +17569,63 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
-                        if args.length() >= 2 {
-                            let input = args.get(0);
-                            let dest = args.get(1);
-
-                            let input_str = if let Some(s) = input.to_string(scope) {
-                                s.to_rust_string_lossy(scope)
-                            } else {
-                                String::new()
-                            };
-
-                            // Encode to UTF-8 bytes
-                            let encoding_rs_encoding =
-                                encoding_rs::Encoding::for_label(b"utf-8").unwrap();
-                            let encoded_bytes = encoding_rs_encoding.encode(&input_str).0;
-
-                            // Create result object
-                            let result_obj = v8::Object::new(scope);
-
-                            let read_key = v8::String::new(scope, "read").unwrap().into();
-                            // Use encoded bytes length for both read and written (simplified implementation)
-                            let read_i32 = encoded_bytes.len() as i32;
-                            let read_val = v8::Integer::new(scope, read_i32);
-                            result_obj.set(scope, read_key, read_val.into());
-
-                            let written_key = v8::String::new(scope, "written").unwrap().into();
-                            let written_i32 = encoded_bytes.len() as i32;
-                            let written_val = v8::Integer::new(scope, written_i32);
-                            result_obj.set(scope, written_key, written_val.into());
-
-                            // Copy bytes to destination if it's an array
-                            if let Ok(dest_array) = v8::Local::<v8::Uint8Array>::try_from(dest) {
-                                let dest_len = dest_array.byte_length();
-                                let copy_len = std::cmp::min(encoded_bytes.len(), dest_len);
-                                if copy_len > 0 {
-                                    let dest_buffer = dest_array.buffer(scope).unwrap();
-                                    let backing_store = dest_buffer.get_backing_store();
-                                    // Convert from &[Cell<u8>] to &[u8] for copy_from_slice
-                                    for (i, byte) in encoded_bytes.iter().enumerate().take(copy_len)
-                                    {
-                                        backing_store[i].set(*byte);
-                                    }
-                                }
-                            }
-
-                            retval.set(result_obj.into());
+                        if args.length() < 2 || !args.get(1).is_uint8_array() {
+                            let error = v8::String::new(
+                                scope,
+                                "TextEncoder.encodeInto: destination must be a Uint8Array",
+                            )
+                            .unwrap();
+                            let error_obj = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(error_obj.into());
+                            return;
                         }
+
+                        let input = args.get(0);
+                        let dest = args.get(1);
+
+                        let input_str = if let Some(s) = input.to_string(scope) {
+                            s.to_rust_string_lossy(scope)
+                        } else {
+                            String::new()
+                        };
+
+                        let dest_array = v8::Local::<v8::Uint8Array>::try_from(dest).unwrap();
+                        let dest_len = dest_array.byte_length();
+                        let mut encoded_bytes = Vec::new();
+                        let mut read_units = 0usize;
+                        let mut written = 0usize;
+
+                        for ch in input_str.chars() {
+                            let mut buffer = [0u8; 4];
+                            let chunk = ch.encode_utf8(&mut buffer).as_bytes();
+                            if written + chunk.len() > dest_len {
+                                break;
+                            }
+                            encoded_bytes.extend_from_slice(chunk);
+                            written += chunk.len();
+                            read_units += ch.len_utf16();
+                        }
+
+                        if written > 0 {
+                            let dest_buffer = dest_array.buffer(scope).unwrap();
+                            let byte_offset = dest_array.byte_offset();
+                            let backing_store = dest_buffer.get_backing_store();
+                            for (i, byte) in encoded_bytes.iter().enumerate() {
+                                backing_store[byte_offset + i].set(*byte);
+                            }
+                        }
+
+                        let result_obj = v8::Object::new(scope);
+
+                        let read_key = v8::String::new(scope, "read").unwrap().into();
+                        let read_val = v8::Integer::new(scope, read_units as i32);
+                        result_obj.set(scope, read_key, read_val.into());
+
+                        let written_key = v8::String::new(scope, "written").unwrap().into();
+                        let written_val = v8::Integer::new(scope, written as i32);
+                        result_obj.set(scope, written_key, written_val.into());
+
+                        retval.set(result_obj.into());
                     },
                 );
                 // Check if function creation succeeded
@@ -13045,16 +17714,29 @@ impl MinimalRuntime {
                      mut retval: v8::ReturnValue| {
                         if args.length() >= 1 {
                             let input = args.get(0);
-                            let mut result = String::new();
+                            let this_obj = args.this();
+                            let fatal_key = v8::String::new(scope, "fatal").unwrap().into();
+                            let fatal = this_obj
+                                .get(scope, fatal_key)
+                                .map(|value| value.to_boolean(scope).is_true())
+                                .unwrap_or(false);
+                            let ignore_bom_key =
+                                v8::String::new(scope, "ignoreBOM").unwrap().into();
+                            let ignore_bom = this_obj
+                                .get(scope, ignore_bom_key)
+                                .map(|value| value.to_boolean(scope).is_true())
+                                .unwrap_or(false);
+                            let mut bytes_to_decode: Option<Vec<u8>> = None;
+                            let mut string_input: Option<String> = None;
 
                             // Handle different input types
                             if let Ok(uint8_array) = v8::Local::<v8::Uint8Array>::try_from(input) {
                                 let byte_len = uint8_array.byte_length();
+                                let byte_offset = uint8_array.byte_offset();
+                                let array_buffer = uint8_array.buffer(scope).unwrap();
+                                let backing_store = array_buffer.get_backing_store();
+                                let mut bytes = vec![0u8; byte_len];
                                 if byte_len > 0 {
-                                    let byte_offset = uint8_array.byte_offset();
-                                    let array_buffer = uint8_array.buffer(scope).unwrap();
-                                    let backing_store = array_buffer.get_backing_store();
-                                    let mut bytes = vec![0u8; byte_len];
                                     unsafe {
                                         let src_ptr =
                                             backing_store.data().add(byte_offset) as *const u8;
@@ -13064,20 +17746,15 @@ impl MinimalRuntime {
                                             byte_len,
                                         );
                                     }
-
-                                    // Decode using encoding_rs (utf-8 default)
-                                    let encoding_rs_encoding =
-                                        encoding_rs::Encoding::for_label(b"utf-8").unwrap();
-                                    let decoded = encoding_rs_encoding.decode(&bytes).0;
-                                    result = decoded.into_owned();
                                 }
+                                bytes_to_decode = Some(bytes);
                             } else if let Ok(array_buffer) =
                                 v8::Local::<v8::ArrayBuffer>::try_from(input)
                             {
                                 let byte_len = array_buffer.byte_length();
+                                let backing_store = array_buffer.get_backing_store();
+                                let mut bytes = vec![0u8; byte_len];
                                 if byte_len > 0 {
-                                    let backing_store = array_buffer.get_backing_store();
-                                    let mut bytes = vec![0u8; byte_len];
                                     unsafe {
                                         let src_ptr = backing_store.data() as *const u8;
                                         if !src_ptr.is_null() {
@@ -13088,29 +17765,58 @@ impl MinimalRuntime {
                                             );
                                         }
                                     }
-
-                                    let encoding_rs_encoding =
-                                        encoding_rs::Encoding::for_label(b"utf-8").unwrap();
-                                    let decoded = encoding_rs_encoding.decode(&bytes).0;
-                                    result = decoded.into_owned();
                                 }
+                                bytes_to_decode = Some(bytes);
                             } else if let Ok(view) =
                                 v8::Local::<v8::ArrayBufferView>::try_from(input)
                             {
                                 let byte_len = view.byte_length();
+                                let mut bytes = vec![0u8; byte_len];
                                 if byte_len > 0 {
-                                    let mut bytes = vec![0u8; byte_len];
                                     view.copy_contents(&mut bytes);
-
-                                    let encoding_rs_encoding =
-                                        encoding_rs::Encoding::for_label(b"utf-8").unwrap();
-                                    let decoded = encoding_rs_encoding.decode(&bytes).0;
-                                    result = decoded.into_owned();
                                 }
+                                bytes_to_decode = Some(bytes);
                             } else if let Some(str_val) = input.to_string(scope) {
                                 // Handle string input - return as-is
-                                result = str_val.to_rust_string_lossy(scope);
+                                string_input = Some(str_val.to_rust_string_lossy(scope));
                             }
+
+                            let result = if let Some(bytes) = bytes_to_decode {
+                                let encoding_rs_encoding =
+                                    encoding_rs::Encoding::for_label(b"utf-8").unwrap();
+                                if fatal {
+                                    match encoding_rs_encoding
+                                        .decode_without_bom_handling_and_without_replacement(&bytes)
+                                    {
+                                        Some(decoded) => {
+                                            let mut decoded = decoded.into_owned();
+                                            if !ignore_bom && decoded.starts_with('\u{feff}') {
+                                                decoded.remove(0);
+                                            }
+                                            decoded
+                                        }
+                                        None => {
+                                            let error = v8::String::new(
+                                                scope,
+                                                "The encoded data was not valid UTF-8",
+                                            )
+                                            .unwrap();
+                                            let exception = v8::Exception::type_error(scope, error);
+                                            scope.throw_exception(exception);
+                                            return;
+                                        }
+                                    }
+                                } else if ignore_bom {
+                                    encoding_rs_encoding
+                                        .decode_without_bom_handling(&bytes)
+                                        .0
+                                        .into_owned()
+                                } else {
+                                    encoding_rs_encoding.decode(&bytes).0.into_owned()
+                                }
+                            } else {
+                                string_input.unwrap_or_default()
+                            };
 
                             let result_val = v8::String::new(scope, &result).unwrap();
                             retval.set(result_val.into());
@@ -13990,6 +18696,25 @@ impl MinimalRuntime {
                 } else {
                     "Event".to_string()
                 };
+                let mut bubbles = false;
+                let mut cancelable = false;
+                if args.length() >= 2 {
+                    let init = args.get(1);
+                    if init.is_object() && !init.is_null() {
+                        if let Ok(init_obj) = v8::Local::<v8::Object>::try_from(init) {
+                            let bubbles_key = v8::String::new(scope, "bubbles").unwrap();
+                            bubbles = init_obj
+                                .get(scope, bubbles_key.into())
+                                .map(|value| value.to_boolean(scope).boolean_value(scope))
+                                .unwrap_or(false);
+                            let cancelable_key = v8::String::new(scope, "cancelable").unwrap();
+                            cancelable = init_obj
+                                .get(scope, cancelable_key.into())
+                                .map(|value| value.to_boolean(scope).boolean_value(scope))
+                                .unwrap_or(false);
+                        }
+                    }
+                }
 
                 let event_type_key = v8::String::new(scope, "type").unwrap().into();
                 let event_type_val = v8::String::new(scope, &event_type).unwrap().into();
@@ -13997,12 +18722,12 @@ impl MinimalRuntime {
 
                 // Add bubbles property
                 let bubbles_key = v8::String::new(scope, "bubbles").unwrap().into();
-                let bubbles_val = v8::Boolean::new(scope, false);
+                let bubbles_val = v8::Boolean::new(scope, bubbles);
                 event_obj.set(scope, bubbles_key, bubbles_val.into());
 
                 // Add cancelable property
                 let cancelable_key = v8::String::new(scope, "cancelable").unwrap().into();
-                let cancelable_val = v8::Boolean::new(scope, true);
+                let cancelable_val = v8::Boolean::new(scope, cancelable);
                 event_obj.set(scope, cancelable_key, cancelable_val.into());
 
                 // Add defaultPrevented property
@@ -14018,6 +18743,14 @@ impl MinimalRuntime {
                      args: v8::FunctionCallbackArguments,
                      _retval: v8::ReturnValue| {
                         let this = args.this();
+                        let cancelable_key = v8::String::new(scope, "cancelable").unwrap().into();
+                        let is_cancelable = this
+                            .get(scope, cancelable_key)
+                            .map(|value| value.to_boolean(scope).boolean_value(scope))
+                            .unwrap_or(false);
+                        if !is_cancelable {
+                            return;
+                        }
                         let default_prevented_key =
                             v8::String::new(scope, "defaultPrevented").unwrap().into();
                         let true_val = v8::Boolean::new(scope, true);
@@ -14207,10 +18940,21 @@ impl MinimalRuntime {
                         result_obj.set(scope, buffer_key, buffer_fn.into());
                     }
                     "process" => {
-                        // Return process module with env property
-                        let env_obj = v8::Object::new(scope);
-                        let env_key = v8::String::new(scope, "env").unwrap().into();
-                        result_obj.set(scope, env_key, env_obj.into());
+                        let context = scope.get_current_context();
+                        let global = context.global(scope);
+                        let process_key = v8::String::new(scope, "process").unwrap();
+                        if let Some(process_value) = global.get(scope, process_key.into()) {
+                            if !process_value.is_undefined() {
+                                retval.set(process_value);
+                                return;
+                            }
+                        }
+
+                        let error_str = v8::String::new(scope, "process global is not available")
+                            .unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
+                        return;
                     }
                     "path" => {
                         // Return path module with join function
@@ -15051,7 +19795,7 @@ impl MinimalRuntime {
                     // v0.3.281: Added readline to the list of builtin modules
                     "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
                     "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
-                    "readline" => {
+                    "readline" | "performance" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
@@ -15176,6 +19920,137 @@ impl MinimalRuntime {
 
                         // Try to resolve as file path
                         if module_path.exists() && module_path.is_file() {
+                            let module_format = match crate::nodejs_core::commonjs_resolver::classify_commonjs_file(&module_path) {
+                                Ok(module_format) => module_format,
+                                Err(error) => {
+                                    let error_str =
+                                        v8::String::new(scope, &error.to_string()).unwrap();
+                                    let error_obj = v8::Exception::error(scope, error_str);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+                            };
+                            if module_format
+                                == crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::EsModule
+                            {
+                                let cache_global_key = v8::String::new(scope, "__beejsEsmNamespaceCache").unwrap();
+                                let cache_obj = match global.get(scope, cache_global_key.into())
+                                    .and_then(|value| v8::Local::<v8::Object>::try_from(value).ok())
+                                {
+                                    Some(cache_obj) => cache_obj,
+                                    None => {
+                                        let cache_obj = v8::Object::new(scope);
+                                        global.set(scope, cache_global_key.into(), cache_obj.into());
+                                        cache_obj
+                                    }
+                                };
+                                let fingerprint_cache_global_key =
+                                    v8::String::new(scope, "__beejsEsmNamespaceFingerprintCache").unwrap();
+                                let fingerprint_cache_obj = match global.get(scope, fingerprint_cache_global_key.into())
+                                    .and_then(|value| v8::Local::<v8::Object>::try_from(value).ok())
+                                {
+                                    Some(cache_obj) => cache_obj,
+                                    None => {
+                                        let cache_obj = v8::Object::new(scope);
+                                        global.set(
+                                            scope,
+                                            fingerprint_cache_global_key.into(),
+                                            cache_obj.into(),
+                                        );
+                                        cache_obj
+                                    }
+                                };
+                                let cache_key_string = module_path.to_string_lossy().to_string();
+                                let cache_key = v8::String::new(scope, &cache_key_string).unwrap();
+
+                                if let Some(cached_namespace) = cache_obj.get(scope, cache_key.into()) {
+                                    if !cached_namespace.is_undefined() {
+                                        if let Some(graph_fingerprints) = fingerprint_cache_obj
+                                            .get(scope, cache_key.into())
+                                            .and_then(|value| {
+                                                v8::Local::<v8::Object>::try_from(value).ok()
+                                            })
+                                        {
+                                            match Self::cached_esm_namespace_graph_is_fresh(
+                                                scope,
+                                                graph_fingerprints,
+                                            ) {
+                                                Ok(true) => {
+                                                    retval.set(cached_namespace);
+                                                    return;
+                                                }
+                                                Ok(false) => {}
+                                                Err(error) => {
+                                                    let error_str =
+                                                        v8::String::new(scope, &error).unwrap();
+                                                    let error_obj =
+                                                        v8::Exception::type_error(scope, error_str);
+                                                    scope.throw_exception(error_obj.into());
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if let Err(error) = crate::permissions::check_global_permission(
+                                    crate::permissions::PermissionKind::FileSystem,
+                                    crate::permissions::PermissionAction::Read,
+                                    crate::permissions::ResourceId::Path(module_path.clone()),
+                                ) {
+                                    let error_str =
+                                        v8::String::new(scope, &error.to_string()).unwrap();
+                                    let error_obj = v8::Exception::type_error(scope, error_str);
+                                    scope.throw_exception(error_obj.into());
+                                    return;
+                                }
+
+                                let module_code = match std::fs::read_to_string(&module_path) {
+                                    Ok(module_code) => module_code,
+                                    Err(error) => {
+                                        let error_msg = format!(
+                                            "Error loading ES module '{}': {}",
+                                            module_path.display(),
+                                            error
+                                        );
+                                        let error_str =
+                                            v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_str);
+                                        scope.throw_exception(error_obj.into());
+                                        return;
+                                    }
+                                };
+
+                                let module_filename = module_path.to_string_lossy().to_string();
+                                match Self::execute_esm_module_namespace(
+                                    scope,
+                                    &module_code,
+                                    &module_filename,
+                                    Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
+                                ) {
+                                    Ok((namespace, source_fingerprints)) => {
+                                        let graph_fingerprints =
+                                            Self::create_esm_namespace_graph_fingerprint_object(
+                                                scope,
+                                                &source_fingerprints,
+                                            );
+                                        cache_obj.set(scope, cache_key.into(), namespace);
+                                        fingerprint_cache_obj.set(
+                                            scope,
+                                            cache_key.into(),
+                                            graph_fingerprints.into(),
+                                        );
+                                        retval.set(namespace);
+                                    }
+                                    Err(error) => {
+                                        let error_str = v8::String::new(scope, &error).unwrap();
+                                        let error_obj = v8::Exception::error(scope, error_str);
+                                        scope.throw_exception(error_obj.into());
+                                    }
+                                }
+                                return;
+                            }
+
                             let cache_global_key = v8::String::new(scope, "__beejsModuleCache").unwrap();
                             let cache_obj = match global.get(scope, cache_global_key.into())
                                 .and_then(|value| v8::Local::<v8::Object>::try_from(value).ok())
@@ -15212,7 +20087,9 @@ impl MinimalRuntime {
 
                             match std::fs::read_to_string(&module_path) {
                                 Ok(code) => {
-                                    if module_path.extension().and_then(|ext| ext.to_str()) == Some("json") {
+                                    if module_format
+                                        == crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::Json
+                                    {
                                         let json_value = match serde_json::from_str::<serde_json::Value>(&code) {
                                             Ok(value) => value,
                                             Err(error) => {
@@ -15234,8 +20111,14 @@ impl MinimalRuntime {
                                         return;
                                     }
 
-                                    let code = if module_path.extension().and_then(|ext| ext.to_str()) == Some("ts") {
-                                        match Self::transpile_typescript_to_js(&code) {
+                                    let code = if module_format
+                                        == crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::TypeScript
+                                    {
+                                        let module_filename = module_path.to_string_lossy().to_string();
+                                        match Self::compile_typescript_commonjs_module(
+                                            &code,
+                                            &module_filename,
+                                        ) {
                                             Ok(js_code) => js_code,
                                             Err(error) => {
                                                 let error_msg = format!(
@@ -15249,6 +20132,54 @@ impl MinimalRuntime {
                                                     v8::Exception::syntax_error(scope, error_str);
                                                 scope.throw_exception(error_obj.into());
                                                 return;
+                                            }
+                                        }
+                                    } else if module_format
+                                        == crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::TypeScriptJsx
+                                    {
+                                        let module_filename = module_path.to_string_lossy().to_string();
+                                        match crate::typescript::compile_typescript(
+                                            &code,
+                                            &module_filename,
+                                        ) {
+                                            Ok(output) => output.js_code,
+                                            Err(error) => {
+                                                if !(error.contains("TSX/JSX")
+                                                    && error.contains("unsupported"))
+                                                {
+                                                    match Self::transpile_typescript_to_js(&code) {
+                                                        Ok(js_code) => js_code,
+                                                        Err(error) => {
+                                                            let error_msg = format!(
+                                                                "Error compiling TypeScript module '{}': {}",
+                                                                module_path.display(),
+                                                                error
+                                                            );
+                                                            let error_str = v8::String::new(
+                                                                scope, &error_msg,
+                                                            )
+                                                            .unwrap();
+                                                            let error_obj =
+                                                                v8::Exception::syntax_error(
+                                                                    scope, error_str,
+                                                                );
+                                                            scope.throw_exception(error_obj.into());
+                                                            return;
+                                                        }
+                                                    }
+                                                } else {
+                                                let error_msg = format!(
+                                                    "Error compiling TypeScript module '{}': {}",
+                                                    module_path.display(),
+                                                    error
+                                                );
+                                                let error_str =
+                                                    v8::String::new(scope, &error_msg).unwrap();
+                                                let error_obj =
+                                                    v8::Exception::syntax_error(scope, error_str);
+                                                scope.throw_exception(error_obj.into());
+                                                return;
+                                                }
                                             }
                                         }
                                     } else {
@@ -15290,6 +20221,7 @@ function require(specifier) {{
     globalThis.__filename = __previousFilename;
   }}
 }}
+require.main = __beejsGlobalRequire.main;
 require.resolve = function(specifier) {{
   const __previousDirname = globalThis.__dirname;
   const __previousFilename = globalThis.__filename;
@@ -15308,8 +20240,21 @@ require.resolve = function(specifier) {{
 
                                     // Compile and run the module code
                                     let script_source = v8::String::new(scope, &wrapper_code).unwrap();
-                                    let script = v8::Script::compile(scope, script_source, None).unwrap();
-                                    let wrapper_func_val = script.run(scope).unwrap();
+                                    let Some(script) = v8::Script::compile(scope, script_source, None) else {
+                                        let error_msg = format!(
+                                            "Error compiling CommonJS module '{}'",
+                                            module_path.display()
+                                        );
+                                        let error_str =
+                                            v8::String::new(scope, &error_msg).unwrap();
+                                        let error_obj =
+                                            v8::Exception::syntax_error(scope, error_str);
+                                        scope.throw_exception(error_obj.into());
+                                        return;
+                                    };
+                                    let Some(wrapper_func_val) = script.run(scope) else {
+                                        return;
+                                    };
 
                                     // Convert to function
                                     let wrapper_func = v8::Local::<v8::Function>::try_from(wrapper_func_val).unwrap();
@@ -15433,6 +20378,9 @@ require.resolve = function(specifier) {{
         .unwrap();
         let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
         require_fn.set(scope, resolve_key, resolve_fn.into());
+
+        let require_main_key = v8::String::new(scope, "main").unwrap().into();
+        require_fn.set(scope, require_main_key, module_obj.clone().into());
 
         // Set global objects
         let require_key = v8::String::new(scope, "require").unwrap().into();
@@ -16625,7 +21573,7 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let _command = args
+                let command = args
                     .get(0)
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
@@ -16633,40 +21581,21 @@ require.resolve = function(specifier) {{
                 if let Err(error) = crate::permissions::check_global_permission(
                     crate::permissions::PermissionKind::Process,
                     crate::permissions::PermissionAction::Execute,
-                    crate::permissions::ResourceId::Name(_command.clone()),
+                    crate::permissions::ResourceId::Name(command.clone()),
                 ) {
                     let error_message = v8::String::new(scope, &error.to_string()).unwrap();
                     let error_obj = v8::Exception::error(scope, error_message);
                     scope.throw_exception(error_obj.into());
                     return;
                 }
-                let child_obj = v8::Object::new(scope);
-
-                // Set properties - pre-create null value first to avoid borrow conflicts
-                let null_local = v8::null(scope);
-                let false_local = v8::Boolean::new(scope, false);
-
-                let stdout_key = v8::String::new(scope, "stdout").unwrap();
-                let stdout_val = v8::String::new(scope, "").unwrap();
-                child_obj.set(scope, stdout_key.into(), stdout_val.into());
-
-                let stderr_key = v8::String::new(scope, "stderr").unwrap();
-                let stderr_val = v8::String::new(scope, "").unwrap();
-                child_obj.set(scope, stderr_key.into(), stderr_val.into());
-
-                let pid_key = v8::String::new(scope, "pid").unwrap();
-                let pid_val = v8::Integer::new(scope, 0);
-                child_obj.set(scope, pid_key.into(), pid_val.into());
-
-                let killed_key = v8::String::new(scope, "killed").unwrap();
-                child_obj.set(scope, killed_key.into(), false_local.into());
-
-                let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
-                child_obj.set(scope, exit_code_key.into(), null_local.into());
-
-                let signal_key = v8::String::new(scope, "signal").unwrap();
-                child_obj.set(scope, signal_key.into(), null_local.into());
-
+                let callback = if args.get(1).is_function() {
+                    args.get(1)
+                } else {
+                    args.get(2)
+                };
+                let output = child_process_output_from_result(run_shell_command(&command));
+                call_child_process_callback(scope, callback, &output);
+                let child_obj = child_process_output_object(scope, &output);
                 retval.set(child_obj.into());
             },
         );
@@ -16688,31 +21617,17 @@ require.resolve = function(specifier) {{
                 if let Err(error) = crate::permissions::check_global_permission(
                     crate::permissions::PermissionKind::Process,
                     crate::permissions::PermissionAction::Execute,
-                    crate::permissions::ResourceId::Name(command),
+                    crate::permissions::ResourceId::Name(command.clone()),
                 ) {
                     let error_message = v8::String::new(scope, &error.to_string()).unwrap();
                     let error_obj = v8::Exception::error(scope, error_message);
                     scope.throw_exception(error_obj.into());
                     return;
                 }
-                let child_obj = v8::Object::new(scope);
-
-                let null_local = v8::null(scope);
-                let false_local = v8::Boolean::new(scope, false);
-
-                let pid_key = v8::String::new(scope, "pid").unwrap();
-                let pid_val = v8::Integer::new(scope, 0);
-                child_obj.set(scope, pid_key.into(), pid_val.into());
-
-                let killed_key = v8::String::new(scope, "killed").unwrap();
-                child_obj.set(scope, killed_key.into(), false_local.into());
-
-                let exit_code_key = v8::String::new(scope, "exitCode").unwrap();
-                child_obj.set(scope, exit_code_key.into(), null_local.into());
-
-                let signal_key = v8::String::new(scope, "signal").unwrap();
-                child_obj.set(scope, signal_key.into(), null_local.into());
-
+                let spawn_args = string_vec_from_v8_array_value(scope, args.get(1));
+                let output = Command::new(&command).args(spawn_args).output();
+                let output = child_process_output_from_result(output);
+                let child_obj = child_process_output_object(scope, &output);
                 retval.set(child_obj.into());
             },
         );
@@ -16726,7 +21641,7 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let _file = args
+                let file = args
                     .get(0)
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
@@ -16734,27 +21649,26 @@ require.resolve = function(specifier) {{
                 if let Err(error) = crate::permissions::check_global_permission(
                     crate::permissions::PermissionKind::Process,
                     crate::permissions::PermissionAction::Execute,
-                    crate::permissions::ResourceId::Name(_file.clone()),
+                    crate::permissions::ResourceId::Name(file.clone()),
                 ) {
                     let error_message = v8::String::new(scope, &error.to_string()).unwrap();
                     let error_obj = v8::Exception::error(scope, error_message);
                     scope.throw_exception(error_obj.into());
                     return;
                 }
-                let child_obj = v8::Object::new(scope);
-
-                let stdout_key = v8::String::new(scope, "stdout").unwrap();
-                let stdout_val = v8::String::new(scope, "").unwrap();
-                child_obj.set(scope, stdout_key.into(), stdout_val.into());
-
-                let stderr_key = v8::String::new(scope, "stderr").unwrap();
-                let stderr_val = v8::String::new(scope, "").unwrap();
-                child_obj.set(scope, stderr_key.into(), stderr_val.into());
-
-                let pid_key = v8::String::new(scope, "pid").unwrap();
-                let pid_val = v8::Integer::new(scope, 0);
-                child_obj.set(scope, pid_key.into(), pid_val.into());
-
+                let args_or_callback = args.get(1);
+                let callback = if args_or_callback.is_function() {
+                    args_or_callback
+                } else if args.get(2).is_function() {
+                    args.get(2)
+                } else {
+                    args.get(3)
+                };
+                let exec_args = string_vec_from_v8_array_value(scope, args_or_callback);
+                let output = Command::new(&file).args(exec_args).output();
+                let output = child_process_output_from_result(output);
+                call_child_process_callback(scope, callback, &output);
+                let child_obj = child_process_output_object(scope, &output);
                 retval.set(child_obj.into());
             },
         );

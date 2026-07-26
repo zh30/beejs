@@ -7,8 +7,6 @@
 // - V8 初始化时间测试
 // - Runtime 初始化时间测试
 
-use std::collections::{BTreeMap, HashMap};
-
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use rusty_v8::Isolate;
 use std::time::{Duration, Instant};

@@ -27,6 +27,23 @@ fn reset_global_broker() {
         .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
 }
 
+fn empty_package_json() -> PackageJson {
+    PackageJson {
+        name: "fixture".to_string(),
+        version: "1.0.0".to_string(),
+        description: None,
+        main: None,
+        scripts: None,
+        dependencies: None,
+        dev_dependencies: None,
+        peer_dependencies: None,
+        optional_dependencies: None,
+        author: None,
+        license: None,
+        repository: None,
+    }
+}
+
 fn finish_archive(builder: Builder<GzEncoder<fs::File>>) {
     let encoder = builder.into_inner().unwrap();
     encoder.finish().unwrap();
@@ -93,6 +110,43 @@ where
 
 fn file_url(path: &Path) -> String {
     format!("file://{}", path.display())
+}
+
+fn sha1_shasum(path: &Path) -> String {
+    use sha1::Digest as _;
+
+    let bytes = fs::read(path).unwrap();
+    hex::encode(sha1::Sha1::digest(&bytes))
+}
+
+fn sha512_integrity(path: &Path) -> String {
+    use base64::Engine as _;
+    use sha2::Digest as _;
+
+    let bytes = fs::read(path).unwrap();
+    let digest = sha2::Sha512::digest(&bytes);
+    format!(
+        "sha512-{}",
+        base64::engine::general_purpose::STANDARD.encode(digest)
+    )
+}
+
+struct CurrentDirGuard {
+    original: std::path::PathBuf,
+}
+
+impl CurrentDirGuard {
+    fn switch_to(path: &Path) -> Self {
+        let original = std::env::current_dir().expect("failed to read current directory");
+        std::env::set_current_dir(path).expect("failed to switch current directory");
+        Self { original }
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.original);
+    }
 }
 
 #[test]
@@ -369,6 +423,326 @@ fn generate_package_lock_uses_global_file_write_broker() {
         !lock_path.exists(),
         "denied package-lock generation must not create {}",
         lock_path.display()
+    );
+}
+
+#[test]
+#[serial]
+fn get_installed_packages_uses_global_file_read_broker_before_scanning_node_modules() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let node_modules_dir = temp_dir.path().join("node_modules");
+    let package_dir = node_modules_dir.join("installed");
+    fs::create_dir_all(&package_dir).unwrap();
+    fs::write(
+        package_dir.join("package.json"),
+        r#"{"name":"installed","version":"1.0.0"}"#,
+    )
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(node_modules_dir.clone()),
+        );
+    }
+
+    let result = pm.get_installed_packages();
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied installed package scan must fail");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+}
+
+#[test]
+#[serial]
+fn clean_cache_uses_global_file_write_broker_before_removing_cache() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let cache_dir = temp_dir.path().join("cache");
+    let cached_file = cache_dir.join("kept.txt");
+    fs::write(&cached_file, "cached").unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(cache_dir.clone()),
+        );
+    }
+
+    let result = pm.clean_cache();
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied cache clean must fail before deleting cache");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        cached_file.exists(),
+        "denied cache clean must not delete {}",
+        cached_file.display()
+    );
+}
+
+#[test]
+#[serial]
+fn generate_package_lock_uses_global_file_read_broker_for_nested_dependencies() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let package_dir = temp_dir.path().join("node_modules").join("parent");
+    let nested_node_modules = package_dir.join("node_modules");
+    let nested_package = nested_node_modules.join("child");
+    let lock_path = temp_dir.path().join("package-lock.json");
+    fs::create_dir_all(&nested_package).unwrap();
+    fs::write(
+        package_dir.join("package.json"),
+        r#"{"name":"parent","version":"1.0.0"}"#,
+    )
+    .unwrap();
+    fs::write(
+        nested_package.join("package.json"),
+        r#"{"name":"child","version":"1.0.0"}"#,
+    )
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(nested_node_modules.clone()),
+        );
+    }
+
+    let result = pm.generate_package_lock(&lock_path, "fixture", "1.0.0");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied nested package scan must fail before lock write");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !lock_path.exists(),
+        "denied nested scan must not write {}",
+        lock_path.display()
+    );
+}
+
+#[test]
+#[serial]
+fn prune_uses_global_file_read_broker_before_scanning_node_modules() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let node_modules_dir = temp_dir.path().join("node_modules");
+    let unused_package = node_modules_dir.join("unused");
+    fs::create_dir_all(&unused_package).unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(node_modules_dir.clone()),
+        );
+    }
+
+    let result = pm.prune(&empty_package_json());
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied prune scan must fail before reading node_modules");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        unused_package.exists(),
+        "denied prune scan must not remove {}",
+        unused_package.display()
+    );
+}
+
+#[test]
+#[serial]
+fn prune_uses_global_file_write_broker_before_removing_package() {
+    let temp_dir = TempDir::new().unwrap();
+    let pm = package_manager(&temp_dir);
+    let unused_package = temp_dir.path().join("node_modules").join("unused");
+    fs::create_dir_all(&unused_package).unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(unused_package.clone()),
+        );
+    }
+
+    let result = pm.prune(&empty_package_json());
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied prune removal must fail before deleting package");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        unused_package.exists(),
+        "denied prune removal must not delete {}",
+        unused_package.display()
+    );
+}
+
+#[test]
+#[serial]
+fn install_package_exact_checks_package_json_write_before_registry_access() {
+    let temp_dir = TempDir::new().unwrap();
+    let _cwd = CurrentDirGuard::switch_to(temp_dir.path());
+    let package_json_path = temp_dir.path().join("package.json");
+    fs::write(
+        &package_json_path,
+        r#"{"name":"exact-policy-fixture","version":"1.0.0","dependencies":{"pkg":"1.0.0"}}"#,
+    )
+    .unwrap();
+    let original_package_json = fs::read_to_string(&package_json_path).unwrap();
+    let pm = PackageManager::new(PackageManagerConfig {
+        registry_url: file_url(&temp_dir.path().join("missing-registry")),
+        cache_dir: temp_dir.path().join("cache"),
+        node_modules_dir: temp_dir.path().join("node_modules"),
+        ..Default::default()
+    })
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(package_json_path.clone()),
+        );
+    }
+
+    let result = pm.install_package_exact("pkg", "1.0.0");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied package.json write must fail before registry access");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert_eq!(
+        fs::read_to_string(&package_json_path).unwrap(),
+        original_package_json,
+        "denied exact install must not rewrite package.json"
+    );
+    assert!(
+        !temp_dir.path().join("node_modules").join("pkg").exists(),
+        "denied exact install must not extract package before package.json write is allowed"
+    );
+}
+
+#[test]
+#[serial]
+fn install_package_checks_target_write_before_download_side_effects() {
+    let temp_dir = TempDir::new().unwrap();
+    let registry_dir = temp_dir.path().join("registry");
+    fs::create_dir_all(&registry_dir).unwrap();
+    let archive_path = temp_dir.path().join("pkg.tgz");
+    create_tgz(&archive_path, |builder| {
+        append_file(builder, "package/index.js", b"module.exports = 1;\n");
+    });
+
+    fs::write(
+        registry_dir.join("pkg"),
+        format!(
+            r#"{{
+                "versions": {{
+                    "1.0.0": {{
+                        "dist": {{
+                            "tarball": "{}",
+                            "shasum": "{}"
+                        }}
+                    }}
+                }}
+            }}"#,
+            file_url(&archive_path),
+            sha1_shasum(&archive_path)
+        ),
+    )
+    .unwrap();
+
+    let cache_tarball = temp_dir.path().join("cache").join("pkg").join("1.0.0.tgz");
+    let package_dir = temp_dir.path().join("node_modules").join("pkg");
+    let pm = PackageManager::new(PackageManagerConfig {
+        registry_url: file_url(&registry_dir),
+        cache_dir: temp_dir.path().join("cache"),
+        node_modules_dir: temp_dir.path().join("node_modules"),
+        ..Default::default()
+    })
+    .unwrap();
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Write,
+            ResourceId::Path(package_dir.clone()),
+        );
+    }
+
+    let result = pm.install_package("pkg", "1.0.0");
+
+    reset_global_broker();
+
+    let error = result.expect_err("denied target write must fail before download");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !cache_tarball.exists(),
+        "denied target write must not download package into cache before failing"
+    );
+    assert!(
+        !package_dir.exists(),
+        "denied target write must not create {}",
+        package_dir.display()
     );
 }
 
@@ -652,6 +1026,102 @@ fn download_package_rejects_registry_entry_without_integrity_or_shasum() {
     assert!(
         result.is_err(),
         "download without integrity or shasum must not be treated as trusted"
+    );
+}
+
+#[test]
+#[serial]
+fn install_dependencies_rejects_registry_tarball_that_does_not_match_lock_integrity() {
+    let temp_dir = TempDir::new().unwrap();
+    let registry_dir = temp_dir.path().join("registry");
+    fs::create_dir_all(&registry_dir).unwrap();
+
+    let good_archive = temp_dir.path().join("good.tgz");
+    create_tgz(&good_archive, |builder| {
+        append_file(builder, "package/index.js", b"module.exports = 'good';\n");
+    });
+    let bad_archive = temp_dir.path().join("bad.tgz");
+    create_tgz(&bad_archive, |builder| {
+        append_file(builder, "package/index.js", b"module.exports = 'bad';\n");
+    });
+
+    fs::write(
+        temp_dir.path().join("package-lock.json"),
+        format!(
+            r#"{{
+                "name": "root",
+                "version": "1.0.0",
+                "lockfileVersion": 3,
+                "requires": true,
+                "dependencies": {{
+                    "pkg": {{
+                        "version": "1.0.0",
+                        "resolved": "{}",
+                        "integrity": "{}",
+                        "dev": false
+                    }}
+                }}
+            }}"#,
+            file_url(&bad_archive),
+            sha512_integrity(&good_archive)
+        ),
+    )
+    .unwrap();
+
+    fs::write(
+        registry_dir.join("pkg"),
+        format!(
+            r#"{{
+                "versions": {{
+                    "1.0.0": {{
+                        "dist": {{
+                            "tarball": "{}",
+                            "integrity": "{}"
+                        }}
+                    }}
+                }}
+            }}"#,
+            file_url(&bad_archive),
+            sha512_integrity(&bad_archive)
+        ),
+    )
+    .unwrap();
+
+    let pm = PackageManager::new(PackageManagerConfig {
+        registry_url: file_url(&registry_dir),
+        cache_dir: temp_dir.path().join("cache"),
+        node_modules_dir: temp_dir.path().join("node_modules"),
+        ..Default::default()
+    })
+    .unwrap();
+    let mut dependencies = HashMap::new();
+    dependencies.insert("pkg".to_string(), "1.0.0".to_string());
+    let package_json = PackageJson {
+        name: "root".to_string(),
+        version: "1.0.0".to_string(),
+        description: None,
+        main: None,
+        scripts: None,
+        dependencies: Some(dependencies),
+        dev_dependencies: None,
+        peer_dependencies: None,
+        optional_dependencies: None,
+        author: None,
+        license: None,
+        repository: None,
+    };
+
+    let result = pm.install_dependencies(&package_json);
+
+    let error = result.expect_err("lockfile integrity mismatch must reject install");
+    let error = error.to_string();
+    assert!(
+        error.contains("lockfile") && error.contains("integrity"),
+        "lockfile integrity error should be explicit, got: {error}"
+    );
+    assert!(
+        !temp_dir.path().join("node_modules").join("pkg").exists(),
+        "lockfile integrity mismatch must not leave installed package behind"
     );
 }
 

@@ -321,7 +321,9 @@ fn test_ecdh_generatekey_p256_public_key_is_uncompressed_point() {
                 true,
                 ['deriveKey', 'deriveBits']
             );
-            const publicBytes = new Uint8Array(keyPair.publicKey.__beejs_key_data__);
+            const publicBytes = new Uint8Array(
+                await crypto.subtle.exportKey('raw', keyPair.publicKey)
+            );
             return publicBytes.length === 65 && publicBytes[0] === 4;
         })();
     "#;

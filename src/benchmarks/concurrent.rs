@@ -8,10 +8,8 @@
 // - 工作窃取性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, Mutex};
-
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::task::{self, JoinHandle};
 
@@ -99,7 +97,7 @@ impl ConcurrentBenchmark {
             let counter: _ = Arc::new(Mutex::new(0));
             let mut handles = Vec::new();
             for _ in 0..10 {
-                let counter: _ = Arc::clone(counter);
+                let counter: _ = Arc::clone(&counter);
                 handles.push(std::thread::spawn(move || {
                     for _ in 0..1000 {
                         let mut c = counter.lock().unwrap();
@@ -126,10 +124,10 @@ impl ConcurrentBenchmark {
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark("lock_free_counter", MetricType::Throughput, || {
             // 模拟无锁计数器
-            let counter: _ = Arc::new(Mutex::new(AtomicUsize::new(0)));
+            let counter: _ = Arc::new(AtomicUsize::new(0));
             let mut handles = Vec::new();
             for _ in 0..10 {
-                let counter: _ = Arc::clone(counter);
+                let counter: _ = Arc::clone(&counter);
                 handles.push(std::thread::spawn(move || {
                     for _ in 0..1000 {
                         counter.fetch_add(1, Ordering::SeqCst);
@@ -200,7 +198,7 @@ impl ConcurrentBenchmark {
                 })
                 .collect();
             // 消费者
-            std::thread::spawn(move || {
+            let consumer_result = std::thread::spawn(move || {
                 let mut sum = 0;
                 for _ in 0..(num_producers * 100) {
                     if let Ok(val) = rx.recv() {
@@ -210,7 +208,11 @@ impl ConcurrentBenchmark {
                 sum
             })
             .join()
-            .unwrap()
+            .unwrap();
+            for handle in producer_handles {
+                handle.join().unwrap();
+            }
+            consumer_result
         })
     }
     /// 数据竞争检测测试
@@ -228,7 +230,7 @@ impl ConcurrentBenchmark {
             let shared: _ = Arc::new(Mutex::new(0));
             let mut handles = Vec::new();
             for _ in 0..10 {
-                let shared: _ = Arc::clone(shared);
+                let shared: _ = Arc::clone(&shared);
                 handles.push(std::thread::spawn(move || {
                     // 故意引入潜在的竞争条件
                     let _guard: _ = shared.lock().unwrap();

@@ -155,6 +155,17 @@ impl<T> ExtendedMatcher<T> {
         ExtendedMatcher::LessThanOrEqual(value)
     }
 }
+
+fn is_js_truthy(value: serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Null => false,
+        serde_json::Value::Bool(value) => value,
+        serde_json::Value::Number(number) => number.as_f64().unwrap_or(0.0) != 0.0,
+        serde_json::Value::String(value) => !value.is_empty(),
+        serde_json::Value::Array(_) | serde_json::Value::Object(_) => true,
+    }
+}
+
 impl<T> Matcher<T> for ExtendedMatcher<T>
 where
     T: PartialEq + std::fmt::Debug + serde::Serialize + Clone,
@@ -232,51 +243,23 @@ where
             ExtendedMatcher::Truthy => {
                 // Check if value is truthy
                 let json: _ = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
-                match json {
-                    serde_json::Value::Null => false,
-                    serde_json::Value::Bool(b) => b,
-                    serde_json::Value::Number(n) => n.as_f64().unwrap_or(0.0) != 0.0,
-                    serde_json::Value::String(s) => !s.is_empty() && s != "false" && s != "0",
-                    serde_json::Value::Array(arr) => !arr.is_empty(),
-                    serde_json::Value::Object(obj) => !obj.is_empty(),
-                }
+                is_js_truthy(json)
             }
             ExtendedMatcher::Falsy => {
                 // Check if value is falsy
                 let json: _ = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
-                match json {
-                    serde_json::Value::Null => true,
-                    serde_json::Value::Bool(b) => !b,
-                    serde_json::Value::Number(n) => n.as_f64().unwrap_or(0.0) == 0.0,
-                    serde_json::Value::String(s) => s.is_empty() || s == "false" || s == "0",
-                    serde_json::Value::Array(arr) => arr.is_empty(),
-                    serde_json::Value::Object(obj) => obj.is_empty(),
-                }
+                !is_js_truthy(json)
             }
             // Stage 93 Phase 3.4 - New matchers implementation
             ExtendedMatcher::ToBeTruthy => {
                 // toBeTruthy - checks if value is truthy with type awareness
                 let json: _ = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
-                match json {
-                    serde_json::Value::Null => false,
-                    serde_json::Value::Bool(b) => b,
-                    serde_json::Value::Number(n) => n.as_f64().unwrap_or(0.0) != 0.0,
-                    serde_json::Value::String(s) => !s.is_empty() && s != "false" && s != "0",
-                    serde_json::Value::Array(arr) => !arr.is_empty(),
-                    serde_json::Value::Object(obj) => !obj.is_empty(),
-                }
+                is_js_truthy(json)
             }
             ExtendedMatcher::ToBeFalsy => {
                 // toBeFalsy - checks if value is falsy with type awareness
                 let json: _ = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
-                match json {
-                    serde_json::Value::Null => true,
-                    serde_json::Value::Bool(b) => !b,
-                    serde_json::Value::Number(n) => n.as_f64().unwrap_or(0.0) == 0.0,
-                    serde_json::Value::String(s) => s.is_empty() || s == "false" || s == "0",
-                    serde_json::Value::Array(arr) => arr.is_empty(),
-                    serde_json::Value::Object(obj) => obj.is_empty(),
-                }
+                !is_js_truthy(json)
             }
             ExtendedMatcher::Throw(expected_message) => {
                 // toThrow - validates error throwing

@@ -82,9 +82,26 @@ impl PerformanceState {
     }
 }
 
+struct PerformanceClock {
+    time_origin_ms: f64,
+    start_instant: Instant,
+}
+
+impl PerformanceClock {
+    fn new() -> Self {
+        Self {
+            time_origin_ms: system_epoch_millis(),
+            start_instant: Instant::now(),
+        }
+    }
+}
+
 /// Global performance state (thread-safe for V8 main thread access)
 static PERFORMANCE_STATE: Lazy<Mutex<PerformanceState>> =
     Lazy::new(|| Mutex::new(PerformanceState::new()));
+
+/// Process-wide high-resolution clock for performance timeline values.
+static PERFORMANCE_CLOCK: Lazy<PerformanceClock> = Lazy::new(PerformanceClock::new);
 
 /// High-resolution time origin (time since system boot for macOS, or Unix epoch for others)
 #[cfg(target_os = "macos")]
@@ -101,34 +118,28 @@ fn get_time_origin() -> Instant {
     Instant::now()
 }
 
-/// Get high-resolution time in milliseconds (since time origin)
-fn get_high_res_time() -> f64 {
-    // Use SystemTime for time since Unix epoch
+fn system_epoch_millis() -> f64 {
     let now = SystemTime::now();
     let duration = now
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or(Duration::ZERO);
-    // Convert to milliseconds with sub-millisecond precision
     duration.as_secs_f64() * 1000.0
+}
+
+/// Get high-resolution time in milliseconds (since time origin)
+fn get_high_res_time() -> f64 {
+    PERFORMANCE_CLOCK.start_instant.elapsed().as_secs_f64() * 1000.0
 }
 
 /// Get high-resolution time in microseconds
 #[allow(dead_code)]
 fn get_high_res_time_us() -> f64 {
-    let now = SystemTime::now();
-    let duration = now
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or(Duration::ZERO);
-    duration.as_secs_f64() * 1_000_000.0
+    get_high_res_time() * 1000.0
 }
 
 /// Get the time origin timestamp in milliseconds
 fn get_time_origin_ms() -> f64 {
-    let now = SystemTime::now();
-    let duration = now
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or(Duration::ZERO);
-    duration.as_secs_f64() * 1000.0
+    PERFORMANCE_CLOCK.time_origin_ms
 }
 
 /// Setup performance API in the V8 context
@@ -229,7 +240,7 @@ pub fn setup_performance_api(
                     .get_mark(&start_mark)
                     .unwrap_or(0.0)
             } else {
-                get_time_origin_ms()
+                0.0
             };
 
             let end_time = if args.length() >= 3 {
@@ -600,8 +611,8 @@ mod tests {
     fn test_high_res_time() {
         let time_ms = get_high_res_time();
         let time_us = get_high_res_time_us();
-        assert!(time_ms > 0.0);
-        assert!(time_us > 0.0);
+        assert!(time_ms >= 0.0);
+        assert!(time_us >= 0.0);
         // Microseconds should be 1000x more precise
         assert!(time_us > time_ms * 1000.0 - 1.0);
     }

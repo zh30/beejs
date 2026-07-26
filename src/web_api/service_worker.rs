@@ -1,7 +1,9 @@
-// ServiceWorker API implementation for Web standard
-// v0.3.324: ServiceWorker support for background tasks, push notifications, and offline caching
-// v0.3.325: ServiceWorker lifecycle events (install, activate, fetch)
-// Provides ServiceWorkerRegistration, ServiceWorker, Cache, and CacheStorage APIs
+// ServiceWorker API boundary for Web standard compatibility.
+//
+// Beejs exposes the discovery surface (`navigator.serviceWorker`) but does not
+// yet have a real registration store, worker lifecycle, fetch interception, or
+// `waitUntil`/`respondWith` scheduling. Registration must therefore fail closed
+// instead of returning a resolved ServiceWorkerRegistration-shaped object.
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -430,55 +432,14 @@ fn service_worker_register_callback(
         return;
     }
 
-    // Get scope from options if provided
-    let scope_str = if args.length() > 1 {
-        let options = args.get(1);
-        if let Some(options_obj) = options.to_object(scope) {
-            let scope_key = v8::String::new(scope, "scope").unwrap();
-            if let Some(scope_val) = options_obj
-                .get(scope, scope_key.into())
-                .and_then(|s| s.to_string(scope))
-            {
-                scope_val.to_rust_string_lossy(scope)
-            } else {
-                "./".to_string()
-            }
-        } else {
-            "./".to_string()
-        }
-    } else {
-        "./".to_string()
-    };
-
-    // Create registration promise
     let resolver = v8::PromiseResolver::new(scope).unwrap();
     let promise = resolver.get_promise(scope);
-
-    // Create registration object
-    let registration_obj = v8::Object::new(scope);
-
-    // scope property
-    let scope_key = v8::String::new(scope, "scope").unwrap();
-    let scope_val = v8::String::new(scope, &scope_str).unwrap();
-    registration_obj.set(scope, scope_key.into(), scope_val.into());
-
-    // active property (null for now)
-    let active_key = v8::String::new(scope, "active").unwrap();
-    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
-    registration_obj.set(scope, active_key.into(), undefined);
-
-    // installing property (null for now)
-    let installing_key = v8::String::new(scope, "installing").unwrap();
-    registration_obj.set(scope, installing_key.into(), undefined);
-
-    // waiting property (null for now)
-    let waiting_key = v8::String::new(scope, "waiting").unwrap();
-    registration_obj.set(scope, waiting_key.into(), undefined);
-
-    // Resolve with registration
-    resolver.resolve(scope, registration_obj.into());
-
     rv.set(promise.into());
+
+    let error_message =
+        v8::String::new(scope, "ServiceWorker registration is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    resolver.reject(scope, error);
 }
 
 /// Setup Cache API
@@ -521,7 +482,10 @@ fn setup_cache_api(
     Ok(())
 }
 
-/// CacheStorage.open callback - returns a Promise that resolves to a Cache
+/// CacheStorage.open callback.
+///
+/// Beejs does not currently have a real CacheStorage backend. Reject instead of
+/// returning a Cache-shaped object whose mutating methods silently succeed.
 fn cache_storage_open_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
@@ -539,90 +503,9 @@ fn cache_storage_open_callback(
     let promise = resolver.get_promise(scope);
     rv.set(promise.into());
 
-    // Create Cache object
-    let cache_obj = v8::Object::new(scope);
-
-    // addAll method
-    let add_all_fn = v8::FunctionTemplate::new(scope, cache_add_all_callback);
-    let add_all_key = v8::String::new(scope, "addAll").unwrap();
-    let add_all_func = add_all_fn.get_function(scope).unwrap();
-    cache_obj.set(scope, add_all_key.into(), add_all_func.into());
-
-    // match method
-    let match_fn = v8::FunctionTemplate::new(scope, cache_match_callback);
-    let match_key = v8::String::new(scope, "match").unwrap();
-    let match_func = match_fn.get_function(scope).unwrap();
-    cache_obj.set(scope, match_key.into(), match_func.into());
-
-    // put method
-    let put_fn = v8::FunctionTemplate::new(scope, cache_put_callback);
-    let put_key = v8::String::new(scope, "put").unwrap();
-    let put_func = put_fn.get_function(scope).unwrap();
-    cache_obj.set(scope, put_key.into(), put_func.into());
-
-    // delete method
-    let delete_fn = v8::FunctionTemplate::new(scope, cache_delete_callback);
-    let delete_key = v8::String::new(scope, "delete").unwrap();
-    let delete_func = delete_fn.get_function(scope).unwrap();
-    cache_obj.set(scope, delete_key.into(), delete_func.into());
-
-    // keys method
-    let keys_fn = v8::FunctionTemplate::new(scope, cache_keys_callback);
-    let keys_key = v8::String::new(scope, "keys").unwrap();
-    let keys_func = keys_fn.get_function(scope).unwrap();
-    cache_obj.set(scope, keys_key.into(), keys_func.into());
-
-    // Resolve the promise with the Cache object
-    resolver.resolve(scope, cache_obj.into());
-}
-
-/// Cache.addAll callback
-fn cache_add_all_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
-    rv.set(undefined);
-}
-
-/// Cache.match callback
-fn cache_match_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
-    rv.set(undefined);
-}
-
-/// Cache.put callback
-fn cache_put_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
-    rv.set(undefined);
-}
-
-/// Cache.delete callback
-fn cache_delete_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    rv.set(v8::Boolean::new(scope, false).into());
-}
-
-/// Cache.keys callback
-fn cache_keys_callback(
-    scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
-) {
-    let empty_array = v8::Array::new(scope, 0);
-    rv.set(empty_array.into());
+    let error_message = v8::String::new(scope, "Cache API is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    resolver.reject(scope, error);
 }
 
 /// CacheStorage.keys callback
@@ -631,8 +514,19 @@ fn cache_storage_keys_callback(
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
+    let resolver = match v8::PromiseResolver::new(scope) {
+        Some(r) => r,
+        None => {
+            let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+            scope.throw_exception(error.into());
+            return;
+        }
+    };
+    let promise = resolver.get_promise(scope);
+    rv.set(promise.into());
+
     let empty_array = v8::Array::new(scope, 0);
-    rv.set(empty_array.into());
+    resolver.resolve(scope, empty_array.into());
 }
 
 /// CacheStorage.has callback
@@ -641,7 +535,19 @@ fn cache_storage_has_callback(
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    rv.set(v8::Boolean::new(scope, false).into());
+    let resolver = match v8::PromiseResolver::new(scope) {
+        Some(r) => r,
+        None => {
+            let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+            scope.throw_exception(error.into());
+            return;
+        }
+    };
+    let promise = resolver.get_promise(scope);
+    rv.set(promise.into());
+
+    let false_val = v8::Boolean::new(scope, false);
+    resolver.resolve(scope, false_val.into());
 }
 
 /// CacheStorage.delete callback
@@ -650,41 +556,25 @@ fn cache_storage_delete_callback(
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    rv.set(v8::Boolean::new(scope, false).into());
+    let resolver = match v8::PromiseResolver::new(scope) {
+        Some(r) => r,
+        None => {
+            let error = v8::String::new(scope, "Failed to create promise resolver").unwrap();
+            scope.throw_exception(error.into());
+            return;
+        }
+    };
+    let promise = resolver.get_promise(scope);
+    rv.set(promise.into());
+
+    let false_val = v8::Boolean::new(scope, false);
+    resolver.resolve(scope, false_val.into());
 }
 
 // =====================================================
 // Push API (v0.3.326)
 // Provides PushManager, PushSubscription, and PushEvent
 // =====================================================
-
-/// Macro to create a PushSubscription object with all required instance properties
-/// Methods are inherited from the prototype set via set_prototype_template
-macro_rules! create_push_subscription {
-    ($scope:expr) => {{
-        let subscription = v8::Object::new($scope);
-
-        // endpoint property - the push server URL
-        let endpoint = v8::String::new($scope, "https://push.example.com/subscribe/abc123").unwrap();
-        let endpoint_key = v8::String::new($scope, "endpoint").unwrap();
-        subscription.set($scope, endpoint_key.into(), endpoint.into());
-
-        // options property - object with subscription options
-        let options = v8::Object::new($scope);
-        let application_server_key = v8::String::new($scope, "applicationServerKey").unwrap();
-        let vapid_key = v8::String::new($scope, "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U").unwrap();
-        options.set($scope, application_server_key.into(), vapid_key.into());
-
-        let user_visible_only = v8::Boolean::new($scope, true);
-        let visible_key = v8::String::new($scope, "userVisibleOnly").unwrap();
-        options.set($scope, visible_key.into(), user_visible_only.into());
-
-        let options_key = v8::String::new($scope, "options").unwrap();
-        subscription.set($scope, options_key.into(), options.into());
-
-        subscription
-    }};
-}
 
 /// Setup Push API - PushManager, PushSubscription, PushEvent
 fn setup_push_api(
@@ -818,109 +708,46 @@ fn push_manager_constructor_callback(
     rv.set(v8::undefined(scope).into());
 }
 
-/// PushSubscription constructor - creates subscription objects
+/// PushSubscription constructor boundary.
 fn push_subscription_constructor_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    // Create a PushSubscription object using macro
-    let subscription = create_push_subscription!(scope);
-
-    // Add methods directly to the instance since prototype inheritance doesn't work
-    // with V8 FunctionTemplate's internal prototype chain
-
-    // getKey method
-    let get_key_fn = v8::FunctionTemplate::new(scope, push_subscription_get_key_callback);
-    let get_key_key = v8::String::new(scope, "getKey").unwrap();
-    let get_key_func = get_key_fn.get_function(scope).unwrap();
-    subscription.set(scope, get_key_key.into(), get_key_func.into());
-
-    // toJSON method
-    let to_json_fn = v8::FunctionTemplate::new(scope, push_subscription_to_json_callback);
-    let to_json_key = v8::String::new(scope, "toJSON").unwrap();
-    let to_json_func = to_json_fn.get_function(scope).unwrap();
-    subscription.set(scope, to_json_key.into(), to_json_func.into());
-
-    // unsubscribe method
-    let unsubscribe_fn = v8::FunctionTemplate::new(scope, push_subscription_unsubscribe_callback);
-    let unsubscribe_key = v8::String::new(scope, "unsubscribe").unwrap();
-    let unsubscribe_func = unsubscribe_fn.get_function(scope).unwrap();
-    subscription.set(scope, unsubscribe_key.into(), unsubscribe_func.into());
-
-    rv.set(subscription.into());
+    let error_message =
+        v8::String::new(scope, "PushSubscription construction is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    scope.throw_exception(error);
+    rv.set(v8::undefined(scope).into());
 }
 
-/// PushSubscription.getKey() - returns the key material for推送加密
+/// PushSubscription.getKey() boundary.
+///
+/// No real PushSubscription instances exist until Beejs has a push service,
+/// subscription store, and key generation backend. Direct prototype calls must
+/// not return fixed key material.
 fn push_subscription_get_key_callback(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
 ) {
-    let key_type = if args.length() > 0 {
-        args.get(0).to_rust_string_lossy(scope)
-    } else {
-        "p256dh".to_string()
-    };
-
-    if key_type == "p256dh" {
-        let key_data = [
-            0x04u8, 0xb2, 0x50, 0x75, 0x60, 0x4a, 0x4f, 0x5c, 0xf4, 0x4a, 0x3f, 0x5a, 0x8e, 0x0c,
-            0xa0, 0x1b, 0x5e, 0x3f, 0x4e, 0x5e, 0x8a, 0x2b, 0x5d, 0x4f, 0x5a, 0x5f, 0x4a, 0x5f,
-            0x5e, 0x3d, 0x4f, 0x5e, 0x5a, 0x4f, 0x5e, 0x5a, 0x3f, 0x5a, 0x4f, 0x5c, 0x5a, 0x4f,
-            0x5e, 0x4a, 0x5f, 0x5e, 0x3f, 0x5a,
-        ];
-        let array_buffer = v8::ArrayBuffer::new(scope, key_data.len());
-        let store = array_buffer.get_backing_store();
-        let slice = unsafe {
-            std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, key_data.len())
-        };
-        slice.copy_from_slice(&key_data);
-        rv.set(array_buffer.into());
-    } else if key_type == "auth" {
-        let auth_data = [0x5au8, 0x5f, 0x5e, 0x3f, 0x4a, 0x5f, 0x5e, 0x3d];
-        let array_buffer = v8::ArrayBuffer::new(scope, auth_data.len());
-        let store = array_buffer.get_backing_store();
-        let slice = unsafe {
-            std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, auth_data.len())
-        };
-        slice.copy_from_slice(&auth_data);
-        rv.set(array_buffer.into());
-    } else {
-        let null_val: v8::Local<v8::Value> = v8::null(scope).into();
-        rv.set(null_val);
-    }
+    let error_message = v8::String::new(scope, "PushSubscription is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    scope.throw_exception(error);
 }
 
-/// PushSubscription.toJSON() - returns a JSON representation
+/// PushSubscription.toJSON() boundary.
 fn push_subscription_to_json_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
+    _rv: v8::ReturnValue,
 ) {
-    let json_obj = v8::Object::new(scope);
-    let endpoint = v8::String::new(scope, "https://push.example.com/subscribe/abc123").unwrap();
-    let endpoint_key = v8::String::new(scope, "endpoint").unwrap();
-    json_obj.set(scope, endpoint_key.into(), endpoint.into());
-
-    let options = v8::Object::new(scope);
-    let app_server_key_str = v8::String::new(scope, "applicationServerKey").unwrap();
-    let user_visible_str = v8::String::new(scope, "userVisibleOnly").unwrap();
-    let vapid_key = v8::String::new(
-        scope,
-        "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
-    )
-    .unwrap();
-    let true_val = v8::Boolean::new(scope, true);
-    options.set(scope, app_server_key_str.into(), vapid_key.into());
-    options.set(scope, user_visible_str.into(), true_val.into());
-
-    let keys_key = v8::String::new(scope, "keys").unwrap();
-    json_obj.set(scope, keys_key.into(), options.into());
-    rv.set(json_obj.into());
+    let error_message = v8::String::new(scope, "PushSubscription is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    scope.throw_exception(error);
 }
 
-/// PushSubscription.unsubscribe() - unsubscribes from push
+/// PushSubscription.unsubscribe() boundary.
 fn push_subscription_unsubscribe_callback(
     scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
@@ -937,8 +764,9 @@ fn push_subscription_unsubscribe_callback(
     let promise = resolver.get_promise(scope);
     rv.set(promise.into());
 
-    let true_val = v8::Boolean::new(scope, true);
-    resolver.resolve(scope, true_val.into());
+    let error_message = v8::String::new(scope, "PushSubscription is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    resolver.reject(scope, error);
 }
 
 /// PushManager.subscribe() - requests a push subscription
@@ -947,7 +775,6 @@ fn push_manager_subscribe_callback(
     _args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    // Create a promise that resolves to a PushSubscription
     let resolver = match v8::PromiseResolver::new(scope) {
         Some(r) => r,
         None => {
@@ -959,11 +786,9 @@ fn push_manager_subscribe_callback(
     let promise = resolver.get_promise(scope);
     rv.set(promise.into());
 
-    // Create a mock PushSubscription object using macro
-    let subscription = create_push_subscription!(scope);
-
-    // Resolve with the subscription (simulate successful subscription)
-    resolver.resolve(scope, subscription.into());
+    let error_message = v8::String::new(scope, "Push subscription is not supported yet").unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    resolver.reject(scope, error);
 }
 
 /// PushManager.getSubscription() - returns existing subscription or null

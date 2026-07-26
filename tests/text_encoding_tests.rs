@@ -46,14 +46,35 @@ mod tests {
     fn test_text_encoder_encode_into() {
         let code = r#"
             const encoder = new TextEncoder();
-            const result = { read: 0, written: 0 };
-            encoder.encodeInto("Hello", result);
-            result.read === 5 && result.written === 5
+            const destination = new Uint8Array(5);
+            const result = encoder.encodeInto("Hello", destination);
+            `${result.read}:${result.written}:${Array.from(destination).join(",")}`
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "TextEncoder.encodeInto should work");
+        assert_eq!(result.unwrap().trim(), "5:5:72,101,108,108,111");
+    }
+
+    /// 测试 TextEncoder.encodeInto() 不会拆开多字节 UTF-8 字符
+    #[test]
+    #[serial]
+    fn test_text_encoder_encode_into_does_not_split_multibyte_character() {
+        let code = r#"
+            const encoder = new TextEncoder();
+            const destination = new Uint8Array(1);
+            const result = encoder.encodeInto("é", destination);
+            `${result.read}:${result.written}:${Array.from(destination).join(",")}`
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(
+            result.is_ok(),
+            "TextEncoder.encodeInto should handle short destination buffers"
+        );
+        assert_eq!(result.unwrap().trim(), "0:0:0");
     }
 
     /// 测试 TextDecoder 构造函数可用性
@@ -121,6 +142,47 @@ mod tests {
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
         let result = runtime.execute_code(code);
         assert!(result.is_ok(), "TextDecoder should support fatal option");
+    }
+
+    /// fatal=true 时 invalid UTF-8 必须抛错，不能宽松替换
+    #[test]
+    #[serial]
+    fn test_text_decoder_fatal_invalid_utf8_throws() {
+        let code = r#"
+            const decoder = new TextDecoder('utf-8', { fatal: true });
+            let threw = false;
+            try {
+                decoder.decode(new Uint8Array([0xff]));
+            } catch (error) {
+                threw = true;
+            }
+            threw
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(
+            result.is_ok(),
+            "TextDecoder fatal invalid UTF-8 test should execute"
+        );
+        assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// ignoreBOM 控制初始 UTF-8 BOM 是否作为 U+FEFF 暴露
+    #[test]
+    #[serial]
+    fn test_text_decoder_ignore_bom_controls_initial_bom() {
+        let code = r#"
+            const bytes = new Uint8Array([0xef, 0xbb, 0xbf, 65]);
+            const stripped = new TextDecoder('utf-8').decode(bytes);
+            const preserved = new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes);
+            `${stripped}:${stripped.length}:${preserved.charCodeAt(0)}:${preserved.slice(1)}:${preserved.length}`
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(result.is_ok(), "TextDecoder ignoreBOM test should execute");
+        assert_eq!(result.unwrap().trim(), "A:1:65279:A:2");
     }
 
     /// 测试编码中文

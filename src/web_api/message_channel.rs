@@ -5,6 +5,12 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 
+fn is_port_closed(scope: &mut v8::HandleScope, port: v8::Local<v8::Object>) -> bool {
+    let closed_key = v8::String::new(scope, "_closed").unwrap();
+    port.get(scope, closed_key.into())
+        .is_some_and(|value| value.is_true())
+}
+
 /// Setup MessageChannel API in V8 context
 pub fn setup_message_channel_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -100,24 +106,60 @@ fn setup_message_port_properties(scope: &mut v8::HandleScope, port: v8::Local<v8
             let message = args.get(0);
             let this_obj = args.this();
 
-            // Check if port is closed
-            let closed_key = v8::String::new(scope, "_closed").unwrap();
-            if let Some(closed_val) = this_obj.get(scope, closed_key.into()) {
-                if closed_val.is_true() {
-                    return;
-                }
+            if is_port_closed(scope, this_obj) {
+                return;
             }
 
             // Get the other port
             let other_port_key = v8::String::new(scope, "_otherPort").unwrap();
             if let Some(other_port_val) = this_obj.get(scope, other_port_key.into()) {
                 if let Ok(other_port) = v8::Local::<v8::Object>::try_from(other_port_val) {
-                    // Queue the message on the other port
+                    if is_port_closed(scope, other_port) {
+                        return;
+                    }
+
+                    let global = scope.get_current_context().global(scope);
+                    let structured_clone_key = v8::String::new(scope, "structuredClone").unwrap();
+                    let Some(structured_clone_value) =
+                        global.get(scope, structured_clone_key.into())
+                    else {
+                        let error_message =
+                            v8::String::new(scope, "structuredClone is unavailable").unwrap();
+                        let error = v8::Exception::error(scope, error_message);
+                        scope.throw_exception(error);
+                        return;
+                    };
+                    let Ok(structured_clone_fn) =
+                        v8::Local::<v8::Function>::try_from(structured_clone_value)
+                    else {
+                        let error_message =
+                            v8::String::new(scope, "structuredClone is unavailable").unwrap();
+                        let error = v8::Exception::error(scope, error_message);
+                        scope.throw_exception(error);
+                        return;
+                    };
+                    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
+                    let Some(cloned_message) =
+                        structured_clone_fn.call(scope, undefined, &[message])
+                    else {
+                        return;
+                    };
+
+                    let started_key = v8::String::new(scope, "_started").unwrap();
+                    let target_started = other_port
+                        .get(scope, started_key.into())
+                        .is_some_and(|value| value.is_true());
+                    if target_started {
+                        dispatch_message_event(scope, other_port, cloned_message);
+                        return;
+                    }
+
+                    // Queue the message on the other port until start() is called.
                     let queue_key = v8::String::new(scope, "_messageQueue").unwrap();
                     if let Some(queue_val) = other_port.get(scope, queue_key.into()) {
                         if let Ok(queue) = v8::Local::<v8::Array>::try_from(queue_val) {
                             let length = queue.length();
-                            queue.set_index(scope, length, message);
+                            queue.set_index(scope, length, cloned_message);
                         }
                     }
 
@@ -128,18 +170,6 @@ fn setup_message_port_properties(scope: &mut v8::HandleScope, port: v8::Local<v8
                     let new_pending = pending_int + 1;
                     let pending_int_val = v8::Integer::new(scope, new_pending as i32);
                     other_port.set(scope, pending_key.into(), pending_int_val.into());
-
-                    // If started, dispatch message immediately
-                    let started_key = v8::String::new(scope, "_started").unwrap();
-                    if let Some(started_val) = other_port.get(scope, started_key.into()) {
-                        if started_val.is_true() {
-                            // Decrement pending and dispatch the message
-                            let final_pending = new_pending.saturating_sub(1);
-                            let final_pending_val = v8::Integer::new(scope, final_pending as i32);
-                            other_port.set(scope, pending_key.into(), final_pending_val.into());
-                            dispatch_message_event(scope, other_port, message);
-                        }
-                    }
                 }
             }
         },

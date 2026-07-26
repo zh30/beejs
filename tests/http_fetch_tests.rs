@@ -84,6 +84,128 @@ mod http_tests {
         )
     }
 
+    fn spawn_header_echo_server(header_name: &str, expected_value: &str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+        let address = listener
+            .local_addr()
+            .expect("test server should expose a local address");
+        let header_name = header_name.to_string();
+        let expected_value = expected_value.to_string();
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buffer = [0; 4096];
+                let read_len = stream.read(&mut buffer).unwrap_or(0);
+                let request = String::from_utf8_lossy(&buffer[..read_len]);
+                let found = request.lines().any(|line| {
+                    let Some((name, value)) = line.split_once(':') else {
+                        return false;
+                    };
+                    name.eq_ignore_ascii_case(&header_name) && value.trim() == expected_value
+                });
+                let body = if found { "present" } else { "missing" };
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        format!("http://{}", address)
+    }
+
+    fn http_header_end(buffer: &[u8]) -> Option<usize> {
+        buffer
+            .windows(b"\r\n\r\n".len())
+            .position(|window| window == b"\r\n\r\n")
+    }
+
+    fn read_http_request_bytes(stream: &mut std::net::TcpStream) -> Vec<u8> {
+        let mut request = Vec::new();
+        let mut expected_len = None;
+        let mut buffer = [0; 1024];
+
+        loop {
+            let read_len = stream.read(&mut buffer).unwrap_or(0);
+            if read_len == 0 {
+                break;
+            }
+            request.extend_from_slice(&buffer[..read_len]);
+
+            if let Some(header_end) = http_header_end(&request) {
+                if expected_len.is_none() {
+                    let headers = String::from_utf8_lossy(&request[..header_end]);
+                    expected_len = headers.lines().find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        if name.eq_ignore_ascii_case("content-length") {
+                            value.trim().parse::<usize>().ok()
+                        } else {
+                            None
+                        }
+                    });
+                }
+
+                if let Some(content_len) = expected_len {
+                    if request.len() >= header_end + b"\r\n\r\n".len() + content_len {
+                        break;
+                    }
+                }
+            }
+        }
+
+        request
+    }
+
+    fn spawn_multipart_formdata_echo_server() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("test server should bind");
+        let address = listener
+            .local_addr()
+            .expect("test server should expose a local address");
+
+        thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let request_bytes = read_http_request_bytes(&mut stream);
+                let request = String::from_utf8_lossy(&request_bytes);
+                let expected_parts = [
+                    "content-type: multipart/form-data; boundary=",
+                    "name=\"note\"",
+                    "alpha",
+                    "name=\"blobField\"; filename=\"blob.txt\"",
+                    "Content-Type: text/plain",
+                    "blob payload",
+                    "name=\"fileField\"; filename=\"file.txt\"",
+                    "Content-Type: text/custom",
+                    "file payload",
+                    "name=\"bytesField\"; filename=\"bytes.bin\"",
+                    "Content-Type: application/octet-stream",
+                ];
+                let has_expected_parts = expected_parts.iter().all(|part| request.contains(part));
+                let has_binary_payload = request_bytes
+                    .windows(3)
+                    .any(|window| window == [0, 255, 65]);
+                let has_placeholder =
+                    request.contains("[Blob data]") || request.contains("[Object]");
+                let body = if has_expected_parts && has_binary_payload && !has_placeholder {
+                    "ok".to_string()
+                } else {
+                    format!(
+                        "bad multipart: expected_parts={has_expected_parts}; binary={has_binary_payload}; placeholder={has_placeholder}; request={request}"
+                    )
+                };
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        format!("http://{}", address)
+    }
+
     #[test]
     #[serial_test::serial]
     fn test_fetch_with_real_http() {
@@ -98,7 +220,10 @@ mod http_tests {
             .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "Expected local HTTP fetch status script to run, got: {result:?}"
+        );
         let binding = result.unwrap();
         let status = binding.trim();
         // 上游 httpbin 可能返回 2xx/4xx/5xx；Beejs 不应再用离线 fallback 改写真实状态。
@@ -120,7 +245,10 @@ mod http_tests {
             .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "Expected local JSON fetch script to run, got: {result:?}"
+        );
         let binding = result.unwrap();
         let output = binding.as_str();
         assert!(
@@ -179,7 +307,10 @@ mod http_tests {
             .replace("__URL__", &url),
         );
 
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "Expected Headers iteration script to run, got: {result:?}"
+        );
         let binding = result.unwrap();
         let output = binding.trim();
         // 应该是 true（200-299 状态码）或 false
@@ -484,6 +615,135 @@ mod http_tests {
 
     #[test]
     #[serial_test::serial]
+    fn test_headers_constructor_accepts_plain_object_init() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers({
+                'Content-Type': 'text/plain',
+                'X-Beejs-Trace': 'ctor'
+            });
+            `${headers.get('content-type')}:${headers.get('x-beejs-trace')}:${headers.has('Content-Type')}`;
+        "#,
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "text/plain:ctor:true",
+            "Expected Headers plain-object init to populate case-insensitive entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_constructor_accepts_sequence_pair_init() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/html'],
+                ['X-Beejs-Trace', 'array-init']
+            ]);
+            `${headers.get('content-type')}:${headers.get('x-beejs-trace')}:${headers.has('Content-Type')}`;
+        "#,
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "text/html:array-init:true",
+            "Expected Headers sequence-pair init to populate entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_init_accepts_headers_instance() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_header_echo_server("X-Beejs-Trace", "from-headers");
+
+        let result = runtime.execute_code(
+            &r#"
+            const headers = new Headers({
+                'X-Beejs-Trace': 'from-headers'
+            });
+            const response = fetch('__URL__', { headers });
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "present",
+            "Expected fetch init to serialize Headers instance entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_init_accepts_header_sequence_pairs() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_header_echo_server("X-Beejs-Trace", "from-array");
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__', {
+                headers: [
+                    ['X-Beejs-Trace', 'from-array']
+                ]
+            });
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "present",
+            "Expected fetch init to serialize header sequence-pair entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_request_object_preserves_headers_instance() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_header_echo_server("X-Beejs-Trace", "from-request");
+
+        let result = runtime.execute_code(
+            &r#"
+            const request = new Request('__URL__', {
+                headers: new Headers({
+                    'X-Beejs-Trace': 'from-request'
+                })
+            });
+            const response = fetch(request);
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "present",
+            "Expected Request(headers) entries to be preserved when passed to fetch, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
     fn test_headers_has() {
         let mut runtime = MinimalRuntime::new().unwrap();
 
@@ -553,6 +813,140 @@ mod http_tests {
             output.contains("cookie1") && output.contains("cookie2"),
             "Expected cookies in Set-Cookie header, got: {}",
             output
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_iteration_methods_expose_cached_entries() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain'],
+                ['X-Beejs-Trace', 'iter']
+            ]);
+            const keys = Array.from(headers.keys()).join('|');
+            const values = Array.from(headers.values()).join('|');
+            const entries = Array.from(headers.entries()).map(([name, value]) => `${name}=${value}`).join('|');
+            const seen = [];
+            headers.forEach((value, name, owner) => {
+                seen.push(`${name}=${value}:${owner === headers}`);
+            });
+            `${keys};${values};${entries};${seen.join('|')}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Headers iteration script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "content-type|x-beejs-trace;text/plain|iter;content-type=text/plain|x-beejs-trace=iter;content-type=text/plain:true|x-beejs-trace=iter:true",
+            "Expected Headers iteration methods to expose cached entries, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_are_directly_iterable() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain'],
+                ['X-Beejs-Trace', 'iterable']
+            ]);
+            const direct = Array.from(headers).map(([name, value]) => `${name}=${value}`).join('|');
+            const looped = [];
+            for (const [name, value] of headers) {
+                looped.push(`${name}=${value}`);
+            }
+            `${direct};${looped.join('|')}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Headers direct iteration script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "content-type=text/plain|x-beejs-trace=iterable;content-type=text/plain|x-beejs-trace=iterable",
+            "Expected Headers to be directly iterable as entry pairs, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_iteration_methods_return_iterators() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain'],
+                ['X-Beejs-Trace', 'iterator']
+            ]);
+            const keyIterator = headers.keys();
+            const valueIterator = headers.values();
+            const entryIterator = headers.entries();
+            const firstKey = keyIterator.next();
+            const secondValue = valueIterator.next();
+            valueIterator.next();
+            const doneValue = valueIterator.next();
+            const firstEntry = entryIterator.next();
+            `${typeof keyIterator.next}:${firstKey.value}:${firstKey.done}:${secondValue.value}:${doneValue.done}:${firstEntry.value[0]}=${firstEntry.value[1]}:${typeof entryIterator[Symbol.iterator]}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Headers iteration methods to return iterator objects, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "function:content-type:false:text/plain:true:content-type=text/plain:function",
+            "Expected Headers keys/values/entries to return iterator objects with next(), got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_headers_iteration_normalizes_names_to_lowercase() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const headers = new Headers([
+                ['Content-Type', 'text/plain']
+            ]);
+            headers.set('X-Beejs-Trace', 'set');
+            headers.append('Set-Cookie', 'cookie=value');
+            const keys = Array.from(headers.keys()).join('|');
+            const entries = Array.from(headers.entries()).map(([name, value]) => `${name}=${value}`).join('|');
+            const seen = [];
+            headers.forEach((value, name) => seen.push(name));
+            `${keys};${entries};${seen.join('|')}`;
+        "#,
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "content-type|x-beejs-trace|set-cookie;content-type=text/plain|x-beejs-trace=set|set-cookie=cookie=value;content-type|x-beejs-trace|set-cookie",
+            "Expected Headers iteration to expose lowercase names, got: {output}"
         );
     }
 
@@ -865,6 +1259,40 @@ mod http_tests {
 
     #[test]
     #[serial_test::serial]
+    fn test_response_constructor_uses_body_first_and_init_options() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const response = new Response('created body', {
+                status: 201,
+                statusText: 'Created',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'X-Beejs-Trace': 'constructor'
+                }
+            });
+            const before = response.bodyUsed;
+            const body = response.text();
+            const after = response.bodyUsed;
+            `${response.status}:${response.ok}:${response.statusText}:${response.headers.get('content-type')}:${response.headers.get('x-beejs-trace')}:${before}:${body}:${after}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected Response(body, init) script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "201:true:Created:text/plain:constructor:false:created body:true",
+            "Expected Response(body, init) to create a consumable response with init metadata, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
     fn test_response_status_text() {
         let mut runtime = MinimalRuntime::new().unwrap();
         let url = spawn_json_server();
@@ -966,6 +1394,36 @@ mod http_tests {
             output == "object",
             "Expected response.headers to be an object, got: {}",
             output
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_headers_get_reads_real_response_headers() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_response_server(
+            200,
+            "OK",
+            "text/plain",
+            "headers",
+            vec![("X-Beejs-Trace".to_string(), "trace-123".to_string())],
+        );
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
+            const headers = response.headers;
+            `${typeof headers.get}:${typeof headers.has}:${headers.get ? headers.get('x-beejs-trace') : 'missing'}:${headers.has ? headers.has('content-type') : false}`;
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "function:function:trace-123:true",
+            "Expected response.headers to expose real Headers get/has behavior, got: {output}"
         );
     }
 
@@ -1423,7 +1881,7 @@ mod http_tests {
             formData.append('username', 'alice');
             formData.append('email', 'alice@example.com');
             formData.append('age', '25');
-            const keys = formData.keys();
+            const keys = Array.from(formData.keys());
             keys.length;
         "#,
         );
@@ -1431,7 +1889,107 @@ mod http_tests {
         assert!(result.is_ok());
         let binding = result.unwrap();
         let output = binding.trim();
-        assert!(output == "3", "Expected 3 unique keys, got: {}", output);
+        assert!(output == "3", "Expected 3 keys, got: {}", output);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_iteration_methods_return_standard_iterators_in_order() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const formData = new FormData();
+            formData.append('tag', 'a');
+            formData.append('tag', 'b');
+            formData.append('name', 'bee');
+            const keys = formData.keys();
+            const firstKey = keys.next();
+            const secondKey = keys.next();
+            const thirdKey = keys.next();
+            const doneKey = keys.next();
+            const values = Array.from(formData.values()).join('|');
+            const entries = Array.from(formData.entries()).map(([name, value]) => `${name}=${value}`).join('|');
+            const direct = Array.from(formData).map(([name, value]) => `${name}=${value}`).join('|');
+            `${typeof keys.next}:${firstKey.value}:${secondKey.value}:${thirdKey.value}:${doneKey.done}:${values}:${entries}:${direct}`;
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected FormData iteration script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output,
+            "function:tag:tag:name:true:a|b|bee:tag=a|tag=b|name=bee:tag=a|tag=b|name=bee",
+            "Expected FormData iterators to preserve duplicate names in insertion order, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_form_data_for_each_invokes_callback_with_owner_and_this_arg() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+
+        let result = runtime.execute_code(
+            r#"
+            const formData = new FormData();
+            formData.append('tag', 'a');
+            formData.append('tag', 'b');
+            const seen = [];
+            formData.forEach(function(value, name, owner) {
+                seen.push(`${this.label}:${name}=${value}:${owner === formData}`);
+            }, { label: 'ctx' });
+            seen.join('|');
+        "#,
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected FormData forEach script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "ctx:tag=a:true|ctx:tag=b:true",
+            "Expected FormData.forEach to call callback for every entry, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_fetch_form_data_multipart_uses_blob_and_file_bytes() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_multipart_formdata_echo_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const formData = new FormData();
+            formData.append('note', 'alpha');
+            formData.append('blobField', new Blob(['blob payload'], { type: 'text/plain' }), 'blob.txt');
+            formData.append('fileField', new File(['file payload'], 'file.txt', { type: 'text/custom' }));
+            formData.append('bytesField', new Blob([new Uint8Array([0, 255, 65])], { type: 'application/octet-stream' }), 'bytes.bin');
+            const response = fetch('__URL__', {
+                method: 'POST',
+                body: formData
+            });
+            response.text();
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(
+            result.is_ok(),
+            "Expected FormData multipart upload script to run, got: {result:?}"
+        );
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "ok",
+            "Expected multipart upload to include real Blob/File bytes, got: {output}"
+        );
     }
 
     // v0.3.350: Tests for fetch with Request object
@@ -1579,6 +2137,70 @@ mod http_tests {
             output == "boolean",
             "Expected response.bodyUsed to be boolean, got: {}",
             output
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_body_consumption_updates_body_used_and_rejects_second_read() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
+            const before = response.bodyUsed;
+            response.text();
+            const after = response.bodyUsed;
+            let secondRead;
+            try {
+                response.json();
+                secondRead = 'allowed';
+            } catch (error) {
+                secondRead = String(error.message || error);
+            }
+            `${before}:${after}:${secondRead.includes('already consumed')}`;
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "false:true:true",
+            "Expected bodyUsed to flip after first read and second read to fail, got: {output}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_response_clone_rejects_after_body_consumed() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        let url = spawn_json_server();
+
+        let result = runtime.execute_code(
+            &r#"
+            const response = fetch('__URL__');
+            response.text();
+            let clonedAfterRead;
+            try {
+                response.clone();
+                clonedAfterRead = 'allowed';
+            } catch (error) {
+                clonedAfterRead = String(error.message || error);
+            }
+            clonedAfterRead.includes('already consumed');
+        "#
+            .replace("__URL__", &url),
+        );
+
+        assert!(result.is_ok());
+        let binding = result.unwrap();
+        let output = binding.trim();
+        assert_eq!(
+            output, "true",
+            "Expected clone() to reject after body consumption, got: {output}"
         );
     }
 }

@@ -62,6 +62,38 @@ mod push_manager_tests {
     }
 
     #[test]
+    fn test_push_manager_subscribe_fails_closed_until_push_service_exists() {
+        let script = r#"
+            if (typeof PushManager === 'undefined') {
+                console.log('ERROR: PushManager not defined');
+            } else {
+                const manager = new PushManager();
+                const result = manager.subscribe({ userVisibleOnly: true });
+                if (!result || typeof result.then !== 'function') {
+                    console.log('ERROR: subscribe did not return a Promise');
+                } else {
+                    result.then(
+                        subscription => {
+                            console.log('ERROR: subscribe resolved fake endpoint: ' + subscription.endpoint);
+                        },
+                        error => {
+                            const message = String(error && error.message || error);
+                            console.log(message === 'Push subscription is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                        }
+                    );
+                }
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushManager.subscribe should fail closed until push service support exists: {}",
+            stdout
+        );
+    }
+
+    #[test]
     fn test_push_manager_get_subscription_exists() {
         // Test that PushManager.getSubscription exists
         let script = r#"
@@ -136,39 +168,39 @@ mod push_subscription_tests {
     }
 
     #[test]
-    fn test_push_subscription_instance_has_get_key() {
-        // Test that PushSubscription instance has getKey method
+    fn test_push_subscription_constructor_fails_closed_instead_of_mock_endpoint() {
         let script = r#"
-            if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-                if (sub && typeof sub.getKey === 'function') {
-                    console.log('SUCCESS: PushSubscription instance has getKey method');
-                } else {
-                    console.log('ERROR: getKey method not found on instance');
-                }
-            } else {
+            if (typeof PushSubscription !== 'function') {
                 console.log('ERROR: PushSubscription not defined');
+            } else {
+                try {
+                    const subscription = new PushSubscription();
+                    console.log('ERROR: constructed fake endpoint: ' + subscription.endpoint);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                }
             }
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "instance should have getKey: {}",
+            "PushSubscription constructor should fail closed instead of returning a mock endpoint: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_push_subscription_instance_has_to_json() {
-        // Test that PushSubscription instance has toJSON method
+    fn test_push_subscription_constructor_rejects_fake_get_key_instance() {
         let script = r#"
             if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-                if (sub && typeof sub.toJSON === 'function') {
-                    console.log('SUCCESS: PushSubscription instance has toJSON method');
-                } else {
-                    console.log('ERROR: toJSON method not found on instance');
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake getKey instance: ' + typeof sub.getKey);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 }
             } else {
                 console.log('ERROR: PushSubscription not defined');
@@ -178,21 +210,21 @@ mod push_subscription_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "instance should have toJSON: {}",
+            "PushSubscription constructor should not expose a fake getKey instance: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_push_subscription_instance_has_unsubscribe() {
-        // Test that PushSubscription instance has unsubscribe method
+    fn test_push_subscription_constructor_rejects_fake_to_json_instance() {
         let script = r#"
             if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-                if (sub && typeof sub.unsubscribe === 'function') {
-                    console.log('SUCCESS: PushSubscription instance has unsubscribe method');
-                } else {
-                    console.log('ERROR: unsubscribe method not found on instance');
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake toJSON instance: ' + typeof sub.toJSON);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 }
             } else {
                 console.log('ERROR: PushSubscription not defined');
@@ -202,21 +234,21 @@ mod push_subscription_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "instance should have unsubscribe: {}",
+            "PushSubscription constructor should not expose a fake toJSON instance: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_push_subscription_instance_has_endpoint() {
-        // Test that PushSubscription instance has endpoint property
+    fn test_push_subscription_constructor_rejects_fake_unsubscribe_instance() {
         let script = r#"
             if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-                if (sub && 'endpoint' in sub && sub.endpoint) {
-                    console.log('SUCCESS: PushSubscription instance has endpoint property');
-                } else {
-                    console.log('ERROR: endpoint property not found on instance');
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake unsubscribe instance: ' + typeof sub.unsubscribe);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 }
             } else {
                 console.log('ERROR: PushSubscription not defined');
@@ -226,21 +258,21 @@ mod push_subscription_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "instance should have endpoint: {}",
+            "PushSubscription constructor should not expose a fake unsubscribe instance: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_push_subscription_instance_has_options() {
-        // Test that PushSubscription instance has options property
+    fn test_push_subscription_constructor_rejects_fake_endpoint() {
         let script = r#"
             if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-                if (sub && 'options' in sub && sub.options) {
-                    console.log('SUCCESS: PushSubscription instance has options property');
-                } else {
-                    console.log('ERROR: options property not found on instance');
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake endpoint: ' + sub.endpoint);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 }
             } else {
                 console.log('ERROR: PushSubscription not defined');
@@ -250,7 +282,111 @@ mod push_subscription_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "instance should have options: {}",
+            "PushSubscription constructor should not expose a fake endpoint: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_push_subscription_constructor_rejects_fake_options() {
+        let script = r#"
+            if (typeof PushSubscription === 'function') {
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake options: ' + typeof sub.options);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                }
+            } else {
+                console.log('ERROR: PushSubscription not defined');
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription constructor should not expose fake options: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_push_subscription_get_key_prototype_call_fails_closed() {
+        let script = r#"
+            if (typeof PushSubscription !== 'function') {
+                console.log('ERROR: PushSubscription not defined');
+            } else {
+                try {
+                    const key = PushSubscription.prototype.getKey.call({});
+                    const byteLength = key && key.byteLength;
+                    console.log('ERROR: getKey returned fake key length: ' + byteLength);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                }
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription.prototype.getKey should fail closed without a real subscription: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_push_subscription_to_json_prototype_call_fails_closed() {
+        let script = r#"
+            if (typeof PushSubscription !== 'function') {
+                console.log('ERROR: PushSubscription not defined');
+            } else {
+                try {
+                    const json = PushSubscription.prototype.toJSON.call({});
+                    console.log('ERROR: toJSON returned fake endpoint: ' + json.endpoint);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                }
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription.prototype.toJSON should fail closed without a real subscription: {}",
+            stdout
+        );
+    }
+
+    #[test]
+    fn test_push_subscription_unsubscribe_prototype_call_rejects() {
+        let script = r#"
+            if (typeof PushSubscription !== 'function') {
+                console.log('ERROR: PushSubscription not defined');
+            } else {
+                const result = PushSubscription.prototype.unsubscribe.call({});
+                if (!result || typeof result.then !== 'function') {
+                    console.log('ERROR: unsubscribe did not return a Promise');
+                } else {
+                    result.then(
+                        value => {
+                            console.log('ERROR: unsubscribe resolved fake success: ' + value);
+                        },
+                        error => {
+                            const message = String(error && error.message || error);
+                            console.log(message === 'PushSubscription is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
+                        }
+                    );
+                }
+            }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("SUCCESS"),
+            "PushSubscription.prototype.unsubscribe should reject without a real subscription: {}",
             stdout
         );
     }
@@ -391,24 +527,15 @@ mod integration_tests {
     }
 
     #[test]
-    fn test_push_subscription_instance_methods() {
-        // Test that PushSubscription instance has all required methods
+    fn test_push_subscription_instance_methods_fail_closed() {
         let script = r#"
             if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-
-                // Check instance methods
-                const hasGetKey = typeof sub.getKey === 'function';
-                const hasToJSON = typeof sub.toJSON === 'function';
-                const hasUnsubscribe = typeof sub.unsubscribe === 'function';
-
-                if (hasGetKey && hasToJSON && hasUnsubscribe) {
-                    console.log('SUCCESS: PushSubscription instance has all required methods');
-                } else {
-                    console.log('ERROR: PushSubscription instance missing methods');
-                    console.log('hasGetKey: ' + hasGetKey);
-                    console.log('hasToJSON: ' + hasToJSON);
-                    console.log('hasUnsubscribe: ' + hasUnsubscribe);
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake methods: ' + [typeof sub.getKey, typeof sub.toJSON, typeof sub.unsubscribe].join(','));
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 }
             } else {
                 console.log('ERROR: PushSubscription not defined');
@@ -418,34 +545,21 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "PushSubscription instance should have methods: {}",
+            "PushSubscription instance method shell should fail closed: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_push_subscription_instance() {
-        // Test creating a PushSubscription instance and accessing its properties
+    fn test_push_subscription_instance_properties_fail_closed() {
         let script = r#"
             if (typeof PushSubscription === 'function') {
-                const sub = new PushSubscription();
-
-                // Check instance properties
-                const hasEndpoint = 'endpoint' in sub && sub.endpoint;
-                const hasOptions = 'options' in sub && sub.options;
-
-                // Check methods work
-                const getKeyResult = sub.getKey ? sub.getKey('p256dh') : null;
-                const toJSONResult = sub.toJSON ? sub.toJSON() : null;
-
-                if (hasEndpoint && hasOptions) {
-                    console.log('SUCCESS: PushSubscription instance works correctly');
-                    console.log('endpoint: ' + sub.endpoint);
-                    console.log('hasOptions: ' + hasOptions);
-                } else {
-                    console.log('ERROR: PushSubscription instance missing properties');
-                    console.log('hasEndpoint: ' + hasEndpoint);
-                    console.log('hasOptions: ' + hasOptions);
+                try {
+                    const sub = new PushSubscription();
+                    console.log('ERROR: constructed fake properties: ' + sub.endpoint + '|' + typeof sub.options);
+                } catch (error) {
+                    const message = String(error && error.message || error);
+                    console.log(message === 'PushSubscription construction is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
                 }
             } else {
                 console.log('ERROR: PushSubscription not defined');
@@ -455,7 +569,7 @@ mod integration_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("SUCCESS"),
-            "PushSubscription instance should work: {}",
+            "PushSubscription instance property shell should fail closed: {}",
             stdout
         );
     }

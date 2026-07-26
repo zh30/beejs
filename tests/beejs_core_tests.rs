@@ -128,6 +128,72 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    #[serial]
+    fn test_execute_code_preserves_js_template_literal_with_type_word(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
+        let result = runtime.execute_code(
+            r#"
+            const string = "bee";
+            const label = `type ${string}`;
+            label;
+        "#,
+        )?;
+
+        assert_eq!(
+            result.trim(),
+            "type bee",
+            "plain JavaScript template literals must not be treated as TypeScript template literal types"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_execute_code_preserves_mapped_type_looking_string(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
+        let result = runtime.execute_code(
+            r#"
+            const text = "[P in keyof T]";
+            text;
+        "#,
+        )?;
+
+        assert_eq!(
+            result.trim(),
+            "[P in keyof T]",
+            "plain JavaScript strings must not trigger mapped-type or keyof rewrites"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_execute_code_still_transpiles_type_aliases_with_mapped_and_template_types(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut runtime =
+            beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime");
+        let result = runtime.execute_code(
+            r#"
+            type Copy<T> = { [P in keyof T]: T[P] };
+            type Label = `type-${string}`;
+            const value = "types removed";
+            value;
+        "#,
+        )?;
+
+        assert_eq!(
+            result.trim(),
+            "types removed",
+            "runtime TypeScript fallback should still remove real type aliases"
+        );
+        Ok(())
+    }
+
     /// 测试 4: CLI run 命令 (预期失败 - 红色)
     #[tokio::test]
     #[serial]

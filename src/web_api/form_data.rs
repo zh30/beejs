@@ -20,8 +20,207 @@ fn get_formdata_cache() -> &'static Mutex<HashMap<usize, Vec<FormDataEntry>>> {
 pub struct FormDataEntry {
     pub name: String,
     pub value: String,
+    pub body: Vec<u8>,
     pub filename: Option<String>,
     pub content_type: String,
+}
+
+fn value_to_optional_string(
+    scope: &mut v8::HandleScope,
+    value: v8::Local<v8::Value>,
+) -> Option<String> {
+    if value.is_undefined() || value.is_null() {
+        return None;
+    }
+
+    value
+        .to_string(scope)
+        .map(|value| value.to_rust_string_lossy(scope))
+}
+
+fn object_string_property(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    key: &str,
+) -> Option<String> {
+    let key = v8::String::new(scope, key)?.into();
+    object
+        .get(scope, key)
+        .and_then(|value| value_to_optional_string(scope, value))
+}
+
+fn object_bool_property(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    key: &str,
+) -> bool {
+    let Some(key) = v8::String::new(scope, key) else {
+        return false;
+    };
+    object
+        .get(scope, key.into())
+        .is_some_and(|value| value.is_boolean() && value.boolean_value(scope))
+}
+
+fn object_has_property(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+    key: &str,
+) -> bool {
+    let Some(key) = v8::String::new(scope, key) else {
+        return false;
+    };
+    object.has(scope, key.into()).unwrap_or(false)
+}
+
+fn bytes_from_array_buffer_value(value: v8::Local<v8::Value>) -> Option<Vec<u8>> {
+    let buffer = v8::Local::<v8::ArrayBuffer>::try_from(value).ok()?;
+    let len = buffer.byte_length();
+    if len == 0 {
+        return Some(Vec::new());
+    }
+    let backing_store = buffer.get_backing_store();
+    let ptr = backing_store.data() as *const u8;
+    if ptr.is_null() {
+        return None;
+    }
+    Some(unsafe { std::slice::from_raw_parts(ptr, len).to_vec() })
+}
+
+fn object_blob_bytes(
+    scope: &mut v8::HandleScope,
+    object: v8::Local<v8::Object>,
+) -> Option<Vec<u8>> {
+    let key = v8::String::new(scope, "blobBytes")?;
+    object
+        .get(scope, key.into())
+        .and_then(bytes_from_array_buffer_value)
+}
+
+fn form_data_value_entry(
+    scope: &mut v8::HandleScope,
+    value: v8::Local<v8::Value>,
+    explicit_filename: Option<String>,
+) -> Option<(String, Vec<u8>, Option<String>, String)> {
+    if value.is_object() {
+        let object = value.to_object(scope)?;
+        let is_blob_like = object_has_property(scope, object, "arrayBuffer")
+            || object_has_property(scope, object, "blobData");
+
+        if is_blob_like {
+            let body = object_blob_bytes(scope, object).unwrap_or_else(|| {
+                object_string_property(scope, object, "blobData")
+                    .unwrap_or_default()
+                    .into_bytes()
+            });
+            let body_text = object_string_property(scope, object, "blobData")
+                .unwrap_or_else(|| String::from_utf8_lossy(&body).into_owned());
+            let content_type = object_string_property(scope, object, "type")
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| "application/octet-stream".to_string());
+            let filename = explicit_filename.or_else(|| {
+                if object_bool_property(scope, object, "_isFile") {
+                    object_string_property(scope, object, "name").filter(|name| !name.is_empty())
+                } else {
+                    Some("blob".to_string())
+                }
+            });
+
+            return Some((body_text, body, filename, content_type));
+        }
+    }
+
+    let text = value_to_optional_string(scope, value)?;
+    let body = text.as_bytes().to_vec();
+    Some((text, body, explicit_filename, "text/plain".to_string()))
+}
+
+fn form_data_index_from_object(
+    scope: &mut v8::HandleScope,
+    form_data_obj: v8::Local<v8::Object>,
+) -> Option<usize> {
+    form_data_obj
+        .get_internal_field(scope, 0)
+        .and_then(|value| value.to_integer(scope))
+        .map(|index| index.value() as usize)
+}
+
+fn form_data_entries_for_object(
+    scope: &mut v8::HandleScope,
+    form_data_obj: v8::Local<v8::Object>,
+) -> Vec<FormDataEntry> {
+    form_data_index_from_object(scope, form_data_obj)
+        .and_then(|index| get_formdata_cache().lock().unwrap().get(&index).cloned())
+        .unwrap_or_default()
+}
+
+fn form_data_entries_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: &[FormDataEntry],
+) -> v8::Local<'a, v8::Array> {
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (index, entry) in entries.iter().enumerate() {
+        let pair = v8::Array::new(scope, 2);
+        let name = v8::String::new(scope, &entry.name).unwrap().into();
+        let value = v8::String::new(scope, &entry.value).unwrap().into();
+        pair.set_index(scope, 0, name);
+        pair.set_index(scope, 1, value);
+        array.set_index(scope, index as u32, pair.into());
+    }
+    array
+}
+
+fn form_data_keys_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: &[FormDataEntry],
+) -> v8::Local<'a, v8::Array> {
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (index, entry) in entries.iter().enumerate() {
+        let name = v8::String::new(scope, &entry.name).unwrap().into();
+        array.set_index(scope, index as u32, name);
+    }
+    array
+}
+
+fn form_data_values_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    entries: &[FormDataEntry],
+) -> v8::Local<'a, v8::Array> {
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (index, entry) in entries.iter().enumerate() {
+        let value = v8::String::new(scope, &entry.value).unwrap().into();
+        array.set_index(scope, index as u32, value);
+    }
+    array
+}
+
+fn symbol_iterator_value<'a>(scope: &mut v8::HandleScope<'a>) -> Option<v8::Local<'a, v8::Value>> {
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+    let symbol_key: v8::Local<v8::Value> = v8::String::new(scope, "Symbol")?.into();
+    let symbol_value = global.get(scope, symbol_key)?;
+    let symbol_object = symbol_value.to_object(scope)?;
+    let iterator_key: v8::Local<v8::Value> = v8::String::new(scope, "iterator")?.into();
+    symbol_object.get(scope, iterator_key)
+}
+
+fn iterator_from_array<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    array: v8::Local<'a, v8::Array>,
+) -> v8::Local<'a, v8::Value> {
+    let Some(iterator_key) = symbol_iterator_value(scope) else {
+        return array.into();
+    };
+    let Some(array_iterator) = array.get(scope, iterator_key) else {
+        return array.into();
+    };
+    let Ok(array_iterator_func) = v8::Local::<v8::Function>::try_from(array_iterator) else {
+        return array.into();
+    };
+
+    array_iterator_func
+        .call(scope, array.into(), &[])
+        .unwrap_or_else(|| array.into())
 }
 
 /// Setup FormData API in V8 context
@@ -114,6 +313,9 @@ fn form_data_constructor(
     let entries_template = v8::FunctionTemplate::new(scope, form_data_entries);
     let entries_func = entries_template.get_function(scope).unwrap();
     form_data_obj.set(scope, entries_key, entries_func.into());
+    if let Some(iterator_key) = symbol_iterator_value(scope) {
+        form_data_obj.set(scope, iterator_key, entries_func.into());
+    }
 
     // Add keys method
     let keys_key = v8::String::new(scope, "keys").unwrap().into();
@@ -159,55 +361,14 @@ fn form_data_append(
         return;
     };
 
-    // Get value (can be string or Blob/File)
-    let (value, _filename, content_type) = if let Some(value_val) = args.get(1).to_string(scope) {
-        (
-            value_val.to_rust_string_lossy(scope),
-            None::<String>,
-            "text/plain".to_string(),
-        )
-    } else if args.get(1).is_object() {
-        // Handle Blob-like objects
-        if let Some(obj) = args.get(1).to_object(scope) {
-            // Check if it has a type property
-            let type_key = v8::String::new(scope, "type").unwrap().into();
-            let content_type = if let Some(t) = obj.get(scope, type_key) {
-                t.to_string(scope)
-                    .map(|s| s.to_rust_string_lossy(scope))
-                    .unwrap_or_else(|| "application/octet-stream".to_string())
-            } else {
-                "application/octet-stream".to_string()
-            };
-
-            // Check if it has a size property for arrayBuffer extraction
-            let size_key = v8::String::new(scope, "size").unwrap().into();
-            let _size = obj
-                .get(scope, size_key)
-                .and_then(|v| v.to_integer(scope))
-                .map(|i| i.value() as usize)
-                .unwrap_or(0);
-
-            // Check for arrayBuffer method
-            let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap().into();
-            let has_array_buffer = obj.has(scope, array_buffer_key).unwrap_or(false);
-            if has_array_buffer {
-                // For now, return a placeholder - full blob support requires async handling
-                ("[Blob data]".to_string(), None, content_type)
-            } else {
-                ("[Object]".to_string(), None, content_type)
-            }
-        } else {
-            return;
-        }
-    } else {
-        return;
-    };
-
     // Get optional filename (third argument)
-    let filename = if let Some(filename_val) = args.get(2).to_string(scope) {
-        Some(filename_val.to_rust_string_lossy(scope))
-    } else {
-        None
+    let explicit_filename = value_to_optional_string(scope, args.get(2));
+
+    // Get value (can be string or Blob/File)
+    let Some((value, body, filename, content_type)) =
+        form_data_value_entry(scope, args.get(1), explicit_filename)
+    else {
+        return;
     };
 
     // Store in cache
@@ -216,6 +377,7 @@ fn form_data_append(
         entries.push(FormDataEntry {
             name,
             value,
+            body,
             filename,
             content_type,
         });
@@ -366,18 +528,11 @@ fn form_data_set(
         return;
     };
 
-    let value = if let Some(value_val) = args.get(1).to_string(scope) {
-        value_val.to_rust_string_lossy(scope)
-    } else if args.get(1).is_object() {
-        "[Object]".to_string()
-    } else {
+    let explicit_filename = value_to_optional_string(scope, args.get(2));
+    let Some((value, body, filename, content_type)) =
+        form_data_value_entry(scope, args.get(1), explicit_filename)
+    else {
         return;
-    };
-
-    let filename = if let Some(filename_val) = args.get(2).to_string(scope) {
-        Some(filename_val.to_rust_string_lossy(scope))
-    } else {
-        None
     };
 
     let mut cache = get_formdata_cache().lock().unwrap();
@@ -388,8 +543,9 @@ fn form_data_set(
         entries.push(FormDataEntry {
             name,
             value,
+            body,
             filename,
-            content_type: "text/plain".to_string(),
+            content_type,
         });
     }
 }
@@ -400,33 +556,9 @@ fn form_data_entries(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let this_obj: v8::Local<v8::Object> = args.this();
-
-    let index = this_obj
-        .get_internal_field(scope, 0)
-        .and_then(|v| v.to_integer(scope))
-        .map(|i| i.value() as usize)
-        .unwrap_or(usize::MAX);
-
-    let cache = get_formdata_cache().lock().unwrap();
-    if let Some(entries) = cache.get(&index) {
-        // Create an array of [name, value] pairs
-        let pairs: Vec<v8::Local<v8::Value>> = entries
-            .iter()
-            .map(|entry| {
-                let pair = v8::Array::new(scope, 2);
-                let name_str = v8::String::new(scope, &entry.name).unwrap();
-                let value_str = v8::String::new(scope, &entry.value).unwrap();
-                pair.set_index(scope, 0, name_str.into());
-                pair.set_index(scope, 1, value_str.into());
-                pair.into()
-            })
-            .collect();
-        let array = v8::Array::new_with_elements(scope, &pairs);
-        retval.set(array.into());
-    } else {
-        retval.set(v8::Array::new(scope, 0).into());
-    }
+    let entries = form_data_entries_for_object(scope, args.this());
+    let array = form_data_entries_array(scope, &entries);
+    retval.set(iterator_from_array(scope, array));
 }
 
 /// FormData.keys() method - returns an iterator of keys
@@ -435,27 +567,9 @@ fn form_data_keys(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let this_obj: v8::Local<v8::Object> = args.this();
-
-    let index = this_obj
-        .get_internal_field(scope, 0)
-        .and_then(|v| v.to_integer(scope))
-        .map(|i| i.value() as usize)
-        .unwrap_or(usize::MAX);
-
-    let cache = get_formdata_cache().lock().unwrap();
-    if let Some(entries) = cache.get(&index) {
-        let unique_keys: std::collections::HashSet<_> =
-            entries.iter().map(|e| e.name.clone()).collect();
-        let keys: Vec<_> = unique_keys
-            .iter()
-            .map(|k| v8::String::new(scope, k).unwrap().into())
-            .collect();
-        let array = v8::Array::new_with_elements(scope, &keys);
-        retval.set(array.into());
-    } else {
-        retval.set(v8::Array::new(scope, 0).into());
-    }
+    let entries = form_data_entries_for_object(scope, args.this());
+    let array = form_data_keys_array(scope, &entries);
+    retval.set(iterator_from_array(scope, array));
 }
 
 /// FormData.values() method - returns an iterator of values
@@ -464,36 +578,37 @@ fn form_data_values(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let this_obj: v8::Local<v8::Object> = args.this();
-
-    let index = this_obj
-        .get_internal_field(scope, 0)
-        .and_then(|v| v.to_integer(scope))
-        .map(|i| i.value() as usize)
-        .unwrap_or(usize::MAX);
-
-    let cache = get_formdata_cache().lock().unwrap();
-    if let Some(entries) = cache.get(&index) {
-        let values: Vec<_> = entries
-            .iter()
-            .map(|e| v8::String::new(scope, &e.value).unwrap().into())
-            .collect();
-        let array = v8::Array::new_with_elements(scope, &values);
-        retval.set(array.into());
-    } else {
-        retval.set(v8::Array::new(scope, 0).into());
-    }
+    let entries = form_data_entries_for_object(scope, args.this());
+    let array = form_data_values_array(scope, &entries);
+    retval.set(iterator_from_array(scope, array));
 }
 
 /// FormData.forEach() method - iterates over all key/value pairs
 fn form_data_for_each(
-    _scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
     _retval: v8::ReturnValue,
 ) {
-    // ForEach requires more complex V8 callback handling
-    // For now, this is a stub - the core functionality (append, get, etc.) is implemented
-    // Full forEach support would require proper callback scope management
+    let callback_val = args.get(0);
+    let Ok(callback) = v8::Local::<v8::Function>::try_from(callback_val) else {
+        return;
+    };
+
+    let this_obj = args.this();
+    let entries = form_data_entries_for_object(scope, this_obj);
+    let this_arg = args.get(1);
+    let receiver = if this_arg.is_undefined() {
+        v8::undefined(scope).into()
+    } else {
+        this_arg
+    };
+
+    for entry in entries {
+        let value_arg: v8::Local<v8::Value> = v8::String::new(scope, &entry.value).unwrap().into();
+        let name_arg: v8::Local<v8::Value> = v8::String::new(scope, &entry.name).unwrap().into();
+        let owner_arg: v8::Local<v8::Value> = this_obj.into();
+        let _ = callback.call(scope, receiver, &[value_arg, name_arg, owner_arg]);
+    }
 }
 
 /// Export FormData entries for use with fetch
@@ -566,7 +681,7 @@ pub fn serialize_formdata_multipart(entries: &[FormDataEntry], boundary: &str) -
         result.extend_from_slice(b"\r\n");
 
         // Write body
-        result.extend_from_slice(entry.value.as_bytes());
+        result.extend_from_slice(&entry.body);
         result.extend_from_slice(b"\r\n");
     }
 

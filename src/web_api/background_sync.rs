@@ -271,31 +271,18 @@ fn sync_manager_register_callback(
     args: v8::FunctionCallbackArguments,
     mut rv: v8::ReturnValue,
 ) {
-    // Get tag from arguments
-    let tag = if args.length() > 0 {
-        args.get(0)
-            .to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "").unwrap())
-            .to_rust_string_lossy(scope)
-    } else {
-        String::from("default-sync")
-    };
-
-    // Store the tag in our global storage
-    let sync_tags = get_sync_tags();
-    let mut tags = sync_tags.lock().unwrap();
-    if !tags.contains(&tag) {
-        tags.push(tag.clone());
-    }
-    drop(tags);
-
-    // Return a promise that resolves when sync is registered
-    // For now, create a resolved promise
     let promise_resolver = v8::PromiseResolver::new(scope).unwrap();
-    let undefined: v8::Local<v8::Value> = v8::undefined(scope).into();
-    promise_resolver.resolve(scope, undefined).unwrap();
+    let promise = promise_resolver.get_promise(scope);
+    rv.set(promise.into());
 
-    rv.set(promise_resolver.into());
+    let message = if args.length() == 0 {
+        "Background Sync register requires a tag"
+    } else {
+        "Background Sync registration is not supported yet"
+    };
+    let message = v8::String::new(scope, message).unwrap();
+    let error = v8::Exception::error(scope, message);
+    promise_resolver.reject(scope, error).unwrap();
 }
 
 /// SyncManager.getTags() callback
@@ -315,5 +302,8 @@ fn sync_manager_get_tags_callback(
         tags_array.set_index(scope, i as u32, tag_val.into());
     }
 
-    rv.set(tags_array.into());
+    let promise_resolver = v8::PromiseResolver::new(scope).unwrap();
+    let promise = promise_resolver.get_promise(scope);
+    rv.set(promise.into());
+    promise_resolver.resolve(scope, tags_array.into()).unwrap();
 }

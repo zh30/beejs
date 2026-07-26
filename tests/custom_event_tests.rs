@@ -68,7 +68,7 @@ mod tests {
             const event = new CustomEvent('test');
             event.detail === null &&
             event.bubbles === false &&
-            event.cancelable === true
+            event.cancelable === false
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -83,7 +83,7 @@ mod tests {
     fn test_custom_event_inherits_from_event() {
         let code = r#"
             const event = new CustomEvent('test');
-            event.type === 'test' && event.cancelable === true
+            event.type === 'test' && event.cancelable === false
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -97,10 +97,14 @@ mod tests {
     #[serial]
     fn test_custom_event_prevent_default() {
         let code = r#"
-            const event = new CustomEvent('test');
-            event.defaultPrevented === false;
-            event.preventDefault();
-            event.defaultPrevented === true
+            const passive = new CustomEvent('passive');
+            passive.preventDefault();
+
+            const cancelable = new CustomEvent('cancelable', { cancelable: true });
+            cancelable.preventDefault();
+
+            passive.defaultPrevented === false &&
+            cancelable.defaultPrevented === true
         "#;
 
         let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
@@ -108,6 +112,30 @@ mod tests {
         assert!(
             result.is_ok(),
             "CustomEvent should have preventDefault method"
+        );
+        assert_eq!(result.unwrap().trim(), "true");
+    }
+
+    /// 测试 CustomEventInit bubbles/cancelable 字段
+    #[test]
+    #[serial]
+    fn test_custom_event_init_bubbles_and_cancelable() {
+        let code = r#"
+            const event = new CustomEvent('ready', {
+                detail: { ok: true },
+                bubbles: true,
+                cancelable: true
+            });
+            event.detail.ok === true &&
+            event.bubbles === true &&
+            event.cancelable === true
+        "#;
+
+        let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+        let result = runtime.execute_code(code);
+        assert!(
+            result.is_ok(),
+            "CustomEvent should parse bubbles/cancelable init fields"
         );
         assert_eq!(result.unwrap().trim(), "true");
     }

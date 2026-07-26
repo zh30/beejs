@@ -224,3 +224,79 @@ fn test_export_key_jwk_format() {
     // Should return a Promise
     assert!(trimmed == "true" || trimmed.contains("Promise") || trimmed == "[object Promise]");
 }
+
+#[test]
+#[serial]
+fn test_export_key_jwk_aes_gcm_fields() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.importKey(
+                'raw',
+                new Uint8Array(32),
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            const jwk = await crypto.subtle.exportKey('jwk', key);
+            const ok =
+                jwk.kty === 'oct' &&
+                jwk.k === 'A'.repeat(43) &&
+                jwk.alg === 'A256GCM' &&
+                jwk.ext === true &&
+                Array.isArray(jwk.key_ops) &&
+                jwk.key_ops.join(',') === 'encrypt,decrypt' &&
+                !jwk.k.includes('=') &&
+                !jwk.k.includes('+') &&
+                !jwk.k.includes('/');
+            return ok ? 'true' : JSON.stringify(jwk);
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}
+
+#[test]
+#[serial]
+fn test_export_key_jwk_hmac_sha512_fields_and_signature_length() {
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let code = r#"
+        (async () => {
+            const key = await crypto.subtle.importKey(
+                'raw',
+                new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]),
+                { name: 'HMAC', hash: 'SHA-512' },
+                true,
+                ['sign', 'verify']
+            );
+            const data = new TextEncoder().encode('hmac sha512 jwk export');
+            const signature = new Uint8Array(await crypto.subtle.sign({ name: 'HMAC' }, key, data));
+            const valid = await crypto.subtle.verify({ name: 'HMAC' }, key, signature, data);
+            const jwk = await crypto.subtle.exportKey('jwk', key);
+            const ok =
+                key.algorithm.name === 'HMAC' &&
+                key.algorithm.hash.name === 'SHA-512' &&
+                signature.length === 64 &&
+                valid === true &&
+                jwk.kty === 'oct' &&
+                jwk.k === 'AQIDBAUGBwgJCgsMDQ4PEA' &&
+                jwk.alg === 'HS512' &&
+                jwk.ext === true &&
+                Array.isArray(jwk.key_ops) &&
+                jwk.key_ops.join(',') === 'sign,verify' &&
+                !jwk.k.includes('=') &&
+                !jwk.k.includes('+') &&
+                !jwk.k.includes('/');
+            return ok ? 'true' : JSON.stringify({
+                algorithm: key.algorithm,
+                signatureLength: signature.length,
+                valid,
+                jwk
+            });
+        })();
+    "#;
+    let result = runtime.execute_code(code);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().trim(), "true");
+}

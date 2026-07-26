@@ -2,6 +2,9 @@
 // Tests for crypto.createPrivateKey, createPublicKey, createSecretKey
 // KeyObjects API for cryptographic key management
 
+use openssl::pkey::PKey;
+use openssl::rsa::Rsa;
+use openssl::symm::Cipher;
 use serial_test::serial;
 use std::fs;
 use std::path::PathBuf;
@@ -31,6 +34,20 @@ fn run_js_test(code: &str) -> String {
     lines.join("\n")
 }
 
+fn encrypted_rsa_pkcs8_pair(passphrase: &[u8]) -> (String, String) {
+    let rsa = Rsa::generate(2048).unwrap();
+    let key = PKey::from_rsa(rsa).unwrap();
+    let private_pem = key
+        .private_key_to_pem_pkcs8_passphrase(Cipher::aes_256_cbc(), passphrase)
+        .unwrap();
+    let public_pem = key.public_key_to_pem().unwrap();
+
+    (
+        String::from_utf8(private_pem).unwrap(),
+        String::from_utf8(public_pem).unwrap(),
+    )
+}
+
 // ==================== createPrivateKey Tests ====================
 
 #[test]
@@ -50,22 +67,12 @@ console.log(typeof crypto.createPrivateKey === 'function' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_private_key_returns_object() {
-    // RSA private key for testing
-    let rsa_pem = r#"-----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L
-+SdBbGhPGhJP2wqE2bF9eDQfyjm1K1J7GQZbXoY9P9BQjCMZXG5u0cJYDNKdW8
-jZGdz7b9c8l8R3T+cBH4qPvE0VJGd5wIz7K2rZPEe5yYJ8EoL3L8v3n8K6V6G
-2V5hB7f4wE4x6yZ2q8R1s5t3u7o6n5m4k3j2i1h0g9f8e7d6c5b4a3
------END RSA PRIVATE KEY-----
-"#;
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
 console.log(typeof privateKey === 'object' && privateKey !== null ? 'PASS' : 'FAIL');
-"#,
-        rsa_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected createPrivateKey to return object: {}",
@@ -76,15 +83,12 @@ console.log(typeof privateKey === 'object' && privateKey !== null ? 'PASS' : 'FA
 #[test]
 #[serial]
 fn test_create_private_key_type_property() {
-    let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n+SdBbGhPGhJP2wqE2bF9eDQfyjm1K1J7GQZbXoY9P9BQjCMZXG5u0cJYDNKdW8\n-----END RSA PRIVATE KEY-----";
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
 console.log(privateKey.type === 'private' ? 'PASS' : 'FAIL');
-"#,
-        rsa_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected type to be 'private': {}",
@@ -95,15 +99,12 @@ console.log(privateKey.type === 'private' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_private_key_asymmetric_key_type_rsa() {
-    let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
 console.log(privateKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
-"#,
-        rsa_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected asymmetricKeyType to be 'rsa': {}",
@@ -114,15 +115,12 @@ console.log(privateKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_private_key_asymmetric_key_type_ec() {
-    let ec_pem = "-----BEGIN EC PRIVATE KEY-----\nMHQCAQEEIIrYSSNQFaA2Hwf1duRSxKtLYX5CB04fSeQ6tF1aY/PuoAcGBSuBBAAK\noUQDQgAEqK3xHfL8S4t/1TQ3WHLp1r4P4G2p5Lq5M5n4o3p2q1r0s9t8u7v6w5x4\n-----END EC PRIVATE KEY-----";
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
 console.log(privateKey.asymmetricKeyType === 'ec' ? 'PASS' : 'FAIL');
-"#,
-        ec_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected asymmetricKeyType to be 'ec': {}",
@@ -133,15 +131,12 @@ console.log(privateKey.asymmetricKeyType === 'ec' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_private_key_has_export_method() {
-    let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
 console.log(typeof privateKey.export === 'function' ? 'PASS' : 'FAIL');
-"#,
-        rsa_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected export method to exist: {}",
@@ -152,16 +147,13 @@ console.log(typeof privateKey.export === 'function' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_private_key_export_pem() {
-    let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
 const exported = privateKey.export('pem');
 console.log(typeof exported === 'string' && exported.includes('BEGIN RSA PRIVATE KEY') ? 'PASS' : 'FAIL');
-"#,
-        rsa_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected export('pem') to return PEM string: {}",
@@ -171,16 +163,144 @@ console.log(typeof exported === 'string' && exported.includes('BEGIN RSA PRIVATE
 
 #[test]
 #[serial]
-fn test_create_private_key_with_object_format() {
-    let rsa_pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
+fn test_create_private_key_export_encrypted_pkcs8_pem_with_passphrase() {
+    let code = r#"
+const passphrase = 'beejs-keyobject-export-passphrase';
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
+const exported = privateKey.export({
+    type: 'pkcs8',
+    format: 'pem',
+    cipher: 'aes-256-cbc',
+    passphrase
+});
+
+const imported = crypto.createPrivateKey({
+    key: exported,
+    type: 'pkcs8',
+    format: 'pem',
+    passphrase
+});
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('encrypted keyobject export');
+const signature = sign.sign(imported, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('encrypted keyobject export');
+console.log(typeof exported === 'string' ? 'PASS' : 'FAIL');
+console.log(exported.includes('BEGIN ENCRYPTED PRIVATE KEY') ? 'PASS' : 'FAIL');
+console.log(!exported.includes('BEGIN RSA PRIVATE KEY') ? 'PASS' : 'FAIL');
+console.log(verify.verify(generated.publicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 4,
+        "Expected private KeyObject encrypted PKCS8 PEM export to round-trip: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_private_key_export_pkcs8_der_returns_buffer() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
+const exported = privateKey.export({ type: 'pkcs8', format: 'der' });
+console.log(Buffer.isBuffer(exported) ? 'PASS' : 'FAIL');
+console.log(exported.length > 256 ? 'PASS' : 'FAIL');
+console.log(exported.toString('utf8').includes('BEGIN') ? 'FAIL' : 'PASS');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 3,
+        "Expected PKCS8 DER export to return binary Buffer data: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_private_key_import_pkcs8_der_round_trip() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+try {
+const originalPrivateKey = crypto.createPrivateKey(generated.privateKey);
+const der = originalPrivateKey.export({ type: 'pkcs8', format: 'der' });
+const importedPrivateKey = crypto.createPrivateKey({ key: der, type: 'pkcs8', format: 'der' });
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('pkcs8 der import');
+const signature = sign.sign(importedPrivateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('pkcs8 der import');
+console.log(importedPrivateKey.type === 'private' ? 'PASS' : 'FAIL');
+console.log(importedPrivateKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(verify.verify(generated.publicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+} catch (error) {
+    console.log('ERROR:' + String(error && error.message ? error.message : error));
+}
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 3,
+        "Expected PKCS8 DER import to produce usable private KeyObject: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_private_key_import_encrypted_pkcs8_pem_with_passphrase() {
+    let passphrase = "beejs-test-passphrase";
+    let (encrypted_private_pem, public_pem) = encrypted_rsa_pkcs8_pair(passphrase.as_bytes());
+    let encrypted_private_pem = serde_json::to_string(&encrypted_private_pem).unwrap();
+    let public_pem = serde_json::to_string(&public_pem).unwrap();
+    let passphrase = serde_json::to_string(passphrase).unwrap();
     let code = format!(
         r#"
-const privateKey = crypto.createPrivateKey({{ key: `{}` }});
-console.log(typeof privateKey === 'object' ? 'PASS' : 'FAIL');
-"#,
-        rsa_pem
+const encryptedPrivatePem = {encrypted_private_pem};
+const publicPem = {public_pem};
+const importedPrivateKey = crypto.createPrivateKey({{
+    key: encryptedPrivatePem,
+    type: 'pkcs8',
+    format: 'pem',
+    passphrase: {passphrase}
+}});
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('encrypted pkcs8 pem import');
+const signature = sign.sign(importedPrivateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('encrypted pkcs8 pem import');
+console.log(importedPrivateKey.type === 'private' ? 'PASS' : 'FAIL');
+console.log(importedPrivateKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(verify.verify(publicPem, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#
     );
     let output = run_js_test(&code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 3,
+        "Expected encrypted PKCS8 PEM import with passphrase to produce usable private KeyObject: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_private_key_with_object_format() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey({ key: generated.privateKey });
+console.log(typeof privateKey === 'object' ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected createPrivateKey to accept object format: {}",
@@ -191,22 +311,18 @@ console.log(typeof privateKey === 'object' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_private_key_invalid_format() {
-    // Note: Beejs accepts any string as key material for flexibility
-    // The implementation returns an object with the key type defaulting to RSA
     let code = r#"
 try {
-    const key = crypto.createPrivateKey('invalid-key-data');
-    // Accept any valid object return as valid behavior
-    console.log(typeof key === 'object' && key.type === 'private' ? 'PASS' : 'FAIL');
+    crypto.createPrivateKey('invalid-key-data');
+    console.log('FAIL');
 } catch (e) {
-    // Or error is acceptable too
-    console.log('PASS');
+    console.log(String(e && e.message ? e.message : e).toLowerCase().includes('invalid') ? 'PASS' : 'FAIL');
 }
 "#;
     let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
-        "Expected valid object or error for invalid key format: {}",
+        "Expected error for invalid key format: {}",
         output
     );
 }
@@ -230,15 +346,12 @@ console.log(typeof crypto.createPublicKey === 'function' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_public_key_returns_object() {
-    let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\nF8CnkK4VK8c9xUHD4lzdAaYx3L+SdBbGhPGhJP2wqE2bF9eDQfyjm1K1J7GQZbXo\nY9P9BQjCMZXG5u0cJYDNKdW8jZGdz7b9c8l8R3T+cBH4qPvE0VJGd5wIz7K2rZPE\ne5yYJ8EoL3L8v3n8K6V6G2V5hB7f4wE4x6yZ2q8R1s5t3u7o6n5m4k3j2i1h0g\n9f8e7d6c5b4a3\n-----END PUBLIC KEY-----";
-    let code = format!(
-        r#"
-const publicKey = crypto.createPublicKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
 console.log(typeof publicKey === 'object' && publicKey !== null ? 'PASS' : 'FAIL');
-"#,
-        pub_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected createPublicKey to return object: {}",
@@ -249,15 +362,12 @@ console.log(typeof publicKey === 'object' && publicKey !== null ? 'PASS' : 'FAIL
 #[test]
 #[serial]
 fn test_create_public_key_type_property() {
-    let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(
-        r#"
-const publicKey = crypto.createPublicKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
 console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
-"#,
-        pub_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected type to be 'public': {}",
@@ -268,15 +378,12 @@ console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_public_key_asymmetric_key_type() {
-    let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(
-        r#"
-const publicKey = crypto.createPublicKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
 console.log(publicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
-"#,
-        pub_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected asymmetricKeyType to be 'rsa': {}",
@@ -287,15 +394,12 @@ console.log(publicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_public_key_has_export_method() {
-    let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(
-        r#"
-const publicKey = crypto.createPublicKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
 console.log(typeof publicKey.export === 'function' ? 'PASS' : 'FAIL');
-"#,
-        pub_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected export method to exist: {}",
@@ -306,19 +410,255 @@ console.log(typeof publicKey.export === 'function' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_create_public_key_export_pem() {
-    let pub_pem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(
-        r#"
-const publicKey = crypto.createPublicKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
 const exported = publicKey.export('pem');
 console.log(typeof exported === 'string' && exported.includes('BEGIN PUBLIC KEY') ? 'PASS' : 'FAIL');
-"#,
-        pub_pem
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected export('pem') to return PEM string: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_from_private_key_pem_derives_public_key() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.privateKey);
+const exported = publicKey.export({ type: 'spki', format: 'pem' });
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('derive public from private pem');
+const signature = sign.sign(generated.privateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('derive public from private pem');
+console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
+console.log(publicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(exported.includes('BEGIN PUBLIC KEY') && !exported.includes('PRIVATE KEY') ? 'PASS' : 'FAIL');
+console.log(verify.verify(publicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 4,
+        "Expected createPublicKey(private PEM) to derive a usable RSA public key: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_from_private_key_object_derives_ec_public_key() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
+const publicKey = crypto.createPublicKey(privateKey);
+const exported = publicKey.export({ type: 'spki', format: 'pem' });
+
+const sign = crypto.createSign('SHA256');
+sign.update('derive ec public from private keyobject');
+const signature = sign.sign(privateKey, 'base64');
+
+const verify = crypto.createVerify('SHA256');
+verify.update('derive ec public from private keyobject');
+console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
+console.log(publicKey.asymmetricKeyType === 'ec' ? 'PASS' : 'FAIL');
+console.log(exported.includes('BEGIN PUBLIC KEY') && !exported.includes('PRIVATE KEY') ? 'PASS' : 'FAIL');
+console.log(verify.verify(publicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 4,
+        "Expected createPublicKey(private KeyObject) to derive a usable EC public key: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_from_private_key_options_derives_public_key() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey({ key: generated.privateKey, format: 'pem' });
+const exported = publicKey.export({ type: 'spki', format: 'pem' });
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('derive public from private options');
+const signature = sign.sign(generated.privateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('derive public from private options');
+console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
+console.log(publicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(exported.includes('BEGIN PUBLIC KEY') && !exported.includes('PRIVATE KEY') ? 'PASS' : 'FAIL');
+console.log(verify.verify(publicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 4,
+        "Expected createPublicKey({{ key: private PEM }}) to derive a usable public key: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_export_pkcs1_pem_round_trip() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
+const pkcs1 = publicKey.export({ type: 'pkcs1', format: 'pem' });
+const spki = publicKey.export({ type: 'spki', format: 'pem' });
+const importedPublicKey = crypto.createPublicKey({ key: pkcs1, type: 'pkcs1', format: 'pem' });
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('public pkcs1 pem export');
+const signature = sign.sign(generated.privateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('public pkcs1 pem export');
+console.log(typeof pkcs1 === 'string' && pkcs1.includes('BEGIN RSA PUBLIC KEY') ? 'PASS' : 'FAIL');
+console.log(spki.includes('BEGIN PUBLIC KEY') && !spki.includes('BEGIN RSA PUBLIC KEY') ? 'PASS' : 'FAIL');
+console.log(importedPublicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(verify.verify(importedPublicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 4,
+        "Expected RSA public PKCS#1 PEM export/import round-trip: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_export_spki_der_returns_buffer() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
+const exported = publicKey.export({ type: 'spki', format: 'der' });
+console.log(Buffer.isBuffer(exported) ? 'PASS' : 'FAIL');
+console.log(exported.length > 128 ? 'PASS' : 'FAIL');
+console.log(exported.toString('utf8').includes('BEGIN') ? 'FAIL' : 'PASS');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 3,
+        "Expected SPKI DER export to return binary Buffer data: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_export_import_pkcs1_der_round_trip() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const publicKey = crypto.createPublicKey(generated.publicKey);
+const exported = publicKey.export({ type: 'pkcs1', format: 'der' });
+const importedPublicKey = crypto.createPublicKey({ key: exported, type: 'pkcs1', format: 'der' });
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('public pkcs1 der export');
+const signature = sign.sign(generated.privateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('public pkcs1 der export');
+console.log(Buffer.isBuffer(exported) ? 'PASS' : 'FAIL');
+console.log(exported.length > 128 ? 'PASS' : 'FAIL');
+console.log(exported.toString('utf8').includes('BEGIN') ? 'FAIL' : 'PASS');
+console.log(importedPublicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(verify.verify(importedPublicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 5,
+        "Expected RSA public PKCS#1 DER export/import round-trip: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_export_ec_pkcs1_reports_incompatible_key_options() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const publicKey = crypto.createPublicKey(generated.publicKey);
+for (const format of ['pem', 'der']) {
+    try {
+        publicKey.export({ type: 'pkcs1', format });
+        console.log('FAIL');
+    } catch (e) {
+        console.log(e && e.code === 'ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS' ? 'PASS' : 'FAIL');
+        console.log(e && e.name === 'Error' ? 'PASS' : 'FAIL');
+        console.log(e && e.message === 'The selected key encoding pkcs1 can only be used for RSA keys.' ? 'PASS' : 'FAIL');
+    }
+}
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 6,
+        "Expected EC public pkcs1 export to report incompatible key options: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_import_spki_der_round_trip() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+try {
+const originalPublicKey = crypto.createPublicKey(generated.publicKey);
+const der = originalPublicKey.export({ type: 'spki', format: 'der' });
+const importedPublicKey = crypto.createPublicKey({ key: der, type: 'spki', format: 'der' });
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('spki der import');
+const signature = sign.sign(generated.privateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('spki der import');
+console.log(importedPublicKey.type === 'public' ? 'PASS' : 'FAIL');
+console.log(importedPublicKey.asymmetricKeyType === 'rsa' ? 'PASS' : 'FAIL');
+console.log(verify.verify(importedPublicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+} catch (error) {
+    console.log('ERROR:' + String(error && error.message ? error.message : error));
+}
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 3,
+        "Expected SPKI DER import to produce usable public KeyObject: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_create_public_key_detects_ec_spki_key_type() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const publicKey = crypto.createPublicKey(generated.publicKey);
+console.log(publicKey.asymmetricKeyType === 'ec' ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    assert!(
+        output.contains("PASS"),
+        "Expected EC SPKI public key to be detected as ec: {}",
         output
     );
 }
@@ -538,6 +878,93 @@ try {
 
 #[test]
 #[serial]
+fn test_keyobject_export_rsa_jwk_round_trip() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
+const publicKey = crypto.createPublicKey(generated.publicKey);
+const privateJwk = privateKey.export({ format: 'jwk' });
+const publicJwk = publicKey.export({ format: 'jwk' });
+const importedPrivateKey = crypto.createPrivateKey({ key: privateJwk, format: 'jwk' });
+const importedPublicKey = crypto.createPublicKey({ key: publicJwk, format: 'jwk' });
+
+const base64url = /^[A-Za-z0-9_-]+$/;
+const fieldsOk =
+  publicJwk.kty === 'RSA' &&
+  base64url.test(publicJwk.n) &&
+  base64url.test(publicJwk.e) &&
+  privateJwk.kty === 'RSA' &&
+  privateJwk.n === publicJwk.n &&
+  privateJwk.e === publicJwk.e &&
+  ['d', 'p', 'q', 'dp', 'dq', 'qi'].every((field) =>
+    typeof privateJwk[field] === 'string' &&
+    base64url.test(privateJwk[field]) &&
+    !privateJwk[field].includes('=')
+  );
+
+const sign = crypto.createSign('RSA-SHA256');
+sign.update('keyobject rsa jwk export');
+const signature = sign.sign(importedPrivateKey, 'base64');
+
+const verify = crypto.createVerify('RSA-SHA256');
+verify.update('keyobject rsa jwk export');
+console.log(fieldsOk ? 'PASS' : 'FAIL');
+console.log(verify.verify(importedPublicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 2,
+        "Expected RSA KeyObject JWK export to round-trip: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
+fn test_keyobject_export_ec_jwk_round_trip() {
+    let code = r#"
+const generated = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
+const publicKey = crypto.createPublicKey(generated.publicKey);
+const privateJwk = privateKey.export({ format: 'jwk' });
+const publicJwk = publicKey.export({ format: 'jwk' });
+const importedPrivateKey = crypto.createPrivateKey({ key: privateJwk, format: 'jwk' });
+const importedPublicKey = crypto.createPublicKey({ key: publicJwk, format: 'jwk' });
+
+const base64url = /^[A-Za-z0-9_-]+$/;
+const fieldsOk =
+  publicJwk.kty === 'EC' &&
+  publicJwk.crv === 'P-256' &&
+  base64url.test(publicJwk.x) &&
+  base64url.test(publicJwk.y) &&
+  privateJwk.kty === 'EC' &&
+  privateJwk.crv === 'P-256' &&
+  privateJwk.x === publicJwk.x &&
+  privateJwk.y === publicJwk.y &&
+  base64url.test(privateJwk.d) &&
+  !privateJwk.d.includes('=');
+
+const sign = crypto.createSign('SHA256');
+sign.update('keyobject ec jwk export');
+const signature = sign.sign(importedPrivateKey, 'base64');
+
+const verify = crypto.createVerify('SHA256');
+verify.update('keyobject ec jwk export');
+console.log(fieldsOk ? 'PASS' : 'FAIL');
+console.log(verify.verify(importedPublicKey, signature, 'base64') === true ? 'PASS' : 'FAIL');
+"#;
+    let output = run_js_test(code);
+    let pass_count = output.lines().filter(|line| *line == "PASS").count();
+    assert_eq!(
+        pass_count, 2,
+        "Expected EC KeyObject JWK export to round-trip: {}",
+        output
+    );
+}
+
+#[test]
+#[serial]
 fn test_key_objects_export_import_roundtrip() {
     let code = r#"
 const secretKey = crypto.createSecretKey(Buffer.from('roundtrip-test'));
@@ -557,19 +984,15 @@ console.log(imported.type === 'secret' ? 'PASS' : 'FAIL');
 #[test]
 #[serial]
 fn test_private_public_key_relationship() {
-    let rsa_priv = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8CnkK4VK8c9xUHD4lzdAaYx3L\n-----END RSA PRIVATE KEY-----";
-    let rsa_pub = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3VS5JJcds3xfn/ygWy\n-----END PUBLIC KEY-----";
-    let code = format!(
-        r#"
-const privateKey = crypto.createPrivateKey(`{}`);
-const publicKey = crypto.createPublicKey(`{}`);
+    let code = r#"
+const generated = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+const privateKey = crypto.createPrivateKey(generated.privateKey);
+const publicKey = crypto.createPublicKey(generated.publicKey);
 console.log(privateKey.type === 'private' ? 'PASS' : 'FAIL');
 console.log(publicKey.type === 'public' ? 'PASS' : 'FAIL');
 console.log(privateKey.asymmetricKeyType === publicKey.asymmetricKeyType ? 'PASS' : 'FAIL');
-"#,
-        rsa_priv, rsa_pub
-    );
-    let output = run_js_test(&code);
+"#;
+    let output = run_js_test(code);
     assert!(
         output.contains("PASS"),
         "Expected key types to match: {}",

@@ -500,7 +500,12 @@ impl Runtime {
             code
         );
 
-        self.execute_code(&wrapped_code)
+        let mut runtime_ref = self.lite_runtime.borrow_mut();
+        let runtime = runtime_ref.get_or_insert_with(|| {
+            crate::runtime_minimal::MinimalRuntime::new().expect("Failed to create MinimalRuntime")
+        });
+        runtime.set_main_module_path(path);
+        runtime.execute_code(&wrapped_code)
     }
 }
 /// 获取智能运行时（根据代码特征自动优化）

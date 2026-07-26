@@ -18,6 +18,7 @@ pub enum PermissionAction {
     Write,
     Execute,
     Connect,
+    Listen,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -90,14 +91,15 @@ impl ResourceBroker {
         action: PermissionAction,
         resource: ResourceId,
     ) -> PermissionDecision {
+        let normalized_resource = normalize_resource(resource);
         let exact = PermissionRule {
             kind: kind.clone(),
             action: action.clone(),
-            resource: normalize_resource(resource),
+            resource: normalized_resource.clone(),
         };
         let wildcard = PermissionRule {
-            kind,
-            action,
+            kind: kind.clone(),
+            action: action.clone(),
             resource: ResourceId::Any,
         };
 
@@ -107,6 +109,27 @@ impl ResourceBroker {
         if self.allow_rules.contains(&exact) {
             return PermissionDecision::Allow;
         }
+
+        if matches!(
+            (&kind, &action, &normalized_resource),
+            (
+                PermissionKind::Network,
+                PermissionAction::Connect | PermissionAction::Listen,
+                ResourceId::Url(_)
+            )
+        ) {
+            if let Some(host_rule) =
+                network_host_rule(kind.clone(), action.clone(), &normalized_resource)
+            {
+                if self.deny_rules.contains(&host_rule) {
+                    return PermissionDecision::Deny;
+                }
+                if self.allow_rules.contains(&host_rule) {
+                    return PermissionDecision::Allow;
+                }
+            }
+        }
+
         if self.deny_rules.contains(&wildcard) {
             return PermissionDecision::Deny;
         }
@@ -138,6 +161,22 @@ impl ResourceBroker {
     }
 }
 
+fn network_host_rule(
+    kind: PermissionKind,
+    action: PermissionAction,
+    resource: &ResourceId,
+) -> Option<PermissionRule> {
+    let ResourceId::Url(url) = resource else {
+        return None;
+    };
+    let host = url::Url::parse(url).ok()?.host_str()?.to_string();
+    Some(PermissionRule {
+        kind,
+        action,
+        resource: ResourceId::Name(host),
+    })
+}
+
 fn normalize_resource(resource: ResourceId) -> ResourceId {
     match resource {
         ResourceId::Path(path) => ResourceId::Path(normalize_path(path)),
@@ -146,6 +185,14 @@ fn normalize_resource(resource: ResourceId) -> ResourceId {
 }
 
 fn normalize_path(path: PathBuf) -> PathBuf {
+    let path = if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()
+            .map(|cwd| cwd.join(&path))
+            .unwrap_or(path)
+    };
+
     if let Ok(canonical) = path.canonicalize() {
         return canonical;
     }

@@ -48,6 +48,15 @@ pub struct HotReloadEvent {
     pub message: Option<String>,
 }
 
+fn check_network_bind_permission(addr: &str) -> Result<(), String> {
+    crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Network,
+        crate::permissions::PermissionAction::Listen,
+        crate::permissions::ResourceId::Url(format!("ws://{}", addr)),
+    )
+    .map_err(|e| e.to_string())
+}
+
 /// WebSocket hot reload server
 #[derive(Debug, Clone)]
 pub struct WebSocketHotReloader {
@@ -138,6 +147,7 @@ impl WebSocketHotReloader {
     #[allow(dead_code)]
     pub async fn start(&self) -> Result<(), String> {
         let addr = format!("{}:{}", self.config.host, self.config.port);
+        check_network_bind_permission(&addr)?;
 
         // Create TCP listener
         let listener = match TcpListener::bind(&addr).await {
@@ -291,6 +301,17 @@ async fn handle_client(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permissions::{
+        global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+    };
+    use serial_test::serial;
+    use std::time::Duration;
+
+    fn reset_global_broker() {
+        *global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
+    }
 
     #[test]
     fn test_websocket_config_default() {
@@ -311,5 +332,45 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"event_type\":\"reload\""));
         assert!(json.contains("\"file_path\":\"test.js\""));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn start_uses_global_network_broker_before_binding_listener() {
+        let config = WebSocketConfig {
+            port: 0,
+            host: "127.0.0.1".to_string(),
+            channel_capacity: 4,
+        };
+        let reloader = WebSocketHotReloader::with_config(config);
+
+        {
+            let mut broker = global_resource_broker()
+                .write()
+                .expect("resource broker lock should not be poisoned");
+            *broker = ResourceBroker::default();
+            broker.deny(
+                PermissionKind::Network,
+                PermissionAction::Listen,
+                ResourceId::Url("ws://127.0.0.1:0".to_string()),
+            );
+        }
+
+        let result = tokio::time::timeout(Duration::from_millis(100), reloader.start()).await;
+        reset_global_broker();
+
+        let error = match result {
+            Ok(Err(error)) => error,
+            Ok(Ok(())) => panic!("denied WebSocket hot reload bind must not succeed"),
+            Err(_) => panic!("denied WebSocket hot reload bind must fail before listener bind"),
+        };
+        assert!(
+            error.contains("permission denied") && error.contains("Listen"),
+            "expected permission denied, got: {error}"
+        );
+        assert!(
+            !reloader.is_running(),
+            "denied WebSocket hot reload bind must not mark server running"
+        );
     }
 }

@@ -1,7 +1,18 @@
 // Hot Reload Tests for Beejs Runtime
 
+use beejs::permissions::{
+    global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
+};
 use beejs::watcher::{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
+use serial_test::serial;
 use std::path::Path;
+use tempfile::TempDir;
+
+fn reset_global_broker() {
+    *global_resource_broker()
+        .write()
+        .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
+}
 
 /// Test 1: Verify watcher configuration defaults
 #[test]
@@ -177,4 +188,83 @@ fn test_watcher_stop() {
     // Stop should be safe even when not running
     reloader.stop();
     assert!(!reloader.is_running());
+}
+
+#[test]
+#[serial]
+fn watch_uses_global_file_read_broker_before_scanning_or_starting() {
+    let temp_dir = TempDir::new().unwrap();
+    std::fs::write(temp_dir.path().join("app.js"), "console.log('hot');").unwrap();
+    let mut reloader = HotReloader::with_config(
+        WatcherConfigBuilder::new()
+            .show_notifications(false)
+            .build(),
+    );
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(temp_dir.path().to_path_buf()),
+        );
+    }
+
+    let result = reloader.watch(temp_dir.path());
+    reloader.stop();
+    reset_global_broker();
+
+    let error = result.expect_err("denied watch path must fail before starting watcher");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !reloader.is_running(),
+        "denied watch must not leave the watcher running"
+    );
+    assert_eq!(reloader.get_stats().files_watched, 0);
+}
+
+#[test]
+#[serial]
+fn watch_uses_global_file_read_broker_for_initial_file_count() {
+    let temp_dir = TempDir::new().unwrap();
+    let watched_file = temp_dir.path().join("app.js");
+    std::fs::write(&watched_file, "console.log('hot');").unwrap();
+    let mut reloader = HotReloader::with_config(
+        WatcherConfigBuilder::new()
+            .show_notifications(false)
+            .build(),
+    );
+
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(watched_file.clone()),
+        );
+    }
+
+    let result = reloader.watch(temp_dir.path());
+    reloader.stop();
+    reset_global_broker();
+
+    let error = result.expect_err("denied watched file must fail before counting files");
+    assert!(
+        error.to_string().contains("permission denied"),
+        "expected permission denied, got: {error}"
+    );
+    assert!(
+        !reloader.is_running(),
+        "denied initial scan must not leave the watcher running"
+    );
+    assert_eq!(reloader.get_stats().files_watched, 0);
 }

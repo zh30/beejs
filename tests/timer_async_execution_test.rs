@@ -18,17 +18,17 @@ fn cleanup_global_state() {
 fn test_settimeout_async_executes_after_delay() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
+    runtime.set_timer_drain_limit_ms(150);
 
-    // Short ref'ed timers should drain before execute_code returns so CLI eval
-    // can observe timer-backed async work.
+    // Short ref'ed timers should drain Promise-backed async work before execute_code returns.
     let result = runtime
         .execute_code(
             r#"
-        globalThis.asyncResult = 'before';
-        setTimeout(() => {
-            globalThis.asyncResult = 'after';
-        }, 50);
-        globalThis.asyncResult;
+        new Promise((resolve) => {
+            setTimeout(() => {
+                resolve('after');
+            }, 50);
+        });
     "#,
         )
         .unwrap();
@@ -42,18 +42,21 @@ fn test_settimeout_zero_executes_immediately() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // setTimeout with delay=0 should execute immediately
+    // setTimeout with delay=0 should execute in the timer phase after sync code.
     let result = runtime
         .execute_code(
             r#"
-        globalThis.testValue = 'initial';
-        setTimeout(() => { globalThis.testValue = 'changed'; }, 0);
-        globalThis.testValue;
+        new Promise((resolve) => {
+            globalThis.testValue = 'initial';
+            setTimeout(() => {
+                globalThis.testValue = 'changed';
+                resolve(globalThis.testValue);
+            }, 0);
+        });
     "#,
         )
         .unwrap();
 
-    // Timer with delay=0 executes immediately during the same execute_code call
     assert_eq!(result.trim(), "changed");
 }
 
@@ -94,20 +97,26 @@ fn test_multiple_set_timeout_zero() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // Multiple delay=0 timers should all execute
+    // Multiple delay=0 timers should all execute in scheduling order.
     let result = runtime
         .execute_code(
             r#"
-        globalThis.count = 0;
-        setTimeout(() => { globalThis.count += 1; }, 0);
-        setTimeout(() => { globalThis.count += 1; }, 0);
-        setTimeout(() => { globalThis.count += 1; }, 0);
-        globalThis.count;
+        new Promise((resolve) => {
+            globalThis.count = 0;
+            const tick = () => {
+                globalThis.count += 1;
+                if (globalThis.count === 3) {
+                    resolve(globalThis.count);
+                }
+            };
+            setTimeout(tick, 0);
+            setTimeout(tick, 0);
+            setTimeout(tick, 0);
+        });
     "#,
         )
         .unwrap();
 
-    // All three timers execute immediately
     assert_eq!(result.trim(), "3");
 }
 
@@ -117,21 +126,21 @@ fn test_timer_with_arguments_zero_delay() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // Test timer with arguments (delay=0, executes immediately)
+    // Test timer with arguments (delay=0, executes in timer phase)
     let result = runtime
         .execute_code(
             r#"
-        setTimeout((a, b, c) => {
-            globalThis.argsResult = a + b + c;
-        }, 0, 10, 20, 30);
-        typeof globalThis.argsResult;
+        new Promise((resolve) => {
+            setTimeout((a, b, c) => {
+                globalThis.argsResult = a + b + c;
+                resolve(globalThis.argsResult);
+            }, 0, 10, 20, 30);
+        });
     "#,
         )
         .unwrap();
 
-    // Should be 'undefined' before execution, then 'number' after
-    // Since timer executes immediately, should be 'number'
-    assert_eq!(result.trim(), "number");
+    assert_eq!(result.trim(), "60");
 
     // Verify the actual value
     let check = runtime.execute_code("globalThis.argsResult").unwrap();
@@ -185,6 +194,76 @@ fn test_setinterval_basic() {
         "cleared",
         "Should be able to clear the interval"
     );
+}
+
+#[test]
+#[serial]
+fn test_setinterval_repeats_until_clear_interval() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    runtime.set_timer_drain_limit_ms(100);
+
+    let result = runtime
+        .execute_code(
+            r#"
+        new Promise((resolve) => {
+            let count = 0;
+            let intervalId = setInterval(() => {
+                count += 1;
+                if (count === 3) {
+                    clearInterval(intervalId);
+                    resolve(count);
+                }
+            }, 5);
+        });
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(
+        result.trim(),
+        "3",
+        "setInterval should keep firing until clearInterval removes it"
+    );
+    cleanup_global_state();
+}
+
+#[test]
+#[serial]
+fn test_setinterval_without_clear_stops_at_drain_limit() {
+    cleanup_global_state();
+    let mut runtime = MinimalRuntime::new().unwrap();
+    runtime.set_timer_drain_limit_ms(50);
+
+    let result = runtime
+        .execute_code(
+            r#"
+        globalThis.intervalCount = 0;
+        setInterval(() => {
+            globalThis.intervalCount += 1;
+        }, 5);
+        "scheduled";
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(
+        result.trim(),
+        "scheduled",
+        "unbounded intervals should not prevent execute_code from returning after the drain limit"
+    );
+
+    let count = runtime
+        .execute_code("globalThis.intervalCount")
+        .unwrap()
+        .trim()
+        .parse::<u64>()
+        .expect("interval count should be numeric");
+    assert!(
+        count > 0,
+        "interval should fire during the drain window before execute_code returns"
+    );
+    cleanup_global_state();
 }
 
 #[test]
@@ -248,26 +327,27 @@ fn test_nested_set_timeout_zero() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // Nested setTimeout(..., 0) should all execute in the same event loop tick
+    // Nested setTimeout(..., 0) should drain until the nested chain settles.
     let result = runtime
         .execute_code(
             r#"
-        globalThis.nestedCount = 0;
-        setTimeout(() => {
-            globalThis.nestedCount += 1;
+        new Promise((resolve) => {
+            globalThis.nestedCount = 0;
             setTimeout(() => {
                 globalThis.nestedCount += 1;
                 setTimeout(() => {
                     globalThis.nestedCount += 1;
+                    setTimeout(() => {
+                        globalThis.nestedCount += 1;
+                        resolve(globalThis.nestedCount);
+                    }, 0);
                 }, 0);
             }, 0);
-        }, 0);
-        globalThis.nestedCount;
+        });
     "#,
         )
         .unwrap();
 
-    // All nested timers with delay=0 execute immediately
     assert_eq!(result.trim(), "3");
 }
 
@@ -277,15 +357,21 @@ fn test_timer_execution_order() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // Timers should execute in the order they were scheduled
+    // Timers should execute in the order they were scheduled.
     let result = runtime
         .execute_code(
             r#"
-        globalThis.order = [];
-        setTimeout(() => { globalThis.order.push('first'); }, 0);
-        setTimeout(() => { globalThis.order.push('second'); }, 0);
-        setTimeout(() => { globalThis.order.push('third'); }, 0);
-        globalThis.order.join(',');
+        new Promise((resolve) => {
+            globalThis.order = [];
+            const finish = () => {
+                if (globalThis.order.length === 3) {
+                    resolve(globalThis.order.join(','));
+                }
+            };
+            setTimeout(() => { globalThis.order.push('first'); finish(); }, 0);
+            setTimeout(() => { globalThis.order.push('second'); finish(); }, 0);
+            setTimeout(() => { globalThis.order.push('third'); finish(); }, 0);
+        });
     "#,
         )
         .unwrap();
