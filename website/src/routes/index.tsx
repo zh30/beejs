@@ -45,17 +45,16 @@ export default function HomeComponent() {
           <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
           <span>v0.1.0-repair-sprint Released</span>
           <span className="text-zinc-600">•</span>
-          <span className="text-zinc-400">100% Test Suite Verified</span>
+          <span className="text-zinc-400">Sub-Millisecond Cold Starts</span>
         </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-[1.1] font-display"
+          className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-[1.1] font-display text-white"
         >
-          The High-Performance{' '}
-          <span className="gradient-amber">JS/TS Runtime</span> Built for Speed
+          Fast, Secure <span className="gradient-amber">JavaScript & TypeScript Runtime</span> in Rust & V8
         </motion.h1>
 
         <motion.p
@@ -64,7 +63,7 @@ export default function HomeComponent() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-6 text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto font-normal leading-relaxed"
         >
-          Powered by Rust and V8. Instant TypeScript execution, fail-closed security, and native Node/Web API compatibility.
+          Engineered from first principles for instant TS execution, fail-closed security sandboxing, WebAssembly JIT performance, and Node/Web API compatibility.
         </motion.p>
 
         <motion.div
@@ -134,14 +133,14 @@ export default function HomeComponent() {
               <div className="w-3 h-3 rounded-full bg-red-500/80" />
               <div className="w-3 h-3 rounded-full bg-amber-500/80" />
               <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-              <span className="ml-2 text-xs font-mono text-zinc-400">app.ts — Beejs Runtime</span>
+              <span className="ml-2 text-xs font-mono text-zinc-400">server.ts — Beejs Runtime Engine</span>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
               TypeScript Native
             </span>
           </div>
           <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto text-zinc-300 bg-[#0a0b0e]">
-            <div className="text-zinc-500">// Instant TypeScript execution with V8 engine</div>
+            <div className="text-zinc-500">// Native Node.js & Web Standard Stream Response</div>
             <div>
               <span className="text-purple-400">import</span> &#123; createServer &#125;{' '}
               <span className="text-purple-400">from</span> <span className="text-emerald-400">'node:http'</span>;
@@ -153,10 +152,13 @@ export default function HomeComponent() {
             </div>
             <div className="pl-4">
               res.<span className="text-blue-400">writeHead</span>(<span className="text-orange-400">200</span>, &#123;{' '}
-              <span className="text-emerald-400">'Content-Type'</span>: <span className="text-emerald-400">'text/plain'</span> &#125;);
+              <span className="text-emerald-400">'Content-Type'</span>: <span className="text-emerald-400">'text/event-stream'</span> &#125;);
             </div>
             <div className="pl-4">
-              res.<span className="text-blue-400">end</span>(<span className="text-emerald-400">'Hello from Beejs Runtime!'</span>);
+              res.<span className="text-blue-400">write</span>(<span className="text-emerald-400">'data: Streaming token chunk\n\n'</span>);
+            </div>
+            <div className="pl-4">
+              res.<span className="text-blue-400">end</span>(<span className="text-emerald-400">'data: Done\n\n'</span>);
             </div>
             <div>&#125;);</div>
             <br />
@@ -164,13 +166,13 @@ export default function HomeComponent() {
               server.<span className="text-blue-400">listen</span>(<span className="text-orange-400">3000</span>, () =&gt; &#123;
             </div>
             <div className="pl-4 text-emerald-400">
-              console.<span className="text-blue-400">log</span>(<span className="text-emerald-400">'🚀 Server running at http://localhost:3000'</span>);
+              console.<span className="text-blue-400">log</span>(<span className="text-emerald-400">'🚀 Server listening at http://localhost:3000'</span>);
             </div>
             <div>&#125;);</div>
             <div className="mt-6 pt-4 border-t border-zinc-800/60 text-xs text-emerald-400 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>$ bee run app.ts</span>
-              <span className="text-zinc-500 ml-auto">Execution time: 4ms</span>
+              <span>$ bee run server.ts</span>
+              <span className="text-zinc-500 ml-auto">Boot time: &lt; 4ms</span>
             </div>
           </div>
         </motion.div>
@@ -192,42 +194,42 @@ export default function HomeComponent() {
       {/* Core Capabilities */}
       <section className="max-w-6xl mx-auto px-6 pb-24 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <h2 className="text-3xl font-bold text-white font-display">Engine Architecture</h2>
+          <h2 className="text-3xl font-bold text-white font-display">First-Principles Architecture</h2>
           <p className="mt-3 text-zinc-400 text-sm">
-            Everything you need for ultra-fast, secure, and modern JavaScript/TypeScript applications.
+            Purpose-built for speed, zero-config TypeScript execution, and security sandboxing.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FeatureCard
             icon={<Cpu className="w-6 h-6 text-amber-400" />}
-            title="V8 JIT Engine"
-            desc="Built on Google V8 for maximum JS execution performance and memory efficiency."
+            title="Google V8 JIT Core"
+            desc="Leverages Google V8 C++ isolates for native execution speed and low heap footprint."
           />
           <FeatureCard
             icon={<FileCode2 className="w-6 h-6 text-amber-400" />}
-            title="TypeScript Native"
-            desc="Zero-config instant TS & TSX transpilation with Source Map error diagnostic alignment."
+            title="Native TypeScript & TSX"
+            desc="Instant TS compilation with Source Map error alignment without ts-node or tsx dependencies."
           />
           <FeatureCard
             icon={<Lock className="w-6 h-6 text-amber-400" />}
-            title="Fail-Closed Security"
-            desc="Granular permission broker for FS, network, process, and environment isolation."
+            title="Fail-Closed Security Sandbox"
+            desc="Granular permission broker for filesystem, network, and process execution isolation."
           />
           <FeatureCard
             icon={<Layers className="w-6 h-6 text-amber-400" />}
-            title="Node.js & Web APIs"
-            desc="Supported fs.promises, http, crypto, fetch, Blob, Streams, and WebCrypto standards."
+            title="Node.js & Web Standard APIs"
+            desc="Supported fs.promises, http stream, WebCrypto, fetch, Blob, and Streams standards."
           />
           <FeatureCard
             icon={<Gauge className="w-6 h-6 text-amber-400" />}
-            title="Sub-Millisecond Boot"
-            desc="Optimized Tokio event loop and V8 isolate bootstrap for near-instant cold starts."
+            title="Sub-Millisecond Cold Starts"
+            desc="Tokio event loop and V8 isolate bootstrap for sub-4ms execution startup."
           />
           <FeatureCard
             icon={<Package className="w-6 h-6 text-amber-400" />}
-            title="Built-in Test Runner"
-            desc="Jest-style assertion suite, matcher tracking, and parallel test runner."
+            title="WebAssembly Native JIT"
+            desc="Full V8 WebAssembly compilation, instantiation, and zero-copy Memory buffer sharing."
           />
         </div>
       </section>
