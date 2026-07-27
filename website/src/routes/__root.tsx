@@ -75,15 +75,15 @@ function RootLayoutInner() {
             <BeeLogo className="w-5 h-5 opacity-80" />
             <span className="text-zinc-300 font-medium font-display">Beejs Runtime</span>
             <span className="text-zinc-700">•</span>
-            <span>Built with Rust & V8</span>
+            <span>{copy.footer.builtWith}</span>
           </div>
 
           <div className="flex items-center gap-6">
             <Link to="/docs" className="hover:text-zinc-300 transition-colors">
-              Documentation
+              {copy.footer.docs}
             </Link>
             <Link to="/blog" className="hover:text-zinc-300 transition-colors">
-              Release Notes
+              {copy.footer.blog}
             </Link>
             <a
               href="https://github.com/zh30/beejs"
@@ -91,12 +91,12 @@ function RootLayoutInner() {
               rel="noreferrer"
               className="hover:text-zinc-300 transition-colors"
             >
-              GitHub Repository
+              {copy.footer.githubRepo}
             </a>
           </div>
 
           <div className="text-zinc-600">
-            © {new Date().getFullYear()} Beejs. Open-source under MIT.
+            {copy.footer.copyright}
           </div>
         </div>
       </footer>

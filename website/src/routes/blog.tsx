@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { BeeLogo } from '../components/Logo'
-import { useLang } from '../lib/i18n'
+import { useLang, type Lang } from '../lib/i18n'
 
 interface Post {
   slug: string
@@ -44,42 +44,71 @@ const modules = import.meta.glob('../blog/*.md', {
   import: 'default',
 }) as Record<string, string>
 
-function getPosts(): Post[] {
+function getPosts(lang: Lang): Post[] {
   try {
-    return Object.entries(modules)
-      .map(([path, rawContent]) => {
-        const slug = path.split('/').pop()?.replace('.md', '') || 'unknown'
-        if (typeof rawContent !== 'string') return null
+    const postsMap = new Map<string, Post>()
 
+    Object.entries(modules).forEach(([path, rawContent]) => {
+      if (typeof rawContent !== 'string') return
+      const filename = path.split('/').pop() || ''
+      const isZhFile = filename.endsWith('.zh.md')
+      const slug = filename.replace(/\.zh\.md$/, '').replace(/\.md$/, '')
+
+      if (lang === 'zh' && isZhFile) {
         const { data, content } = parseFrontmatter(rawContent)
-
-        return {
+        postsMap.set(slug, {
+          slug,
+          title: data.title || '无标题',
+          excerpt: data.excerpt || content.slice(0, 160).replace(/[#*`]/g, '') + '...',
+          date: data.date || '未知日期',
+          author: data.author || 'Beejs 团队',
+          readTime: data.readTime || '1 分钟阅读',
+          tag: data.tag || '日志',
+          content,
+        })
+      } else if (lang === 'en' && !isZhFile) {
+        const { data, content } = parseFrontmatter(rawContent)
+        postsMap.set(slug, {
           slug,
           title: data.title || 'Untitled',
           excerpt: data.excerpt || content.slice(0, 160).replace(/[#*`]/g, '') + '...',
           date: data.date || 'Unknown Date',
-          author: data.author || 'Anonymous',
+          author: data.author || 'Beejs Team',
           readTime: data.readTime || '1 min read',
           tag: data.tag || 'Blog',
           content,
-        }
-      })
-      .filter((post): post is Post => post !== null)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        })
+      } else if (lang === 'zh' && !isZhFile && !postsMap.has(slug)) {
+        const { data, content } = parseFrontmatter(rawContent)
+        postsMap.set(slug, {
+          slug,
+          title: data.title || 'Untitled',
+          excerpt: data.excerpt || content.slice(0, 160).replace(/[#*`]/g, '') + '...',
+          date: data.date || 'Unknown Date',
+          author: data.author || 'Beejs Team',
+          readTime: data.readTime || '1 min read',
+          tag: data.tag || 'Blog',
+          content,
+        })
+      }
+    })
+
+    return Array.from(postsMap.values()).sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
   } catch (err) {
     console.error('Failed to process blog posts:', err)
     return []
   }
 }
 
-const allPosts = getPosts()
-
 export default function BlogComponent() {
   const { slug } = useParams()
-  const { copy } = useLang()
+  const { copy, lang } = useLang()
+  const posts = getPosts(lang)
 
   if (slug) {
-    const post = allPosts.find((p) => p.slug === slug)
+    const post = posts.find((p) => p.slug === slug)
     if (!post) return <div className="text-zinc-300 text-center py-24">{copy.blog.notFound}</div>
     return <BlogPostView post={post} />
   }
@@ -101,7 +130,7 @@ export default function BlogComponent() {
         </header>
 
         <div className="grid grid-cols-1 gap-6">
-          {allPosts.map((post, i) => (
+          {posts.map((post, i) => (
             <motion.article
               key={post.slug}
               initial={{ opacity: 0, y: 20 }}
@@ -187,7 +216,7 @@ function BlogPostView({ post }: { post: Post }) {
 
           <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono mt-4 pb-8 border-b border-zinc-800">
             <User className="w-3.5 h-3.5 text-zinc-500" />
-            <span>By {post.author}</span>
+            <span>{copy.blog.by}{post.author}</span>
           </div>
 
           <div className="prose prose-invert max-w-none mt-8 prose-headings:font-display prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-amber-400 prose-code:text-amber-300 prose-pre:bg-[#0a0b0e] prose-pre:border prose-pre:border-zinc-800">

@@ -1,8 +1,9 @@
 # Beejs Documentation
 
-Start here when deciding what Beejs can do today:
+Start here when deciding what Beejs can do today and where it is headed:
 
 - [Current Scope](CURRENT_SCOPE.md): Stable, Preview, Experimental, and Historical capability boundaries.
+- [Three-Year Technical Roadmap (2026-2029)](THREE_YEAR_ROADMAP_2026_2029.md): Bold technical vision for AI-Native, Edge-Native, Polyglot, and Sovereign Sandbox evolution.
 - [Quick Start](QUICK_START.md): source-first build and first smoke commands.
 - [CLI Usage Guide](CLI_USAGE_GUIDE.md): command syntax and examples. Cross-check command maturity with Current Scope.
 
