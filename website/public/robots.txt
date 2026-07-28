@@ -1,0 +1,5 @@
+# https://bee.zhanghe.dev/robots.txt
+User-agent: *
+Allow: /
+
+Sitemap: https://bee.zhanghe.dev/sitemap.xml
