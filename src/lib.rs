@@ -58,14 +58,14 @@ pub mod performance_reporter;
 pub mod monitor;
 
 pub mod event_loop;
+pub mod nodejs_core; // Core Node.js compatible modules (fs, path, crypto, http, net, timers)
+pub mod package_manager; // Package manager
 pub mod permissions;
 pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution
-pub mod nodejs_core;     // Core Node.js compatible modules (fs, path, crypto, http, net, timers)
-pub mod v8_snapshot;    // V8 snapshot and warmup system
-pub mod package_manager; // Package manager
-pub mod watcher;         // File watcher for hot reload
+pub mod v8_snapshot; // V8 snapshot and warmup system
+pub mod watcher; // File watcher for hot reload
 pub mod watcher_websocket; // WebSocket hot reload
-pub mod web_api;         // Web standards API (Streams, Blob, Worker, Crypto)
+pub mod web_api; // Web standards API (Streams, Blob, Worker, Crypto)
 
 #[cfg(feature = "observability")]
 pub mod observability;
@@ -90,18 +90,18 @@ pub mod platform;
 #[cfg(feature = "cloudnative")]
 pub mod cloud_native;
 
-pub mod error;    // Unified error handling system
+pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
-pub mod memory;   // Memory management
+pub mod memory; // Memory management
+pub mod testing; // Testing framework support
 pub mod typescript; // TypeScript transpilation support
-pub mod testing;  // Testing framework support
-                 // 重新导出 REPL 相关类型
-                 // pub use repl::{Repl, ReplConfig};  // Temporarily disabled
-                 // 重新导出 WebAssembly 相关类型
-                 // pub use wasm_integration::{initialize_wasm, check_wasm_support};  // Temporarily disabled
-                 // 重新导出 I/O 相关类型
-                 // pub use io::{DmaEngine, DmaBuffer, DmaDirection, MemoryMapper, MappedFile, MapOptions, MemoryAdvice};  // Temporarily disabled
-                 // Define OptimizeMode here since it's used by multiple modules
+
+// Temporarily disabled re-exports:
+// pub use repl::{Repl, ReplConfig};
+// pub use wasm_integration::{initialize_wasm, check_wasm_support};
+// pub use io::{DmaEngine, DmaBuffer, DmaDirection, MemoryMapper, MappedFile, MapOptions, MemoryAdvice};
+
+// Define OptimizeMode here since it's used by multiple modules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OptimizeMode {
     Speed,
