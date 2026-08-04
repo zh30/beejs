@@ -1881,12 +1881,12 @@ fn ecdh_key_from_private_bytes(curve: &str, private_key: &[u8]) -> Result<EcKey<
     let group = ecdh_group(curve)?;
     let private_number = BigNum::from_slice(private_key)
         .map_err(|error| format!("ECDH: invalid private key: {}", error))?;
-    let ctx =
+    let mut ctx =
         BigNumContext::new().map_err(|error| format!("ECDH: BigNum context failed: {}", error))?;
     let mut public_key = EcPoint::new(&group)
         .map_err(|error| format!("ECDH: public key allocation failed: {}", error))?;
     public_key
-        .mul_generator(&group, &private_number, &ctx)
+        .mul_generator2(&group, &private_number, &mut ctx)
         .map_err(|error| format!("ECDH: public key derivation failed: {}", error))?;
 
     let key = EcKey::from_private_components(&group, &private_number, &public_key)

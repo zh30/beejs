@@ -3439,12 +3439,12 @@ fn ecdh_key_from_private_hex(curve: &str, private_key_hex: &str) -> Result<EcKey
 
     let private_number = BigNum::from_slice(&private_key_bytes)
         .map_err(|error| format!("createECDH: invalid private key: {}", error))?;
-    let ctx = BigNumContext::new()
+    let mut ctx = BigNumContext::new()
         .map_err(|error| format!("createECDH: BigNum context failed: {}", error))?;
     let mut public_key = EcPoint::new(&group)
         .map_err(|error| format!("createECDH: public key allocation failed: {}", error))?;
     public_key
-        .mul_generator(&group, &private_number, &ctx)
+        .mul_generator2(&group, &private_number, &mut ctx)
         .map_err(|error| format!("createECDH: public key derivation failed: {}", error))?;
 
     let key = EcKey::from_private_components(&group, &private_number, &public_key)

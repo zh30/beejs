@@ -1,6 +1,6 @@
 # Cargo
 target/
-Cargo.lock
+# Keep Cargo.lock tracked so CI/reproducible builds use the same dependency graph.
 
 # Node / local package-manager output
 node_modules/
