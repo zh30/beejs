@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
 
-/// Get the path to the bee binary
+/// Get the path to the bee binary built by cargo for integration tests.
 fn beejs_path() -> PathBuf {
-    PathBuf::from("/Users/henry/code/beejs/target/debug/bee")
+    PathBuf::from(env!("CARGO_BIN_EXE_bee"))
 }
 
 #[cfg(test)]
