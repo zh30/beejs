@@ -19,6 +19,7 @@ use rand::Rng;
 use reqwest;
 use rusty_v8 as v8;
 use serde_json;
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::Write;
@@ -4038,6 +4039,7 @@ pub struct MinimalRuntime {
     isolate: v8::OwnedIsolate,
     // v0.3.93: 存储 V8 Context 以支持跨 Context 共享数据
     context: Option<v8::Global<v8::Context>>,
+    apis_initialized: bool,
     process_argv: Vec<String>,
     main_module_dir: String,
     main_module_filename: String,
@@ -4083,6 +4085,7 @@ impl MinimalRuntime {
         Ok(Self {
             isolate,
             context: None,
+            apis_initialized: false,
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
@@ -4110,6 +4113,7 @@ impl MinimalRuntime {
         Ok(Self {
             isolate,
             context: None,
+            apis_initialized: false,
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
@@ -4134,6 +4138,7 @@ impl MinimalRuntime {
         Ok(Self {
             isolate,
             context: None,
+            apis_initialized: false,
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
@@ -7836,13 +7841,15 @@ impl MinimalRuntime {
             Self::should_execute_as_esm_module(code, &self.main_module_filename)?;
 
         let js_code = if should_execute_as_esm_module {
-            code.to_string()
+            Cow::Borrowed(code)
         } else if has_raw_typescript {
             // Only transpile if it looks like raw TypeScript
-            Self::transpile_typescript_to_js(code)?
+            Cow::Owned(Self::transpile_typescript_to_js(code)?)
         } else {
-            code.to_string()
+            Cow::Borrowed(code)
         };
+
+        let needs_setup = !self.apis_initialized;
 
         // 创建 HandleScope（整个函数只创建一次）
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
@@ -7861,17 +7868,11 @@ impl MinimalRuntime {
 
         let scope = &mut v8::ContextScope::new(scope, context);
 
-        // 检查是否需要设置 API（第一次调用时）
-        let global = context.global(scope);
-        let http_key = v8::String::new(scope, "http").unwrap();
-        let http_val = global.get(scope, http_key.into()).unwrap();
-        let needs_setup = http_val.is_undefined();
-
         if needs_setup {
             // 第一次调用，设置所有 API
             Self::setup_console(scope, &context)?;
             setup_buffer_module(scope);
-            Self::setup_web_apis(scope, &context)?;
+            Self::setup_web_primitives(scope, &context)?;
             Self::setup_process_api(scope, &context)?;
             setup_path_api(scope, &context)?;
             setup_fs_api(scope, &context)?;
@@ -7890,6 +7891,7 @@ impl MinimalRuntime {
             Self::setup_dns_api(scope, &context)?;
             setup_net_api(scope, &context)?;
             Self::setup_string_decoder_api(scope, &context)?;
+            Self::setup_legacy_web_apis(scope, &context, true)?;
             setup_crypto_api(scope, &context)?;
             Self::setup_module_system(
                 scope,
@@ -7953,6 +7955,8 @@ impl MinimalRuntime {
             // v0.3.342: Clipboard API (copy/paste for AI workloads)
             use crate::web_api::clipboard::setup_clipboard_api;
             setup_clipboard_api(scope, &context)?;
+
+            self.apis_initialized = true;
         }
 
         Self::apply_process_argv(scope, &context, &self.process_argv)?;
@@ -7965,7 +7969,7 @@ impl MinimalRuntime {
         let result = if should_execute_as_esm_module {
             match Self::execute_esm_module(
                 scope,
-                &js_code,
+                js_code.as_ref(),
                 &self.main_module_filename,
                 &mut self.esm_module_cache,
                 &mut self.esm_module_cache_fingerprints,
@@ -7994,7 +7998,7 @@ impl MinimalRuntime {
                 }
             }
         } else {
-            let code = v8::String::new(scope, &js_code)
+            let code = v8::String::new(scope, js_code.as_ref())
                 .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
             let resource_name = v8::String::new(scope, &self.main_module_filename)
                 .ok_or_else(|| anyhow::anyhow!("Failed to create V8 script resource name"))?;
@@ -9083,12 +9087,38 @@ impl MinimalRuntime {
         Ok(())
     }
 
-    /// Set up Web APIs in the V8 context
-    fn setup_web_apis(
+    /// Set up Web primitives that are not installed by the modular API setup below.
+    fn setup_web_primitives(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        crate::web_api::encoding::setup_encoding_api(scope, context)?;
+        crate::web_api::url::setup_url_api(scope, context)?;
+        crate::web_api::websocket::setup_websocket_api(scope, context)?;
+
+        // V8 already provides globalThis, Promise, Math, JSON, and Date. Keep its
+        // native implementations and only add the Node.js global alias here.
+        let global = context.global(scope);
+        let global_key = v8::String::new(scope, "global")
+            .ok_or_else(|| anyhow::anyhow!("Failed to create global alias key"))?;
+        global.set(scope, global_key.into(), global.into());
+
+        Ok(())
+    }
+
+    /// Legacy monolithic setup retained while compatibility migrates to modules.
+    ///
+    /// `crypto_only` avoids registering Web APIs that are replaced by the newer
+    /// focused modules while preserving Node crypto methods not migrated yet.
+    #[rustfmt::skip]
+    fn setup_legacy_web_apis(
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Context,
+        crypto_only: bool,
     ) -> Result<()> {
         let global = context.global(scope);
+
+        if !crypto_only {
 
         // Set up global setTimeout with improved async support (v0.3.18: returns timer ID)
         let set_timeout_fn = v8::Function::new(
@@ -10855,6 +10885,8 @@ impl MinimalRuntime {
         .ok_or_else(|| anyhow::anyhow!("Failed to create atob function"))?;
         let atob_key = v8::String::new(scope, "atob").unwrap().into();
         global.set(scope, atob_key, atob_fn.into());
+
+        }
 
         // Set up global crypto object
         let crypto_obj = v8::Object::new(scope);
@@ -17479,14 +17511,16 @@ impl MinimalRuntime {
         let crypto_key = v8::String::new(scope, "crypto").unwrap().into();
         global.set(scope, crypto_key, crypto_obj.into());
 
-        // Setup TextEncoder/TextDecoder API (v0.2.3)
-        MinimalRuntime::setup_text_encoding_api(scope, context)?;
+        if !crypto_only {
+            // Setup TextEncoder/TextDecoder API (v0.2.3)
+            MinimalRuntime::setup_text_encoding_api(scope, context)?;
 
-        // Setup WebSocket API (v0.2.2)
-        MinimalRuntime::setup_websocket_api(scope, context)?;
+            // Setup WebSocket API (v0.2.2)
+            MinimalRuntime::setup_websocket_api(scope, context)?;
 
-        // Setup Promise API
-        MinimalRuntime::setup_promise_api(scope, context)?;
+            // Setup Promise API
+            MinimalRuntime::setup_promise_api(scope, context)?;
+        }
 
         Ok(())
     }

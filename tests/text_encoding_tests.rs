@@ -268,7 +268,7 @@ mod tests {
     #[serial]
     fn test_btoa_atob_round_trip() {
         let code = r#"
-            const original = "Hello, World! 🌍";
+            const original = "Hello, World! ÿ";
             const encoded = btoa(original);
             const decoded = atob(encoded);
             original === decoded

@@ -4285,8 +4285,8 @@ __beejsRunTests();
     wrapped
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+#[allow(clippy::needless_return)]
+fn main() -> Result<()> {
     let cli = Cli::parse();
     let verbose = cli.verbose;
 
@@ -4435,14 +4435,22 @@ async fn main() -> Result<()> {
                 // Initial run
                 execute_file(&file)?;
 
+                // Watch mode is the only CLI path that needs Tokio. Keeping the
+                // runtime local avoids paying multi-thread scheduler startup for
+                // short-lived commands such as `bee eval` and `bee run`.
+                let watch_runtime = tokio::runtime::Builder::new_multi_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|error| anyhow!("Failed to create watch runtime: {}", error))?;
+
                 // Start WebSocket server in background
                 let ws_reloader_clone = ws_reloader.clone();
-                let _ws_handle = tokio::spawn(async move {
+                let _ws_handle = watch_runtime.spawn(async move {
                     let _ = ws_reloader_clone.start().await;
                 });
 
                 // Give WebSocket server time to start
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                std::thread::sleep(std::time::Duration::from_millis(100));
 
                 // Watch for changes
                 loop {

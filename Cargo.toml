@@ -232,6 +232,10 @@ serial_test = "3.0"
 name = "bee"
 path = "src/main.rs"
 
+[[bench]]
+name = "runtime_startup"
+harness = false
+
 # [[bin]]
 # name = "test_stage95_core"
 # path = "test_stage95_core.rs"

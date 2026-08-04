@@ -365,8 +365,10 @@ fn websocket_constructor_callback(
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
     ws_obj.set(scope, onclose_key.into(), null_val);
     let onerror_key: _ = v8::String::new(scope, "onerror").unwrap();
-    let null_val: v8::Local<v8::Value> = v8::null(scope).into();
-    ws_obj.set(scope, onerror_key.into(), null_val);
+    // Preserve Beejs' existing callable default so code can invoke onerror
+    // without first installing a handler.
+    let onerror_handler = v8::Function::new(scope, websocket_noop_error_handler).unwrap();
+    ws_obj.set(scope, onerror_key.into(), onerror_handler.into());
     // Add methods
     let send_key: _ = v8::String::new(scope, "send").unwrap();
     let send_func: _ = v8::Function::new(scope, websocket_send_callback).unwrap();
@@ -391,6 +393,14 @@ fn websocket_constructor_callback(
     ws_obj.set(scope, update_ready_key.into(), update_ready_func.into());
     retval.set(ws_obj.into());
 }
+
+fn websocket_noop_error_handler(
+    _scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+}
+
 /// Get WebSocket ID from JS object
 fn get_ws_id(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>) -> Option<u64> {
     let id_key: _ = v8::String::new(scope, "__wsId").unwrap();
