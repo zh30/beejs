@@ -23,18 +23,18 @@ fn test_set_immediate_exists() {
 fn test_set_immediate_basic_execution() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
-    // Test that setImmediate schedules callback execution
+    // setImmediate runs in the check phase after the current sync script completes.
+    // Resolve a Promise from the callback so execute_code can await the settlement.
     let code = r#"
-        let executed = false;
-        setImmediate(function() { executed = true; });
-        // For synchronous execution, callback should be called
-        executed;
+        new Promise((resolve) => {
+            setImmediate(function() { resolve(true); });
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
         result.trim(),
         "true",
-        "setImmediate callback should execute synchronously"
+        "setImmediate callback should execute during the event-loop drain"
     );
 }
 
@@ -44,9 +44,9 @@ fn test_set_immediate_with_argument() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let result = null;
-        setImmediate(function(x, y) { result = x + y; }, 5, 3);
-        result;
+        new Promise((resolve) => {
+            setImmediate(function(x, y) { resolve(x + y); }, 5, 3);
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
@@ -80,11 +80,15 @@ fn test_set_immediate_multiple_calls() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let count = 0;
-        setImmediate(function() { count += 1; });
-        setImmediate(function() { count += 2; });
-        setImmediate(function() { count += 3; });
-        count;
+        new Promise((resolve) => {
+            let count = 0;
+            setImmediate(function() { count += 1; });
+            setImmediate(function() { count += 2; });
+            setImmediate(function() {
+                count += 3;
+                resolve(count);
+            });
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
@@ -136,14 +140,14 @@ fn test_set_immediate_callback_with_this() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
-        let thisValue = null;
-        const obj = {
-            test: function() {
-                thisValue = this === obj;
-            }
-        };
-        setImmediate(function() { obj.test(); });
-        thisValue;
+        new Promise((resolve) => {
+            const obj = {
+                test: function() {
+                    resolve(this === obj);
+                }
+            };
+            setImmediate(function() { obj.test(); });
+        });
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
