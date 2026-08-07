@@ -4039,7 +4039,12 @@ pub struct MinimalRuntime {
     isolate: v8::OwnedIsolate,
     // v0.3.93: 存储 V8 Context 以支持跨 Context 共享数据
     context: Option<v8::Global<v8::Context>>,
+    /// Core Node/compat APIs installed (console, process, fs, require, timers, …).
     apis_initialized: bool,
+    /// Heavy / rare Web APIs installed (Streams, Workers, fetch suite, …).
+    /// Deferred until the executed source actually references them so first
+    /// execute of simple scripts does not pay for unused bindings.
+    extended_apis_initialized: bool,
     process_argv: Vec<String>,
     main_module_dir: String,
     main_module_filename: String,
@@ -4067,14 +4072,17 @@ impl MinimalRuntime {
     /// v0.3.221: 增强 Isolate 配置以提升性能
     /// v0.3.231: 使用更小的初始堆以加快启动速度
     /// v0.3.270: 设置显式微任务策略，确保 nextTick 在 Promise 之前执行
+    ///
+    /// First principles: do not pre-reserve a large young heap for short-lived
+    /// CLI processes. V8 grows the heap on demand; a low initial limit cuts
+    /// isolate create latency without capping large workloads (max stays 2GB).
     pub fn new() -> Result<Self> {
         // Initialize V8 (idempotent - safe to call multiple times)
         crate::initialize_v8()?;
 
-        // v0.3.231: 使用更小的初始堆 (128MB) 以加快启动速度
-        // 最大堆保持 2GB 以提供足够的运行空间
+        // 16MB initial / 2GB max — same initial as `new_fast`, full production max.
         let create_params =
-            v8::CreateParams::default().heap_limits(128 * 1024 * 1024, 2048 * 1024 * 1024);
+            v8::CreateParams::default().heap_limits(16 * 1024 * 1024, 2048 * 1024 * 1024);
 
         // Create a new isolate with optimized parameters
         let mut isolate = v8::Isolate::new(create_params);
@@ -4086,6 +4094,7 @@ impl MinimalRuntime {
             isolate,
             context: None,
             apis_initialized: false,
+            extended_apis_initialized: false,
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
@@ -4114,6 +4123,7 @@ impl MinimalRuntime {
             isolate,
             context: None,
             apis_initialized: false,
+            extended_apis_initialized: false,
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
@@ -4139,6 +4149,7 @@ impl MinimalRuntime {
             isolate,
             context: None,
             apis_initialized: false,
+            extended_apis_initialized: false,
             process_argv: Self::default_process_argv(),
             main_module_dir: Self::default_main_module_dir(),
             main_module_filename: Self::default_main_module_filename(),
@@ -7751,6 +7762,159 @@ impl MinimalRuntime {
             .is_match(code)
     }
 
+    /// True when we must install the heavy Web API suite before running `code`.
+    ///
+    /// Deferred install is only safe for self-contained scripts whose source is
+    /// the entire program. Any module load (`require` / `import`) can pull in
+    /// dependency sources that use `fetch` / `Blob` / `structuredClone` / … without
+    /// those identifiers appearing in the top-level entry — so module paths always
+    /// get the full extended surface (pre-deferral behavior).
+    fn code_needs_extended_apis(code: &str) -> bool {
+        // CommonJS / ESM loaders: dependency bodies are not scanned here.
+        if code.contains("require")
+            || code.contains("import ")
+            || code.contains("import\t")
+            || code.contains("import\n")
+            || code.contains("import(")
+            || code.contains("import.meta")
+        {
+            return true;
+        }
+
+        // Direct references in a single self-contained source string.
+        const MARKERS: &[&str] = &[
+            "fetch",
+            "Request",
+            "Response",
+            "Headers",
+            "FormData",
+            "Worker",
+            "SharedArrayBuffer",
+            "BroadcastChannel",
+            "MessageChannel",
+            "MessagePort",
+            "ServiceWorker",
+            "serviceWorker",
+            "CompressionStream",
+            "DecompressionStream",
+            "structuredClone",
+            "ReadableStream",
+            "WritableStream",
+            "TransformStream",
+            "ByteLengthQueuingStrategy",
+            "CountQueuingStrategy",
+            "crypto.subtle",
+            "DOMParser",
+            "clipboard",
+            "ClipboardItem",
+            "Blob",
+            "FileReader",
+            "URLSearchParams",
+            "ErrorEvent",
+            "CustomEvent",
+            "readline",
+            "createInterface",
+            "BackgroundSync",
+            "SyncManager",
+            "SyncEvent",
+            "navigator.",
+            "ArrayBuffer.prototype.transfer",
+            "transferToFixedLength",
+        ];
+        MARKERS.iter().any(|marker| code.contains(marker))
+    }
+
+    /// Node-compatible core surface needed for most scripts and CLI workloads.
+    fn install_core_apis(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+        main_module_dir: &str,
+        main_module_filename: &str,
+    ) -> Result<()> {
+        Self::setup_console(scope, context)?;
+        setup_buffer_module(scope);
+        Self::setup_web_primitives(scope, context)?;
+        Self::setup_process_api(scope, context)?;
+        setup_path_api(scope, context)?;
+        setup_fs_api(scope, context)?;
+        Self::setup_os_api(scope, context)?;
+        Self::setup_child_process_api(scope, context)?;
+        Self::setup_stream_api(scope, context)?;
+
+        use crate::nodejs_core::http::init_http_connection_pool;
+        init_http_connection_pool(10, 20, false);
+
+        setup_http_api(scope, context)?;
+        Self::setup_util_api(scope, context)?;
+        crate::nodejs_core::querystring::setup_querystring_api(scope, context)?;
+        Self::setup_events_api(scope, context)?;
+        Self::setup_dns_api(scope, context)?;
+        setup_net_api(scope, context)?;
+        Self::setup_string_decoder_api(scope, context)?;
+        Self::setup_legacy_web_apis(scope, context, true)?;
+        setup_crypto_api(scope, context)?;
+        Self::setup_module_system(scope, context, main_module_dir, main_module_filename)?;
+        setup_timers_api(scope, context)?;
+        setup_performance_api(scope, context)?;
+
+        // AbortController is small and commonly used by fetch/streams later;
+        // install with core so extended modules can assume it exists.
+        use crate::web_api::abort::setup_abort_api;
+        setup_abort_api(scope, context)?;
+
+        Ok(())
+    }
+
+    /// Heavy / less-common Web APIs deferred until source needs them.
+    fn install_extended_apis(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        setup_streams_api(scope, context)?;
+        setup_blob_api(scope, context)?;
+        setup_compression_api(scope, context)?;
+        setup_structured_clone_api(scope, context)?;
+        setup_array_buffer_transfer_api(scope, context)?;
+        setup_broadcast_channel_api(scope, context)?;
+        setup_message_channel_api(scope, context)?;
+        setup_worker_api(scope, context)?;
+        setup_shared_array_buffer_api(scope, context)?;
+
+        use crate::web_api::events::setup_events_api as setup_web_events_api;
+        setup_web_events_api(scope, context)?;
+        setup_service_worker_api(scope, context)?;
+
+        use crate::web_api::background_sync::setup_background_sync_api;
+        setup_background_sync_api(scope, context)?;
+        crate::nodejs_core::readline::setup_readline_api(scope, context)?;
+
+        use crate::web_api::fetch::setup_fetch_api;
+        setup_fetch_api(scope, context)?;
+
+        use crate::web_api::form_data::setup_form_data_api;
+        setup_form_data_api(scope, context)?;
+
+        use crate::web_api::url_search_params::setup_url_search_params_api;
+        setup_url_search_params_api(scope, context);
+        Self::setup_live_url_search_params(scope)?;
+
+        setup_web_crypto_api(scope, context)?;
+
+        use crate::web_api::error_event::setup_error_event_api;
+        setup_error_event_api(scope, context);
+
+        use crate::web_api::custom_event::setup_custom_event_api;
+        setup_custom_event_api(scope, context);
+
+        use crate::web_api::dom_parser::setup_dom_parser_api;
+        setup_dom_parser_api(scope, context)?;
+
+        use crate::web_api::clipboard::setup_clipboard_api;
+        setup_clipboard_api(scope, context)?;
+
+        Ok(())
+    }
+
     /// Execute JavaScript or TypeScript code and return the result as a string
     /// v0.3.93: 修改为使用存储的 Context 以支持跨调用共享数据
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
@@ -7849,7 +8013,13 @@ impl MinimalRuntime {
             Cow::Borrowed(code)
         };
 
-        let needs_setup = !self.apis_initialized;
+        // Core APIs on first execute; heavy Web APIs only when the source
+        // (or ESM path) actually references them — multi-execute still installs
+        // extended later if a subsequent script needs them.
+        let needs_core_setup = !self.apis_initialized;
+        let needs_extended_setup = !self.extended_apis_initialized
+            && (should_execute_as_esm_module
+                || Self::code_needs_extended_apis(js_code.as_ref()));
 
         // 创建 HandleScope（整个函数只创建一次）
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
@@ -7868,95 +8038,19 @@ impl MinimalRuntime {
 
         let scope = &mut v8::ContextScope::new(scope, context);
 
-        if needs_setup {
-            // 第一次调用，设置所有 API
-            Self::setup_console(scope, &context)?;
-            setup_buffer_module(scope);
-            Self::setup_web_primitives(scope, &context)?;
-            Self::setup_process_api(scope, &context)?;
-            setup_path_api(scope, &context)?;
-            setup_fs_api(scope, &context)?;
-            Self::setup_os_api(scope, &context)?;
-            Self::setup_child_process_api(scope, &context)?;
-            Self::setup_stream_api(scope, &context)?;
-
-            // Initialize HTTP connection pool (v0.3.84)
-            use crate::nodejs_core::http::init_http_connection_pool;
-            init_http_connection_pool(10, 20, false);
-
-            setup_http_api(scope, &context)?;
-            Self::setup_util_api(scope, &context)?;
-            crate::nodejs_core::querystring::setup_querystring_api(scope, &context)?;
-            Self::setup_events_api(scope, &context)?;
-            Self::setup_dns_api(scope, &context)?;
-            setup_net_api(scope, &context)?;
-            Self::setup_string_decoder_api(scope, &context)?;
-            Self::setup_legacy_web_apis(scope, &context, true)?;
-            setup_crypto_api(scope, &context)?;
-            Self::setup_module_system(
+        if needs_core_setup {
+            Self::install_core_apis(
                 scope,
                 &context,
                 &self.main_module_dir,
                 &self.main_module_filename,
             )?;
-            setup_timers_api(scope, &context)?; // v0.3.249: Timer API with async scheduling
-            setup_performance_api(scope, &context)?; // v0.3.275: Performance API
-            setup_streams_api(scope, &context)?; // v0.3.282: Web Streams API for AI workloads
-            setup_blob_api(scope, &context)?; // v0.3.305: Blob API for binary data handling
-            setup_compression_api(scope, &context)?; // v0.3.295: CompressionStream API (gzip/deflate)
-            setup_structured_clone_api(scope, &context)?; // v0.3.299: structuredClone global function
-            setup_array_buffer_transfer_api(scope, &context)?; // v0.3.311: ArrayBuffer transfer API
-            setup_broadcast_channel_api(scope, &context)?; // v0.3.312: BroadcastChannel API (cross-tab communication)
-            setup_message_channel_api(scope, &context)?; // v0.3.315: MessageChannel API (port-based communication)
-            setup_worker_api(scope, &context)?; // v0.3.320: Worker API (Web Worker support for parallel execution)
-            setup_shared_array_buffer_api(scope, &context)?; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
-                                                             // v0.3.326: Setup web Event API (Event, ExtendableEvent) before ServiceWorker
-            use crate::web_api::events::setup_events_api as setup_web_events_api;
-            setup_web_events_api(scope, &context)?;
-            setup_service_worker_api(scope, &context)?; // v0.3.324: ServiceWorker API (background tasks, push notifications, offline caching)
-                                                        // v0.3.327: Background Sync API (SyncManager, SyncEvent)
-            use crate::web_api::background_sync::setup_background_sync_api;
-            setup_background_sync_api(scope, &context)?;
-            crate::nodejs_core::readline::setup_readline_api(scope, &context)?; // v0.3.277: Readline API
-
-            // v0.3.291: Initialize AbortController API (needed for pipeTo signal option)
-            // Use direct call to avoid duplicating other API initialization
-            use crate::web_api::abort::setup_abort_api;
-            setup_abort_api(scope, &context)?;
-
-            // v0.3.347: Fetch API (fetch, Request, Response, Headers)
-            use crate::web_api::fetch::setup_fetch_api;
-            setup_fetch_api(scope, &context)?;
-
-            // v0.3.349: FormData API (needed for fetch request bodies)
-            use crate::web_api::form_data::setup_form_data_api;
-            setup_form_data_api(scope, &context)?;
-
-            // v0.3.353: URLSearchParams API (query string manipulation)
-            use crate::web_api::url_search_params::setup_url_search_params_api;
-            setup_url_search_params_api(scope, &context);
-            Self::setup_live_url_search_params(scope)?;
-
-            // v0.3.354: Web Crypto API (crypto.subtle for hashing, encryption)
-            setup_web_crypto_api(scope, &context)?;
-
-            // v0.3.333: ErrorEvent API (script error handling for WebSocket, Worker, etc.)
-            use crate::web_api::error_event::setup_error_event_api;
-            setup_error_event_api(scope, &context);
-
-            // v0.3.337: CustomEvent API (custom event handling for AI agents and UI frameworks)
-            use crate::web_api::custom_event::setup_custom_event_api;
-            setup_custom_event_api(scope, &context);
-
-            // v0.3.341: DOMParser API (HTML/XML document parsing for AI workloads)
-            use crate::web_api::dom_parser::setup_dom_parser_api;
-            setup_dom_parser_api(scope, &context)?;
-
-            // v0.3.342: Clipboard API (copy/paste for AI workloads)
-            use crate::web_api::clipboard::setup_clipboard_api;
-            setup_clipboard_api(scope, &context)?;
-
             self.apis_initialized = true;
+        }
+
+        if needs_extended_setup {
+            Self::install_extended_apis(scope, &context)?;
+            self.extended_apis_initialized = true;
         }
 
         Self::apply_process_argv(scope, &context, &self.process_argv)?;
@@ -25686,5 +25780,124 @@ mod tests {
         let result = runtime.execute_code("console.error('Error message'); 100;");
         assert!(result.is_ok());
         assert_eq!(result.unwrap().trim(), "100");
+    }
+
+    #[test]
+    fn code_needs_extended_apis_skips_simple_scripts() {
+        assert!(!MinimalRuntime::code_needs_extended_apis("1 + 1"));
+        assert!(!MinimalRuntime::code_needs_extended_apis(
+            "console.log('hi'); const a = 10; a + 20"
+        ));
+    }
+
+    #[test]
+    fn code_needs_extended_apis_detects_web_markers() {
+        assert!(MinimalRuntime::code_needs_extended_apis("await fetch('https://x')"));
+        assert!(MinimalRuntime::code_needs_extended_apis("new Worker('w.js')"));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "new ReadableStream({ start() {} })"
+        ));
+        assert!(MinimalRuntime::code_needs_extended_apis("structuredClone({})"));
+    }
+
+    #[test]
+    fn code_needs_extended_apis_for_module_loads() {
+        // Entry source may not mention fetch/Blob, but deps can. Any require/import
+        // must force the full extended surface.
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "const m = require('./lib'); m.ping();"
+        ));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "require('fs').readFileSync('/tmp/x')"
+        ));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "import x from './mod.js'"
+        ));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "const m = await import('./mod.js')"
+        ));
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn deferred_extended_apis_install_when_needed() {
+        let mut runtime = MinimalRuntime::new().unwrap();
+        // First execute only needs core APIs.
+        let simple = runtime.execute_code("1 + 1").unwrap();
+        assert_eq!(simple.trim(), "2");
+        assert!(runtime.apis_initialized);
+        assert!(!runtime.extended_apis_initialized);
+
+        // A later script that references fetch must install extended APIs.
+        let fetch_type = runtime
+            .execute_code("typeof fetch")
+            .expect("fetch should install on demand");
+        assert_eq!(fetch_type.trim(), "function");
+        assert!(runtime.extended_apis_initialized);
+    }
+
+    /// Entry has no Web API markers; a required dependency uses fetch + Blob.
+    /// Extended APIs must already be installed before the dependency runs
+    /// (pre-deferral multi-file Node behavior).
+    #[test]
+    #[serial_test::serial]
+    fn required_module_can_use_fetch_and_blob_without_entry_markers() {
+        let dir = std::env::temp_dir().join(format!(
+            "beejs_require_extended_{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let lib_path = dir.join("lib_with_web.js");
+        let entry_path = dir.join("entry.js");
+        std::fs::write(
+            &lib_path,
+            r#"
+// Dependency-only Web API use — not visible in entry source text.
+function ping() {
+  if (typeof fetch !== "function") {
+    throw new Error("fetch missing in required module");
+  }
+  if (typeof Blob !== "function") {
+    throw new Error("Blob missing in required module");
+  }
+  if (typeof structuredClone !== "function") {
+    throw new Error("structuredClone missing in required module");
+  }
+  return typeof fetch + ":" + typeof Blob + ":" + typeof structuredClone;
+}
+module.exports = { ping };
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            &entry_path,
+            // Intentionally no fetch/Blob/structuredClone markers in entry.
+            "const m = require('./lib_with_web.js');\nm.ping();\n",
+        )
+        .unwrap();
+
+        let entry_source = std::fs::read_to_string(&entry_path).unwrap();
+        assert!(
+            !entry_source.contains("fetch")
+                && !entry_source.contains("Blob")
+                && !entry_source.contains("structuredClone"),
+            "entry must not contain extended markers (test validity)"
+        );
+        assert!(
+            MinimalRuntime::code_needs_extended_apis(&entry_source),
+            "require in entry must force extended install"
+        );
+
+        let mut runtime = MinimalRuntime::new().unwrap();
+        runtime.set_main_module_path(&entry_path);
+        let result = runtime
+            .execute_code(&entry_source)
+            .expect("required module Web APIs must resolve");
+        assert_eq!(result.trim(), "function:function:function");
+        assert!(runtime.extended_apis_initialized);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
