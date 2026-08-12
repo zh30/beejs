@@ -5,7 +5,7 @@
 [![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-Beejs is a high-performance, fail-closed JavaScript and TypeScript runtime built with Rust and V8. Designed from first principles for sub-millisecond cold starts, native TypeScript execution, WebAssembly JIT, and robust Node.js/Web API compatibility.
+Beejs is a JavaScript and TypeScript runtime built with Rust and V8. The active product path is the `bee` CLI over `MinimalRuntime`, with growing Node.js and Web API compatibility. Performance and compatibility numbers are only valid when backed by current, reproducible benchmarks and conformance scores.
 
 Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.dev)
 
@@ -13,19 +13,18 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 
 ## Why Beejs
 
-- **Fast & Lightweight**: Built on Google V8 and Tokio for sub-4ms cold starts and low memory usage.
-- **Native TypeScript & TSX**: Instant execution without `ts-node` or `tsx` compilation wrappers; full Source Map error diagnostic alignment.
-- **Fail-Closed Security Sandbox**: Granular permission broker (`--deny-fs`, `--deny-net`) protecting against untrusted code execution.
-- **WebAssembly Native JIT**: Full V8 `WebAssembly` compilation, instantiation, and zero-copy `WebAssembly.Memory` buffer sharing.
-- **Node.js & Web API Surface**: Supported `http` stream responses (`res.write`), `fs.promises`, `fetch`, `Streams`, `WebCrypto`, `Blob`, and `Worker` standards.
+- **Rust + V8 execution**: Default runtime path is `src/runtime_minimal.rs` with Tokio-backed timers and I/O work in progress.
+- **TypeScript support**: `.ts` files are transpiled before execution (self-hosted compiler today; cache and TSX coverage are active work items).
+- **Fail-closed permissions**: Granular broker flags such as `--deny-fs` / `--deny-net`.
+- **Node.js & Web API surface (incremental)**: Partial `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified.
 
 ---
 
 ## Current Status
 
-Beejs is at tag **`v0.1.0-repair-sprint`** with 100% of the core release test suite (357/357 tests) passing and zero `clippy` warnings. It is suitable for scripting workflows, AI agent sandboxing, microservices, and internals research.
+Package version is **`0.1.0`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
 
-See [Current Scope](docs/CURRENT_SCOPE.md) for the detailed capability matrix (Stable, Preview, Experimental, and Historical).
+Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/`. Performance claims require the scripts in `benchmarks/` against the binary you just built.
 
 ---
 

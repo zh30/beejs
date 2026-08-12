@@ -1,23 +1,16 @@
-#![allow(clippy::all)]
-// Clean imports - removing unused ones
+// Beejs: Rust + V8 JavaScript/TypeScript runtime
+//
+// Fact sources for capability claims: Cargo.toml, this file, src/main.rs,
+// docs/CURRENT_SCOPE.md, and executable tests. Do not treat historical STAGE_*
+// reports as the current product surface.
+//
+// Default path: MinimalRuntime (src/runtime_minimal.rs) via the `bee` CLI.
+// Node/Web compatibility is incremental; AI features behind `feature = "ai"`
+// are experimental and must not claim unverified performance multipliers.
 use std::collections::HashMap;
 use std::sync::Once;
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
-// Beejs: 高性能 JavaScript/TypeScript 运行时
-//
-// Stage 92: 企业级性能突破与 AI 原生优化
-// 使用 Rust 和 V8 构建的高性能 JS/TS 运行时，为 AI 时代提供更高效的脚本执行能力。
-// 通过 AI 驱动的智能优化系统实现 1000-5000x 性能提升。
-//
-// ## 主要特性
-// - 基于 V8 的高性能 JavaScript 执行
-// - WebAssembly 集成支持
-// - TypeScript 原生支持
-// - 进程池复用系统
-// - 自动性能基准测试
-// - 性能回归检测
-// - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
 use std::hash::Hash;
@@ -61,6 +54,7 @@ pub mod event_loop;
 pub mod nodejs_core; // Core Node.js compatible modules (fs, path, crypto, http, net, timers)
 pub mod package_manager; // Package manager
 pub mod permissions;
+pub mod runtime; // Split runtime surface (re-exports MinimalRuntime)
 pub mod runtime_minimal; // Minimal runtime for basic JavaScript execution
 pub mod v8_snapshot; // V8 snapshot and warmup system
 pub mod watcher; // File watcher for hot reload

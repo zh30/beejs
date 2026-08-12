@@ -4904,23 +4904,30 @@ fn main() -> Result<()> {
             check_network_listen_permission(&bind_target)?;
 
             if https {
-                // HTTPS mode
                 let cert_path = cert.unwrap_or_else(|| "cert.pem".to_string());
                 let key_path = key.unwrap_or_else(|| "key.pem".to_string());
-
-                println!("🔒 Starting HTTPS Server");
+                println!("🔒 HTTPS serve requires TLS terminator integration");
                 println!("  Host: {}:{}", host, port);
-                println!("  TLS Cert: {}", cert_path);
-                println!("  TLS Key: {}", key_path);
-                println!("✅ HTTPS server configured (TLS support ready)");
-                println!("💡 Tip: Provide valid certificate files to enable HTTPS");
-            } else {
-                // HTTP mode
-                println!("🚀 Starting HTTP Server");
-                println!("  Host: {}:{}", host, port);
-                println!("✅ HTTP server configured");
+                println!("  Cert: {} Key: {}", cert_path, key_path);
+                println!("💡 For now, use HTTP serve or terminate TLS externally.");
+                return Ok(());
             }
-            println!("💡 Tip: Use 'bee run' to execute JavaScript files");
+
+            let addr = format!("{}:{}", host, port);
+            println!("🚀 Starting HTTP Server on http://{}", addr);
+            let server = tiny_http::Server::http(&addr)
+                .map_err(|e| anyhow::anyhow!("failed to bind {}: {}", addr, e))?;
+            println!("✅ Listening (Ctrl+C to stop)");
+            for request in server.incoming_requests() {
+                let response = tiny_http::Response::from_string(
+                    "{\"runtime\":\"beejs\",\"ok\":true}\n",
+                )
+                .with_header(
+                    tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+                        .unwrap(),
+                );
+                let _ = request.respond(response);
+            }
             return Ok(());
         }
         Some(Command::Init { permissions, name }) => {

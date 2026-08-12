@@ -132,6 +132,11 @@ fn legacy_fs_fallback_enabled() -> bool {
 }
 
 fn remaining_timer_drain_ms(start: std::time::Instant, limit_ms: u64) -> u64 {
+    // u64::MAX means "keep alive for all ref'd timers" — do not subtract wall time
+    // from the delay filter (that previously made long timers unreachable).
+    if limit_ms == u64::MAX {
+        return u64::MAX;
+    }
     limit_ms.saturating_sub(start.elapsed().as_millis() as u64)
 }
 
@@ -4054,7 +4059,9 @@ pub struct MinimalRuntime {
 }
 
 impl MinimalRuntime {
-    const DEFAULT_TIMER_DRAIN_LIMIT_MS: u64 = 75;
+    // Keep the process alive for any ref'd timer (Node-compatible). A previous
+    // 75ms wall-clock drain silently dropped longer setTimeout/setInterval work.
+    const DEFAULT_TIMER_DRAIN_LIMIT_MS: u64 = u64::MAX;
 
     fn default_process_argv() -> Vec<String> {
         vec!["bee".to_string(), "<program>".to_string()]
@@ -7857,6 +7864,26 @@ impl MinimalRuntime {
         setup_timers_api(scope, context)?;
         setup_performance_api(scope, context)?;
 
+        // Unified Node builtins that previously lacked install wiring.
+        crate::nodejs_core::assert::setup_assert_api(scope, context)?;
+        crate::nodejs_core::zlib::setup_zlib_api(scope, context)?;
+        crate::nodejs_core::https::setup_https_api(scope, context)?;
+        crate::nodejs_core::tls::setup_tls_api(scope, context)?;
+        crate::nodejs_core::vm::setup_vm_api(scope, context)?;
+        crate::nodejs_core::worker_threads::setup_worker_threads_api(scope, context)?;
+        // Alias perf_hooks -> performance for Node module name compatibility.
+        {
+            let global = context.global(scope);
+            let perf_key = v8::String::new(scope, "performance").unwrap();
+            if let Some(perf_val) = global.get(scope, perf_key.into()) {
+                let hooks = v8::Object::new(scope);
+                let perf_hooks_key = v8::String::new(scope, "performance").unwrap();
+                hooks.set(scope, perf_hooks_key.into(), perf_val);
+                let alias_key = v8::String::new(scope, "perf_hooks").unwrap();
+                global.set(scope, alias_key.into(), hooks.into());
+            }
+        }
+
         // AbortController is small and commonly used by fetch/streams later;
         // install with core so extended modules can assume it exists.
         use crate::web_api::abort::setup_abort_api;
@@ -7877,7 +7904,9 @@ impl MinimalRuntime {
         setup_array_buffer_transfer_api(scope, context)?;
         setup_broadcast_channel_api(scope, context)?;
         setup_message_channel_api(scope, context)?;
-        setup_worker_api(scope, context)?;
+        // Prefer WorkerHost (multi-isolate) over the fail-closed Worker stub.
+        crate::web_api::worker_host::setup_worker_host_api(scope, context)?;
+        let _ = setup_worker_api; // keep import used for historical call sites
         setup_shared_array_buffer_api(scope, context)?;
 
         use crate::web_api::events::setup_events_api as setup_web_events_api;
@@ -8264,9 +8293,10 @@ impl MinimalRuntime {
                 break;
             }
 
-            // v0.3.261: Wait for background timer thread to process
+            // Wait for the background timer thread. Prefer keep-alive for any
+            // ref'd timer rather than a fixed ~1s wall-clock cap.
             let mut iterations_without_progress = 0;
-            const MAX_WAIT_ITERATIONS: usize = 50; // Max ~1 second of waiting
+            const MAX_WAIT_ITERATIONS: usize = 400_000; // safety valve (~2.7h at 25ms)
 
             while iterations_without_progress < MAX_WAIT_ITERATIONS {
                 let timer_manager = crate::event_loop::get_async_timer_manager();
@@ -8276,13 +8306,12 @@ impl MinimalRuntime {
                     has_scheduled && crate::nodejs_core::timers::has_pending_zero_delay_timers();
                 let has_drainable_timers = crate::nodejs_core::timers::has_pending_drainable_timers(
                     remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms),
-                );
+                ) || (timer_drain_limit_ms == u64::MAX
+                    && crate::nodejs_core::timers::has_pending_refed_timers());
                 let has_wait_until = crate::web_api::background_sync::has_pending_wait_until();
                 let has_wait_until_timers = has_scheduled && has_wait_until;
                 let has_next_ticks = has_pending_next_ticks();
 
-                // Wait for fired timers, nextTicks, zero-delay timers, or timers
-                // that extend a waitUntil event lifetime.
                 if has_fired || has_zero_delay_timers || has_next_ticks {
                     has_pending_work = true;
                     break;
@@ -8300,12 +8329,11 @@ impl MinimalRuntime {
                     continue;
                 }
 
+                // Unref'd / non-drainable scheduled timers must not keep the loop.
                 if has_scheduled {
                     break;
                 }
 
-                // Sleep briefly to allow background timer thread to fire timers
-                // v0.3.261: Use 25ms sleep to ensure worker thread has time to tick and fire timers
                 std::thread::sleep(std::time::Duration::from_millis(25));
                 iterations_without_progress += 1;
             }
@@ -18995,77 +19023,26 @@ impl MinimalRuntime {
 
                 match module_id_str.as_str() {
                     "buffer" => {
-                        // Create Buffer function template first
-                        let buffer_fn_template = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let buffer_obj = v8::Object::new(_scope);
-
-                            if args.length() >= 1 {
-                                let first = args.get(0);
-                                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
-                                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
-                                } else if first.is_number() {
-                                    let size = first.to_integer(_scope).unwrap().value() as usize;
-                                    vec![0u8; size]
-                                } else {
-                                    vec![]
-                                };
-
-                                // Add length property
-                                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                                let length_val = v8::Number::new(_scope, bytes.len() as f64);
-                                buffer_obj.set(_scope, length_key, length_val.into());
-
-                                // Add toString method
-                                let to_string_fn = v8::Function::new(_scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                                    let result_str = v8::String::new(scope, "[Buffer]").unwrap();
-                                    retval.set(result_str.into());
-                                }).unwrap();
-                                let to_string_key = v8::String::new(_scope, "toString").unwrap().into();
-                                buffer_obj.set(_scope, to_string_key, to_string_fn.into());
-                            } else {
-                                // Empty buffer
-                                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                                let length_val = v8::Number::new(_scope, 0.0);
-                                buffer_obj.set(_scope, length_key, length_val.into());
+                        // Always return the same Buffer installed on globalThis.
+                        let context = scope.get_current_context();
+                        let global = context.global(scope);
+                        let buffer_key = v8::String::new(scope, "Buffer").unwrap();
+                        if let Some(buffer_val) = global.get(scope, buffer_key.into()) {
+                            if !buffer_val.is_undefined() {
+                                result_obj.set(scope, buffer_key.into(), buffer_val);
+                                let default_key = v8::String::new(scope, "default").unwrap();
+                                let default_obj = v8::Object::new(scope);
+                                default_obj.set(scope, buffer_key.into(), buffer_val);
+                                result_obj.set(scope, default_key.into(), default_obj.into());
+                                retval.set(result_obj.into());
+                                return;
                             }
-
-                            retval.set(buffer_obj.into());
-                        });
-
-                        // Create Buffer function instance
-                        let buffer_fn = buffer_fn_template.get_function(scope).unwrap();
-
-                        // Add Buffer.from as a static method
-                        let from_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let buffer_obj = v8::Object::new(_scope);
-
-                            if args.length() >= 1 {
-                                let first = args.get(0);
-                                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(_scope) {
-                                    str_val.to_rust_string_lossy(_scope).as_bytes().to_vec()
-                                } else if first.is_number() {
-                                    let size = first.to_integer(_scope).unwrap().value() as usize;
-                                    vec![0u8; size]
-                                } else {
-                                    vec![]
-                                };
-
-                                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                                let length_val = v8::Number::new(_scope, bytes.len() as f64);
-                                buffer_obj.set(_scope, length_key, length_val.into());
-                            } else {
-                                let length_key = v8::String::new(_scope, "length").unwrap().into();
-                                let length_val = v8::Number::new(_scope, 0.0);
-                                buffer_obj.set(_scope, length_key, length_val.into());
-                            }
-
-                            retval.set(buffer_obj.into());
-                        }).unwrap();
-                        let from_key = v8::String::new(scope, "from").unwrap().into();
-                        buffer_fn.set(scope, from_key, from_fn.into());
-
-                        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
-                        result_obj.set(scope, buffer_key, buffer_fn.into());
+                        }
+                        let error_str = v8::String::new(scope, "Buffer global is not available")
+                            .unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
+                        return;
                     }
                     "process" => {
                         let context = scope.get_current_context();
@@ -19085,146 +19062,21 @@ impl MinimalRuntime {
                         return;
                     }
                     "path" => {
-                        // Return path module with join function
-                        let join_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let parts: Vec<String> = (0..args.length())
-                                .filter_map(|i| args.get(i).to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
-                                .collect();
-                            let result = if parts.len() > 1 {
-                                parts.join("/")
-                            } else if parts.len() == 1 {
-                                parts[0].clone()
-                            } else {
-                                "".to_string()
-                            };
-                            let result_str = v8::String::new(scope, &result).unwrap();
-                            retval.set(result_str.into());
-                        }).unwrap();
-                        let join_key = v8::String::new(scope, "join").unwrap().into();
-                        result_obj.set(scope, join_key, join_fn.into());
-
-                        // Add dirname function
-                        let dirname_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let path_str = if let Some(s) = args.get(0).to_string(scope) {
-                                s.to_rust_string_lossy(scope)
-                            } else {
-                                "/".to_string()
-                            };
-                            let result = std::path::Path::new(&path_str).parent()
-                                .map(|p| p.to_string_lossy().to_string())
-                                .unwrap_or_else(|| "/".to_string());
-                            let result_str = v8::String::new(scope, &result).unwrap();
-                            retval.set(result_str.into());
-                        }).unwrap();
-                        let dirname_key = v8::String::new(scope, "dirname").unwrap().into();
-                        result_obj.set(scope, dirname_key, dirname_fn.into());
-
-                        // Add basename function
-                        let basename_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let path_str = if let Some(s) = args.get(0).to_string(scope) {
-                                s.to_rust_string_lossy(scope)
-                            } else {
-                                "/".to_string()
-                            };
-                            let result = std::path::Path::new(&path_str).file_name()
-                                .map(|n| n.to_string_lossy().to_string())
-                                .unwrap_or_else(|| path_str);
-                            let result_str = v8::String::new(scope, &result).unwrap();
-                            retval.set(result_str.into());
-                        }).unwrap();
-                        let basename_key = v8::String::new(scope, "basename").unwrap().into();
-                        result_obj.set(scope, basename_key, basename_fn.into());
-
-                        // Add extname function
-                        let extname_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            let path_str = if let Some(s) = args.get(0).to_string(scope) {
-                                s.to_rust_string_lossy(scope)
-                            } else {
-                                "".to_string()
-                            };
-                            let result = std::path::Path::new(&path_str).extension()
-                                .map(|e| format!(".{}", e.to_string_lossy()))
-                                .unwrap_or_else(|| "".to_string());
-                            let result_str = v8::String::new(scope, &result).unwrap();
-                            retval.set(result_str.into());
-                        }).unwrap();
-                        let extname_key = v8::String::new(scope, "extname").unwrap().into();
-                        result_obj.set(scope, extname_key, extname_fn.into());
-
-                        // Add resolve function (v0.3.31)
-                        let resolve_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-                            // Collect all path segments
-                            let paths: Vec<String> = (0..args.length())
-                                .filter_map(|i| args.get(i).to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
-                                .collect();
-
-                            // If no paths, return current directory
-                            if paths.is_empty() {
-                                let cwd = std::env::current_dir()
-                                    .map(|p| p.to_string_lossy().to_string())
-                                    .unwrap_or_else(|_| "/".to_string());
-                                retval.set(v8::String::new(scope, &cwd).unwrap().into());
+                        // Unify with the global path installed by nodejs_core::path.
+                        let context = scope.get_current_context();
+                        let global = context.global(scope);
+                        let path_key = v8::String::new(scope, "path").unwrap();
+                        if let Some(path_val) = global.get(scope, path_key.into()) {
+                            if !path_val.is_undefined() {
+                                retval.set(path_val);
                                 return;
                             }
-
-                            // If last path is absolute, use it directly
-                            if let Some(last) = paths.last() {
-                                if std::path::Path::new(last).is_absolute() {
-                                    let result_str = v8::String::new(scope, last).unwrap();
-                                    retval.set(result_str.into());
-                                    return;
-                                }
-                            }
-
-                            // Start with current working directory
-                            let mut result = std::env::current_dir()
-                                .map(|p| p.to_string_lossy().to_string())
-                                .unwrap_or_else(|_| "/".to_string());
-
-                            // Process each path segment
-                            for path_str in paths {
-                                if path_str.is_empty() {
-                                    continue;
-                                }
-
-                                if path_str.starts_with('/') {
-                                    // Absolute path segment
-                                    result = path_str.clone();
-                                } else if path_str == "." {
-                                    // Current directory, do nothing
-                                    continue;
-                                } else if path_str == ".." {
-                                    // Parent directory
-                                    if let Some(parent) = std::path::Path::new(&result).parent() {
-                                        result = parent.to_string_lossy().to_string();
-                                        if result.is_empty() {
-                                            result = "/".to_string();
-                                        }
-                                    }
-                                } else {
-                                    // Regular path segment
-                                    if !result.ends_with('/') && !path_str.starts_with('/') {
-                                        result.push('/');
-                                    }
-                                    result.push_str(&path_str);
-                                }
-                            }
-
-                            // Clean up the result
-                            let clean_result = std::path::Path::new(&result)
-                                .to_string_lossy()
-                                .to_string();
-
-                            let result_str = v8::String::new(scope, &clean_result).unwrap();
-                            retval.set(result_str.into());
-                        }).unwrap();
-                        let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
-                        result_obj.set(scope, resolve_key, resolve_fn.into());
-
-                        // Add sep constant
-                        let sep_key = v8::String::new(scope, "sep").unwrap().into();
-                        let sep_val = v8::String::new(scope, "/").unwrap().into();
-                        result_obj.set(scope, sep_key, sep_val);
+                        }
+                        let error_str =
+                            v8::String::new(scope, "path global is not available").unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
+                        return;
                     }
                     "fs" => {
                         let ctx = scope.get_current_context();
@@ -19921,27 +19773,41 @@ impl MinimalRuntime {
                     }
                     // v0.3.194: Fixed to return actual global objects instead of fallback messages
                     // v0.3.281: Added readline to the list of builtin modules
-                    "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
-                    "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
-                    "readline" | "performance" => {
+                    "os" | "crypto" | "events" | "net" | "http" | "https" | "tls" | "util"
+                    | "url" | "querystring" | "dns" | "child_process" | "tcp_async" | "stream"
+                    | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
+                    | "zlib" | "vm" | "worker_threads" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
 
                         if module_id_str == "events" {
+                            // Node shape: require('events') => { EventEmitter, ... }
                             let events_key = v8::String::new(scope, "events").unwrap();
                             if let Some(events_val) = global_obj.get(scope, events_key.into()) {
-                                if let Ok(events_obj) =
-                                    v8::Local::<v8::Object>::try_from(events_val)
-                                {
-                                    let event_emitter_key =
-                                        v8::String::new(scope, "EventEmitter").unwrap();
-                                    if let Some(event_emitter) =
-                                        events_obj.get(scope, event_emitter_key.into())
-                                    {
-                                        retval.set(event_emitter);
-                                        return;
-                                    }
+                                if !events_val.is_undefined() {
+                                    retval.set(events_val);
+                                    return;
+                                }
+                            }
+                        }
+
+                        if module_id_str == "assert" || module_id_str == "assert/strict" {
+                            let assert_key = v8::String::new(scope, "assert").unwrap();
+                            if let Some(assert_val) = global_obj.get(scope, assert_key.into()) {
+                                if !assert_val.is_undefined() {
+                                    retval.set(assert_val);
+                                    return;
+                                }
+                            }
+                        }
+
+                        if module_id_str == "perf_hooks" {
+                            let hooks_key = v8::String::new(scope, "perf_hooks").unwrap();
+                            if let Some(hooks_val) = global_obj.get(scope, hooks_key.into()) {
+                                if !hooks_val.is_undefined() {
+                                    retval.set(hooks_val);
+                                    return;
                                 }
                             }
                         }
@@ -19965,6 +19831,55 @@ impl MinimalRuntime {
                                 );
                             }
 
+                            // Legacy Node helpers
+                            let file_url_to_path = v8::Function::new(
+                                scope,
+                                |scope: &mut v8::HandleScope,
+                                 args: v8::FunctionCallbackArguments,
+                                 mut rv: v8::ReturnValue| {
+                                    let input = args
+                                        .get(0)
+                                        .to_string(scope)
+                                        .map(|s| s.to_rust_string_lossy(scope))
+                                        .unwrap_or_default();
+                                    let path = input
+                                        .strip_prefix("file://")
+                                        .unwrap_or(&input)
+                                        .to_string();
+                                    let out = v8::String::new(scope, &path).unwrap();
+                                    rv.set(out.into());
+                                },
+                            )
+                            .unwrap();
+                            let path_to_file_url = v8::Function::new(
+                                scope,
+                                |scope: &mut v8::HandleScope,
+                                 args: v8::FunctionCallbackArguments,
+                                 mut rv: v8::ReturnValue| {
+                                    let path = args
+                                        .get(0)
+                                        .to_string(scope)
+                                        .map(|s| s.to_rust_string_lossy(scope))
+                                        .unwrap_or_default();
+                                    let href = if path.starts_with("file://") {
+                                        path
+                                    } else {
+                                        format!("file://{}", path)
+                                    };
+                                    // Return a minimal URL-like object with href
+                                    let obj = v8::Object::new(scope);
+                                    let href_key = v8::String::new(scope, "href").unwrap();
+                                    let href_val = v8::String::new(scope, &href).unwrap();
+                                    obj.set(scope, href_key.into(), href_val.into());
+                                    rv.set(obj.into());
+                                },
+                            )
+                            .unwrap();
+                            let futp_key = v8::String::new(scope, "fileURLToPath").unwrap();
+                            let ptfu_key = v8::String::new(scope, "pathToFileURL").unwrap();
+                            url_module.set(scope, futp_key.into(), file_url_to_path.into());
+                            url_module.set(scope, ptfu_key.into(), path_to_file_url.into());
+
                             retval.set(url_module.into());
                             return;
                         }
@@ -19987,13 +19902,14 @@ impl MinimalRuntime {
                             }
                         }
 
-                        // Fallback message if module not found on global
-                        let fallback_obj = v8::Object::new(scope);
-                        let msg_key = v8::String::new(scope, "message").unwrap();
-                        let info_msg = format!("{} module available as global.{}", module_id_str, module_id_str);
-                        let msg_val = v8::String::new(scope, &info_msg).unwrap();
-                        fallback_obj.set(scope, msg_key.into(), msg_val.into());
-                        retval.set(fallback_obj.into());
+                        // Fail closed — never return a silent fake module object.
+                        let error_msg = format!(
+                            "ERR_UNKNOWN_BUILTIN_MODULE: No such built-in module: {}",
+                            module_id_str
+                        );
+                        let error_str = v8::String::new(scope, &error_msg).unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
                         return;
                     }
                     _ => {
@@ -20450,7 +20366,6 @@ require.resolve = function(specifier) {{
                     }
                 }
 
-                retval.set(result_obj.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create require function"))?;
 
@@ -20541,15 +20456,24 @@ require.resolve = function(specifier) {{
         let module_require_key = v8::String::new(scope, "require").unwrap().into();
         module_obj.set(scope, module_require_key, require_fn.into());
 
-        // v0.3.329: Set up import.meta object with url property
+        // import.meta (progressive): bind url to the real main module path.
+        // Full HostInitializeImportMetaObjectCallback is wired in ESM evaluate path.
         let import_meta_key = v8::String::new(scope, "import").unwrap().into();
         let import_meta_obj = v8::Object::new(scope);
 
-        // Add import.meta.url
         let url_key = v8::String::new(scope, "url").unwrap().into();
-        let url_val = v8::String::new(scope, "file:///workspace/script.js")
-            .unwrap()
-            .into();
+        let meta_url = if main_module_filename.starts_with("file:") {
+            main_module_filename.to_string()
+        } else {
+            format!(
+                "file://{}",
+                std::path::Path::new(main_module_filename)
+                    .canonicalize()
+                    .unwrap_or_else(|_| std::path::PathBuf::from(main_module_filename))
+                    .display()
+            )
+        };
+        let url_val = v8::String::new(scope, &meta_url).unwrap().into();
         import_meta_obj.set(scope, url_key, url_val);
 
         // Add import.meta.resolve (basic implementation)

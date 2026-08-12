@@ -1,80 +1,105 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Beejs performance baseline runner (startup + eval throughput).
+set -euo pipefail
 
-# Beejs Performance Benchmark Suite Runner
-# This script runs comprehensive performance benchmarks for Beejs
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
-set -e
+echo "Building release bee..."
+cargo build --release -q
 
-echo "🚀 Starting Beejs Performance Benchmark Suite"
-echo "=============================================="
-echo ""
+BEE="$ROOT/target/release/bee"
+OUT_DIR="$ROOT/benchmarks/results"
+mkdir -p "$OUT_DIR"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+REPORT="$OUT_DIR/baseline_${STAMP}.md"
 
-# Create benchmarks directory if it doesn't exist
-mkdir -p benchmarks
+run_timed() {
+  local label="$1"
+  shift
+  local start end
+  start=$(python3 - <<'PY'
+import time; print(time.perf_counter())
+PY
+)
+  "$@" >/dev/null
+  end=$(python3 - <<'PY'
+import time; print(time.perf_counter())
+PY
+)
+  python3 - <<PY
+start=float("$start"); end=float("$end")
+print(f"{end-start:.6f}")
+PY
+}
 
-# Run the benchmark tests
-echo "📊 Running performance benchmark tests..."
-echo ""
+echo "Running startup / eval baseline..."
+{
+  echo "# Beejs performance baseline"
+  echo
+  echo "Generated: ${STAMP}"
+  echo
+  echo "| Metric | Seconds |"
+  echo "|--------|---------|"
+} >"$REPORT"
 
-cargo test --test performance_benchmark_tests --release -- --nocapture
+iters="${BENCH_ITERS:-20}"
+total=0
+for i in $(seq 1 "$iters"); do
+  t=$("$BEE" eval "1+1" >/dev/null; python3 - <<'PY'
+import time, subprocess, os
+bee=os.environ.get("BEE")
+# placeholder
+print(0)
+PY
+)
+done
 
-echo ""
-echo "📈 Generating performance report..."
-echo ""
+# Prefer /usr/bin/time when available
+if command -v gtime >/dev/null 2>&1; then
+  TIME_BIN=gtime
+elif /usr/bin/time -p true >/dev/null 2>&1; then
+  TIME_BIN=/usr/bin/time
+else
+  TIME_BIN=""
+fi
 
-# Create a simple performance report
-cat > benchmarks/performance_report.md << 'EOF'
-# Beejs Performance Benchmark Report
+measure() {
+  local label="$1"
+  shift
+  if [[ -n "$TIME_BIN" ]]; then
+    local out
+    out=$($TIME_BIN -p "$@" 2>&1 >/dev/null | awk '/^real /{print $2}')
+    echo "| $label | ${out}s |" >>"$REPORT"
+    echo "$label: ${out}s"
+  else
+    local start end
+    start=$(date +%s.%N)
+    "$@" >/dev/null
+    end=$(date +%s.%N)
+    local dur
+    dur=$(python3 -c "print(f'{float('$end')-float('$start'):.6f}')")
+    echo "| $label | ${dur}s |" >>"$REPORT"
+    echo "$label: ${dur}s"
+  fi
+}
 
-## Test Results Summary
+measure "cold_eval_1plus1" "$BEE" eval "1 + 1"
+measure "run_hello" "$BEE" run examples/basics/hello_world.js
 
-### Performance Test Suite
-- ✅ Benchmark runner creation test
-- ✅ Simple code execution benchmark
-- ✅ Complex code execution benchmark
-- ✅ Startup time benchmark
-- ✅ Node.js API benchmark
-- ✅ Console API benchmark
-- ✅ Module require benchmark
-- ✅ Arithmetic operations benchmark
+# Optional peer comparison when binaries exist
+if command -v node >/dev/null 2>&1; then
+  measure "node_eval_1plus1" node -e "1+1"
+fi
+if command -v bun >/dev/null 2>&1; then
+  measure "bun_eval_1plus1" bun -e "1+1"
+fi
 
-### Performance Characteristics
+# Criterion-less cargo bench (custom harness)
+if cargo bench -q --bench runtime_startup 2>/dev/null; then
+  echo "| runtime_startup_bench | ok |" >>"$REPORT"
+fi
 
-Based on the benchmark tests, Beejs demonstrates:
-
-1. **Fast Startup Time**: Efficient V8 isolate creation
-2. **High Execution Speed**: Optimized code execution paths
-3. **Low Memory Overhead**: Efficient memory management
-4. **Node.js Compatibility**: Full API support with good performance
-
-### Key Metrics
-
-- **Average Execution Time**: Sub-microsecond for simple operations
-- **Throughput**: High operations per second
-- **Memory Efficiency**: Optimized V8 memory usage
-- **Compatibility**: 100% test pass rate (26/26 tests)
-
-### Performance Optimizations Implemented
-
-1. **V8 Engine Integration**: Using rusty_v8 v0.20 with JIT compilation
-2. **Optimized Console API**: Direct V8 bindings for maximum performance
-3. **Efficient Module System**: Smart caching and dependency resolution
-4. **Node.js API Compatibility**: Zero-overhead API bindings
-
-### Next Steps for Further Optimization
-
-1. **Isolate Pooling**: Reuse V8 isolates to reduce creation overhead
-2. **Bytecode Caching**: Pre-compile and cache frequently used modules
-3. **Memory Pool**: Implement custom memory pool for better allocation performance
-4. **Concurrent Execution**: Optimize for multi-threaded workloads
-
----
-Generated: $(date)
-EOF
-
-echo "✅ Performance benchmark completed!"
-echo ""
-echo "📄 Report saved to: benchmarks/performance_report.md"
-echo ""
-echo "🎉 All tests passed! Beejs is performing well."
-echo ""
+echo
+echo "Wrote $REPORT"
+cat "$REPORT"

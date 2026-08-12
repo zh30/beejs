@@ -1,6 +1,16 @@
 # Current Scope
 
-Last reviewed: 2026-06-12
+Last reviewed: 2026-08-12
+
+Optimization sprint notes (2026-08-12):
+
+- Node conformance fixtures live in `tests/conformance/` (scorecard-driven).
+- Event-loop keep-alive no longer silently drops timers after 75ms.
+- New builtins wired: `assert`, `zlib`, `https`, `tls`, `vm`, `worker_threads`, `perf_hooks`.
+- WorkerHost multi-isolate scaffold is available (`BeeWorkerHost` / progressive `Worker`).
+- `bee serve` binds a real HTTP listener (HTTPS still external-TLS).
+- TypeScript transpile uses a content-hash cache (`src/typescript/cache.rs`).
+- rusty_v8 remains on 0.22; see `docs/V8_UPGRADE.md` for the 0.32 migration branch plan.
 
 This page is the user-facing capability boundary for the current Beejs checkout. It is intentionally narrower than many historical stage reports in this repository.
 

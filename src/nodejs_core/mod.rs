@@ -1,4 +1,5 @@
 // Stage 43.0: 完整Node.js核心API兼容层
+pub mod assert;
 pub mod buffer;
 pub mod child_process;
 pub mod commonjs_resolver;
@@ -8,6 +9,7 @@ pub mod events;
 /// 对标Bun，实现100% Node.js API兼容性
 pub mod fs;
 pub mod http;
+pub mod https;
 pub mod net;
 pub mod os;
 pub mod path;
@@ -19,8 +21,12 @@ pub mod require; // v0.3.54: CommonJS module loader extracted to独立模块
 pub mod stream;
 pub mod tcp_async; // v0.3.71: Async TCP connection module
 pub mod timers; // v0.3.244: Timer API (setTimeout, setInterval, setImmediate)
+pub mod tls;
 pub mod url;
 pub mod util; // v0.3.277: Readline API (createInterface, Interface.question, etc.)
+pub mod vm;
+pub mod worker_threads;
+pub mod zlib;
 use anyhow::Result;
 use rusty_v8 as v8;
 /// 设置所有Node.js核心API
@@ -37,6 +43,8 @@ pub fn setup_nodejs_core_apis(
     events::setup_events_api(scope, context)?;
     net::setup_net_api(scope, context)?;
     http::setup_http_api(scope, context)?;
+    https::setup_https_api(scope, context)?;
+    tls::setup_tls_api(scope, context)?;
     dns::setup_dns_api(scope, context)?; // v0.3.67: DNS support
     buffer::setup_buffer_api(scope, context)?;
     path::setup_path_api(scope, context)?;
@@ -49,7 +57,11 @@ pub fn setup_nodejs_core_apis(
     timers::setup_timers_api(scope, context)?; // v0.3.244: Timer API
     performance::setup_performance_api(scope, context)?; // v0.3.275: Performance API
     readline::setup_readline_api(scope, context)?; // v0.3.277: Readline API
-                                                   // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
+    assert::setup_assert_api(scope, context)?;
+    zlib::setup_zlib_api(scope, context)?;
+    vm::setup_vm_api(scope, context)?;
+    worker_threads::setup_worker_threads_api(scope, context)?;
+    // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
     Ok(())
 }

@@ -8,6 +8,8 @@ const JS_EXTENSIONS: &[&str] = &["js", "json", "ts"];
 const COMMONJS_EXPORT_CONDITIONS: &[&str] = &["require", "node", "default"];
 const ESM_EXPORT_CONDITIONS: &[&str] = &["import", "node", "default"];
 const BUILTIN_MODULES: &[&str] = &[
+    "assert",
+    "assert/strict",
     "buffer",
     "child_process",
     "crypto",
@@ -16,18 +18,25 @@ const BUILTIN_MODULES: &[&str] = &[
     "fs",
     "fs/promises",
     "http",
+    "https",
     "net",
     "os",
     "path",
+    "perf_hooks",
     "performance",
     "process",
     "querystring",
     "readline",
     "stream",
+    "string_decoder",
     "tcp_async",
     "timers",
+    "tls",
     "url",
     "util",
+    "vm",
+    "worker_threads",
+    "zlib",
 ];
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -228,8 +228,36 @@ fn cp_spawn_callback(
         return;
     }
     let spawn_args = string_vec_from_v8_array_value(scope, args.get(1));
-    let output = child_process_output_from_result(Command::new(&command).args(spawn_args).output());
-    let child_obj = child_process_output_object(scope, &output);
+    // Non-blocking spawn: do not wait on stdout via Command::output().
+    let child_obj = v8::Object::new(scope);
+    match Command::new(&command).args(&spawn_args).spawn() {
+        Ok(mut child) => {
+            let pid = child.id();
+            let pid_key = v8::String::new(scope, "pid").unwrap();
+            let pid_val: v8::Local<v8::Value> = v8::Number::new(scope, pid as f64).into();
+            child_obj.set(scope, pid_key.into(), pid_val);
+            // Detach wait onto a background thread so the V8 thread is not blocked.
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
+            let killed_key = v8::String::new(scope, "killed").unwrap();
+            let killed_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            child_obj.set(scope, killed_key.into(), killed_val);
+            let connected_key = v8::String::new(scope, "connected").unwrap();
+            let connected_val: v8::Local<v8::Value> = v8::Boolean::new(scope, false).into();
+            child_obj.set(scope, connected_key.into(), connected_val);
+            let on_func = v8::FunctionTemplate::new(scope, child_on_callback);
+            let on_instance = on_func.get_function(scope).unwrap();
+            let on_key = v8::String::new(scope, "on").unwrap();
+            child_obj.set(scope, on_key.into(), on_instance.into());
+        }
+        Err(err) => {
+            let msg = v8::String::new(scope, &format!("spawn {}", err)).unwrap();
+            let exc = v8::Exception::error(scope, msg);
+            scope.throw_exception(exc);
+            return;
+        }
+    }
     retval.set(child_obj.into());
 }
 fn cp_exec_file_callback(

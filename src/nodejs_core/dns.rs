@@ -399,10 +399,7 @@ fn perform_dns_lookup(hostname: &str, family: i32) -> Result<Vec<String>, String
             }
             Ok(results)
         }
-        Err(_) => {
-            // 如果解析失败，返回模拟结果
-            Ok(vec!["127.0.0.1".to_string()])
-        }
+        Err(err) => Err(format!("ENOTFOUND getaddrinfo {}", err)),
     }
 }
 
@@ -412,11 +409,8 @@ fn perform_dns_reverse(ip: &str) -> Result<Vec<String>, String> {
         return Ok(vec!["localhost".to_string()]);
     }
 
-    if let Ok(_sock_addr) = ip.parse::<std::net::SocketAddr>() {
-        return Ok(vec![format!("resolved.{}", ip.replace(".", "-"))]);
-    }
-
-    Err(format!("Cannot reverse resolve: {}", ip))
+    // Do not invent PTR records. Fail closed until a real reverse lookup is wired.
+    Err(format!("ENOTFOUND Cannot reverse resolve: {}", ip))
 }
 
 /// 从选项对象中提取 DNS 选项

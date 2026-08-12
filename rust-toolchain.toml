@@ -1,0 +1,6 @@
+# Pin a toolchain that can link rusty_v8 0.22 on this repo.
+# Stable 1.93 currently ICE's on truncated/corrupt V8 archives in some caches;
+# after a clean gn_out download, 1.93 works — keep channel flexible.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]

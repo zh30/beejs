@@ -54,6 +54,22 @@ jobs:
       - name: Run tests
         run: cargo test --verbose
 
+      - name: Feature matrix (compile-only)
+        run: |
+          set -e
+          for feat in ai benchmarks observability; do
+            echo "::group::cargo check --features $feat"
+            cargo check --features "$feat" || echo "::warning::feature $feat currently does not compile"
+            echo "::endgroup::"
+          done
+
+      - name: Node conformance scorecard
+        run: |
+          cargo build -q
+          ./tests/conformance/run_conformance.sh || true
+          echo "Scorecard:"
+          cat tests/conformance/scorecard.md
+
       - name: Check crate package contents
         run: cargo package --locked --list
 

@@ -140,18 +140,17 @@ impl AiLlmEngine {
         max_tokens: usize,
         kv_cache: Option<KvCache>,
     ) -> Result<Vec<u32>, String> {
-        // 模拟 tokenization
+        // EXPERIMENTAL / SIMULATED inference — not a real LLM backend.
+        // Prefer npm SDKs (openai/anthropic) on Beejs I/O for production AI apps.
         let input_tokens: _ = string_to_tokens(prompt);
-        // 模拟 KV Cache 检索和更新
         let mut current_kv_cache = if let Some(cache) = kv_cache {
             cache
         } else {
             self.allocate_kv_cache()?
         };
         let mut generated_tokens = input_tokens.clone();
-        // 生成 tokens
         for _ in 0..max_tokens {
-            // 模拟前向传播
+            // Simulated forward pass (random/heuristic tokens).
             let next_token: _ = self.forward_pass(&generated_tokens, &mut current_kv_cache)?;
             generated_tokens.push(next_token);
             if next_token == 3 {

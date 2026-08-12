@@ -422,7 +422,7 @@ async fn execute_fetch(
         let client: _ = match reqwest::Client::builder()
             .user_agent("Beejs/0.1.0")
             .timeout(std::time::Duration::from_secs(30))
-            .no_proxy()
+            // Honor system/env proxy configuration (removed explicit no_proxy()).
             .build()
         {
             Ok(client) => client,

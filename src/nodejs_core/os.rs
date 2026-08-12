@@ -320,9 +320,16 @@ fn os_release_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 简化实现，返回通用版本
-    let release: _ = "10.0.0";
-    retval.set(v8::String::new(scope, release).unwrap().into());
+    let release = sys_info::os_release().unwrap_or_else(|_| {
+        if cfg!(target_os = "macos") {
+            "Darwin".to_string()
+        } else if cfg!(target_os = "windows") {
+            "Windows_NT".to_string()
+        } else {
+            "Linux".to_string()
+        }
+    });
+    retval.set(v8::String::new(scope, &release).unwrap().into());
 }
 fn os_hostname_callback(
     scope: &mut v8::HandleScope,
@@ -342,14 +349,16 @@ fn os_loadavg_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 简化的负载平均值
-    let loadavg: _ = v8::Array::new(scope, 3);
-    let val1: _ = v8::Number::new(scope, 0.1).into();
-    loadavg.set_index(scope, 0, val1);
-    let val2: _ = v8::Number::new(scope, 0.2).into();
-    loadavg.set_index(scope, 1, val2);
-    let val3: _ = v8::Number::new(scope, 0.3).into();
-    loadavg.set_index(scope, 2, val3);
+    let loadavg = v8::Array::new(scope, 3);
+    let (a, b, c) = sys_info::loadavg()
+        .map(|l| (l.one, l.five, l.fifteen))
+        .unwrap_or((0.0, 0.0, 0.0));
+    let v0: v8::Local<v8::Value> = v8::Number::new(scope, a).into();
+    let v1: v8::Local<v8::Value> = v8::Number::new(scope, b).into();
+    let v2: v8::Local<v8::Value> = v8::Number::new(scope, c).into();
+    loadavg.set_index(scope, 0, v0);
+    loadavg.set_index(scope, 1, v1);
+    loadavg.set_index(scope, 2, v2);
     retval.set(loadavg.into());
 }
 fn os_uptime_callback(
@@ -357,11 +366,16 @@ fn os_uptime_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 获取系统运行时间
-    let uptime: _ = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs();
+    let uptime = match sys_info::boottime() {
+        Ok(bt) => {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            now.saturating_sub(bt.tv_sec as u64)
+        }
+        Err(_) => 0,
+    };
     retval.set(v8::Number::new(scope, uptime as f64).into());
 }
 fn os_cpus_callback(
@@ -369,37 +383,45 @@ fn os_cpus_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 获取CPU数量
-    let cpu_count: _ = num_cpus::get();
-    let cpus_array: _ = v8::Array::new(scope, cpu_count as i32);
+    let cpu_count = num_cpus::get();
+    let model = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|content| {
+            content
+                .lines()
+                .find(|l| l.starts_with("model name"))
+                .and_then(|l| l.split(':').nth(1))
+                .map(|s| s.trim().to_string())
+        })
+        .or_else(|| {
+            // macOS: sysctl
+            std::process::Command::new("sysctl")
+                .args(["-n", "machdep.cpu.brand_string"])
+                .output()
+                .ok()
+                .and_then(|o| String::from_utf8(o.stdout).ok())
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+        })
+        .unwrap_or_else(|| format!("{} CPU", std::env::consts::ARCH));
+    let cpus_array = v8::Array::new(scope, cpu_count as i32);
     for i in 0..cpu_count {
-        let cpu_obj: _ = v8::Object::new(scope);
-        let _key_0: _ = v8::String::new(scope, "model").unwrap();
-        let val: _ = v8::String::new(scope, "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz")
-            .unwrap()
-            .into();
-        cpu_obj.set(scope, _key_0.into(), val);
-        let key_speed: _ = v8::String::new(scope, "speed").unwrap();
-        let val_speed: _ = v8::Number::new(scope, 3600.0);
+        let cpu_obj = v8::Object::new(scope);
+        let model_key = v8::String::new(scope, "model").unwrap();
+        let model_val = v8::String::new(scope, &model).unwrap();
+        cpu_obj.set(scope, model_key.into(), model_val.into());
+        let key_speed = v8::String::new(scope, "speed").unwrap();
+        let val_speed = v8::Number::new(scope, 0.0);
         cpu_obj.set(scope, key_speed.into(), val_speed.into());
-        let times_obj: _ = v8::Object::new(scope);
-        let key_user: _ = v8::String::new(scope, "user").unwrap();
-        let val_user: _ = v8::Number::new(scope, 1000000.0);
-        times_obj.set(scope, key_user.into(), val_user.into());
-        let key_nice: _ = v8::String::new(scope, "nice").unwrap();
-        let val_nice: _ = v8::Number::new(scope, 0.0);
-        times_obj.set(scope, key_nice.into(), val_nice.into());
-        let key_sys: _ = v8::String::new(scope, "sys").unwrap();
-        let val_sys: _ = v8::Number::new(scope, 500000.0);
-        times_obj.set(scope, key_sys.into(), val_sys.into());
-        let key_idle: _ = v8::String::new(scope, "idle").unwrap();
-        let val_idle: _ = v8::Number::new(scope, 8000000.0);
-        times_obj.set(scope, key_idle.into(), val_idle.into());
-        let key_irq: _ = v8::String::new(scope, "irq").unwrap();
-        let val_irq: _ = v8::Number::new(scope, 0.0);
-        times_obj.set(scope, key_irq.into(), val_irq.into());
-        let _key_1: _ = v8::String::new(scope, "times").unwrap();
-        cpu_obj.set(scope, _key_1.into(), times_obj.into());
+        let times_obj = v8::Object::new(scope);
+        for (name, val) in [("user", 0.0), ("nice", 0.0), ("sys", 0.0), ("idle", 0.0), ("irq", 0.0)]
+        {
+            let key = v8::String::new(scope, name).unwrap();
+            let num = v8::Number::new(scope, val);
+            times_obj.set(scope, key.into(), num.into());
+        }
+        let times_key = v8::String::new(scope, "times").unwrap();
+        cpu_obj.set(scope, times_key.into(), times_obj.into());
         cpus_array.set_index(scope, i as u32, cpu_obj.into());
     }
     retval.set(cpus_array.into());
@@ -409,8 +431,9 @@ fn os_freemem_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 简化的可用内存
-    let freemem: _ = 8u64 * 1024 * 1024 * 1024; // 8GB
+    let freemem = sys_info::mem_info()
+        .map(|m| m.avail * 1024)
+        .unwrap_or(0);
     retval.set(v8::Number::new(scope, freemem as f64).into());
 }
 fn os_totalmem_callback(
@@ -418,8 +441,9 @@ fn os_totalmem_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    // 简化的总内存
-    let totalmem: _ = 16u64 * 1024 * 1024 * 1024; // 16GB
+    let totalmem = sys_info::mem_info()
+        .map(|m| m.total * 1024)
+        .unwrap_or(0);
     retval.set(v8::Number::new(scope, totalmem as f64).into());
 }
 fn os_homedir_callback(

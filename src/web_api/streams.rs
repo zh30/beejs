@@ -1144,10 +1144,22 @@ fn writable_stream_constructor(
             writer.set(_scope, closed_key.into(), closed_promise_val);
             writer.set(_scope, release_key.into(), release_func.into());
 
-            // Add desiredSize property
+            // desiredSize ≈ highWaterMark - queue size (WHATWG-ish backpressure signal)
+            let hwm_key = v8::String::new(_scope, "_highWaterMark").unwrap();
+            let queue_key = v8::String::new(_scope, "_queue").unwrap();
+            let hwm = writable_this
+                .get(_scope, hwm_key.into())
+                .and_then(|v| v.number_value(_scope))
+                .unwrap_or(1.0);
+            let queued = writable_this
+                .get(_scope, queue_key.into())
+                .and_then(|v| v8::Local::<v8::Array>::try_from(v).ok())
+                .map(|a| a.length() as f64)
+                .unwrap_or(0.0);
             let desired_size_key: v8::Local<v8::String> =
                 v8::String::new(_scope, "desiredSize").unwrap();
-            let desired_size_val: v8::Local<v8::Value> = v8::Number::new(_scope, 1.0).into(); // Default high-water mark
+            let desired_size_val: v8::Local<v8::Value> =
+                v8::Number::new(_scope, hwm - queued).into();
             writer.set(_scope, desired_size_key.into(), desired_size_val);
 
             retval.set(writer.into());

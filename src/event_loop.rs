@@ -4,7 +4,6 @@
 // v0.3.248: 使用 fired timer 队列简化架构
 
 use once_cell::sync::Lazy;
-use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -12,7 +11,6 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, oneshot};
-use tokio::time::{sleep, timeout};
 
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,174 +51,74 @@ pub struct EventLoopTask {
     pub estimated_duration: Duration,
 }
 
-/// V8 事件循环
-#[allow(dead_code)]
-pub struct V8EventLoop {
-    state: Arc<Mutex<EventLoopState>>,
-    config: EventLoopConfig,
-    task_queue: Arc<Mutex<Vec<EventLoopTask>>>,
-    completed_tasks: Arc<Mutex<Vec<EventLoopTask>>>,
+/// Pending I/O completion to be applied on the V8 main thread.
+#[derive(Debug)]
+pub struct IoCompletion {
+    pub id: u64,
+    pub ok: bool,
+    pub payload: String,
 }
 
-#[allow(dead_code)]
-impl V8EventLoop {
-    pub fn new(config: EventLoopConfig) -> Self {
+/// Cross-thread I/O completion queue for the tokio ↔ V8 bridge.
+/// Async work should push here; the main event-loop drain pops and resolves Promises.
+pub struct IoCompletionQueue {
+    inner: Mutex<Vec<IoCompletion>>,
+    next_id: AtomicU64,
+    pending_ops: AtomicU64,
+}
+
+impl IoCompletionQueue {
+    pub fn new() -> Self {
         Self {
-            state: Arc::new(Mutex::new(EventLoopState::Stopped)),
-            config,
-            task_queue: Arc::new(Mutex::new(Vec::new())),
-            completed_tasks: Arc::new(Mutex::new(Vec::new())),
+            inner: Mutex::new(Vec::new()),
+            next_id: AtomicU64::new(1),
+            pending_ops: AtomicU64::new(0),
         }
     }
 
-    pub fn new_with_default_config() -> Self {
-        Self::new(EventLoopConfig::default())
+    pub fn begin_op(&self) -> u64 {
+        self.pending_ops.fetch_add(1, Ordering::SeqCst);
+        self.next_id.fetch_add(1, Ordering::SeqCst)
     }
 
-    pub fn start(&self) -> Result<(), String> {
-        let mut state = self.state.lock().map_err(|e| e.to_string())?;
-        if *state == EventLoopState::Running {
-            return Ok(());
+    pub fn complete(&self, id: u64, ok: bool, payload: String) {
+        if let Ok(mut q) = self.inner.lock() {
+            q.push(IoCompletion { id, ok, payload });
         }
-        *state = EventLoopState::Running;
-        Ok(())
+        self.pending_ops.fetch_sub(1, Ordering::SeqCst);
     }
 
-    pub fn stop(&self) -> Result<(), String> {
-        let mut state = self.state.lock().map_err(|e| e.to_string())?;
-        *state = EventLoopState::Stopped;
-        Ok(())
+    pub fn drain(&self) -> Vec<IoCompletion> {
+        self.inner.lock().map(|mut q| q.drain(..).collect()).unwrap_or_default()
     }
 
-    pub fn pause(&self) -> Result<(), String> {
-        let mut state = self.state.lock().map_err(|e| e.to_string())?;
-        *state = EventLoopState::Paused;
-        Ok(())
+    pub fn has_pending(&self) -> bool {
+        self.pending_ops.load(Ordering::SeqCst) > 0
+            || self.inner.lock().map(|q| !q.is_empty()).unwrap_or(false)
     }
+}
 
-    pub fn resume(&self) -> Result<(), String> {
-        let mut state = self.state.lock().map_err(|e| e.to_string())?;
-        match state.clone() {
-            EventLoopState::Paused => *state = EventLoopState::Running,
-            _ => return Err("Event loop is not paused".to_string()),
-        }
-        Ok(())
+impl Default for IoCompletionQueue {
+    fn default() -> Self {
+        Self::new()
     }
+}
 
-    pub fn get_state(&self) -> EventLoopState {
-        self.state.lock().unwrap().clone()
-    }
+static IO_COMPLETION_QUEUE: Lazy<IoCompletionQueue> = Lazy::new(IoCompletionQueue::new);
 
-    pub fn add_task(&self, task: EventLoopTask) -> Result<(), String> {
-        let mut queue = self.task_queue.lock().map_err(|e| e.to_string())?;
-        if queue.len() >= self.config.max_queue_size {
-            return Err("Task queue is full".to_string());
-        }
-        queue.push(task);
-        Ok(())
-    }
+pub fn io_completion_queue() -> &'static IoCompletionQueue {
+    &IO_COMPLETION_QUEUE
+}
 
-    pub async fn process_tasks(&self) -> Result<usize, String> {
-        let state = self.get_state();
-        if !matches!(state, EventLoopState::Running) {
-            return Err("Event loop is not running".to_string());
-        }
-        let mut tasks = self.task_queue.lock().map_err(|e| e.to_string())?;
-        let task_count = tasks.len();
-        if tasks.is_empty() {
-            return Ok(0);
-        }
-        let mut completed = Vec::new();
-        for task in tasks.drain(..) {
-            let execution_time = task.estimated_duration.min(Duration::from_millis(100));
-            let result = timeout(execution_time, sleep(execution_time)).await;
-            match result {
-                Ok(_) => completed.push(task),
-                Err(_) => completed.push(task),
-            }
-        }
-        drop(tasks);
-        let mut completed_queue = self.completed_tasks.lock().map_err(|e| e.to_string())?;
-        completed_queue.extend(completed);
-        Ok(task_count)
-    }
-
-    pub async fn wait_for_completion(&self, timeout_duration: Duration) -> Result<usize, String> {
-        let start = Instant::now();
-        while start.elapsed() < timeout_duration {
-            let processed = self.process_tasks().await?;
-            let remaining = self.task_queue.lock().unwrap().len();
-            if remaining == 0 && processed == 0 {
-                break;
-            }
-            sleep(Duration::from_millis(10)).await;
-        }
-        let completed_count = self.completed_tasks.lock().unwrap().len();
-        Ok(completed_count)
-    }
-
-    pub fn get_queue_size(&self) -> usize {
-        self.task_queue.lock().unwrap().len()
-    }
-
-    pub fn get_completed_count(&self) -> usize {
-        self.completed_tasks.lock().unwrap().len()
-    }
-
-    pub fn clear_completed(&self) {
-        self.completed_tasks.lock().unwrap().clear();
-    }
-
-    pub fn reset(&self) -> Result<(), String> {
-        self.stop()?;
-        self.task_queue.lock().unwrap().clear();
-        self.completed_tasks.lock().unwrap().clear();
-        Ok(())
-    }
-
-    pub fn create_promise_handler<'a>(
-        &self,
-        scope: &mut v8::ContextScope<v8::HandleScope<'a>>,
-        context: &v8::Local<v8::Context>,
-    ) -> Result<v8::Local<'a, v8::Object>, String> {
-        let promise_handler = v8::Object::new(scope);
-        let resolve_func = v8::FunctionTemplate::new(
-            scope,
-            |_scope: &mut v8::HandleScope,
-             _args: v8::FunctionCallbackArguments,
-             mut _rv: v8::ReturnValue| {
-                let result = v8::String::new(_scope, "resolved").unwrap();
-                _rv.set(result.into());
-            },
-        );
-        let resolve_instance = resolve_func
-            .get_function(scope)
-            .ok_or("Failed to create resolve function")?;
-        let resolve_key = v8::String::new(scope, "resolve").unwrap();
-        promise_handler.set(scope, resolve_key.into(), resolve_instance.into());
-        let reject_func = v8::FunctionTemplate::new(
-            scope,
-            |_scope: &mut v8::HandleScope,
-             _args: v8::FunctionCallbackArguments,
-             mut _rv: v8::ReturnValue| {
-                let result = v8::String::new(_scope, "rejected").unwrap();
-                _rv.set(result.into());
-            },
-        );
-        let reject_instance = reject_func
-            .get_function(scope)
-            .ok_or("Failed to create reject function")?;
-        let reject_key = v8::String::new(scope, "reject").unwrap();
-        promise_handler.set(scope, reject_key.into(), reject_instance.into());
-        let global = context.global(scope);
-        let event_loop_key = v8::String::new(scope, "__beejs_event_loop").unwrap();
-        let event_loop_obj = v8::Object::new(scope);
-        let state_str = v8::String::new(scope, &format!("{:?}", self.get_state())).unwrap();
-        let state_key = v8::String::new(scope, "state").unwrap();
-        event_loop_obj.set(scope, state_key.into(), state_str.into());
-        global.set(scope, event_loop_key.into(), event_loop_obj.into());
-        Ok(promise_handler)
-    }
+/// Node-like phase tags for the main-thread drain loop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventLoopPhase {
+    NextTick,
+    Microtasks,
+    Timers,
+    IoCallbacks,
+    Immediate,
+    Close,
 }
 
 // v0.3.247: 异步定时器调度器（纯 tokio 异步实现）

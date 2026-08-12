@@ -28,6 +28,7 @@ pub mod url;
 pub mod url_search_params;
 pub mod websocket;
 pub mod worker; // v0.3.320: Worker API (Web Worker support for parallel execution) // v0.3.353: URLSearchParams API (query string manipulation)
+pub mod worker_host; // Multi-isolate WorkerHost
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -58,6 +59,8 @@ use url::setup_url_api;
 use url_search_params::setup_url_search_params_api;
 use websocket::setup_websocket_api;
 use worker::setup_worker_api;
+#[allow(unused_imports)]
+use worker_host::setup_worker_host_api;
 /// 初始化所有 Web API 到 V8 上下文
 pub fn init_web_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

@@ -1,0 +1,25 @@
+# Node.js conformance scorecard
+
+This directory is the north-star metric for Beejs Node compatibility work.
+
+## Layout
+
+- `fixtures/` — small JS scripts asserting Node-like behavior
+- `scorecard.md` — latest pass/fail summary (update when you run the suite)
+- `run_conformance.sh` — runner that executes fixtures with `bee` (or `cargo run`)
+
+## How to run
+
+```bash
+./tests/conformance/run_conformance.sh
+# or after release build:
+BEE_BIN=./target/release/bee ./tests/conformance/run_conformance.sh
+```
+
+Exit code is non-zero if any fixture fails. CI publishes the printed pass rate.
+
+## Scope policy
+
+Start with pure-logic / sync modules (`path`, `buffer`, `events`, `assert`, `url`,
+`util`, `querystring`). Async I/O fixtures are added as the event loop lands
+true keep-alive and non-blocking APIs.

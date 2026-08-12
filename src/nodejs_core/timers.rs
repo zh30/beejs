@@ -1100,6 +1100,11 @@ pub fn has_pending_drainable_timers(max_delay_ms: u64) -> bool {
     })
 }
 
+/// True when any ref'd timeout/interval is still scheduled (ignores delay cap).
+pub fn has_pending_refed_timers() -> bool {
+    has_pending_drainable_timers(u64::MAX)
+}
+
 /// v0.3.250: Store setImmediate callback for next event loop iteration
 /// v0.3.261: Store with deferred=false so they run in the same iteration
 /// (after timers). Callbacks registered from within other callbacks will be

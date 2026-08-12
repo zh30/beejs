@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Node conformance scorecard runner for Beejs.
+set -u
+
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT"
+
+if [[ -n "${BEE_BIN:-}" ]]; then
+  BEE=("$BEE_BIN")
+elif [[ -x ./target/release/bee ]]; then
+  BEE=(./target/release/bee)
+elif [[ -x ./target/debug/bee ]]; then
+  BEE=(./target/debug/bee)
+else
+  BEE=(cargo run --quiet --)
+fi
+
+FIXTURE_DIR="$ROOT/tests/conformance/fixtures"
+SCORECARD="$ROOT/tests/conformance/scorecard.md"
+PASS=0
+FAIL=0
+SKIP=0
+RESULTS=()
+
+shopt -s nullglob
+fixtures=("$FIXTURE_DIR"/*.js)
+if [[ ${#fixtures[@]} -eq 0 ]]; then
+  echo "No fixtures found in $FIXTURE_DIR" >&2
+  exit 1
+fi
+
+echo "Beejs Node conformance scorecard"
+echo "Binary: ${BEE[*]}"
+echo "Fixtures: ${#fixtures[@]}"
+echo
+
+for fixture in "${fixtures[@]}"; do
+  name="$(basename "$fixture")"
+  out="$(mktemp)"
+  err="$(mktemp)"
+  if "${BEE[@]}" run "$fixture" >"$out" 2>"$err"; then
+    if grep -q "^CONFORMANCE_PASS$" "$out"; then
+      echo "PASS  $name"
+      RESULTS+=("| $name | PASS |")
+      PASS=$((PASS + 1))
+    else
+      echo "FAIL  $name (missing CONFORMANCE_PASS marker)"
+      RESULTS+=("| $name | FAIL | missing marker |")
+      FAIL=$((FAIL + 1))
+    fi
+  else
+    echo "FAIL  $name"
+    tail -n 5 "$err" | sed 's/^/      /'
+    RESULTS+=("| $name | FAIL | runtime error |")
+    FAIL=$((FAIL + 1))
+  fi
+  rm -f "$out" "$err"
+done
+
+TOTAL=$((PASS + FAIL + SKIP))
+RATE=0
+if [[ $TOTAL -gt 0 ]]; then
+  RATE=$((PASS * 100 / TOTAL))
+fi
+
+echo
+echo "Summary: $PASS/$TOTAL passed (${RATE}%)"
+
+{
+  echo "# Beejs Node conformance scorecard"
+  echo
+  echo "Generated: $(date -u +%Y-%m-%dT%H:%MZ)"
+  echo
+  echo "| Fixture | Result | Notes |"
+  echo "|---------|--------|-------|"
+  for line in "${RESULTS[@]}"; do
+    echo "$line"
+  done
+  echo
+  echo "**Pass rate: ${PASS}/${TOTAL} (${RATE}%)**"
+} >"$SCORECARD"
+
+echo "Wrote $SCORECARD"
+exit $FAIL
