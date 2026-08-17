@@ -85,6 +85,7 @@ fn test_setinterval_returns_timer() {
         .execute_code(
             r#"
         const id = setInterval(() => {}, 100);
+        id.unref();
         typeof id;
     "#,
         )
@@ -136,13 +137,16 @@ fn test_timer_with_arguments() {
 fn test_timer_metadata_storage() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    // Just verify timers can be created without error
+    // Just verify timers can be created without error.
+    // Unref the ref'd timers so the keep-alive loop can return.
     let result = runtime
         .execute_code(
             r#"
-        setTimeout(() => {}, 100);
-        setInterval(() => {}, 200);
+        const t = setTimeout(() => {}, 100);
+        const i = setInterval(() => {}, 200);
         setImmediate(() => {});
+        t.unref();
+        i.unref();
         'timers created';
     "#,
         )
@@ -185,13 +189,16 @@ fn test_multiple_timers_metadata() {
 fn test_settimeout_async_callback_stored() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    // Timer with delay > 0 should store callback in registry
+    // Timer with delay > 0 should store callback in registry.
+    // Unref so execute_code returns before it fires (ref'd timers keep the
+    // loop alive until they run).
     let _ = runtime
         .execute_code(
             r#"
-        setTimeout(() => {
+        const t = setTimeout(() => {
             globalThis.asyncExecuted = true;
         }, 100);
+        t.unref();
     "#,
         )
         .unwrap();
@@ -231,7 +238,9 @@ fn test_cleartimer_prevents_callback_execution() {
 fn test_setinterval_repeats() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
-    // setInterval should store callback for repeated execution
+    // setInterval should store callback for repeated execution.
+    // Unref so the keep-alive event loop can return from execute_code;
+    // Node semantics keep ref'd intervals running forever.
     let _ = runtime
         .execute_code(
             r#"
@@ -239,6 +248,7 @@ fn test_setinterval_repeats() {
         const id = setInterval(() => {
             globalThis.intervalCount += 1;
         }, 10);
+        id.unref();
         globalThis.intervalId = id;
     "#,
         )
@@ -289,6 +299,8 @@ fn test_timer_metadata_complete() {
         const timeoutId = setTimeout(() => {}, 100);
         const intervalId = setInterval(() => {}, 200);
         const immediateId = setImmediate(() => {});
+        timeoutId.unref();
+        intervalId.unref();
         typeof timeoutId + '-' + typeof intervalId + '-' + typeof immediateId;
     "#,
         )

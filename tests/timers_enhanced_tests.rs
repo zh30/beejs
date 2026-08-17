@@ -176,12 +176,14 @@ fn test_set_interval_returns_timer_id() {
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setInterval(function() {}, 100);
-        typeof timerId === 'object' &&
+        const ok = typeof timerId === 'object' &&
         timerId !== null &&
         Number(timerId) > 0 &&
         typeof timerId.unref === 'function' &&
         typeof timerId.ref === 'function' &&
         typeof timerId.refresh === 'function';
+        timerId.unref();
+        ok;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
@@ -201,6 +203,7 @@ fn test_set_interval_basic_execution() {
     // We test that it returns a valid timer ID
     let code = r#"
         const timerId = setInterval(function() {}, 0);
+        timerId.unref();
         timerId > 0;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
@@ -257,10 +260,13 @@ fn test_timer_ids_are_numbers() {
     let code = r#"
         const timeoutId = setTimeout(function() {}, 100);
         const intervalId = setInterval(function() {}, 100);
-        typeof timeoutId === 'object' &&
+        const ok = typeof timeoutId === 'object' &&
         typeof intervalId === 'object' &&
         Number(timeoutId) > 0 &&
         Number(intervalId) > 0;
+        timeoutId.unref();
+        intervalId.unref();
+        ok;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(result.trim(), "true", "Both timers should be handles");
@@ -278,6 +284,9 @@ fn test_multiple_timers() {
         ids.push(setTimeout(function() {}, 200));
         ids.push(setInterval(function() {}, 300));
         ids.push(setInterval(function() {}, 400));
+        // Ref'd timers keep the event loop alive by design; release them so
+        // execute_code can return after checking handle creation.
+        ids.forEach((id) => id.unref());
         ids.length === 4;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
@@ -334,7 +343,9 @@ fn test_setinterval_returns_timer_handle() {
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
     let code = r#"
         const timerId = setInterval(function() {}, 1000);
-        typeof timerId === 'object' && Number(timerId) > 0;
+        const ok = typeof timerId === 'object' && Number(timerId) > 0;
+        timerId.unref();
+        ok;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(
@@ -473,9 +484,14 @@ fn test_timer_unref_ref_chain() {
 fn test_interval_timer_has_unref_ref() {
     let mut runtime =
         beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+    // A ref'd interval keeps the event loop alive by design (Node semantics),
+    // so unref it after checking the handle to let execute_code return.
     let code = r#"
         const timerId = setInterval(function() {}, 1000);
-        typeof timerId === 'object' && Number(timerId) > 0;
+        const ok = typeof timerId === 'object' && Number(timerId) > 0
+            && typeof timerId.unref === 'function' && typeof timerId.ref === 'function';
+        timerId.unref();
+        ok;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert_eq!(

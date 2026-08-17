@@ -36,8 +36,9 @@ use crate::nodejs_core::http::setup_http_api;
 use crate::nodejs_core::net::setup_net_api;
 use crate::nodejs_core::path::setup_path_api;
 use crate::nodejs_core::timers::{
-    execute_fired_timers, execute_immediate_callbacks, mark_immediate_callbacks_deferred,
-    setup_timers_api,
+    clear_pending_immediates, execute_fired_timers, execute_immediate_callbacks,
+    has_pending_immediates, mark_immediate_callbacks_deferred, setup_timers_api,
+    unmark_immediate_callbacks_deferred,
 };
 // v0.3.261: Import process module for nextTick support
 use crate::nodejs_core::process::{execute_next_tick_callbacks, has_pending_next_ticks};
@@ -7954,6 +7955,11 @@ impl MinimalRuntime {
 
         crate::web_api::background_sync::reset_pending_wait_until();
 
+        // Drop setImmediate callbacks left over from a previous execute_code
+        // (e.g. after an early error return). They capture V8 handles from the
+        // execution that scheduled them and must not run in this one.
+        clear_pending_immediates();
+
         // Transpile TypeScript to JavaScript if TypeScript features are detected
         // Only transpile raw TypeScript syntax that our proper compiler can't handle
         // v0.3.170: Enhanced TypeScript detection for module augmentation
@@ -8047,8 +8053,7 @@ impl MinimalRuntime {
         // extended later if a subsequent script needs them.
         let needs_core_setup = !self.apis_initialized;
         let needs_extended_setup = !self.extended_apis_initialized
-            && (should_execute_as_esm_module
-                || Self::code_needs_extended_apis(js_code.as_ref()));
+            && (should_execute_as_esm_module || Self::code_needs_extended_apis(js_code.as_ref()));
 
         // 创建 HandleScope（整个函数只创建一次）
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
@@ -8261,6 +8266,11 @@ impl MinimalRuntime {
         let timer_drain_started_at = std::time::Instant::now();
 
         loop {
+            // A new iteration makes previously deferred setImmediate callbacks
+            // eligible again (they were deferred to skip the iteration that
+            // registered them).
+            unmark_immediate_callbacks_deferred();
+
             // Fast path: after sync code, nextTick and microtasks may be the only
             // pending work. Process them before deciding whether timer polling is
             // needed; otherwise plain synchronous execution pays the timer wait.
@@ -8287,6 +8297,7 @@ impl MinimalRuntime {
                     || has_wait_until_timers
                     || has_wait_until
                     || has_pending_next_ticks()
+                    || has_pending_immediates()
             };
 
             if !has_initial_pending_work {
@@ -8312,7 +8323,8 @@ impl MinimalRuntime {
                 let has_wait_until_timers = has_scheduled && has_wait_until;
                 let has_next_ticks = has_pending_next_ticks();
 
-                if has_fired || has_zero_delay_timers || has_next_ticks {
+                if has_fired || has_zero_delay_timers || has_next_ticks || has_pending_immediates()
+                {
                     has_pending_work = true;
                     break;
                 }
@@ -8373,13 +8385,30 @@ impl MinimalRuntime {
             // Execute all currently fired timers (setTimeout/setInterval with delay > 0)
             execute_fired_timers(scope);
 
+            // Timer callbacks may have queued nextTick callbacks; those have
+            // higher priority than the check phase (setImmediate) below.
+            execute_next_tick_callbacks(scope);
+
             // v0.3.339: Process microtasks after timer execution
             // Timer callbacks may resolve Promises (e.g., setTimeout callbacks that call resolve())
             // These Promises need to be processed before continuing
             scope.perform_microtask_checkpoint();
 
-            // v0.3.261: NOTE - setImmediate callbacks are NOT executed inside this loop
-            // They are processed after the loop (in the "next iteration") to match Node.js behavior
+            // Check phase: run setImmediate callbacks every iteration, not only
+            // after the loop. Otherwise a pending immediate would be stuck behind
+            // a later timer (e.g. a 50ms timeout), which violates Node semantics.
+            // Callbacks registered during this phase are deferred to the next
+            // iteration via mark_immediate_callbacks_deferred.
+            execute_immediate_callbacks(scope);
+            mark_immediate_callbacks_deferred();
+
+            // Immediate callbacks may also queue nextTicks; drain them before
+            // the loop evaluates whether work remains.
+            execute_next_tick_callbacks(scope);
+            scope.perform_microtask_checkpoint();
+
+            // The check phase above runs setImmediate callbacks inside the loop,
+            // so a pending immediate is never stuck behind a later timer.
 
             // v0.3.261: Check if there are still pending nextTicks in the queue
             // (could be added during callback execution)
@@ -8412,7 +8441,11 @@ impl MinimalRuntime {
             };
             // v0.3.339: Don't include has_pending_work in break condition since it's a stored value
             // that may be stale. Instead, check the actual state of timers and nextTicks.
-            if !has_pending_next_ticks_now && !has_new_timers && !has_scheduled_timers {
+            if !has_pending_next_ticks_now
+                && !has_new_timers
+                && !has_scheduled_timers
+                && !has_pending_immediates()
+            {
                 // Run any remaining microtasks before exiting
                 scope.perform_microtask_checkpoint();
                 break;
@@ -8434,25 +8467,29 @@ impl MinimalRuntime {
                 scope.perform_microtask_checkpoint();
             }
 
-            // If we need to wait for timers, do a brief wait
-            if has_new_timers || has_pending_work {
+            // If we need to wait for timers, do a brief wait. Skip the wait when
+            // immediates are pending: the check phase must not be delayed past a
+            // real-time timer deadline (Node's poll phase does not block when the
+            // check phase has work).
+            if (has_new_timers || has_pending_work) && !has_pending_immediates() {
                 std::thread::sleep(std::time::Duration::from_millis(50));
             }
         }
 
-        // v0.3.261: Execute setImmediate callbacks AFTER the main loop
-        // This represents the "check phase" of the current event loop iteration
-        // Timers and nextTicks have already executed in the current iteration
-        execute_immediate_callbacks(scope);
-
-        // v0.3.261: Mark any callbacks registered during execution as deferred
-        // This ensures callbacks registered from within setImmediate run in NEXT iteration
-        mark_immediate_callbacks_deferred();
-
-        // Final cleanup: execute any remaining nextTicks and microtasks
-        // This ensures all pending callbacks are processed before returning
-        execute_next_tick_callbacks(scope);
-        scope.perform_microtask_checkpoint();
+        // Final cleanup: drain remaining work until every queue is empty.
+        // Leftover immediate callbacks hold V8 Global handles tied to this
+        // execution; leaving them queued would leak them into the next
+        // execute_code call (or past isolate disposal in tests).
+        loop {
+            execute_next_tick_callbacks(scope);
+            scope.perform_microtask_checkpoint();
+            unmark_immediate_callbacks_deferred();
+            execute_immediate_callbacks(scope);
+            mark_immediate_callbacks_deferred();
+            if !has_pending_next_ticks() && !has_pending_immediates() {
+                break;
+            }
+        }
 
         // Return the original script completion value. Do not recompile or rerun
         // any user expression while converting it to a string.
@@ -25716,12 +25753,18 @@ mod tests {
 
     #[test]
     fn code_needs_extended_apis_detects_web_markers() {
-        assert!(MinimalRuntime::code_needs_extended_apis("await fetch('https://x')"));
-        assert!(MinimalRuntime::code_needs_extended_apis("new Worker('w.js')"));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "await fetch('https://x')"
+        ));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "new Worker('w.js')"
+        ));
         assert!(MinimalRuntime::code_needs_extended_apis(
             "new ReadableStream({ start() {} })"
         ));
-        assert!(MinimalRuntime::code_needs_extended_apis("structuredClone({})"));
+        assert!(MinimalRuntime::code_needs_extended_apis(
+            "structuredClone({})"
+        ));
     }
 
     #[test]
@@ -25766,10 +25809,8 @@ mod tests {
     #[test]
     #[serial_test::serial]
     fn required_module_can_use_fetch_and_blob_without_entry_markers() {
-        let dir = std::env::temp_dir().join(format!(
-            "beejs_require_extended_{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("beejs_require_extended_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 

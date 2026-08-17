@@ -6,7 +6,9 @@ pub mod commonjs_resolver;
 pub mod crypto;
 pub mod dns; // v0.3.67: DNS lookup and resolve API
 pub mod events;
-/// 对标Bun，实现100% Node.js API兼容性
+/// Node.js 核心 API 兼容层。
+/// 兼容性进度以 tests/conformance/scorecard.md 的符合性分数为准，
+/// 不要在此处或注释中宣称全面兼容。
 pub mod fs;
 pub mod http;
 pub mod https;

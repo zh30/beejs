@@ -150,7 +150,7 @@ enum Command {
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
     },
-    /// Bundle code for production
+    /// Bundle code for production (experimental: local static imports only)
     Bundle {
         #[command(flatten)]
         permissions: PermissionCliOptions,
@@ -181,7 +181,8 @@ enum Command {
     },
     /// Display version information
     Version,
-    /// Start HTTP/HTTPS server
+    /// Start HTTP/HTTPS server (experimental: serves a fixed health response,
+    /// not user scripts yet)
     Serve {
         #[command(flatten)]
         permissions: PermissionCliOptions,
@@ -4915,17 +4916,20 @@ fn main() -> Result<()> {
 
             let addr = format!("{}:{}", host, port);
             println!("🚀 Starting HTTP Server on http://{}", addr);
+            println!("⚠️  bee serve is experimental: it returns a fixed health response and does not execute user scripts yet");
             let server = tiny_http::Server::http(&addr)
                 .map_err(|e| anyhow::anyhow!("failed to bind {}: {}", addr, e))?;
             println!("✅ Listening (Ctrl+C to stop)");
             for request in server.incoming_requests() {
-                let response = tiny_http::Response::from_string(
-                    "{\"runtime\":\"beejs\",\"ok\":true}\n",
-                )
-                .with_header(
-                    tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
-                        .unwrap(),
-                );
+                let response =
+                    tiny_http::Response::from_string("{\"runtime\":\"beejs\",\"ok\":true}\n")
+                        .with_header(
+                            tiny_http::Header::from_bytes(
+                                &b"Content-Type"[..],
+                                &b"application/json"[..],
+                            )
+                            .unwrap(),
+                        );
                 let _ = request.respond(response);
             }
             return Ok(());

@@ -138,6 +138,15 @@ impl ImmediateCallbackStorage {
         }
     }
 
+    /// Make deferred callbacks eligible again. Called at the start of each
+    /// event-loop iteration; pairs with mark_all_as_deferred() so a callback
+    /// registered during the check phase runs in the next iteration.
+    fn unmark_all_deferred(&mut self) {
+        for (_, _, _, deferred) in self.callbacks.iter_mut() {
+            *deferred = false;
+        }
+    }
+
     /// v0.3.261: Drain non-deferred callbacks (those that should run now)
     fn drain_non_deferred(
         &mut self,
@@ -189,14 +198,17 @@ impl ImmediateCallbackStorage {
     }
 }
 
-// SAFETY: ImmediateCallbackStorage is only ever accessed from the V8 main thread
-// where the isolate is running. This is guaranteed by the design of the runtime.
-unsafe impl Send for ImmediateCallbackStorage {}
-unsafe impl Sync for ImmediateCallbackStorage {}
+// SAFETY note: the immediate queue is thread-local, so no Send/Sync impl is
+// required. setImmediate callbacks capture V8 Global handles from the isolate
+// that scheduled them; a process-global queue lets callbacks leak into another
+// isolate's event loop, where calling them deadlocks on that isolate's lock.
 
-/// Global immediate callbacks queue (only accessed from V8 main thread)
-static IMMEDIATE_CALLBACKS: Lazy<Mutex<ImmediateCallbackStorage>> =
-    Lazy::new(|| Mutex::new(ImmediateCallbackStorage::new()));
+// Per-thread immediate callback queue (only accessed from the V8 thread that
+// scheduled the callbacks)
+thread_local! {
+    static IMMEDIATE_CALLBACKS: std::cell::RefCell<ImmediateCallbackStorage> =
+        std::cell::RefCell::new(ImmediateCallbackStorage::new());
+}
 
 /// Next timer ID counter (shared, thread-safe)
 /// v0.3.261: Made public for timer validation in event loop
@@ -925,8 +937,7 @@ pub fn clear_all_timer_callbacks() {
     storage.callbacks.clear();
     storage.args.clear();
 
-    let mut immediate_storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    immediate_storage.clear_all();
+    IMMEDIATE_CALLBACKS.with(|s| s.borrow_mut().clear_all());
 }
 
 /// v0.3.256: Complete cleanup - clears both callbacks and metadata
@@ -1035,9 +1046,10 @@ pub fn execute_fired_timers(scope: &mut v8::HandleScope) {
 /// This ensures setImmediate callbacks registered during sync code run in same iteration,
 /// while callbacks registered from within other callbacks run in the next iteration
 pub fn execute_immediate_callbacks(scope: &mut v8::HandleScope) {
-    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    // Only execute non-deferred callbacks (those registered during sync code)
-    let callbacks = storage.drain_non_deferred();
+    // Drain under the lock, then release it before invoking JS. Callbacks may
+    // re-enter setImmediate (chained immediates) or clearImmediate; holding the
+    // mutex across callback.call would deadlock on that re-entry.
+    let callbacks = IMMEDIATE_CALLBACKS.with(|s| s.borrow_mut().drain_non_deferred());
 
     for (timer_id, callback, args) in callbacks {
         let callback = v8::Local::<v8::Function>::new(scope, callback);
@@ -1058,8 +1070,7 @@ pub fn execute_immediate_callbacks(scope: &mut v8::HandleScope) {
 
 /// v0.3.250: Check if there are pending setImmediate callbacks
 pub fn has_pending_immediates() -> bool {
-    let storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    !storage.is_empty()
+    IMMEDIATE_CALLBACKS.with(|s| !s.borrow().is_empty())
 }
 
 /// Check if any zero-delay timers are pending in the current epoch.
@@ -1114,23 +1125,37 @@ pub fn store_immediate_callback(
     callback: v8::Global<v8::Function>,
     args: Vec<v8::Global<v8::Value>>,
 ) {
-    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    // Initially not deferred - will be marked deferred after execution
-    storage.push(timer_id, callback, args, false);
+    IMMEDIATE_CALLBACKS.with(|s| {
+        // Initially not deferred - will be marked deferred after execution
+        s.borrow_mut().push(timer_id, callback, args, false);
+    });
 }
 
 /// v0.3.261: Mark all callbacks as deferred
 /// Called after executing setImmediate callbacks to defer any callbacks
 /// registered during execution to the NEXT iteration
 pub fn mark_immediate_callbacks_deferred() {
-    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    storage.mark_all_as_deferred();
+    IMMEDIATE_CALLBACKS.with(|s| s.borrow_mut().mark_all_as_deferred());
+}
+
+/// Make deferred callbacks eligible at the start of a new event-loop iteration.
+/// Without this, callbacks deferred by mark_immediate_callbacks_deferred would
+/// never become runnable again.
+pub fn unmark_immediate_callbacks_deferred() {
+    IMMEDIATE_CALLBACKS.with(|s| s.borrow_mut().unmark_all_deferred());
+}
+
+/// Drop pending setImmediate callbacks left over from a previous execution.
+/// Immediate callbacks capture V8 handles from the execution that scheduled
+/// them; running them in a later execute_code call is never correct, and a
+/// leftover would keep that call's event loop alive on stale state.
+pub fn clear_pending_immediates() {
+    IMMEDIATE_CALLBACKS.with(|s| s.borrow_mut().clear_all());
 }
 
 /// v0.3.250: Remove a pending setImmediate callback (for clearImmediate)
 pub fn remove_immediate_callback(timer_id: u64) -> bool {
-    let mut storage = IMMEDIATE_CALLBACKS.lock().unwrap();
-    storage.remove(timer_id)
+    IMMEDIATE_CALLBACKS.with(|s| s.borrow_mut().remove(timer_id))
 }
 
 #[cfg(test)]

@@ -32,3 +32,4 @@ wasm_cache/
 .antigravitycli/
 benchmark_reports/
 docs/archive/local-artifacts/
+.gstack/

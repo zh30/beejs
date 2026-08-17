@@ -154,7 +154,9 @@ fn test_setinterval_basic() {
     let mut runtime = MinimalRuntime::new().unwrap();
 
     // Test that setInterval schedules callbacks correctly
-    // First, verify the timer is created and can be cleared
+    // First, verify the timer is created and can be cleared.
+    // Unref so the keep-alive loop returns from execute_code (Node semantics
+    // keep ref'd intervals alive forever).
     let result = runtime
         .execute_code(
             r#"
@@ -162,6 +164,8 @@ fn test_setinterval_basic() {
         const id = setInterval(() => {
             globalThis.intervalCount += 1;
         }, 10);
+        id.unref();
+        globalThis.intervalId = id;
         typeof id;
     "#,
         )
@@ -187,7 +191,7 @@ fn test_setinterval_basic() {
 
     // Verify we can clear the interval (proves it was registered)
     let clear_result = runtime
-        .execute_code("clearInterval(id); 'cleared'")
+        .execute_code("clearInterval(globalThis.intervalId); 'cleared'")
         .unwrap();
     assert_eq!(
         clear_result.trim(),
@@ -274,14 +278,18 @@ fn test_clear_all_timers_function() {
     cleanup_global_state();
     let mut runtime = MinimalRuntime::new().unwrap();
 
-    // Create multiple timers
+    // Create multiple timers. Unref so execute_code returns before they fire
+    // (ref'd timers keep the loop alive until they run, which would make the
+    // clear below meaningless).
     let _ = runtime
         .execute_code(
             r#"
         globalThis.timer1Fired = false;
         globalThis.timer2Fired = false;
-        setTimeout(() => { globalThis.timer1Fired = true; }, 100);
-        setTimeout(() => { globalThis.timer2Fired = true; }, 100);
+        const t1 = setTimeout(() => { globalThis.timer1Fired = true; }, 100);
+        const t2 = setTimeout(() => { globalThis.timer2Fired = true; }, 100);
+        t1.unref();
+        t2.unref();
     "#,
         )
         .unwrap();
