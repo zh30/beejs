@@ -24233,9 +24233,6 @@ require.resolve = function(specifier) {{
     ) -> Result<()> {
         let global = context.global(scope);
 
-        // Create events object
-        let events_obj = v8::Object::new(scope);
-
         // EventEmitter constructor
         let event_emitter_constructor = v8::FunctionTemplate::new(
             scope,
@@ -24864,9 +24861,11 @@ require.resolve = function(specifier) {{
         // Get the EventEmitter function
         let event_emitter_func = event_emitter_constructor.get_function(scope).unwrap();
 
-        // Set EventEmitter as events.EventEmitter
+        // Node exports the class itself, with a self-reference so that both
+        // `const E = require('events')` and `const { EventEmitter } =
+        // require('events')` yield a constructor.
         let event_emitter_key = v8::String::new(scope, "EventEmitter").unwrap();
-        events_obj.set(scope, event_emitter_key.into(), event_emitter_func.into());
+        event_emitter_func.set(scope, event_emitter_key.into(), event_emitter_func.into());
         event_emitter_func.set(scope, event_emitter_key.into(), event_emitter_func.into());
 
         // Add static method listenerCount(emitter, eventName)
@@ -24925,7 +24924,7 @@ require.resolve = function(specifier) {{
 
         // Set events as global
         let events_key = v8::String::new(scope, "events").unwrap();
-        global.set(scope, events_key.into(), events_obj.into());
+        global.set(scope, events_key.into(), event_emitter_func.into());
 
         Ok(())
     }

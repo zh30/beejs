@@ -29,12 +29,15 @@ pub fn setup_events_api(
     // 创建构造函数实例
     let event_emitter_func: _ = event_emitter_constructor.get_function(scope).unwrap();
     // 设置到全局
+    //
+    // Node exports the class itself, with a self-reference so that both
+    // `const E = require('events')` and `const { EventEmitter } =
+    // require('events')` yield a constructor.
     let global: _ = context.global(scope);
     let events_key: _ = v8::String::new(scope, "events").unwrap();
-    let events_obj: _ = v8::Object::new(scope);
-    let _key_0: _ = v8::String::new(scope, "EventEmitter").unwrap();
-    events_obj.set(scope, _key_0.into(), event_emitter_func.into());
-    global.set(scope, events_key.into(), events_obj.into());
+    let event_emitter_key: _ = v8::String::new(scope, "EventEmitter").unwrap();
+    event_emitter_func.set(scope, event_emitter_key.into(), event_emitter_func.into());
+    global.set(scope, events_key.into(), event_emitter_func.into());
     Ok(())
 }
 fn event_emitter_constructor_callback(

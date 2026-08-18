@@ -121,26 +121,42 @@ fn test_snapshot_metadata() {
     assert!(metadata.builtin_warmup);
 }
 
+/// `generate_snapshot` must serialize a real V8 startup blob, not a marker
+/// string labelled as a snapshot. The blob is fed back into `v8::Isolate` here
+/// because that is the only assertion V8 itself has to agree with.
 #[test]
 #[serial]
-fn test_generate_snapshot_fails_closed_until_real_v8_snapshot_exists() {
+fn test_generate_snapshot_produces_a_loadable_v8_startup_blob() {
     use beejs::v8_snapshot::{SnapshotConfig, SnapshotManager};
+    use rusty_v8 as v8;
 
-    let config = SnapshotConfig::default();
-    let manager = SnapshotManager::new(config);
+    let manager = SnapshotManager::new(SnapshotConfig::default());
+    let snapshot = manager
+        .generate_snapshot()
+        .expect("warmup context should serialize");
 
-    let result = manager.generate_snapshot();
-    assert!(result.is_err(), "真实 V8 snapshot 未实现前不应生成空快照");
+    assert!(snapshot.validate(), "generated snapshot should validate");
     assert!(
-        result.unwrap_err().to_string().contains("not implemented"),
-        "错误信息应明确说明 snapshot generation 未实现"
+        !snapshot.snapshot_data.starts_with(b"BEEJS_WARMUP_V1\0"),
+        "the blob must be V8 snapshot data, not a beejs marker"
     );
+
+    beejs::initialize_v8().unwrap();
+    let params = v8::Isolate::create_params().snapshot_blob(snapshot.snapshot_data.clone());
+    let mut isolate = v8::Isolate::new(params);
+    {
+        let scope = &mut v8::HandleScope::new(&mut isolate);
+        let context = v8::Context::new(scope);
+        let scope = &mut v8::ContextScope::new(scope, context);
+        let source = v8::String::new(scope, "1 + 1").unwrap();
+        let script = v8::Script::compile(scope, source, None)
+            .expect("an isolate restored from the snapshot should compile");
+        let value = script.run(scope).expect("restored isolate should execute");
+        assert_eq!(value.to_uint32(scope).unwrap().value(), 2);
+    }
 
     let stats = manager.get_stats();
-    assert_eq!(
-        stats.snapshots_generated, 0,
-        "未生成有效 snapshot 时不应递增 snapshots_generated"
-    );
+    assert_eq!(stats.snapshots_generated, 1);
 }
 
 #[test]

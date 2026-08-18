@@ -156,6 +156,36 @@ fn run_worker_thread(id: u32, script_source: String, rx: Receiver<WorkerMessage>
     Ok(())
 }
 
+/// Extract the script body from a `data:[<mediatype>][;base64],<data>` URL.
+///
+/// Passing the whole URL through as source makes the worker try to execute the
+/// `data:,` prefix, which fails to compile.
+fn decode_data_url(url: &str) -> Result<String> {
+    let body = url
+        .strip_prefix("data:")
+        .ok_or_else(|| anyhow!("not a data URL: {}", url))?;
+    let (metadata, payload) = body
+        .split_once(',')
+        .ok_or_else(|| anyhow!("data URL is missing the ',' separator: {}", url))?;
+
+    if metadata
+        .rsplit(';')
+        .next()
+        .is_some_and(|last| last.eq_ignore_ascii_case("base64"))
+    {
+        use base64::Engine as _;
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(payload.trim())
+            .map_err(|e| anyhow!("data URL has invalid base64 payload: {}", e))?;
+        String::from_utf8(decoded).map_err(|e| anyhow!("data URL is not valid UTF-8: {}", e))
+    } else {
+        Ok(percent_encoding::percent_decode_str(payload)
+            .decode_utf8()
+            .map_err(|e| anyhow!("data URL is not valid UTF-8: {}", e))?
+            .into_owned())
+    }
+}
+
 /// Setup a progressive Worker constructor that uses WorkerHost when script text is inline.
 pub fn setup_worker_host_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -180,7 +210,17 @@ pub fn setup_worker_host_api(
                 .unwrap_or_default();
 
             // Support `new Worker({ source: "..." })` progressive path and file URL later.
-            let source = if script_ref.starts_with("data:") || script_ref.contains('\n') {
+            let source = if script_ref.starts_with("data:") {
+                match decode_data_url(&script_ref) {
+                    Ok(code) => code,
+                    Err(err) => {
+                        let msg = v8::String::new(scope, &format!("{}", err)).unwrap();
+                        let exc = v8::Exception::error(scope, msg);
+                        scope.throw_exception(exc);
+                        return;
+                    }
+                }
+            } else if script_ref.contains('\n') {
                 script_ref.clone()
             } else if let Ok(code) = std::fs::read_to_string(&script_ref) {
                 code

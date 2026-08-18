@@ -59,93 +59,117 @@ mod worker_api_tests {
     }
 
     #[test]
-    fn test_worker_script_url_fails_closed_until_real_execution_exists() {
-        let script = r#"
-            try {
-                const worker = new Worker('./worker.js');
-                console.log('ERROR: Worker created fake object: ' + typeof worker.postMessage);
-            } catch (e) {
-                const message = String(e && e.message || e);
-                if (message.includes('Worker') && message.includes('not supported')) {
-                    console.log('SUCCESS: ' + message);
-                } else {
-                    console.log('ERROR: unexpected Worker error: ' + message);
-                }
-            }
-        "#;
-        let output = run_script(script);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(
-            stdout.contains("SUCCESS:"),
-            "Worker script URL should fail closed instead of returning a fake object: {}",
-            stdout
-        );
-    }
-
-    #[test]
-    fn test_worker_data_url_fails_closed_until_real_execution_exists() {
-        let script = r#"
-            try {
-                new Worker('data:,self.postMessage("test")');
-                console.log('ERROR: data URL Worker created fake object');
-            } catch (e) {
-                const message = String(e && e.message || e);
-                console.log(message === 'Worker script execution is not supported yet' ? 'SUCCESS' : 'ERROR: ' + message);
-            }
-        "#;
-        let output = run_script(script);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        assert!(
-            stdout.contains("SUCCESS"),
-            "Worker data URL should fail closed until real execution exists: {}",
-            stdout
-        );
-    }
-
-    #[test]
-    fn test_worker_missing_script_url_reports_required_argument() {
+    fn test_worker_missing_script_url_is_a_type_error() {
         let script = r#"
             try {
                 new Worker();
                 console.log('ERROR: Worker created without script URL');
             } catch (e) {
-                const message = String(e && e.message || e);
-                console.log(message === 'Worker constructor requires a script URL' ? 'SUCCESS' : 'ERROR: ' + message);
+                console.log((e instanceof TypeError ? 'SUCCESS: ' : 'ERROR: wrong type: ') + e.message);
             }
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
-            stdout.contains("SUCCESS"),
-            "Worker without script URL should report a required argument: {}",
+            stdout.contains("SUCCESS: Worker requires a script URL or source"),
+            "Worker without a script URL should be a TypeError: {}",
             stdout
         );
     }
 
     #[test]
-    fn test_worker_fail_closed_does_not_emit_fake_lifecycle_logs() {
+    fn test_worker_unreadable_script_path_reports_the_path() {
         let script = r#"
             try {
-                const worker = new Worker("data:,self.postMessage('test')");
-                worker.postMessage("hello");
-                worker.terminate();
-                console.log('ERROR: fake Worker lifecycle reached');
+                new Worker('./definitely-missing-worker.js');
+                console.log('ERROR: Worker accepted an unreadable path');
             } catch (e) {
-                console.log('SUCCESS: ' + String(e && e.message || e));
+                console.log('SUCCESS: ' + e.message);
             }
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains(
+                "SUCCESS: WorkerHost could not load script './definitely-missing-worker.js'"
+            ),
+            "an unreadable worker path should name the path it tried: {}",
+            stdout
+        );
+    }
+
+    /// The data URL body is the worker source; the `data:,` prefix must be
+    /// stripped rather than handed to the compiler.
+    #[test]
+    fn test_worker_data_url_body_is_executed_as_source() {
+        let script = r#"
+            const worker = new Worker("data:text/javascript,console.log('SUCCESS: data URL body ran')");
+            setTimeout(() => worker.terminate(), 300);
         "#;
         let output = run_script(script);
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
-            stdout.contains("SUCCESS: Worker script execution is not supported yet"),
-            "Worker construction should fail before fake lifecycle methods run: {}",
-            stdout
+            stdout.contains("SUCCESS: data URL body ran"),
+            "the data URL body should run in the worker: stdout={} stderr={}",
+            stdout,
+            stderr
         );
         assert!(
-            !stderr.contains("postMessage called") && !stderr.contains("terminated"),
-            "Worker fail-closed path must not emit fake lifecycle logs: {}",
+            !stderr.contains("SyntaxError"),
+            "the data URL prefix must not reach the compiler: {}",
             stderr
+        );
+    }
+
+    #[test]
+    fn test_worker_percent_encoded_data_url_is_decoded() {
+        let script = r#"
+            const worker = new Worker("data:,console.log('SUCCESS%3A%20decoded')");
+            setTimeout(() => worker.terminate(), 300);
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stdout.contains("SUCCESS: decoded"),
+            "percent-encoded data URL payloads should be decoded: stdout={} stderr={}",
+            stdout,
+            stderr
+        );
+    }
+
+    #[test]
+    fn test_worker_base64_data_url_is_decoded() {
+        // base64 of: console.log('SUCCESS: base64')
+        let script = r#"
+            const worker = new Worker("data:text/javascript;base64,Y29uc29sZS5sb2coJ1NVQ0NFU1M6IGJhc2U2NCcp");
+            setTimeout(() => worker.terminate(), 300);
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stdout.contains("SUCCESS: base64"),
+            "base64 data URL payloads should be decoded: stdout={} stderr={}",
+            stdout,
+            stderr
+        );
+    }
+
+    #[test]
+    fn test_worker_exposes_post_message_and_terminate() {
+        let script = r#"
+            const worker = new Worker("data:,self === undefined");
+            console.log('postMessage=' + typeof worker.postMessage + ' terminate=' + typeof worker.terminate);
+            worker.terminate();
+        "#;
+        let output = run_script(script);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("postMessage=function terminate=function"),
+            "a spawned worker should expose its lifecycle methods: {}",
+            stdout
         );
     }
 }

@@ -154,51 +154,59 @@ fn path_resolve_callback(
     for i in 0..args.length() {
         let arg: _ = args.get(i);
         if let Some(s) = arg.to_string(scope) {
-            let arg_str: _ = s.to_rust_string_lossy(scope);
-            if !arg_str.is_empty() {
-                paths.push(arg_str);
-            }
+            paths.push(s.to_rust_string_lossy(scope));
         }
     }
     let is_windows: _ = cfg!(windows);
-    let mut result = String::new(); // Accumulates normalized path parts
-                                    // 如果没有路径，返回当前目录
-    if paths.is_empty() {
-        result = std::env::current_dir()
+    let separator: _ = if is_windows { '\\' } else { '/' };
+
+    // Walk right to left prepending each segment, stopping at the first absolute
+    // one; the cwd acts as the implicit leftmost segment.
+    let mut resolved = String::new();
+    let mut reached_absolute = false;
+    for path in paths.iter().rev() {
+        if path.is_empty() {
+            continue;
+        }
+        resolved = if resolved.is_empty() {
+            path.clone()
+        } else {
+            format!("{path}{separator}{resolved}")
+        };
+        if is_absolute_path(path, is_windows) {
+            reached_absolute = true;
+            break;
+        }
+    }
+    if !reached_absolute {
+        let cwd: _ = std::env::current_dir()
             .unwrap_or_else(|_| std::path::PathBuf::from("."))
             .to_string_lossy()
             .to_string();
-    } else {
-        // 从右向左处理路径
-        for path in paths.into_iter().rev() {
-            if is_windows
-                && (path.starts_with("\\") || (path.len() > 1 && path.chars().nth(1) == Some(':')))
-            {
-                // 绝对路径
-                result = path.to_string();
-                break;
-            } else if !is_windows && path.starts_with('/') {
-                // 绝对路径
-                result = path.to_string();
-                break;
-            } else {
-                // 相对路径
-                if result.is_empty() {
-                    result = std::env::current_dir()
-                        .unwrap_or_else(|_| std::path::PathBuf::from("."))
-                        .to_string_lossy()
-                        .to_string();
-                }
-                result = format!(
-                    "{}/{}",
-                    result.trim_end_matches(is_windows.then(|| '\\').unwrap_or('/')),
-                    path
-                );
-            }
-        }
+        resolved = if resolved.is_empty() {
+            cwd
+        } else {
+            format!("{cwd}{separator}{resolved}")
+        };
     }
-    result = normalize_path(&result, is_windows);
+
+    let mut result: _ = normalize_path(&resolved, is_windows);
+    // resolve never reports a trailing separator, except for the root itself.
+    while result.len() > 1 && result.ends_with(separator) {
+        result.pop();
+    }
     retval.set(v8::String::new(scope, &result).unwrap().into());
+}
+
+fn is_absolute_path(path: &str, is_windows: bool) -> bool {
+    if is_windows {
+        let bytes: _ = path.as_bytes();
+        path.starts_with('\\')
+            || path.starts_with('/')
+            || (bytes.len() >= 3 && bytes[1] == b':' && (bytes[2] == b'\\' || bytes[2] == b'/'))
+    } else {
+        path.starts_with('/')
+    }
 }
 fn path_relative_callback(
     scope: &mut v8::HandleScope,
@@ -338,27 +346,15 @@ fn path_extname_callback(
         .unwrap_or_default();
     let is_windows: _ = cfg!(windows);
     let separator: _ = if is_windows { '\\' } else { '/' };
-    let result: _ = if let Some(last_sep) = path.rfind(separator) {
-        let basename: _ = &path[last_sep + 1..];
-        if let Some(dot_pos) = basename.rfind('.') {
-            let ext: _ = &basename[dot_pos..];
-            if ext.len() > 1 && !ext.contains(separator) {
-                ext
-            } else {
-                ""
-            }
-        } else {
-            ""
-        }
-    } else if let Some(dot_pos) = path.rfind('.') {
-        let ext: _ = &path[dot_pos..];
-        if ext.len() > 1 && !ext.contains(separator) {
-            ext
-        } else {
-            ""
-        }
-    } else {
-        ""
+    let basename: _ = match path.rfind(separator) {
+        Some(last_sep) => &path[last_sep + 1..],
+        None => path.as_str(),
+    };
+    // A dot that opens the basename marks a dotfile, not an extension, so
+    // `.gitignore` and `..` have no extension while `..a` has `.a`.
+    let result: _ = match basename.rfind('.') {
+        Some(dot_pos) if dot_pos > 0 && basename != ".." => &basename[dot_pos..],
+        _ => "",
     };
     retval.set(v8::String::new(scope, result).unwrap().into());
 }
@@ -525,37 +521,50 @@ fn path_normalize_callback(
 }
 // 辅助函数：规范化路径
 fn normalize_path(path: &str, is_windows: bool) -> String {
-    let mut result = String::with_capacity(path.len()); // Accumulates normalized path parts
     let separator: _ = if is_windows { '\\' } else { '/' };
     let other_separator: _ = if is_windows { '/' } else { '\\' };
     let separator_str: _ = separator.to_string();
     let replaced_path: _ = path.replace(other_separator, &separator_str);
-    let parts: Vec<&str> = replaced_path
+
+    // The root stays in front of the normalized body: a bare separator on POSIX,
+    // and the drive prefix (`C:\`) on Windows.
+    let bytes: _ = replaced_path.as_bytes();
+    let root_len: usize = if is_windows && bytes.len() >= 3 && bytes[1] == b':' && bytes[2] == b'\\'
+    {
+        3
+    } else if replaced_path.starts_with(separator) {
+        1
+    } else {
+        0
+    };
+    let root: _ = &replaced_path[..root_len];
+    let is_absolute: _ = root_len > 0;
+    let body: _ = &replaced_path[root_len..];
+    let keeps_trailing_separator: _ = !body.is_empty() && body.ends_with(separator);
+
+    let mut stack: Vec<&str> = Vec::new();
+    for part in body
         .split(separator)
-        .filter(|s| !s.is_empty() && *s != ".")
-        .collect();
-    let mut stack = Vec::new();
-    for part in parts {
-        if part == ".." {
-            if !stack.is_empty() {
-                stack.pop();
-            }
-        } else {
+        .filter(|part| !part.is_empty() && *part != ".")
+    {
+        if part != ".." {
             stack.push(part);
+        } else if stack.last().is_some_and(|last| *last != "..") {
+            stack.pop();
+        } else if !is_absolute {
+            // A relative path may legitimately climb above where it started;
+            // an absolute one cannot go above its root.
+            stack.push("..");
         }
     }
-    for (i, part) in stack.iter().enumerate() {
-        if i > 0 {
-            result.push(separator);
-        }
-        result.push_str(part);
+
+    let mut result: _ = format!("{root}{}", stack.join(&separator_str));
+    if keeps_trailing_separator && !result.ends_with(separator) {
+        result.push(separator);
     }
     if result.is_empty() {
-        result = ".".to_string();
+        ".".to_string()
+    } else {
+        result
     }
-    // 处理根路径
-    if path.starts_with(&separator.to_string()) {
-        result = format!("{}{}", result, separator);
-    }
-    result
 }

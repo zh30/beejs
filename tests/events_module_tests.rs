@@ -10,7 +10,8 @@ fn test_events_module_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof events");
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "object");
+    // The events module is the EventEmitter class itself, as in Node.
+    assert_eq!(result.unwrap().trim(), "function");
 }
 
 #[test]

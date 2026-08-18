@@ -35,10 +35,9 @@ impl SnapshotManager {
     }
     /// 生成快照
     ///
-    /// rusty_v8 0.22 does not expose a complete SnapshotCreator workflow comparable
-    /// to modern `v8` crates. We persist a **warmup artifact** (builtin JS source +
-    /// metadata) that `warmup_builtins` / MinimalRuntime can consume, while clearly
-    /// marking that it is not a native V8 startup blob.
+    /// Runs the warmup script in a dedicated `SnapshotCreator` isolate and
+    /// serializes the resulting context into a native V8 startup blob, so the
+    /// stored bytes can be handed to `create_params.snapshot_blob` on load.
     pub fn generate_snapshot(&self) -> Result<V8Snapshot> {
         let warmup_source = r#"
             (function(){
@@ -47,9 +46,7 @@ impl SnapshotManager {
               return 'beejs-warmup-ok';
             })();
         "#;
-        let mut data = Vec::new();
-        data.extend_from_slice(b"BEEJS_WARMUP_V1\0");
-        data.extend_from_slice(warmup_source.as_bytes());
+        let data = Self::create_startup_blob(warmup_source)?;
         let id = format!("warmup-{}", chrono::Utc::now().timestamp());
         let snapshot = V8Snapshot::new(data, id.clone(), false, true);
         {
@@ -61,6 +58,40 @@ impl SnapshotManager {
         }
         Ok(snapshot)
     }
+
+    /// Serialize a warmed-up context into a native V8 startup blob.
+    fn create_startup_blob(warmup_source: &str) -> Result<Vec<u8>> {
+        crate::initialize_v8()?;
+
+        let mut creator = v8::SnapshotCreator::new(None);
+        // SAFETY: `get_owned_isolate` may be called at most once per creator,
+        // and this is the only call. The isolate is leaked below because the
+        // creator destroys it in its own `Drop`.
+        let mut isolate = unsafe { creator.get_owned_isolate() };
+        {
+            let scope = &mut v8::HandleScope::new(&mut isolate);
+            let context = v8::Context::new(scope);
+            {
+                let scope = &mut v8::ContextScope::new(scope, context);
+                let source = v8::String::new(scope, warmup_source)
+                    .ok_or_else(|| anyhow!("failed to allocate warmup source"))?;
+                let script = v8::Script::compile(scope, source, None)
+                    .ok_or_else(|| anyhow!("failed to compile warmup script"))?;
+                script
+                    .run(scope)
+                    .ok_or_else(|| anyhow!("warmup script did not complete"))?;
+            }
+            creator.set_default_context(context);
+        }
+        std::mem::forget(isolate);
+
+        // create_blob must not run inside a handle scope.
+        let blob = creator
+            .create_blob(v8::FunctionCodeHandling::Keep)
+            .ok_or_else(|| anyhow!("V8 refused to serialize the warmup context"))?;
+        Ok(blob.to_vec())
+    }
+
     /// 加载快照
     pub fn load_snapshot(&self, snapshot_id: &str) -> Result<()> {
         // 从缓存获取快照

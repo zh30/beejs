@@ -58,7 +58,8 @@ fn test_path_join_empty_args() {
     let code = r#"require('path').join("")"#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "");
+    // Node normalizes an all-empty join to the current directory.
+    assert_eq!(result.unwrap().trim(), ".");
 }
 
 #[test]
@@ -68,7 +69,7 @@ fn test_path_join_no_args() {
     let code = r#"require('path').join()"#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "");
+    assert_eq!(result.unwrap().trim(), ".");
 }
 
 #[test]
@@ -120,7 +121,7 @@ fn test_path_dirname_empty() {
     let code = r#"require('path').dirname("")"#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "/");
+    assert_eq!(result.unwrap().trim(), ".");
 }
 
 #[test]
@@ -159,7 +160,8 @@ fn test_path_basename_root() {
     let code = r#"require('path').basename("/")"#;
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "/");
+    // The root has no trailing component.
+    assert_eq!(result.unwrap().trim(), "");
 }
 
 #[test]

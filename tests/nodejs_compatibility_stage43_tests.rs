@@ -50,9 +50,30 @@ fn test_nodejs_events_basic() {
         called;
     "#;
     let result = runtime.execute_code(code);
-    assert!(result.is_ok());
-    let result_str = result.unwrap();
-    assert!(result_str.contains("true"));
+    let result_str = result.expect("require('events') should be a constructor");
+    assert!(result_str.contains("true"), "got: {result_str}");
+}
+
+/// Node's `events` module *is* the EventEmitter class, and carries a
+/// self-reference so destructuring yields the same constructor.
+#[test]
+#[serial]
+fn test_events_module_is_the_event_emitter_class() {
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let code = r#"
+        const events = require('events');
+        const { EventEmitter } = require('events');
+        [
+            typeof events,
+            String(EventEmitter === events),
+            String(new events().on !== undefined),
+            String(new EventEmitter().emit !== undefined),
+        ].join(",");
+    "#;
+    let result = runtime
+        .execute_code(code)
+        .expect("events module shape should match Node");
+    assert!(result.contains("function,true,true,true"), "got: {result}");
 }
 
 #[test]

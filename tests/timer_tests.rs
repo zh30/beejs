@@ -6,6 +6,7 @@ mod timer_tests {
     use beejs::nodejs_core::timers::{
         get_next_timer_id, get_timer_epoch, TimerMetadata, TimerType, TIMER_METADATA,
     };
+    use serial_test::serial;
 
     #[test]
     fn test_timer_id_generation() {
@@ -19,6 +20,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_timer_metadata_storage() {
         // Test storing timer metadata
         let timer_id = get_next_timer_id();
@@ -56,6 +58,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_interval_metadata() {
         let timer_id = get_next_timer_id();
 
@@ -81,6 +84,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_immediate_metadata() {
         let timer_id = get_next_timer_id();
 
@@ -106,6 +110,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_clear_timer() {
         let timer_id = get_next_timer_id();
 
@@ -143,6 +148,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_clear_all_timers() {
         // Add multiple timers
         for i in 1..=5 {
@@ -183,6 +189,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_unref_state() {
         let timer_id = get_next_timer_id();
 
@@ -216,6 +223,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_zero_delay_timeout() {
         // setTimeout with delay 0 should execute immediately
         let timer_id = get_next_timer_id();
@@ -241,6 +249,7 @@ mod timer_tests {
     }
 
     #[test]
+    #[serial]
     fn test_various_delays() {
         // Test various delay values
         let delays = [0, 1, 10, 100, 1000, 5000];
