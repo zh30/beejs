@@ -7,7 +7,7 @@
 
 use once_cell::sync::Lazy;
 use rusty_v8 as v8;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
@@ -35,6 +35,50 @@ pub struct TimerMetadata {
 /// pub for access from integration tests
 pub static TIMER_METADATA: Lazy<Mutex<HashMap<u64, TimerMetadata>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
+
+// Timer IDs scheduled by the current thread.
+//
+// The metadata registry and the async timer manager are process-global, but a
+// V8 isolate belongs to exactly one thread. Keep-alive checks, fired-timer
+// dispatch and teardown must therefore be scoped per thread: otherwise one
+// thread's ref'd interval pins every other thread's event loop forever, and a
+// runtime drop wipes timers other threads are still waiting on.
+thread_local! {
+    static OWNED_TIMER_IDS: std::cell::RefCell<HashSet<u64>> =
+        std::cell::RefCell::new(HashSet::new());
+}
+
+/// Record `timer_id` as owned by the current thread.
+fn track_owned_timer(timer_id: u64) {
+    OWNED_TIMER_IDS.with(|ids| {
+        ids.borrow_mut().insert(timer_id);
+    });
+}
+
+/// Drop the current thread's ownership claim on `timer_id`.
+fn forget_owned_timer(timer_id: u64) {
+    OWNED_TIMER_IDS.with(|ids| {
+        ids.borrow_mut().remove(&timer_id);
+    });
+}
+
+/// True when `timer_id` was scheduled by the current thread.
+fn owns_timer(timer_id: u64) -> bool {
+    OWNED_TIMER_IDS.with(|ids| ids.borrow().contains(&timer_id))
+}
+
+/// Snapshot of the current thread's timer IDs.
+///
+/// Callers take this before locking `TIMER_METADATA` so the two are never held
+/// at once.
+fn owned_timer_ids() -> HashSet<u64> {
+    OWNED_TIMER_IDS.with(|ids| ids.borrow().clone())
+}
+
+/// Take every timer ID owned by the current thread, clearing the claim.
+fn take_owned_timer_ids() -> HashSet<u64> {
+    OWNED_TIMER_IDS.with(|ids| std::mem::take(&mut *ids.borrow_mut()))
+}
 
 /// v0.3.261: Epoch counter to distinguish timers from different test runs
 /// Incremented on cleanup to invalidate all previously scheduled timers
@@ -244,6 +288,7 @@ pub fn get_all_timer_metadata() -> Vec<(u64, TimerMetadata)> {
 
 /// Remove timer metadata
 pub fn remove_timer_metadata(timer_id: u64) {
+    forget_owned_timer(timer_id);
     let mut metadata = TIMER_METADATA.lock().unwrap();
     metadata.remove(&timer_id);
 }
@@ -550,6 +595,7 @@ pub fn setup_timers_api(
                 .collect();
 
             // Store metadata
+            track_owned_timer(timer_id);
             let mut metadata = TIMER_METADATA.lock().unwrap();
             metadata.insert(
                 timer_id,
@@ -631,6 +677,7 @@ pub fn setup_timers_api(
 
             // Store metadata. 0ms intervals use a 1ms effective delay so the
             // event-loop drain limit can still bound un-cleared intervals.
+            track_owned_timer(timer_id);
             let mut metadata = TIMER_METADATA.lock().unwrap();
             metadata.insert(
                 timer_id,
@@ -696,6 +743,7 @@ pub fn setup_timers_api(
             let timer_id = get_next_timer_id();
 
             // Store metadata in global registry
+            track_owned_timer(timer_id);
             let mut metadata = TIMER_METADATA.lock().unwrap();
             metadata.insert(
                 timer_id,
@@ -760,6 +808,7 @@ pub fn setup_timers_api(
 
             if timer_id > 0 {
                 // Remove from metadata
+                forget_owned_timer(timer_id);
                 let mut metadata = TIMER_METADATA.lock().unwrap();
                 metadata.remove(&timer_id);
 
@@ -910,23 +959,34 @@ pub fn is_timer_unrefed(timer_id: u64) -> bool {
         .unwrap_or(false)
 }
 
-/// v0.3.248: Clear all timers in AsyncTimerManager as well
-/// v0.3.261: Full reset of timer system for test isolation
+/// v0.3.248: Cancel the timers this thread scheduled in the AsyncTimerManager.
+///
+/// The manager and its fired queue are process-wide, so clearing them wholesale
+/// would drop timers other threads are still waiting on. The global ID counter
+/// and epoch are left untouched for the same reason: `get_next_timer_id` only
+/// needs them to stay monotonic, and rewinding them mid-run makes IDs collide
+/// between threads.
 pub fn clear_all_async_timers() {
     let manager = get_async_timer_manager();
-    // Clear scheduled timers and fired queue
-    manager.clear();
-    manager.clear_fired_timers();
-    // Reset timer ID counter
-    NEXT_TIMER_ID.store(1, Ordering::SeqCst);
-    // Increment epoch to generate unique timer IDs in next test
-    increment_timer_epoch();
+    for timer_id in owned_timer_ids() {
+        let _ = manager.cancel(timer_id);
+    }
 }
 
-/// v0.3.250: Clear all timer metadata
+/// v0.3.250: Clear the timer metadata owned by the current thread
 pub fn clear_all_timers() {
+    let owned = take_owned_timer_ids();
+    if owned.is_empty() {
+        return;
+    }
+
+    let manager = get_async_timer_manager();
+    for timer_id in &owned {
+        let _ = manager.cancel(*timer_id);
+    }
+
     if let Ok(mut metadata) = TIMER_METADATA.lock() {
-        metadata.clear();
+        metadata.retain(|id, _| !owned.contains(id));
     }
 }
 
@@ -1026,6 +1086,14 @@ pub fn execute_fired_timers(scope: &mut v8::HandleScope) {
             continue;
         }
 
+        // The fired queue is process-wide. A callback belongs to the isolate of
+        // the thread that scheduled it, so hand foreign timers back instead of
+        // invoking their V8 handles on this isolate.
+        if !owns_timer(timer_id) {
+            timer_manager.mark_timer_fired(timer_id);
+            continue;
+        }
+
         // Skip if timer callback doesn't exist (was already executed or cleared)
         let callback_exists = {
             let storage = TIMER_CALLBACKS.lock().unwrap();
@@ -1073,15 +1141,15 @@ pub fn has_pending_immediates() -> bool {
     IMMEDIATE_CALLBACKS.with(|s| !s.borrow().is_empty())
 }
 
-/// Check if any zero-delay timers are pending in the current epoch.
+/// Check if any zero-delay timers scheduled by this thread are pending.
 ///
 /// `execute_code` should wait for these to preserve same-tick `setTimeout(..., 0)`
 /// semantics, but should not block on longer timers that are meant to fire later.
 pub fn has_pending_zero_delay_timers() -> bool {
-    let current_epoch = get_timer_epoch();
+    let owned = owned_timer_ids();
     let metadata = TIMER_METADATA.lock().unwrap();
-    metadata.values().any(|meta| {
-        meta.epoch == current_epoch
+    metadata.iter().any(|(id, meta)| {
+        owned.contains(id)
             && meta.delay == 0
             && matches!(meta.timer_type, TimerType::Timeout | TimerType::Interval)
     })
@@ -1089,10 +1157,10 @@ pub fn has_pending_zero_delay_timers() -> bool {
 
 /// Check if any short, ref'ed one-shot timeout should keep the current eval alive.
 pub fn has_pending_drainable_timeout_timers(max_delay_ms: u64) -> bool {
-    let current_epoch = get_timer_epoch();
+    let owned = owned_timer_ids();
     let metadata = TIMER_METADATA.lock().unwrap();
-    metadata.values().any(|meta| {
-        meta.epoch == current_epoch
+    metadata.iter().any(|(id, meta)| {
+        owned.contains(id)
             && !meta.is_unrefed
             && meta.delay <= max_delay_ms
             && matches!(meta.timer_type, TimerType::Timeout)
@@ -1101,10 +1169,10 @@ pub fn has_pending_drainable_timeout_timers(max_delay_ms: u64) -> bool {
 
 /// Check if any short, ref'ed timeout or interval should keep the current eval alive.
 pub fn has_pending_drainable_timers(max_delay_ms: u64) -> bool {
-    let current_epoch = get_timer_epoch();
+    let owned = owned_timer_ids();
     let metadata = TIMER_METADATA.lock().unwrap();
-    metadata.values().any(|meta| {
-        meta.epoch == current_epoch
+    metadata.iter().any(|(id, meta)| {
+        owned.contains(id)
             && !meta.is_unrefed
             && meta.delay <= max_delay_ms
             && matches!(meta.timer_type, TimerType::Timeout | TimerType::Interval)

@@ -32,11 +32,7 @@ pub fn setup_vm_api(
     Ok(())
 }
 
-fn compile_and_run(
-    scope: &mut v8::HandleScope,
-    code: &str,
-    rv: &mut v8::ReturnValue,
-) {
+fn compile_and_run(scope: &mut v8::HandleScope, code: &str, rv: &mut v8::ReturnValue) {
     let source = v8::String::new(scope, code).unwrap();
     let script = match v8::Script::compile(scope, source, None) {
         Some(s) => s,

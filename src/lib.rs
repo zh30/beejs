@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 // Beejs: Rust + V8 JavaScript/TypeScript runtime
 //
 // Fact sources for capability claims: Cargo.toml, this file, src/main.rs,

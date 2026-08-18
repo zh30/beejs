@@ -55,7 +55,8 @@ fn bytes_from_arg(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> O
         let buf = v8::Local::<v8::ArrayBuffer>::try_from(value).ok()?;
         let store = buf.get_backing_store();
         let len = buf.byte_length();
-        let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+        let slice =
+            unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
         return Some(slice.to_vec());
     }
     if value.is_typed_array() {
@@ -63,7 +64,8 @@ fn bytes_from_arg(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> O
         let len = ta.byte_length() as usize;
         let buf = ta.buffer(scope)?;
         let store = buf.get_backing_store();
-        let slice = unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+        let slice =
+            unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
         return Some(slice.to_vec());
     }
     if let Some(s) = value.to_string(scope) {

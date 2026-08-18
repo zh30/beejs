@@ -71,7 +71,10 @@ fn value_is_truthy(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> 
         return false;
     }
     if value.is_number() {
-        return value.number_value(scope).map(|n| n != 0.0 && !n.is_nan()).unwrap_or(false);
+        return value
+            .number_value(scope)
+            .map(|n| n != 0.0 && !n.is_nan())
+            .unwrap_or(false);
     }
     if value.is_string() {
         return value

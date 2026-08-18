@@ -414,8 +414,13 @@ fn os_cpus_callback(
         let val_speed = v8::Number::new(scope, 0.0);
         cpu_obj.set(scope, key_speed.into(), val_speed.into());
         let times_obj = v8::Object::new(scope);
-        for (name, val) in [("user", 0.0), ("nice", 0.0), ("sys", 0.0), ("idle", 0.0), ("irq", 0.0)]
-        {
+        for (name, val) in [
+            ("user", 0.0),
+            ("nice", 0.0),
+            ("sys", 0.0),
+            ("idle", 0.0),
+            ("irq", 0.0),
+        ] {
             let key = v8::String::new(scope, name).unwrap();
             let num = v8::Number::new(scope, val);
             times_obj.set(scope, key.into(), num.into());
@@ -431,9 +436,7 @@ fn os_freemem_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let freemem = sys_info::mem_info()
-        .map(|m| m.avail * 1024)
-        .unwrap_or(0);
+    let freemem = sys_info::mem_info().map(|m| m.avail * 1024).unwrap_or(0);
     retval.set(v8::Number::new(scope, freemem as f64).into());
 }
 fn os_totalmem_callback(
@@ -441,9 +444,7 @@ fn os_totalmem_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let totalmem = sys_info::mem_info()
-        .map(|m| m.total * 1024)
-        .unwrap_or(0);
+    let totalmem = sys_info::mem_info().map(|m| m.total * 1024).unwrap_or(0);
     retval.set(v8::Number::new(scope, totalmem as f64).into());
 }
 fn os_homedir_callback(

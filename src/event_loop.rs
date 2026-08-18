@@ -89,7 +89,10 @@ impl IoCompletionQueue {
     }
 
     pub fn drain(&self) -> Vec<IoCompletion> {
-        self.inner.lock().map(|mut q| q.drain(..).collect()).unwrap_or_default()
+        self.inner
+            .lock()
+            .map(|mut q| q.drain(..).collect())
+            .unwrap_or_default()
     }
 
     pub fn has_pending(&self) -> bool {
