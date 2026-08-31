@@ -1,6 +1,22 @@
 #[cfg(test)]
 mod typescript_compiler_integration_tests {
-    use beejs::typescript::compile_typescript;
+    use beejs::typescript::{
+        compile_typescript as compile_oxc, CompilationOutput, TypeScriptCompiler,
+        TypeScriptCompilerConfig,
+    };
+
+    /// Historical emit tests stay on the self-hosted compiler.
+    /// TSX/JSX filenames go through oxc, which is the product backend.
+    fn compile_typescript(source: &str, file_name: &str) -> Result<CompilationOutput, String> {
+        let lower = file_name.to_ascii_lowercase();
+        if lower.ends_with(".tsx") || lower.ends_with(".jsx") {
+            return compile_oxc(source, file_name);
+        }
+        let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
+        compiler
+            .compile_source(source, file_name)
+            .map_err(|error| error.to_string())
+    }
 
     #[test]
     #[ignore = "source map generation is not implemented yet; tracked in zh30/beejs#1"]
@@ -97,34 +113,39 @@ function load() {
     }
 
     #[test]
-    fn test_unsupported_tsx_returns_clear_error() {
+    fn test_tsx_elements_emit_classic_jsx() {
         let ts_code = r#"
 const element = <div className="greeting">Hello</div>;
 "#;
 
-        let error = compile_typescript(ts_code, "component.tsx")
-            .expect_err("unsupported TSX should not generate JavaScript");
+        let output =
+            compile_typescript(ts_code, "component.tsx").expect("TSX should transpile through oxc");
 
         assert!(
-            error.contains("TSX") && error.contains("unsupported"),
-            "unsupported TSX should return a clear diagnostic, got: {}",
-            error
+            output.js_code.contains("React.createElement"),
+            "classic JSX emit expected, got: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("<div"),
+            "JSX element syntax should be transformed, got: {}",
+            output.js_code
         );
     }
 
     #[test]
-    fn test_self_closing_tsx_returns_clear_error() {
+    fn test_self_closing_tsx_emits_classic_jsx() {
         let ts_code = r#"
 const element = <Foo />;
 "#;
 
-        let error = compile_typescript(ts_code, "component.tsx")
-            .expect_err("self-closing TSX should fail fast before JavaScript generation");
+        let output = compile_typescript(ts_code, "component.tsx")
+            .expect("self-closing TSX should transpile through oxc");
 
         assert!(
-            error.contains("TSX") && error.contains("unsupported"),
-            "unsupported self-closing TSX should return a clear diagnostic, got: {}",
-            error
+            output.js_code.contains("React.createElement"),
+            "classic JSX emit expected, got: {}",
+            output.js_code
         );
     }
 

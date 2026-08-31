@@ -1,6 +1,6 @@
 # Current Scope
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-08-31
 
 Optimization sprint notes (2026-08-12):
 
@@ -9,7 +9,7 @@ Optimization sprint notes (2026-08-12):
 - New builtins wired: `assert`, `zlib`, `https`, `tls`, `vm`, `worker_threads`, `perf_hooks`.
 - WorkerHost multi-isolate scaffold is available (`BeeWorkerHost` / progressive `Worker`).
 - `bee serve` binds a real HTTP listener (HTTPS still external-TLS).
-- TypeScript transpile uses a content-hash cache (`src/typescript/cache.rs`).
+- TypeScript transpile uses oxc 0.147 (`src/typescript/oxc_backend.rs`) with a content-hash cache (`src/typescript/cache.rs`). Language surface is TypeScript 6.0 (transpile-only). TS 7.0 added no new syntax.
 - rusty_v8 remains on 0.22; see `docs/V8_UPGRADE.md` for the 0.32 migration branch plan.
 
 This page is the user-facing capability boundary for the current Beejs checkout. It is intentionally narrower than many historical stage reports in this repository.
@@ -25,7 +25,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `0.1.0`.
+- Package version is `0.1.1`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.
@@ -54,7 +54,7 @@ Preview means the capability is present in the default build and is useful for e
 
 Current preview scope:
 
-- TypeScript and TSX entry files are accepted by the CLI and pass through the built-in TypeScript transpilation path before execution. The supported syntax subset and diagnostics are still evolving.
+- TypeScript and TSX entry files are accepted by the CLI and pass through oxc before execution. This is transpile-only: types are erased, `using` / Stage 3 decorators are downleveled to ES2022, and TSX emits classic `React.createElement`. There is no project-wide `tsc` type-check.
 - Node.js compatibility modules under `src/nodejs_core/` are installed into the runtime, including areas such as `fs`, `crypto`, `events`, `buffer`, `path`, `os`, `url`, `dns`, `process`, timers, streams, HTTP, networking, readline, and CommonJS `require`. Treat these as compatibility work in progress unless a behavior is covered by current executable tests.
 - Web API modules under `src/web_api/` are installed into the runtime, including areas such as fetch, WebSocket, Web Crypto, URL, events, FormData, Abort, Blob, timers, encoding, performance, streams, compression, structured clone, workers, service workers, broadcast channels, and message channels. Treat these as API-specific preview work, not blanket Web platform compatibility.
 - Watch and hot reload code paths exist through `bee run --watch`, `src/watcher.rs`, and `src/watcher_websocket.rs`.

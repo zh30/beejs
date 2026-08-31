@@ -40,12 +40,12 @@ console.log(myColor, myStatus);
                 );
                 // 验证枚举成员值
                 assert!(
-                    output.js_code.contains("Red: \"red\""),
+                    output.js_code.contains("[\"Red\"] = \"red\""),
                     "Should contain Red with string value: {}",
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("Active: 1"),
+                    output.js_code.contains("[\"Active\"] = 1"),
                     "Should contain Active with number value: {}",
                     output.js_code
                 );
@@ -85,7 +85,7 @@ console.log(moveUp);
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("Up: \"UP\""),
+                    output.js_code.contains("[\"Up\"] = \"UP\""),
                     "Should contain Up with value: {}",
                     output.js_code
                 );
@@ -126,12 +126,12 @@ console.log(code);
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("OK: 200"),
+                    output.js_code.contains("[\"OK\"] = 200"),
                     "Should contain OK with value 200: {}",
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("NotFound: 404"),
+                    output.js_code.contains("[\"NotFound\"] = 404"),
                     "Should contain NotFound with value 404: {}",
                     output.js_code
                 );
@@ -170,19 +170,19 @@ console.log(val1, val2, val3);
                 );
                 // 验证字符串值
                 assert!(
-                    output.js_code.contains("StringValue: \"str\""),
+                    output.js_code.contains("[\"StringValue\"] = \"str\""),
                     "Should contain StringValue with string: {}",
                     output.js_code
                 );
                 // 验证数值
                 assert!(
-                    output.js_code.contains("NumericValue: 42"),
+                    output.js_code.contains("[\"NumericValue\"] = 42"),
                     "Should contain NumericValue: {}",
                     output.js_code
                 );
                 // 验证自动赋值 (从最后一个数值递增)
                 assert!(
-                    output.js_code.contains("AutoNumeric: 43"),
+                    output.js_code.contains("[\"AutoNumeric\"] = 43"),
                     "Should contain AutoNumeric with auto value 43 (last value + 1): {}",
                     output.js_code
                 );
@@ -218,7 +218,7 @@ console.log(a, b);
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("Active: 1"),
+                    output.js_code.contains("[\"Active\"] = 1"),
                     "Should contain Active: {}",
                     output.js_code
                 );
@@ -310,17 +310,17 @@ console.log(v1, v2, v3);
                 );
                 // 验证数值被保留
                 assert!(
-                    output.js_code.contains("First: 100"),
+                    output.js_code.contains("[\"First\"] = 100"),
                     "Should contain First: {}",
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("Second: 200"),
+                    output.js_code.contains("[\"Second\"] = 200"),
                     "Should contain Second: {}",
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("Third: 300"),
+                    output.js_code.contains("[\"Third\"] = 300"),
                     "Should contain Third: {}",
                     output.js_code
                 );

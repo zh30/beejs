@@ -15,12 +15,12 @@ Usage:
   curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 
 Environment variables:
-  BEEJS_VERSION     Version tag to install (example: v0.1.0 or 0.1.0)
+  BEEJS_VERSION     Version tag to install (example: v0.1.1 or 0.1.1)
   BEEJS_INSTALL_DIR Install directory (default: ~/.beejs/bin)
   BEEJS_REPO        GitHub repo (default: zh30/beejs)
 
 Examples:
-  BEEJS_VERSION=v0.1.0 sh install.sh
+  BEEJS_VERSION=v0.1.1 sh install.sh
   BEEJS_INSTALL_DIR=~/.local/bin sh install.sh
 USAGE
 }

@@ -1,7 +1,7 @@
 # Beejs
 
 [![Website](https://img.shields.io/badge/website-bee.zhanghe.dev-amber)](https://bee.zhanghe.dev)
-[![Release](https://img.shields.io/badge/release-v0.1.0--repair--sprint-blue)](#current-status)
+[![Release](https://img.shields.io/badge/release-v0.1.1-blue)](#current-status)
 [![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -14,7 +14,7 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 ## Why Beejs
 
 - **Rust + V8 execution**: Default runtime path is `src/runtime_minimal.rs` with Tokio-backed timers and I/O work in progress.
-- **TypeScript support**: `.ts` files are transpiled before execution (self-hosted compiler today; cache and TSX coverage are active work items).
+- **TypeScript support**: `.ts` / `.tsx` files are transpiled by oxc before execution (TypeScript 6.0 syntax, transpile-only; no `tsc` type-check).
 - **Fail-closed permissions**: Granular broker flags such as `--deny-fs` / `--deny-net`.
 - **Node.js & Web API surface (incremental)**: Partial `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified.
 
@@ -22,7 +22,7 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 
 ## Current Status
 
-Package version is **`0.1.0`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
+Package version is **`0.1.1`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
 
 Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/`. Performance claims require the scripts in `benchmarks/` against the binary you just built.
 
@@ -39,7 +39,7 @@ curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 Or specify a custom version tag or installation directory:
 
 ```bash
-curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.1.0-repair-sprint sh
+curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.1.1 sh
 curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_INSTALL_DIR="$HOME/.local/bin" sh
 ```
 
@@ -122,10 +122,11 @@ See [CLI usage guide](docs/CLI_USAGE_GUIDE.md) for full options and examples.
 
 ## Native TypeScript & WebAssembly
 
-Beejs handles `.ts`, `.tsx`, and `.wasm` modules natively:
+Beejs handles `.ts`, `.tsx`, and `.wasm` modules natively. TypeScript is stripped and downleveled by oxc to ES2022 so the current V8 can run `using`, Stage 3 decorators, and TSX:
 
 ```bash
 bee run examples/basics/typescript_demo.ts
+bee run examples/basics/typescript_latest.ts
 ```
 
 For WebAssembly, Beejs exposes full `WebAssembly.compile`, `WebAssembly.Instance`, and shared `WebAssembly.Memory` buffer APIs through V8 JIT compilation.

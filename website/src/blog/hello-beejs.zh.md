@@ -14,7 +14,7 @@ Beejs v0.1 是本运行时的首个公开核心版本。我们的目标清晰且
 ## v0.1 包含的核心能力
 
 - **原生 JavaScript 执行**：基于 Rust + V8 构建的高效运行时。
-- **免配置 TypeScript 体验**：传入 `.ts` 或 `.tsx` 入口文件时自动完成内置转译与定位。
+- **免配置 TypeScript 体验**：传入 `.ts` 或 `.tsx` 入口文件时由 oxc 转译 TypeScript 6.0 语法（仅转译，不做 tsc 类型检查）。
 - **丰富的 CLI 子命令**：内置 `run`、`eval`、`repl`、`test`、`bundle`、`serve`、项目初始化与包管理功能。
 - **Node.js 与 Web API 兼容层**：集成常用的核心兼容模块。
 - **自动化发布校验**：全面覆盖 代码格式（fmt）、Clippy 检查、核心库单元测试及 CLI 输出规范。

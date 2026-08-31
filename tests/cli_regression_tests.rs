@@ -1780,7 +1780,7 @@ fn run_file_resolves_commonjs_relative_to_script_directory() {
 }
 
 #[test]
-fn run_typescript_error_diagnostics_fail_before_execution() {
+fn run_typescript_type_errors_do_not_block_execution() {
     let dir = tempdir().expect("failed to create tempdir");
     let script = dir.path().join("diagnostic_error.ts");
     std::fs::write(
@@ -1804,16 +1804,12 @@ console.log("TYPE_DIAGNOSTIC_SCRIPT_RAN", answer());
     let stderr = String::from_utf8_lossy(&output.stderr);
     let combined = format!("{stdout}{stderr}");
     assert!(
-        !output.status.success(),
-        "bee run should fail for Error diagnostics before executing JS. output: {combined}"
+        output.status.success(),
+        "oxc is transpile-only: type mismatches must not fail bee run. output: {combined}"
     );
     assert!(
-        !stdout.contains("TYPE_DIAGNOSTIC_SCRIPT_RAN"),
-        "bee run must not execute transpiled JS after Error diagnostics. stdout: {stdout}"
-    );
-    assert!(
-        combined.contains("Type 'number' is not assignable to type 'string'"),
-        "diagnostic should be reported to the caller. output: {combined}"
+        stdout.contains("TYPE_DIAGNOSTIC_SCRIPT_RAN"),
+        "transpiled JS should still execute. stdout: {stdout}"
     );
 }
 

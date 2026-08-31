@@ -6243,6 +6243,7 @@ impl MinimalRuntime {
     }
 
     /// Transpile TypeScript to JavaScript by removing type annotations
+    #[allow(dead_code)]
     fn transpile_typescript_to_js(code: &str) -> Result<String> {
         let mut js_code = code.to_string();
 
@@ -7603,6 +7604,7 @@ impl MinimalRuntime {
         Ok(js_code)
     }
 
+    #[allow(dead_code)]
     fn rewrite_static_esm_imports_to_commonjs(code: &str) -> String {
         static IMPORT_FROM_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         static SIDE_EFFECT_IMPORT_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
@@ -7649,6 +7651,7 @@ impl MinimalRuntime {
             .to_string()
     }
 
+    #[allow(dead_code)]
     fn rewrite_static_esm_import_clause(indent: &str, bindings: &str, specifier: &str) -> String {
         let specifier_literal = serde_json::to_string(specifier).unwrap();
         let bindings = bindings.trim();
@@ -7686,6 +7689,7 @@ impl MinimalRuntime {
         format!("{indent}const {bindings} = require({specifier_literal});")
     }
 
+    #[allow(dead_code)]
     fn rewrite_esm_named_import_bindings(bindings: &str) -> String {
         let inner = bindings
             .trim()
@@ -7715,6 +7719,7 @@ impl MinimalRuntime {
         format!("{{ {rewritten} }}")
     }
 
+    #[allow(dead_code)]
     fn has_export_equals_statement(code: &str) -> bool {
         static EXPORT_EQUALS_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         EXPORT_EQUALS_PATTERN
@@ -7722,6 +7727,7 @@ impl MinimalRuntime {
             .is_match(code)
     }
 
+    #[allow(dead_code)]
     fn has_interface_declaration(code: &str) -> bool {
         static INTERFACE_DECLARATION_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         INTERFACE_DECLARATION_PATTERN
@@ -7734,6 +7740,7 @@ impl MinimalRuntime {
             .is_match(code)
     }
 
+    #[allow(dead_code)]
     fn has_mapped_type_declaration(code: &str) -> bool {
         static MAPPED_TYPE_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         MAPPED_TYPE_PATTERN
@@ -7746,6 +7753,7 @@ impl MinimalRuntime {
             .is_match(code)
     }
 
+    #[allow(dead_code)]
     fn has_type_alias_declaration(code: &str) -> bool {
         static TYPE_ALIAS_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         TYPE_ALIAS_PATTERN
@@ -7758,6 +7766,7 @@ impl MinimalRuntime {
             .is_match(code)
     }
 
+    #[allow(dead_code)]
     fn has_keyof_type_usage(code: &str) -> bool {
         static KEYOF_TYPE_PATTERN: OnceLock<regex::Regex> = OnceLock::new();
         KEYOF_TYPE_PATTERN
@@ -7898,93 +7907,37 @@ impl MinimalRuntime {
         // execution that scheduled them and must not run in this one.
         clear_pending_immediates();
 
-        // Transpile TypeScript to JavaScript if TypeScript features are detected
-        // Only transpile raw TypeScript syntax that our proper compiler can't handle
-        // v0.3.170: Enhanced TypeScript detection for module augmentation
-        // Note: We avoid transpiling patterns that might exist in already-compiled JS
-        // We look for patterns that are DEFINITELY TypeScript, not just JavaScript with colons
+        // Transpile TypeScript-only source through oxc before V8 parse.
+        // Do not treat `import` / `export` as TypeScript: those are valid JS.
         let skip_runtime_typescript_transpile =
             code.starts_with("// @beejs-no-runtime-typescript-transpile");
         let has_raw_typescript = !skip_runtime_typescript_transpile
-            && (Self::has_interface_declaration(code)    // interface definition
-            || code.contains("enum ")      // enum definition
-            || Self::has_type_alias_declaration(code)       // type alias
-            || code.contains(": string")    // type annotation with known type
-            || code.contains(": number")
-            || code.contains(": boolean")
-            || code.contains(": User")      // custom type in function param
-            || code.contains(": Promise<")
-            || code.contains(" as const")   // as const assertion
-            || code.contains(" as ")        // as Type assertion
-            || code.contains(" satisfies ") // satisfies operator
-            || code.contains("declare global")  // v0.3.170: global declaration block
-            || code.contains("declare module \"") // v0.3.170: module declaration
-            || Self::has_export_equals_statement(code) // v0.3.172: export = statement
-            || Self::has_keyof_type_usage(code)      // v0.3.174: keyof operator
-            // NOTE: typeof is NOT included here because it's valid JavaScript
-            // Removing typeof breaks JavaScript code that uses it for runtime type checking
-            || code.contains("infer ")      // v0.3.175: infer keyword in conditional types
-            || code.contains("abstract class")   // v0.3.176: abstract class declaration
-            || code.contains("abstract ")       // v0.3.176: abstract method or class
-            || code.contains("export abstract") // v0.3.196: export abstract class
-            || code.contains("this:")           // v0.3.183: this parameter type annotation
-            || Self::has_mapped_type_declaration(code) // v0.3.184: mapped type [P in keyof T] pattern
-            || Self::has_keyof_type_usage(code)    // v0.3.185: keyof typeof pattern
-            || code.contains("extends keyof")   // v0.3.185: keyof in generic constraints
-            || code.contains(" extends ")       // v0.3.186: conditional type extends pattern
-            || (Self::has_type_alias_declaration(code) && code.contains("${"))  // v0.3.188: template literal type pattern
-            || code.contains("[key:")   // v0.3.190: index signature [key: string]: T pattern
-            || code.contains("import type")    // v0.3.193: import type statement
-            || code.contains("export type")    // v0.3.193: export type statement
-            || code.contains("import ")        // v0.3.195: ESM import statement
-            || code.contains("export const")   // v0.3.195: ESM export const
-            || code.contains("export function") // v0.3.195: ESM export function
-            || code.contains("export class")   // v0.3.195: ESM export class
-            || code.contains("export default") // v0.3.195: ESM export default
-            || code.contains("export {")       // v0.3.195: ESM export braces
-            || code.contains("${Uppercase<")   // v0.3.200: intrinsic Uppercase in template literal
-            || code.contains("${Lowercase<")   // v0.3.200: intrinsic Lowercase in template literal
-            || code.contains("${Capitalize<")  // v0.3.200: intrinsic Capitalize in template literal
-            || code.contains("${Uncapitalize<") // v0.3.200: intrinsic Uncapitalize in template literal
-            || code.contains("Awaited<")       // v0.3.201: Awaited utility type
-            || code.contains("ThisParameterType<")  // v0.3.202: ThisParameterType utility type
-            || code.contains("OmitThisParameter<") // v0.3.202: OmitThisParameter utility type
-            || code.contains("Uppercase<")     // v0.3.203: standalone Uppercase intrinsic type
-            || code.contains("Lowercase<")     // v0.3.203: standalone Lowercase intrinsic type
-            || code.contains("Capitalize<")    // v0.3.203: standalone Capitalize intrinsic type
-            || code.contains("Uncapitalize<")   // v0.3.203: standalone Uncapitalize intrinsic type
-            || code.contains("Trim<")           // v0.3.222: Trim intrinsic type
-            || code.contains("TrimLeft<")       // v0.3.222: TrimLeft intrinsic type
-            || code.contains("TrimRight<")      // v0.3.222: TrimRight intrinsic type
-            || code.contains("NonNullable<")   // v0.3.204: NonNullable utility type
-            || code.contains("Partial<")        // v0.3.206: Partial utility type
-            || code.contains("Required<")       // v0.3.207: Required utility type
-            || code.contains("Readonly<")       // v0.3.207: Readonly utility type
-            || code.contains("Pick<")           // v0.3.208: Pick utility type
-            || code.contains("Omit<")           // v0.3.208: Omit utility type
-            || code.contains("Record<")         // v0.3.208: Record utility type
-            || code.contains("Exclude<")        // v0.3.209: Exclude utility type
-            || code.contains("Extract<")        // v0.3.209: Extract utility type
-            || code.contains("InstanceType<")   // v0.3.210: InstanceType utility type
-            || code.contains("ReturnType<")     // v0.3.211: ReturnType utility type
-            || code.contains("Parameters<")     // v0.3.211: Parameters utility type
-            || code.contains("ConstructorParameters<")  // v0.3.211: ConstructorParameters utility type
-            || code.contains("NoInfer<")                // v0.3.212: NoInfer utility type
-            || code.contains("Infer<")                   // v0.3.213: Infer utility type
-            || code.contains("ThisType<")                 // v0.3.216: ThisType utility type
-            || code.contains("Mutable<")); // v0.3.218: Mutable utility type
+            && crate::typescript::looks_like_typescript_source(code);
 
-        let should_execute_as_esm_module =
-            Self::should_execute_as_esm_module(code, &self.main_module_filename)?;
-
-        let js_code = if should_execute_as_esm_module {
-            Cow::Borrowed(code)
-        } else if has_raw_typescript {
-            // Only transpile if it looks like raw TypeScript
-            Cow::Owned(Self::transpile_typescript_to_js(code)?)
+        let js_code = if has_raw_typescript {
+            let filename = if self.main_module_filename.ends_with(".ts")
+                || self.main_module_filename.ends_with(".tsx")
+                || self.main_module_filename.ends_with(".mts")
+                || self.main_module_filename.ends_with(".cts")
+                || self.main_module_filename.ends_with(".jsx")
+            {
+                self.main_module_filename.as_str()
+            } else if crate::typescript::looks_like_jsx_source(code) {
+                "eval.tsx"
+            } else {
+                "eval.ts"
+            };
+            Cow::Owned(
+                crate::typescript::compile_typescript(code, filename)
+                    .map(|output| output.js_code)
+                    .map_err(|error| anyhow::anyhow!(error))?,
+            )
         } else {
             Cow::Borrowed(code)
         };
+
+        let should_execute_as_esm_module =
+            Self::should_execute_as_esm_module(js_code.as_ref(), &self.main_module_filename)?;
 
         // Both surfaces go in on the first execute. Deferring the extended set
         // until the source looks like it needs it is not sound: a script reaches
@@ -20163,30 +20116,6 @@ impl MinimalRuntime {
                                         ) {
                                             Ok(output) => output.js_code,
                                             Err(error) => {
-                                                if !(error.contains("TSX/JSX")
-                                                    && error.contains("unsupported"))
-                                                {
-                                                    match Self::transpile_typescript_to_js(&code) {
-                                                        Ok(js_code) => js_code,
-                                                        Err(error) => {
-                                                            let error_msg = format!(
-                                                                "Error compiling TypeScript module '{}': {}",
-                                                                module_path.display(),
-                                                                error
-                                                            );
-                                                            let error_str = v8::String::new(
-                                                                scope, &error_msg,
-                                                            )
-                                                            .unwrap();
-                                                            let error_obj =
-                                                                v8::Exception::syntax_error(
-                                                                    scope, error_str,
-                                                                );
-                                                            scope.throw_exception(error_obj.into());
-                                                            return;
-                                                        }
-                                                    }
-                                                } else {
                                                 let error_msg = format!(
                                                     "Error compiling TypeScript module '{}': {}",
                                                     module_path.display(),
@@ -20198,7 +20127,6 @@ impl MinimalRuntime {
                                                     v8::Exception::syntax_error(scope, error_str);
                                                 scope.throw_exception(error_obj.into());
                                                 return;
-                                                }
                                             }
                                         }
                                     } else {

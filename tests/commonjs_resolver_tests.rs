@@ -2343,72 +2343,60 @@ fn runtime_require_loads_tsx_without_jsx_using_typescript_transpile() {
 
 #[test]
 #[serial]
-fn runtime_require_rejects_tsx_element_syntax_without_executing_it() {
+fn runtime_require_loads_tsx_element_syntax_with_global_react() {
     let temp = tempfile::tempdir().unwrap();
     let app_dir = temp.path().join("app");
     fs::create_dir_all(&app_dir).unwrap();
     fs::write(
         app_dir.join("component.tsx"),
-        "globalThis.__tsxExecuted = true; const view = <div />; module.exports = { view };",
+        "const view = <div />; module.exports = { view };",
     )
     .unwrap();
 
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = format!(
         r#"
+        globalThis.React = {{
+            createElement(type) {{
+                return {{ type }};
+            }}
+        }};
         globalThis.__dirname = "{}";
-        globalThis.__tsxExecuted = false;
-        let message = "loaded";
-        try {{
-            require("./component.tsx");
-        }} catch (error) {{
-            message = String(error && error.message || error);
-        }}
-        message.includes("TSX/JSX") &&
-          message.includes("unsupported") &&
-          globalThis.__tsxExecuted === false;
+        require("./component.tsx").view.type;
         "#,
         path_for_js(&app_dir)
     );
 
     let result = runtime.execute_code(&code).unwrap();
 
-    assert_eq!(result.trim(), "true");
+    assert_eq!(result.trim(), "div");
 }
 
 #[test]
 #[serial]
-fn runtime_require_rejects_jsx_element_syntax_without_executing_it() {
+fn runtime_require_loads_jsx_element_syntax_with_global_react() {
     let temp = tempfile::tempdir().unwrap();
     let app_dir = temp.path().join("app");
     fs::create_dir_all(&app_dir).unwrap();
-    fs::write(
-        app_dir.join("component.jsx"),
-        "globalThis.__jsxExecuted = true; module.exports = <span />;",
-    )
-    .unwrap();
+    fs::write(app_dir.join("component.jsx"), "module.exports = <span />;").unwrap();
 
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = format!(
         r#"
+        globalThis.React = {{
+            createElement(type) {{
+                return {{ type }};
+            }}
+        }};
         globalThis.__dirname = "{}";
-        globalThis.__jsxExecuted = false;
-        let message = "loaded";
-        try {{
-            require("./component.jsx");
-        }} catch (error) {{
-            message = String(error && error.message || error);
-        }}
-        message.includes("TSX/JSX") &&
-          message.includes("unsupported") &&
-          globalThis.__jsxExecuted === false;
+        require("./component.jsx").type;
         "#,
         path_for_js(&app_dir)
     );
 
     let result = runtime.execute_code(&code).unwrap();
 
-    assert_eq!(result.trim(), "true");
+    assert_eq!(result.trim(), "span");
 }
 
 #[test]

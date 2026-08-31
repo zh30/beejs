@@ -49,7 +49,7 @@ pub struct FetchConfig {
 impl Default for FetchConfig {
     fn default() -> Self {
         Self {
-            user_agent: "Beejs/0.1.0".to_string(),
+            user_agent: format!("Beejs/{}", env!("CARGO_PKG_VERSION")),
             timeout: std::time::Duration::from_secs(30),
             max_redirects: 20,
         }
@@ -420,7 +420,7 @@ async fn execute_fetch(
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;
 
         let client: _ = match reqwest::Client::builder()
-            .user_agent("Beejs/0.1.0")
+            .user_agent(format!("Beejs/{}", env!("CARGO_PKG_VERSION")))
             .timeout(std::time::Duration::from_secs(30))
             // Honor system/env proxy configuration (removed explicit no_proxy()).
             .build()
@@ -1964,7 +1964,10 @@ mod tests {
     #[test]
     fn test_fetch_config_default() {
         let config: _ = FetchConfig::default();
-        assert_eq!(config.user_agent, "Beejs/0.1.0");
+        assert_eq!(
+            config.user_agent,
+            format!("Beejs/{}", env!("CARGO_PKG_VERSION"))
+        );
         assert_eq!(config.timeout, std::time::Duration::from_secs(30));
         assert_eq!(config.max_redirects, 20);
     }

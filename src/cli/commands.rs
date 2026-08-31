@@ -13,7 +13,7 @@ use std::path::PathBuf;
 #[command(
     name = "bee",
     about = "High-performance JavaScript/TypeScript runtime (faster than Bun)",
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Henry Zhang"
 )]
 pub struct CliApp {

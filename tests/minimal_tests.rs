@@ -20,10 +20,10 @@ const x = 1;
         let result = typescript::compile_typescript(ts_code, "declare_global.ts");
         assert!(result.is_ok(), "declare global should compile successfully");
         let output = result.unwrap();
-        // 验证 declare global 块被正确转译
+        // oxc 擦除 ambient declare global，只保留运行时代码
         assert!(
-            output.js_code.contains("/* declare global"),
-            "Should contain declare global placeholder: {}",
+            !output.js_code.contains("declare global"),
+            "Should erase declare global: {}",
             output.js_code
         );
         assert!(
@@ -46,15 +46,10 @@ const y = 2;
         let result = typescript::compile_typescript(ts_code, "declare_module.ts");
         assert!(result.is_ok(), "declare module should compile successfully");
         let output = result.unwrap();
-        // 验证 declare module 被正确转译（保留 declare module 语法）
+        // oxc 擦除 ambient declare module，只保留运行时代码
         assert!(
-            output.js_code.contains("declare module \"my-module\""),
-            "Should contain declare module: {}",
-            output.js_code
-        );
-        assert!(
-            output.js_code.contains("someValue"),
-            "Should contain someValue: {}",
+            !output.js_code.contains("declare module"),
+            "Should erase declare module: {}",
             output.js_code
         );
         assert!(
@@ -89,18 +84,18 @@ const config = { apiKey: "test" };
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("/* declare global"),
-            "Should contain declare global: {}",
+            !output.js_code.contains("declare global"),
+            "Should erase declare global: {}",
             output.js_code
         );
         assert!(
-            output.js_code.contains("declare module \"express\""),
-            "Should contain express module: {}",
+            !output.js_code.contains("declare module"),
+            "Should erase declare module: {}",
             output.js_code
         );
         assert!(
-            output.js_code.contains("version"),
-            "Should contain version: {}",
+            output.js_code.contains("const config"),
+            "Should preserve runtime config: {}",
             output.js_code
         );
         println!("✅ Test 3: TypeScript module augmentation combined");
@@ -263,10 +258,9 @@ export = 5;
             result.err()
         );
         let output = result.unwrap();
-        // export = 应该被转译为注释占位符
         assert!(
-            output.js_code.contains("/* export ="),
-            "Should contain export = placeholder: {}",
+            output.js_code.contains("module.exports = 5"),
+            "export = should become module.exports: {}",
             output.js_code
         );
         println!("✅ Test 9: TypeScript export = syntax");
@@ -377,11 +371,6 @@ type UserType = typeof user;
         assert!(
             !output.js_code.contains("keyof"),
             "Should remove keyof: {}",
-            output.js_code
-        );
-        assert!(
-            output.js_code.contains("User"),
-            "Should preserve User reference: {}",
             output.js_code
         );
         assert!(
@@ -2363,8 +2352,8 @@ const x = 1;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("require"),
-            "Should have require: {}",
+            output.js_code.contains("import") && output.js_code.contains("./module"),
+            "Should keep ESM default import: {}",
             output.js_code
         );
         println!("✅ Test 64: ESM default import");
@@ -2385,8 +2374,10 @@ const x = 1;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("require"),
-            "Should have require: {}",
+            output.js_code.contains("import")
+                && output.js_code.contains("named")
+                && output.js_code.contains("./module"),
+            "Should keep ESM named import: {}",
             output.js_code
         );
         println!("✅ Test 65: ESM named import");
@@ -2407,8 +2398,10 @@ const x = 1;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("require"),
-            "Should have require: {}",
+            output.js_code.contains("import")
+                && output.js_code.contains("*")
+                && output.js_code.contains("./module"),
+            "Should keep ESM namespace import: {}",
             output.js_code
         );
         println!("✅ Test 66: ESM namespace import");
@@ -2429,8 +2422,8 @@ const y = 2;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("/* ESM export"),
-            "Should have ESM comment: {}",
+            output.js_code.contains("export const x = 1"),
+            "Should keep ESM export const: {}",
             output.js_code
         );
         println!("✅ Test 67: ESM export const");
@@ -2451,8 +2444,8 @@ const y = 2;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("/* ESM export"),
-            "Should have ESM comment: {}",
+            output.js_code.contains("export function foo"),
+            "Should keep ESM export function: {}",
             output.js_code
         );
         println!("✅ Test 68: ESM export function");
@@ -2474,8 +2467,8 @@ const b = 2;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("/* ESM export"),
-            "Should have ESM comment: {}",
+            output.js_code.contains("export { a }"),
+            "Should keep ESM export braces: {}",
             output.js_code
         );
         println!("✅ Test 69: ESM export braces");
@@ -2496,8 +2489,8 @@ const x = 1;
         );
         let output = result.unwrap();
         assert!(
-            output.js_code.contains("require"),
-            "Should have require: {}",
+            output.js_code.contains("import") && output.js_code.contains("./side-effect"),
+            "Should keep side-effect import: {}",
             output.js_code
         );
         println!("✅ Test 70: ESM import side-effect");
@@ -2519,10 +2512,14 @@ const x = 1;
             result.err()
         );
         let output = result.unwrap();
-        // 验证 ESM 导出被转换为注释（快速路径处理）
         assert!(
-            output.js_code.contains("/* ESM export"),
-            "Should have ESM comment: {}",
+            output.js_code.contains("export class Animal"),
+            "Should keep ESM export class: {}",
+            output.js_code
+        );
+        assert!(
+            !output.js_code.contains("abstract"),
+            "Should erase abstract: {}",
             output.js_code
         );
         // 验证后面的代码仍然存在

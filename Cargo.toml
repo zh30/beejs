@@ -1,6 +1,6 @@
 [package]
 name = "beejs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 autobins = false
 authors = ["Henry Zhang"]
@@ -61,6 +61,13 @@ include = [
 # Pin 0.22 for API stability of the current binding surface.
 # Upgrade path to 0.32 / `v8` crate: docs/V8_UPGRADE.md (dedicated branch).
 rusty_v8 = "0.22"
+
+# TypeScript 6.0 syntax transpile (strip types, downlevel using/decorators for V8 0.22)
+oxc = { version = "0.147", default-features = false, features = [
+    "semantic",
+    "transformer",
+    "codegen",
+] }
 
 # WebAssembly runtime
 wasmtime = "38.0"

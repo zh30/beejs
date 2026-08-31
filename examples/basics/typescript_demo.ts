@@ -1,6 +1,5 @@
-// Beejs v0.1 TypeScript smoke example.
-// Keep this file within the syntax currently supported by the built-in
-// transpiler so documentation quick-start commands stay executable.
+// Beejs TypeScript smoke example.
+// Transpiled by oxc (TypeScript 6.0 syntax, transpile-only) before V8.
 
 let message: string = "Hello from TypeScript!";
 let count: number = 42;

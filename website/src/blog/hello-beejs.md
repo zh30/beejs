@@ -13,7 +13,7 @@ Beejs v0.1 is the first public core release target for the runtime. The goal is 
 ## What v0.1 Includes
 
 - JavaScript execution through the Rust + V8 runtime.
-- TypeScript and TSX entry files routed through the built-in transpiler before execution.
+- TypeScript and TSX entry files routed through oxc (TypeScript 6.0 syntax, transpile-only) before execution.
 - CLI commands for `run`, `eval`, `repl`, `test`, `bundle`, `serve`, project initialization, and package operations.
 - Selected Node.js and Web API compatibility modules.
 - Release checks for formatting, clippy, library tests, core runtime tests, and CLI output behavior.

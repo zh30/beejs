@@ -92,7 +92,7 @@ bee --version
 
 ```bash
 # 选择版本和平台
-VERSION=v0.1.0
+VERSION=v0.1.1
 TARGET=x86_64-unknown-linux-gnu
 
 # 下载指定版本
@@ -467,13 +467,11 @@ optimization.enableAll();
 
 ### Q: 支持哪些 TypeScript 功能？
 
-A: Beejs 支持 TypeScript 4.0+ 的所有主要功能：
-- 类型检查
-- 泛型
-- 接口
-- 枚举
-- 装饰器
-- 命名空间
+A: Beejs 用 oxc 转译 TypeScript 6.0 语法（与 TypeScript 7.0 语言面兼容），再交给 V8 执行。这是 transpile-only，不做完整 `tsc` 类型检查。已覆盖的语法包括：
+- 类型注解、泛型、接口、枚举、命名空间
+- `satisfies`、`import type`、`as const`
+- `const` 类型参数、Stage 3 装饰器、`using` / `await using`
+- TSX（classic JSX，`React.createElement`）
 
 ### Q: 如何调试内存泄漏？
 

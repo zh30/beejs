@@ -1,6 +1,7 @@
 //! Disk + memory cache for TypeScript transpile output (content-hash keyed).
 
 use crate::typescript::compiler::{CompilationOutput, TypeScriptError};
+use crate::typescript::oxc_backend::BACKEND_ID;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs;
@@ -13,6 +14,7 @@ static MEMORY_CACHE: Lazy<Mutex<HashMap<u64, CompilationOutput>>> =
 
 fn hash_source(source: &str, file_name: &str) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    BACKEND_ID.hash(&mut hasher);
     source.hash(&mut hasher);
     file_name.hash(&mut hasher);
     hasher.finish()

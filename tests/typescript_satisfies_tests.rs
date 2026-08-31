@@ -88,7 +88,9 @@ console.log(nums);
                     output.js_code
                 );
                 assert!(
-                    output.js_code.contains("1, 2, 3"),
+                    output.js_code.contains('1')
+                        && output.js_code.contains('2')
+                        && output.js_code.contains('3'),
                     "Should contain array elements: {}",
                     output.js_code
                 );

@@ -284,7 +284,7 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
     };
 
     // If it's a TypeScript file, compile it
-    if extension == "ts" || extension == "tsx" {
+    if matches!(extension.as_str(), "ts" | "tsx" | "mts" | "cts" | "jsx") {
         match beejs::typescript::compile_typescript(&source, &file.to_string_lossy()) {
             Ok(output) => {
                 // Show diagnostics (warnings/errors)

@@ -25,7 +25,7 @@ const copy = {
     footer: {
       statusLabel: 'System Status',
       statusValue: 'Operational',
-      stage: 'v0.1.0',
+      stage: 'v0.1.1',
       contact: 'Contact',
       email: 'support@bee.zhanghe.dev',
       rights: 'All rights reserved.',
@@ -36,7 +36,7 @@ const copy = {
       copyright: `© ${new Date().getFullYear()} Beejs. Open-source under MIT.`,
     },
     home: {
-      heroBadge: 'v0.1.0-repair-sprint Released',
+      heroBadge: 'v0.1.1 Released',
       heroBadgeSub: 'Sub-Millisecond Cold Starts',
       heroTitlePrefix: 'Fast, Secure ',
       heroTitleAccent: 'JavaScript & TypeScript Runtime',
@@ -57,7 +57,7 @@ const copy = {
       telemetryNote: 'These are product-surface checks, not synthetic benchmark claims.',
       telemetry: [
         { label: 'Runtime', value: 'Rust+V8', delta: 'core', note: 'execution' },
-        { label: 'TypeScript', value: 'TS/TSX', delta: 'built-in', note: 'transpile' },
+        { label: 'TypeScript', value: 'TS 6.0', delta: 'oxc', note: 'transpile' },
         { label: 'Platforms', value: 'macOS/Linux', delta: 'prebuilt', note: 'assets' },
         { label: 'Output', value: 'quiet', delta: 'default', note: 'CLI' },
       ],
@@ -71,7 +71,7 @@ const copy = {
         },
         {
           title: 'Native TypeScript & TSX',
-          desc: 'Instant TS compilation with Source Map error alignment without ts-node or tsx dependencies.',
+          desc: 'oxc transpiles TypeScript 6.0 syntax (using, Stage 3 decorators, TSX) before V8. No tsc type-check, no ts-node.',
         },
         {
           title: 'Fail-Closed Security Sandbox',
@@ -109,7 +109,7 @@ const copy = {
         },
         {
           title: 'TypeScript Loader',
-          desc: 'Transpiles TS and TSX files before execution.',
+          desc: 'oxc strips types and downlevels to ES2022 before V8. Language surface is TypeScript 6.0.',
         },
         {
           title: 'Node Compatibility',
@@ -211,13 +211,15 @@ const copy = {
         },
         'jit-optimization': {
           title: 'TypeScript',
-          subtitle: 'TS and TSX files are transpiled before execution.',
+          subtitle: 'TS and TSX files are transpiled by oxc before execution.',
           body: [
-            'When a .ts or .tsx file is passed to bee run, the CLI reads the source and routes it through the TypeScript module before V8 execution.',
+            'When a .ts or .tsx file is passed to bee run, the CLI routes it through oxc (TypeScript 6.0 syntax, transpile-only). Types are erased. using and Stage 3 decorators downlevel to ES2022 for the current V8. TSX emits classic React.createElement. TypeScript 7.0 added no new language syntax.',
           ],
           list: [
-            'Use .ts and .tsx entry files',
-            'Keep runtime-specific behavior covered by executable tests',
+            'Use .ts, .tsx, .mts, .cts, and .jsx entry files',
+            'This is not tsc --noEmit. Invalid types can still run if the JS is valid',
+            'Unused value imports stay (side effects). Only import type is erased',
+            'bee run examples/basics/typescript_latest.ts',
           ],
         },
         'memory-management': {
@@ -300,7 +302,7 @@ const copy = {
     footer: {
       statusLabel: '系统状态',
       statusValue: '运行中',
-      stage: 'v0.1.0',
+      stage: 'v0.1.1',
       contact: '联系',
       email: 'support@bee.zhanghe.dev',
       rights: '保留所有权利。',
@@ -311,7 +313,7 @@ const copy = {
       copyright: `© ${new Date().getFullYear()} Beejs. 基于 MIT 协议开源。`,
     },
     home: {
-      heroBadge: 'v0.1.0-repair-sprint 已发布',
+      heroBadge: 'v0.1.1 已发布',
       heroBadgeSub: '亚毫秒级冷启动',
       heroTitlePrefix: '基于 Rust 与 V8 的超高速、安全 ',
       heroTitleAccent: 'JavaScript & TypeScript 运行时',
@@ -332,7 +334,7 @@ const copy = {
       telemetryNote: '这里展示的是产品表面和验证闸门，不是合成性能宣传。',
       telemetry: [
         { label: '运行时', value: 'Rust+V8', delta: '核心', note: '执行' },
-        { label: 'TypeScript', value: 'TS/TSX', delta: '内置', note: '转译' },
+        { label: 'TypeScript', value: 'TS 6.0', delta: 'oxc', note: '转译' },
         { label: '平台', value: 'macOS/Linux', delta: '预编译', note: '产物' },
         { label: '输出', value: 'quiet', delta: '默认', note: 'CLI' },
       ],
@@ -345,7 +347,7 @@ const copy = {
         },
         {
           title: '原生 TypeScript & TSX',
-          desc: '无需 ts-node 或 tsx 等第三方依赖，实现 TS 代码零配置开箱即用与 Source Map 错误精准定位。',
+          desc: 'oxc 转译 TypeScript 6.0 语法（using、Stage 3 装饰器、TSX）后再交给 V8。不做 tsc 类型检查，也不依赖 ts-node。',
         },
         {
           title: '默认闭合安全沙箱',
@@ -383,7 +385,7 @@ const copy = {
         },
         {
           title: 'TypeScript 加载',
-          desc: '执行前转译 TS 和 TSX 文件。',
+          desc: 'oxc 擦除类型并降级到 ES2022 再交给 V8。语言面是 TypeScript 6.0。',
         },
         {
           title: 'Node 兼容层',
@@ -473,9 +475,16 @@ const copy = {
         },
         'jit-optimization': {
           title: 'TypeScript',
-          subtitle: 'TS 和 TSX 文件执行前会先转译。',
-          body: ['当 .ts 或 .tsx 文件传给 bee run 时，CLI 会读取源码并通过 TypeScript 模块处理，再交给 V8 执行。'],
-          list: ['可使用 .ts 和 .tsx 入口文件', '运行时行为应通过可执行测试覆盖'],
+          subtitle: 'TS 和 TSX 文件执行前由 oxc 转译。',
+          body: [
+            '当 .ts 或 .tsx 文件传给 bee run 时，CLI 会走 oxc（TypeScript 6.0 语法，仅转译）。类型会被擦除。using 和 Stage 3 装饰器会降级到 ES2022，以适应当前 V8。TSX 输出 classic React.createElement。TypeScript 7.0 没有新语法。',
+          ],
+          list: [
+            '可使用 .ts、.tsx、.mts、.cts、.jsx 入口文件',
+            '这不是 tsc --noEmit。类型错误只要生成的 JS 合法仍可能执行',
+            '未使用的 value import 会保留（可能有副作用），只擦除 import type',
+            'bee run examples/basics/typescript_latest.ts',
+          ],
         },
         'memory-management': {
           title: '兼容层',
