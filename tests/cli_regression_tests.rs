@@ -7378,3 +7378,62 @@ test("fs read is denied", () => {{
         "--deny-fs should deny fs reads inside bee test callbacks. output: {combined}"
     );
 }
+
+#[test]
+fn run_hello_server_answers_http_without_manual_pump() {
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    let port = {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("reserve a free port");
+        listener.local_addr().expect("local addr").port()
+    };
+
+    let mut child = Command::new(bee_path())
+        .args(["run", "examples/http/hello_server.js"])
+        .env("PORT", port.to_string())
+        .env("HOST", "127.0.0.1")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("failed to spawn bee run hello_server");
+
+    let started = Instant::now();
+    let mut response = None;
+    while started.elapsed() < Duration::from_secs(15) {
+        match TcpStream::connect(("127.0.0.1", port)) {
+            Ok(mut stream) => {
+                let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+                let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
+                if stream
+                    .write_all(
+                        format!(
+                            "GET / HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+                        )
+                        .as_bytes(),
+                    )
+                    .is_ok()
+                {
+                    let mut body = String::new();
+                    if stream.read_to_string(&mut body).is_ok() && body.contains("hello") {
+                        response = Some(body);
+                        break;
+                    }
+                }
+            }
+            Err(_) => thread::sleep(Duration::from_millis(100)),
+        }
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
+
+    let body =
+        response.expect("bee run hello_server.js should answer HTTP without a test-side pump");
+    assert!(
+        body.contains("200") && body.contains("hello"),
+        "hello_server should return 200 hello. response: {body}"
+    );
+}

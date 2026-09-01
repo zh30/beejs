@@ -38,7 +38,31 @@ for fixture in "${fixtures[@]}"; do
   name="$(basename "$fixture")"
   out="$(mktemp)"
   err="$(mktemp)"
-  if "${BEE[@]}" run "$fixture" >"$out" 2>"$err"; then
+  extra=()
+  policy="${fixture%.js}.policy.json"
+  if [[ -f "$policy" ]]; then
+    extra+=(--permission-policy "$policy")
+  fi
+  # macOS bash 3.2 + `set -u` treats empty "${arr[@]}" as unbound.
+  if [[ ${#extra[@]} -gt 0 ]]; then
+    run_cmd=("${BEE[@]}" run "${extra[@]}" "$fixture")
+  else
+    run_cmd=("${BEE[@]}" run "$fixture")
+  fi
+  if command -v timeout >/dev/null 2>&1; then
+    if timeout 30 "${run_cmd[@]}" >"$out" 2>"$err"; then
+      run_ok=1
+    else
+      run_ok=0
+    fi
+  else
+    if "${run_cmd[@]}" >"$out" 2>"$err"; then
+      run_ok=1
+    else
+      run_ok=0
+    fi
+  fi
+  if [[ "$run_ok" -eq 1 ]]; then
     if grep -q "^CONFORMANCE_PASS$" "$out"; then
       echo "PASS  $name"
       RESULTS+=("| $name | PASS |")

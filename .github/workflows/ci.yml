@@ -66,9 +66,14 @@ jobs:
       - name: Node conformance scorecard
         run: |
           cargo build -q
-          ./tests/conformance/run_conformance.sh || true
+          ./tests/conformance/run_conformance.sh
           echo "Scorecard:"
           cat tests/conformance/scorecard.md
+
+      - name: bee test directory mode
+        run: |
+          cargo build -q
+          ./target/debug/bee test examples/testing
 
       - name: Check crate package contents
         run: cargo package --locked --list

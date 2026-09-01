@@ -235,9 +235,9 @@ const copy = {
         },
         'server-mode': {
           title: 'Serve Mode',
-          subtitle: 'Start the built-in HTTP or HTTPS server.',
+          subtitle: 'Health-check stub, not an application server.',
           body: [
-            'The CLI exposes serve for lightweight runtime server usage. HTTPS requires explicit certificate and key paths.',
+            'bee serve binds a tiny_http listener and returns a fixed {"ok":true} JSON body. It does not execute user scripts. For application HTTP, use http.createServer and bee run.',
           ],
           code: ['$ bee serve --host localhost --port 3000'],
         },
@@ -249,7 +249,7 @@ const copy = {
             'bee eval <code> - evaluate a JavaScript snippet',
             'bee test [file] - run the built-in or file-based test runner',
             'bee bundle <entry> - write a production bundle',
-            'bee serve - start the HTTP or HTTPS server',
+            'bee serve - health stub (fixed JSON, not user scripts)',
             'bee install - install dependencies from package.json',
           ],
         },
@@ -494,8 +494,10 @@ const copy = {
         },
         'server-mode': {
           title: 'Serve 模式',
-          subtitle: '启动内置 HTTP 或 HTTPS 服务。',
-          body: ['CLI 提供 serve 用于轻量服务场景。HTTPS 需要显式传入证书和私钥路径。'],
+          subtitle: '健康检查 stub，不是应用服务器。',
+          body: [
+            'bee serve 用 tiny_http 绑定端口并返回固定 {"ok":true}，不执行用户脚本。应用 HTTP 请用 http.createServer 和 bee run。',
+          ],
           code: ['$ bee serve --host localhost --port 3000'],
         },
         'cli-usage': {
@@ -506,7 +508,7 @@ const copy = {
             'bee eval <code> - 执行 JavaScript 片段',
             'bee test [file] - 运行内置或文件测试',
             'bee bundle <entry> - 写出生产 bundle',
-            'bee serve - 启动 HTTP 或 HTTPS 服务',
+            'bee serve - 健康检查 stub（固定 JSON，不跑用户脚本）',
             'bee install - 从 package.json 安装依赖',
           ],
         },

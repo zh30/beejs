@@ -3,6 +3,23 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 
+use crate::permissions::{check_global_permission, PermissionAction, PermissionKind, ResourceId};
+
+fn check_dns_network_permission(hostname: &str) -> Result<(), String> {
+    check_global_permission(
+        PermissionKind::Network,
+        PermissionAction::Connect,
+        ResourceId::Url(format!("dns://{hostname}")),
+    )
+    .map_err(|error| error.to_string())
+}
+
+fn throw_dns_permission_error(scope: &mut v8::HandleScope, message: &str) {
+    let error_message = v8::String::new(scope, message).unwrap();
+    let error = v8::Exception::type_error(scope, error_message);
+    scope.throw_exception(error);
+}
+
 /// DNS 记录类型
 #[derive(Debug, Clone, Copy)]
 pub enum DnsRecordType {
@@ -69,8 +86,12 @@ fn dns_lookup_callback(
     mut _retval: v8::ReturnValue,
 ) {
     let hostname = args.get(0);
-    let options = args.get(1);
-    let callback = args.get(2);
+    let arg1 = args.get(1);
+    let (options, callback) = if arg1.is_function() {
+        (v8::undefined(scope).into(), arg1)
+    } else {
+        (arg1, args.get(2))
+    };
 
     // 获取主机名
     let hostname_str = if hostname.is_string() {
@@ -81,6 +102,19 @@ fn dns_lookup_callback(
     } else {
         return;
     };
+
+    if let Err(error) = check_dns_network_permission(&hostname_str) {
+        if callback.is_function() {
+            if let Ok(callback_fn) = v8::Local::<v8::Function>::try_from(callback) {
+                let undefined = v8::undefined(scope);
+                let err_msg = v8::String::new(scope, &error).unwrap();
+                callback_fn.call(scope, undefined.into(), &[err_msg.into()]);
+            }
+            return;
+        }
+        throw_dns_permission_error(scope, &error);
+        return;
+    }
 
     // 解析选项
     let family = extract_dns_option(scope, &options, "family", 4);
@@ -166,6 +200,14 @@ fn dns_resolve4_callback(
         return;
     }
 
+    if let Err(error) = check_dns_network_permission(&hostname_str) {
+        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+        let undefined = v8::undefined(scope);
+        let err_msg = v8::String::new(scope, &error).unwrap();
+        callback_fn.call(scope, undefined.into(), &[err_msg.into()]);
+        return;
+    }
+
     let result = perform_dns_lookup(&hostname_str, 4);
     let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
 
@@ -211,6 +253,14 @@ fn dns_resolve6_callback(
     };
 
     if !callback.is_function() {
+        return;
+    }
+
+    if let Err(error) = check_dns_network_permission(&hostname_str) {
+        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+        let undefined = v8::undefined(scope);
+        let err_msg = v8::String::new(scope, &error).unwrap();
+        callback_fn.call(scope, undefined.into(), &[err_msg.into()]);
         return;
     }
 
@@ -283,6 +333,14 @@ fn dns_resolve_callback(
     };
 
     if !callback.is_function() {
+        return;
+    }
+
+    if let Err(error) = check_dns_network_permission(&hostname_str) {
+        let callback_fn = v8::Local::<v8::Function>::try_from(callback).unwrap();
+        let undefined = v8::undefined(scope);
+        let err_msg = v8::String::new(scope, &error).unwrap();
+        callback_fn.call(scope, undefined.into(), &[err_msg.into()]);
         return;
     }
 

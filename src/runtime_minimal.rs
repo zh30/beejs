@@ -4057,6 +4057,10 @@ pub struct MinimalRuntime {
     esm_module_cache: HashMap<PathBuf, v8::Global<v8::Module>>,
     esm_module_cache_fingerprints: HashMap<PathBuf, [u8; 32]>,
     timer_drain_limit_ms: u64,
+    /// When true, `execute_code` stays alive while an HTTP server is listening.
+    /// CLI `bee run` sets this; library/integration tests leave it false so
+    /// `listen()` does not hang the test process.
+    http_server_keep_alive: bool,
 }
 
 impl MinimalRuntime {
@@ -4081,6 +4085,14 @@ impl MinimalRuntime {
     /// v0.3.231: 使用更小的初始堆以加快启动速度
     /// v0.3.270: 设置显式微任务策略，确保 nextTick 在 Promise 之前执行
     ///
+    fn isolate_create_params(initial: usize, maximum: usize) -> v8::CreateParams {
+        let params = v8::CreateParams::default().heap_limits(initial, maximum);
+        match crate::v8_snapshot::cached_startup_blob() {
+            Some(blob) => params.snapshot_blob(blob.to_vec()),
+            None => params,
+        }
+    }
+
     /// First principles: do not pre-reserve a large young heap for short-lived
     /// CLI processes. V8 grows the heap on demand; a low initial limit cuts
     /// isolate create latency without capping large workloads (max stays 2GB).
@@ -4089,8 +4101,7 @@ impl MinimalRuntime {
         crate::initialize_v8()?;
 
         // 16MB initial / 2GB max — same initial as `new_fast`, full production max.
-        let create_params =
-            v8::CreateParams::default().heap_limits(16 * 1024 * 1024, 2048 * 1024 * 1024);
+        let create_params = Self::isolate_create_params(16 * 1024 * 1024, 2048 * 1024 * 1024);
 
         // Create a new isolate with optimized parameters
         let mut isolate = v8::Isolate::new(create_params);
@@ -4109,6 +4120,7 @@ impl MinimalRuntime {
             esm_module_cache: HashMap::new(),
             esm_module_cache_fingerprints: HashMap::new(),
             timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
+            http_server_keep_alive: false,
         })
     }
 
@@ -4120,8 +4132,7 @@ impl MinimalRuntime {
 
         // 极致低延迟启动：16MB 初始堆 + 256MB 最大堆
         // 这种配置最小化了进程创建时 V8 堆内存预分配与映射的系统开销
-        let create_params =
-            v8::CreateParams::default().heap_limits(16 * 1024 * 1024, 256 * 1024 * 1024);
+        let create_params = Self::isolate_create_params(16 * 1024 * 1024, 256 * 1024 * 1024);
 
         let mut isolate = v8::Isolate::new(create_params);
 
@@ -4138,6 +4149,7 @@ impl MinimalRuntime {
             esm_module_cache: HashMap::new(),
             esm_module_cache_fingerprints: HashMap::new(),
             timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
+            http_server_keep_alive: false,
         })
     }
 
@@ -4147,7 +4159,7 @@ impl MinimalRuntime {
     pub fn with_heap_limits(initial: usize, maximum: usize) -> Result<Self> {
         crate::initialize_v8()?;
 
-        let create_params = v8::CreateParams::default().heap_limits(initial, maximum);
+        let create_params = Self::isolate_create_params(initial, maximum);
 
         let mut isolate = v8::Isolate::new(create_params);
 
@@ -4164,6 +4176,7 @@ impl MinimalRuntime {
             esm_module_cache: HashMap::new(),
             esm_module_cache_fingerprints: HashMap::new(),
             timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
+            http_server_keep_alive: false,
         })
     }
 
@@ -4180,6 +4193,10 @@ impl MinimalRuntime {
 
     pub fn set_timer_drain_limit_ms(&mut self, limit_ms: u64) {
         self.timer_drain_limit_ms = limit_ms;
+    }
+
+    pub fn set_http_server_keep_alive(&mut self, keep_alive: bool) {
+        self.http_server_keep_alive = keep_alive;
     }
 
     fn configure_isolate(isolate: &mut v8::OwnedIsolate) {
@@ -4390,17 +4407,10 @@ impl MinimalRuntime {
             .and_then(|extension| extension.to_str())
             == Some("mjs")
         {
-            if has_export_syntax || has_await_syntax {
-                return Ok(true);
-            }
-
-            for specifier in import_specifiers {
-                if Self::static_import_targets_native_esm(&specifier, main_module_path)? {
-                    return Ok(true);
-                }
-            }
-
-            return Ok(false);
+            // `bee eval` with `import`/`export` uses a virtual `eval.mjs` path.
+            // Treat any static import/export as native ESM so users get module
+            // errors instead of a Script SyntaxError.
+            return Ok(has_export_syntax || has_await_syntax || !import_specifiers.is_empty());
         }
 
         Ok(has_export_syntax || has_await_syntax || !import_specifiers.is_empty())
@@ -4547,11 +4557,13 @@ impl MinimalRuntime {
             .collect()
     }
 
+    #[allow(dead_code)]
     fn is_native_esm_source_path(path: &Path) -> Result<bool> {
         let module_format = crate::nodejs_core::commonjs_resolver::classify_commonjs_file(path)?;
         Ok(module_format == crate::nodejs_core::commonjs_resolver::CommonJsModuleFormat::EsModule)
     }
 
+    #[allow(dead_code)]
     fn static_import_targets_native_esm(specifier: &str, referrer_path: &Path) -> Result<bool> {
         let specifier_path = Path::new(specifier);
         if (specifier_path.is_absolute()
@@ -5354,6 +5366,7 @@ impl MinimalRuntime {
                     v8::String::new(scope, "Duplex").unwrap(),
                     v8::String::new(scope, "pipeline").unwrap(),
                     v8::String::new(scope, "passThrough").unwrap(),
+                    v8::String::new(scope, "PassThrough").unwrap(),
                 ];
                 let module_name = v8::String::new(scope, "node:stream").unwrap();
                 Some(v8::Module::create_synthetic_module(
@@ -5631,6 +5644,7 @@ impl MinimalRuntime {
             "Duplex",
             "pipeline",
             "passThrough",
+            "PassThrough",
         ] {
             let export_key = v8::String::new(scope, export_name).unwrap();
             let export_value = stream_object
@@ -8154,6 +8168,7 @@ impl MinimalRuntime {
         // Note: setImmediate callbacks are processed AFTER this loop (in the "next iteration")
         //
         let timer_drain_limit_ms = self.timer_drain_limit_ms;
+        let http_server_keep_alive = self.http_server_keep_alive;
         let timer_drain_started_at = std::time::Instant::now();
 
         loop {
@@ -8167,6 +8182,7 @@ impl MinimalRuntime {
             // needed; otherwise plain synchronous execution pays the timer wait.
             execute_next_tick_callbacks(scope);
             scope.perform_microtask_checkpoint();
+            crate::nodejs_core::http::pump_pending_http_requests_in_scope(scope, &context);
 
             // v0.3.339: Reset pending work flag at start of each iteration
             // This ensures we re-check the actual state rather than using stale values
@@ -8379,6 +8395,38 @@ impl MinimalRuntime {
             mark_immediate_callbacks_deferred();
             if !has_pending_next_ticks() && !has_pending_immediates() {
                 break;
+            }
+        }
+
+        // CLI `bee run` keeps the process alive while HTTP servers listen.
+        // Tests leave `http_server_keep_alive` false so listen() returns.
+        if http_server_keep_alive {
+            loop {
+                let pumped =
+                    crate::nodejs_core::http::pump_pending_http_requests_in_scope(scope, &context);
+                execute_next_tick_callbacks(scope);
+                scope.perform_microtask_checkpoint();
+                execute_fired_timers(scope);
+                unmark_immediate_callbacks_deferred();
+                execute_immediate_callbacks(scope);
+                mark_immediate_callbacks_deferred();
+                execute_next_tick_callbacks(scope);
+                scope.perform_microtask_checkpoint();
+
+                let listening = crate::nodejs_core::http::has_listening_http_servers();
+                let pending_req = crate::nodejs_core::http::has_pending_http_requests();
+                let pending_async = crate::nodejs_core::http::has_pending_async_http_responses();
+                if !listening
+                    && !pending_req
+                    && !pending_async
+                    && !has_pending_next_ticks()
+                    && !has_pending_immediates()
+                {
+                    break;
+                }
+                if pumped == 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
             }
         }
 
@@ -19704,10 +19752,33 @@ impl MinimalRuntime {
                     "os" | "crypto" | "events" | "net" | "http" | "https" | "tls" | "util"
                     | "url" | "querystring" | "dns" | "child_process" | "tcp_async" | "stream"
                     | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
-                    | "zlib" | "vm" | "worker_threads" => {
+                    | "zlib" | "vm" | "worker_threads" | "module" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
+
+                        if module_id_str == "module" {
+                            let module_exports = v8::Object::new(scope);
+                            let module_key = v8::String::new(scope, "module").unwrap();
+                            if let Some(current_module) = global_obj.get(scope, module_key.into()) {
+                                if let Ok(current_obj) =
+                                    v8::Local::<v8::Object>::try_from(current_module)
+                                {
+                                    let create_key = v8::String::new(scope, "createRequire").unwrap();
+                                    if let Some(create_require) =
+                                        current_obj.get(scope, create_key.into())
+                                    {
+                                        module_exports.set(
+                                            scope,
+                                            create_key.into(),
+                                            create_require,
+                                        );
+                                    }
+                                }
+                            }
+                            retval.set(module_exports.into());
+                            return;
+                        }
 
                         if module_id_str == "events" {
                             // Node shape: require('events') => { EventEmitter, ... }
@@ -20358,6 +20429,35 @@ require.resolve = function(specifier) {{
         // v0.3.329: Add module.require for CommonJS compatibility
         let module_require_key = v8::String::new(scope, "require").unwrap().into();
         module_obj.set(scope, module_require_key, require_fn.into());
+
+        let create_require_src = r#"
+(function() {
+  if (!globalThis.module) return;
+  globalThis.module.createRequire = function(filename) {
+    var dir = '.';
+    if (typeof filename === 'string') {
+      var idx = Math.max(filename.lastIndexOf('/'), filename.lastIndexOf('\\'));
+      dir = idx >= 0 ? (filename.slice(0, idx) || '/') : filename;
+    } else if (filename && typeof filename.href === 'string') {
+      var href = String(filename.href).replace(/^file:\/\//, '');
+      var idx2 = href.lastIndexOf('/');
+      dir = idx2 >= 0 ? (href.slice(0, idx2) || '/') : href;
+    }
+    var req = globalThis.require;
+    return function createdRequire(id) {
+      var prev = globalThis.__dirname;
+      globalThis.__dirname = dir;
+      try { return req(id); }
+      finally { globalThis.__dirname = prev; }
+    };
+  };
+})();
+"#;
+        if let Some(code) = v8::String::new(scope, create_require_src) {
+            if let Some(script) = v8::Script::compile(scope, code, None) {
+                let _ = script.run(scope);
+            }
+        }
 
         // import.meta (progressive): bind url to the real main module path.
         // Full HostInitializeImportMetaObjectCallback is wired in ESM evaluate path.
@@ -23784,6 +23884,8 @@ require.resolve = function(specifier) {{
         let passthrough_instance = passthrough_func.get_function(scope).unwrap();
         let passthrough_key = v8::String::new(scope, "passThrough").unwrap();
         stream_obj.set(scope, passthrough_key.into(), passthrough_instance.into());
+        let passthrough_alias = v8::String::new(scope, "PassThrough").unwrap();
+        stream_obj.set(scope, passthrough_alias.into(), passthrough_instance.into());
 
         // Set stream as global
         let stream_key = v8::String::new(scope, "stream").unwrap();
@@ -24879,13 +24981,24 @@ require.resolve = function(specifier) {{
                     .to_string(_scope)
                     .map(|s| s.to_rust_string_lossy(_scope))
                     .unwrap_or_default();
+                let callback = if args.get(1).is_function() {
+                    Some(args.get(1))
+                } else if args.get(2).is_function() {
+                    Some(args.get(2))
+                } else {
+                    None
+                };
 
                 if hostname.is_empty() {
-                    retval.set(
-                        v8::String::new(_scope, "Error: hostname is required")
-                            .unwrap()
-                            .into(),
-                    );
+                    let error_msg = "Error: hostname is required";
+                    if let Some(cb) = callback {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(cb) {
+                            let undefined = v8::undefined(_scope);
+                            let err_val = v8::String::new(_scope, error_msg).unwrap();
+                            func.call(_scope, undefined.into(), &[err_val.into()]);
+                        }
+                    }
+                    retval.set(v8::String::new(_scope, error_msg).unwrap().into());
                     return;
                 }
                 if let Err(error) = crate::permissions::check_global_permission(
@@ -24893,7 +25006,15 @@ require.resolve = function(specifier) {{
                     crate::permissions::PermissionAction::Connect,
                     crate::permissions::ResourceId::Name(hostname.clone()),
                 ) {
-                    retval.set(v8::String::new(_scope, &error.to_string()).unwrap().into());
+                    let error_msg = error.to_string();
+                    if let Some(cb) = callback {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(cb) {
+                            let undefined = v8::undefined(_scope);
+                            let err_val = v8::String::new(_scope, &error_msg).unwrap();
+                            func.call(_scope, undefined.into(), &[err_val.into()]);
+                        }
+                    }
+                    retval.set(v8::String::new(_scope, &error_msg).unwrap().into());
                     return;
                 }
 
@@ -24920,13 +25041,41 @@ require.resolve = function(specifier) {{
 
                         // Return first address as string for compatibility
                         if let Some(ip) = addresses.first() {
+                            if let Some(cb) = callback {
+                                if let Ok(func) = v8::Local::<v8::Function>::try_from(cb) {
+                                    let undefined = v8::undefined(_scope);
+                                    let null_val = v8::null(_scope);
+                                    let addr_val = v8::String::new(_scope, ip).unwrap();
+                                    let family_val = v8::Integer::new(_scope, 4);
+                                    func.call(
+                                        _scope,
+                                        undefined.into(),
+                                        &[null_val.into(), addr_val.into(), family_val.into()],
+                                    );
+                                }
+                            }
                             retval.set(v8::String::new(_scope, ip).unwrap().into());
                         } else {
+                            if let Some(cb) = callback {
+                                if let Ok(func) = v8::Local::<v8::Function>::try_from(cb) {
+                                    let undefined = v8::undefined(_scope);
+                                    let err_val =
+                                        v8::String::new(_scope, "Error: no addresses").unwrap();
+                                    func.call(_scope, undefined.into(), &[err_val.into()]);
+                                }
+                            }
                             retval.set(v8::null(_scope).into());
                         }
                     }
                     Err(e) => {
                         let error_msg = format!("Error: dns.lookup {} - {}", hostname, e);
+                        if let Some(cb) = callback {
+                            if let Ok(func) = v8::Local::<v8::Function>::try_from(cb) {
+                                let undefined = v8::undefined(_scope);
+                                let err_val = v8::String::new(_scope, &error_msg).unwrap();
+                                func.call(_scope, undefined.into(), &[err_val.into()]);
+                            }
+                        }
                         retval.set(v8::String::new(_scope, &error_msg).unwrap().into());
                     }
                 }
@@ -25292,222 +25441,18 @@ require.resolve = function(specifier) {{
     /// v0.3.94: 改为非阻塞模式，由调用者决定是否继续轮询
     pub fn pump_http_messages(&mut self) -> usize {
         use crate::nodejs_core::http::{
-            create_http_response, get_global_request_handler, get_http_server_channel,
-            try_recv_http_request,
+            has_pending_http_requests, pump_pending_http_requests_in_scope,
         };
 
-        let mut processed = 0;
-
-        // v0.3.93: 获取存储的 Context，复用以保持 handler 可见性
-        let global_context = self.get_context();
-
-        // v0.3.93: 检查消息通道状态（验证 channel 已初始化）
-        let _channel = get_http_server_channel();
-
-        // v0.3.94: 修复 - 使用非阻塞接收，避免与测试时间冲突
-        // 原来的阻塞循环等待最多 9 秒，但测试可能在此之前停止调用 pump
-        // 现在改为非阻塞模式，由调用者决定是否继续轮询
-        let first_request = if let Some(request) = try_recv_http_request() {
-            Some(request)
-        } else {
-            // 没有待处理的请求，立即返回
+        if !has_pending_http_requests() {
             return 0;
-        };
-
-        // 处理第一个请求（如果有）
-        if let Some(request) = first_request {
-            // 使用已存储的 Context，而不是创建新的
-            let scope = &mut v8::HandleScope::new(&mut self.isolate);
-            let context_local = v8::Local::new(scope, &global_context);
-            let scope = &mut v8::ContextScope::new(scope, context_local);
-
-            // v0.3.93: 设置 HTTP API（仅在第一次时需要）
-            // 检查是否已经设置了 http 模块
-            let global = context_local.global(scope);
-            let http_key = v8::String::new(scope, "http").unwrap();
-            let http_setup_failed = if global.get(scope, http_key.into()).unwrap().is_undefined() {
-                if let Err(_e) = setup_http_api(scope, &context_local) {
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-
-            if http_setup_failed {
-                // 发送错误响应
-                let response =
-                    create_http_response(request.connection_id, 500, "Setup failed", "text/plain");
-                send_http_response(response);
-                return 1;
-            }
-
-            // 获取 handler 并处理请求
-            let handler = get_global_request_handler(scope, &context_local);
-
-            if handler.is_none() {
-                // 发送默认 404 响应
-                let response =
-                    create_http_response(request.connection_id, 404, "No handler", "text/plain");
-                send_http_response(response);
-                return 1;
-            }
-
-            let handler = handler.unwrap();
-
-            // 创建请求对象
-            let req_obj = v8::Object::new(scope);
-            let method_key = v8::String::new(scope, "method").unwrap();
-            let method_val = v8::String::new(scope, &request.method).unwrap();
-            req_obj.set(scope, method_key.into(), method_val.into());
-
-            let url_key = v8::String::new(scope, "url").unwrap();
-            let url_val = v8::String::new(scope, &request.url).unwrap();
-            req_obj.set(scope, url_key.into(), url_val.into());
-
-            let path_key = v8::String::new(scope, "path").unwrap();
-            let path_val = v8::String::new(scope, &request.path).unwrap();
-            req_obj.set(scope, path_key.into(), path_val.into());
-
-            // v0.3.95: 设置 headers（使用 lowercase 键名以匹配 Node.js 惯例）
-            let headers_obj = v8::Object::new(scope);
-            for (name, value) in &request.headers {
-                // 使用 lowercase 键名，HTTP header 查找是大小写敏感的
-                let name_lower = name.to_lowercase();
-                let name_key = v8::String::new(scope, &name_lower).unwrap();
-                let value_val = v8::String::new(scope, value).unwrap();
-                headers_obj.set(scope, name_key.into(), value_val.into());
-            }
-            let headers_key = v8::String::new(scope, "headers").unwrap();
-            req_obj.set(scope, headers_key.into(), headers_obj.into());
-
-            // 创建响应对象
-            let res_obj = v8::Object::new(scope);
-            let res_headers_obj = v8::Object::new(scope);
-            let res_headers_key = v8::String::new(scope, "headers").unwrap();
-            res_obj.set(scope, res_headers_key.into(), res_headers_obj.into());
-
-            let status_code_key = v8::String::new(scope, "statusCode").unwrap();
-            let status_200 = v8::Integer::new(scope, 200);
-            res_obj.set(scope, status_code_key.into(), status_200.into());
-
-            let body_key = v8::String::new(scope, "_body").unwrap();
-            let empty_body = v8::String::new(scope, "").unwrap();
-            res_obj.set(scope, body_key.into(), empty_body.into());
-
-            // v0.3.93: 设置 response 方法 (writeHead, end, setHeader)
-            // 这些方法在 nodejs_core/http.rs 中定义，需要导入
-            use crate::nodejs_core::http::{
-                http_res_end_callback, http_res_set_header_callback, http_res_write_head_callback,
-            };
-
-            // 设置 end 方法
-            let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
-            let end_instance = end_fn.get_function(scope).unwrap();
-            let end_key = v8::String::new(scope, "end").unwrap();
-            res_obj.set(scope, end_key.into(), end_instance.into());
-
-            // 设置 writeHead 方法
-            let write_head_fn = v8::FunctionTemplate::new(scope, http_res_write_head_callback);
-            let write_head_instance = write_head_fn.get_function(scope).unwrap();
-            let write_head_key = v8::String::new(scope, "writeHead").unwrap();
-            res_obj.set(scope, write_head_key.into(), write_head_instance.into());
-
-            // 设置 setHeader 方法
-            let set_header_fn = v8::FunctionTemplate::new(scope, http_res_set_header_callback);
-            let set_header_instance = set_header_fn.get_function(scope).unwrap();
-            let set_header_key = v8::String::new(scope, "setHeader").unwrap();
-            res_obj.set(scope, set_header_key.into(), set_header_instance.into());
-
-            // 调用 handler
-            let handler_fn: v8::Local<v8::Function> = v8::Local::new(scope, &handler);
-            let this_val = v8::undefined(scope).into();
-            let args = [req_obj.into(), res_obj.into()];
-
-            if handler_fn.call(scope, this_val, &args).is_none() {
-                let response =
-                    create_http_response(request.connection_id, 500, "Handler error", "text/plain");
-                send_http_response(response);
-                return 1;
-            }
-
-            // v0.3.93: 重要！handler 可能修改了 res 对象，但我们需要获取更新后的值
-            // handler.call 传入的 res_obj 是 HandleScope 内的 Local，handler 对 res 的修改
-            // 不会自动同步到 res_obj。我们需要重新从 args 获取 this 值
-            let updated_res_obj = args.get(1).unwrap().to_object(scope).unwrap();
-
-            // 提取响应
-            let status_code_key = v8::String::new(scope, "statusCode").unwrap();
-            let status_200_fallback = v8::Integer::new(scope, 200);
-            let status_code_val = updated_res_obj
-                .get(scope, status_code_key.into())
-                .unwrap_or(status_200_fallback.into());
-            let status_code = status_code_val
-                .to_int32(scope)
-                .map(|i| i.value() as u16)
-                .unwrap_or(200);
-
-            let body_key = v8::String::new(scope, "_body").unwrap();
-            let empty_body_fallback = v8::String::new(scope, "").unwrap();
-            let body_val = updated_res_obj
-                .get(scope, body_key.into())
-                .unwrap_or(empty_body_fallback.into());
-            let body = body_val
-                .to_string(scope)
-                .map(|s| s.to_rust_string_lossy(scope))
-                .unwrap_or_default();
-
-            // v0.3.95: 提取自定义 headers（与 send_http_response 相同的逻辑）
-            let mut response_headers = std::collections::HashMap::new();
-            let res_headers_key = v8::String::new(scope, "headers").unwrap();
-            if let Some(headers_val) = updated_res_obj.get(scope, res_headers_key.into()) {
-                if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
-                    let props = headers_obj
-                        .get_property_names(scope)
-                        .unwrap_or(v8::Array::new(scope, 0));
-                    for i in 0..props.length() {
-                        if let Some(key_val) = props.get_index(scope, i) {
-                            if let Some(key_str) = key_val.to_string(scope) {
-                                let key = key_str.to_rust_string_lossy(scope);
-                                if let Some(value_val) = headers_obj.get(scope, key_val) {
-                                    if let Some(value_str) = value_val.to_string(scope) {
-                                        let value = value_str.to_rust_string_lossy(scope);
-                                        response_headers.insert(key, value);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 添加默认 headers（如果还没有设置）
-            if !response_headers.contains_key("Content-Type") {
-                response_headers.insert(
-                    "Content-Type".to_string(),
-                    "text/plain; charset=utf-8".to_string(),
-                );
-            }
-            response_headers.insert("Content-Length".to_string(), body.len().to_string());
-            // v0.3.97: 不设置默认 Connection 头，让 handle_connection 根据 Keep-Alive 决定
-            // response_headers.insert("Connection".to_string(), "close".to_string());
-
-            // 创建响应消息
-            let response_msg = crate::nodejs_core::http::HttpResponseMessage {
-                connection_id: request.connection_id,
-                status_code,
-                headers: response_headers,
-                body: body.as_bytes().to_vec(),
-            };
-
-            // 发送响应
-            use crate::nodejs_core::http::send_http_response;
-            send_http_response(response_msg);
-            processed += 1;
         }
 
-        processed
+        let global_context = self.get_context();
+        let scope = &mut v8::HandleScope::new(&mut self.isolate);
+        let context_local = v8::Local::new(scope, &global_context);
+        let scope = &mut v8::ContextScope::new(scope, context_local);
+        pump_pending_http_requests_in_scope(scope, &context_local)
     }
 
     /// 初始化 HTTP 服务器消息通道

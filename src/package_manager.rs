@@ -15,7 +15,7 @@ use flate2::read::GzDecoder;
 #[allow(unused)]
 use serde::{Deserialize, Serialize};
 #[allow(unused)]
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 #[allow(unused)]
 use std::fs;
 #[allow(unused)]
@@ -77,14 +77,11 @@ pub struct PackageJson {
         skip_serializing_if = "Option::is_none"
     )]
     pub optional_dependencies: Option<HashMap<String, String>>,
-    pub author: Option<String>,
+    #[serde(default)]
+    pub author: Option<serde_json::Value>,
     pub license: Option<String>,
-    pub repository: Option<Repository>,
-}
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Repository {
-    pub r#type: Option<String>,
-    pub url: Option<String>,
+    #[serde(default)]
+    pub repository: Option<serde_json::Value>,
 }
 /// Package information from registry
 #[derive(Debug, Clone, Deserialize)]
@@ -115,6 +112,37 @@ pub struct ResolutionResult {
     pub package: PackageVersion,
     pub path: PathBuf,
     pub resolved: bool,
+    pub integrity: Option<String>,
+    pub tarball_url: Option<String>,
+}
+
+struct DownloadedPackage {
+    path: PathBuf,
+    integrity: Option<String>,
+    tarball_url: String,
+}
+
+/// Parse `name`, `name@version`, `@scope/name`, or `@scope/name@version`.
+pub fn parse_npm_package_spec(spec: &str) -> (String, String) {
+    let spec = spec.trim();
+    if spec.starts_with('@') {
+        if let Some(slash) = spec.find('/') {
+            let rest = &spec[slash + 1..];
+            if let Some(at) = rest.find('@') {
+                return (
+                    spec[..slash + 1 + at].to_string(),
+                    rest[at + 1..].to_string(),
+                );
+            }
+        }
+        return (spec.to_string(), "latest".to_string());
+    }
+    if let Some((name, version)) = spec.split_once('@') {
+        if !name.is_empty() && !version.is_empty() {
+            return (name.to_string(), version.to_string());
+        }
+    }
+    (spec.to_string(), "latest".to_string())
 }
 /// High-performance package manager
 pub struct PackageManager {
@@ -569,6 +597,7 @@ impl PackageManager {
     /// Download package tarball from npm registry
     pub fn download_package(&self, name: &str, version: &str) -> Result<PathBuf> {
         self.download_package_with_locked_dependency(name, version, None)
+            .map(|downloaded| downloaded.path)
     }
 
     fn download_package_with_locked_dependency(
@@ -576,7 +605,7 @@ impl PackageManager {
         name: &str,
         version: &str,
         locked: Option<&LockedDependency>,
-    ) -> Result<PathBuf> {
+    ) -> Result<DownloadedPackage> {
         let cached_path = self
             .config
             .cache_dir
@@ -627,7 +656,13 @@ impl PackageManager {
         if cached_path.exists() {
             match verify_package_tarball(&cached_path, verification_integrity, verification_shasum)
             {
-                Ok(()) => return Ok(cached_path),
+                Ok(()) => {
+                    return Ok(DownloadedPackage {
+                        path: cached_path,
+                        integrity,
+                        tarball_url,
+                    })
+                }
                 Err(e) => {
                     let _ = fs::remove_file(&cached_path);
                     tracing::warn!(
@@ -677,7 +712,11 @@ impl PackageManager {
             return Err(e);
         }
 
-        Ok(tarball_path)
+        Ok(DownloadedPackage {
+            path: tarball_path,
+            integrity,
+            tarball_url,
+        })
     }
 
     /// Extract tarball to node_modules
@@ -825,6 +864,30 @@ impl PackageManager {
         version_range: &str,
         locked: Option<&LockedDependency>,
     ) -> Result<ResolutionResult> {
+        let mut seen = HashSet::new();
+        self.install_package_recursive(name, version_range, locked, &mut seen)
+    }
+
+    fn install_package_recursive(
+        &self,
+        name: &str,
+        version_range: &str,
+        locked: Option<&LockedDependency>,
+        seen: &mut HashSet<String>,
+    ) -> Result<ResolutionResult> {
+        if !seen.insert(name.to_string()) {
+            return Ok(ResolutionResult {
+                package: PackageVersion {
+                    name: name.to_string(),
+                    version: version_range.to_string(),
+                },
+                path: self.config.node_modules_dir.join(name),
+                resolved: true,
+                integrity: None,
+                tarball_url: None,
+            });
+        }
+
         self.check_package_install_write_permissions(name)?;
 
         let version = if let Some(locked) = locked {
@@ -842,19 +905,88 @@ impl PackageManager {
         };
 
         // Download tarball
-        let tarball_path = self.download_package_with_locked_dependency(name, &version, locked)?;
+        let downloaded = self.download_package_with_locked_dependency(name, &version, locked)?;
 
         // Extract to node_modules
-        self.extract_package(&tarball_path, name)?;
+        let installed_path = self.extract_package(&downloaded.path, name)?;
+        self.write_package_integrity_meta(
+            &installed_path,
+            downloaded.integrity.as_deref(),
+            Some(&downloaded.tarball_url),
+        )?;
+
+        self.install_package_dependency_tree(&installed_path, seen)?;
 
         Ok(ResolutionResult {
             package: PackageVersion {
                 name: name.to_string(),
                 version,
             },
-            path: self.config.node_modules_dir.join(name),
+            path: installed_path,
             resolved: true,
+            integrity: downloaded.integrity,
+            tarball_url: Some(downloaded.tarball_url),
         })
+    }
+
+    fn write_package_integrity_meta(
+        &self,
+        package_dir: &Path,
+        integrity: Option<&str>,
+        tarball_url: Option<&str>,
+    ) -> Result<()> {
+        let meta_path = package_dir.join(".beejs-integrity.json");
+        check_fs_write_permission(&meta_path)?;
+        let meta = serde_json::json!({
+            "integrity": integrity,
+            "resolved": tarball_url,
+        });
+        fs::write(
+            &meta_path,
+            serde_json::to_string_pretty(&meta)
+                .map_err(|e| anyhow!("Failed to serialize integrity metadata: {}", e))?,
+        )
+        .map_err(|e| anyhow!("Failed to write integrity metadata: {}", e))?;
+        Ok(())
+    }
+
+    fn read_package_integrity_meta(&self, package_dir: &Path) -> (Option<String>, Option<String>) {
+        let meta_path = package_dir.join(".beejs-integrity.json");
+        let Ok(content) = fs::read_to_string(&meta_path) else {
+            return (None, None);
+        };
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(&content) else {
+            return (None, None);
+        };
+        (
+            value
+                .get("integrity")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            value
+                .get("resolved")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        )
+    }
+
+    fn install_package_dependency_tree(
+        &self,
+        package_dir: &Path,
+        seen: &mut HashSet<String>,
+    ) -> Result<()> {
+        let package_json_path = package_dir.join("package.json");
+        if !package_json_path.exists() {
+            return Ok(());
+        }
+        let package = self.parse_package_json(&package_json_path)?;
+        let Some(dependencies) = package.dependencies else {
+            return Ok(());
+        };
+        for (dep_name, dep_range) in dependencies {
+            self.install_package_recursive(&dep_name, &dep_range, None, seen)?;
+        }
+        Ok(())
     }
     /// Parse package.json file
     pub fn parse_package_json(&self, path: &Path) -> Result<PackageJson> {
@@ -951,6 +1083,8 @@ impl PackageManager {
             package: package_version,
             path,
             resolved: true,
+            integrity: None,
+            tarball_url: None,
         })
     }
     /// Add a dependency
@@ -1181,6 +1315,33 @@ impl PackageManager {
                 }
 
                 if path.is_dir() {
+                    let scoped = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| n.starts_with('@'))
+                        .unwrap_or(false);
+                    if scoped {
+                        for scoped_entry in fs::read_dir(&path)
+                            .map_err(|e| anyhow!("Failed to read scoped node_modules: {}", e))?
+                        {
+                            let scoped_entry = scoped_entry.map_err(|e| {
+                                anyhow!("Failed to read scoped directory entry: {}", e)
+                            })?;
+                            if let Some(pkg) = self.scan_installed_package(&scoped_entry.path())? {
+                                dependencies.insert(
+                                    pkg.name.clone(),
+                                    LockedDependency {
+                                        version: pkg.version.clone(),
+                                        resolved: pkg.resolved.clone(),
+                                        integrity: pkg.integrity.clone(),
+                                        dev: Some(pkg.dev),
+                                        dependencies: None,
+                                    },
+                                );
+                            }
+                        }
+                        continue;
+                    }
                     if let Some(pkg) = self.scan_installed_package(&path)? {
                         let nested_deps: HashMap<String, LockedDependency> = pkg
                             .dependencies
@@ -1319,11 +1480,13 @@ impl PackageManager {
             }
         }
 
+        let (integrity, resolved) = self.read_package_integrity_meta(path);
+
         Ok(Some(InstalledPackage {
             name,
             version,
-            resolved: None,
-            integrity: None,
+            resolved,
+            integrity,
             dev: is_dev,
             dependencies: nested_deps,
         }))
@@ -1378,6 +1541,8 @@ impl PackageManager {
             },
             path: self.config.node_modules_dir.join(name),
             resolved: true,
+            integrity: None,
+            tarball_url: None,
         })
     }
 
@@ -1661,5 +1826,25 @@ mod tests {
         if let Some(deps) = &package.dependencies {
             assert!(!deps.contains_key("lodash"));
         }
+    }
+
+    #[test]
+    fn parse_npm_package_spec_handles_scoped_and_plain_names() {
+        assert_eq!(
+            parse_npm_package_spec("lodash"),
+            ("lodash".to_string(), "latest".to_string())
+        );
+        assert_eq!(
+            parse_npm_package_spec("lodash@4.17.21"),
+            ("lodash".to_string(), "4.17.21".to_string())
+        );
+        assert_eq!(
+            parse_npm_package_spec("@scope/name"),
+            ("@scope/name".to_string(), "latest".to_string())
+        );
+        assert_eq!(
+            parse_npm_package_spec("@scope/name@1.2.3"),
+            ("@scope/name".to_string(), "1.2.3".to_string())
+        );
     }
 }

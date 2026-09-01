@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Component;
 use std::path::{Path, PathBuf};
 
-const JS_EXTENSIONS: &[&str] = &["js", "json", "ts"];
+const JS_EXTENSIONS: &[&str] = &["js", "json", "ts", "mjs", "cjs", "tsx"];
 const COMMONJS_EXPORT_CONDITIONS: &[&str] = &["require", "node", "default"];
 const ESM_EXPORT_CONDITIONS: &[&str] = &["import", "node", "default"];
 const BUILTIN_MODULES: &[&str] = &[
@@ -19,6 +19,7 @@ const BUILTIN_MODULES: &[&str] = &[
     "fs/promises",
     "http",
     "https",
+    "module",
     "net",
     "os",
     "path",

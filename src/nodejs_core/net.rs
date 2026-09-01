@@ -740,6 +740,17 @@ fn server_listen_callback(
     let port = extract_integer_option(scope, &args.get(0), "port", 0);
     let host = extract_string_option(scope, &args.get(0), "host", "0.0.0.0");
 
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Network,
+        crate::permissions::PermissionAction::Listen,
+        crate::permissions::ResourceId::Url(format!("tcp://{}:{}", host, port)),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::type_error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+        return;
+    }
+
     // 设置 listening 为 true
     let listening_key = v8::String::new(scope, "listening").unwrap();
     let listening_val = v8::Boolean::new(scope, true);

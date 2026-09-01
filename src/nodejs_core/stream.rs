@@ -110,6 +110,8 @@ pub fn setup_stream_api(
     let passthrough_func: _ = passthrough_fn.get_function(scope).unwrap();
     let passthrough_key: _ = v8::String::new(scope, "passThrough").unwrap();
     stream_obj.set(scope, passthrough_key.into(), passthrough_func.into());
+    let passthrough_alias: _ = v8::String::new(scope, "PassThrough").unwrap();
+    stream_obj.set(scope, passthrough_alias.into(), passthrough_func.into());
 
     // 设置到全局
     let stream_key: _ = v8::String::new(scope, "stream").unwrap();
