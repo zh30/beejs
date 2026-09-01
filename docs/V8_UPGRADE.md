@@ -25,6 +25,9 @@ It must not interleave with Node compatibility feature work.
 
 ## Interim mitigation in this sprint
 
+- Branch `upgrade/rusty-v8-0.32` exists. After `rusty_v8 = "0.32"` and
+  `new_default_platform(0, false).make_shared()`, `cargo check --lib` succeeds
+  on that branch. `main` stays on 0.22 until a dedicated merge.
 - Keep 0.22 as the default compile pin for stability.
 - Land warmup-artifact snapshot (`SnapshotManager::generate_snapshot`) and
   `HostInitializeImportMetaObject`-shaped progressive `import.meta` wiring.

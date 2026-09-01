@@ -151,4 +151,86 @@ mod install_command_tests {
             "PackageJson should have optional_dependencies field"
         );
     }
+
+    fn registry_reachable() -> bool {
+        Command::new("curl")
+            .args(["-sI", "--max-time", "8", "https://registry.npmjs.org/ms"])
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    }
+
+    #[test]
+    fn add_lodash_and_ms_then_require() {
+        if !registry_reachable() {
+            eprintln!("skipping registry e2e: npm registry unreachable");
+            return;
+        }
+
+        let dir = TempDir::new().expect("tempdir");
+        let init = Command::new(beejs_path())
+            .current_dir(dir.path())
+            .args(["init", "demo"])
+            .output()
+            .expect("bee init");
+        assert!(
+            init.status.success(),
+            "bee init failed: {}",
+            String::from_utf8_lossy(&init.stderr)
+        );
+
+        let project = dir.path().join("demo");
+        let add_lodash = Command::new(beejs_path())
+            .current_dir(&project)
+            .args(["add", "lodash"])
+            .output()
+            .expect("bee add lodash");
+        assert!(
+            add_lodash.status.success(),
+            "bee add lodash failed: {}",
+            String::from_utf8_lossy(&add_lodash.stderr)
+        );
+
+        let eval_lodash = Command::new(beejs_path())
+            .current_dir(&project)
+            .args(["eval", "console.log(require('lodash').VERSION)"])
+            .output()
+            .expect("bee eval lodash");
+        assert!(
+            eval_lodash.status.success(),
+            "require('lodash') failed: {}{}",
+            String::from_utf8_lossy(&eval_lodash.stdout),
+            String::from_utf8_lossy(&eval_lodash.stderr)
+        );
+
+        let add_ms = Command::new(beejs_path())
+            .current_dir(&project)
+            .args(["add", "ms"])
+            .output()
+            .expect("bee add ms");
+        assert!(
+            add_ms.status.success(),
+            "bee add ms failed: {}",
+            String::from_utf8_lossy(&add_ms.stderr)
+        );
+
+        let eval_ms = Command::new(beejs_path())
+            .current_dir(&project)
+            .args(["eval", "console.log(typeof require('ms'))"])
+            .output()
+            .expect("bee eval ms");
+        assert!(
+            eval_ms.status.success(),
+            "require('ms') failed: {}{}",
+            String::from_utf8_lossy(&eval_ms.stdout),
+            String::from_utf8_lossy(&eval_ms.stderr)
+        );
+
+        let lock = fs::read_to_string(project.join("package-lock.json"))
+            .expect("package-lock.json after add");
+        assert!(
+            lock.contains("integrity") && !lock.contains("\"integrity\": null"),
+            "lockfile should record real integrity. lock: {lock}"
+        );
+    }
 }

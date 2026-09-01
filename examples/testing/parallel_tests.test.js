@@ -15,7 +15,7 @@ describe("并行测试示例", () => {
     test("测试 2: 字符串操作", () => {
         const str = "Hello Beejs";
         expect(str).toContain("Beejs");
-        expect(str.length).toBe(12);
+        expect(str.length).toBe(11);
         expect(str.toUpperCase()).toBe("HELLO BEEJS");
     });
 
@@ -62,7 +62,7 @@ describe("并行测试示例", () => {
     test("测试 9: 长度断言", () => {
         expect([1, 2, 3, 4, 5]).toHaveLength(5);
         expect("Beejs").toHaveLength(5);
-        expect({ a: 1, b: 2 }).toHaveLength(2);
+        expect(Object.keys({ a: 1, b: 2 })).toHaveLength(2);
     });
 
     test("测试 10: 深度对象比较", () => {
@@ -86,7 +86,7 @@ describe("并行测试示例", () => {
             }
         };
 
-        expect(obj1).toDeepEqual(obj2);
+        expect(obj1).toEqual(obj2);
     });
 });
 

@@ -150,7 +150,7 @@ enum Command {
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
     },
-    /// Bundle code for production (experimental: local static imports only)
+    /// Bundle code (experimental: concatenates local static imports, not a bundler)
     Bundle {
         #[command(flatten)]
         permissions: PermissionCliOptions,
@@ -4414,10 +4414,12 @@ fn main() -> Result<()> {
                 let execute_file = |file: &PathBuf| -> Result<()> {
                     let code = read_and_compile_source(file)?;
 
+                    beejs::v8_snapshot::enable_startup_snapshot_for_cli();
                     let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                         .expect("Failed to create runtime");
                     runtime.set_process_argv(build_process_argv(file, &args));
                     runtime.set_main_module_path(file);
+                    runtime.set_http_server_keep_alive(true);
 
                     match runtime.execute_code(&code) {
                         Ok(result) => {
@@ -4492,10 +4494,12 @@ fn main() -> Result<()> {
                 ws_reloader.stop();
             } else {
                 // Normal execution mode
+                beejs::v8_snapshot::enable_startup_snapshot_for_cli();
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                     .expect("Failed to create runtime");
                 runtime.set_process_argv(build_process_argv(&file, &args));
                 runtime.set_main_module_path(&file);
+                runtime.set_http_server_keep_alive(true);
 
                 // Execute preload modules first
                 for preload in &all_preloads {
@@ -4538,6 +4542,12 @@ fn main() -> Result<()> {
             // Create a minimal runtime with Web API support
             let mut runtime =
                 beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+            let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            if code.contains("import ") || code.contains("export ") || code.contains("import{") {
+                runtime.set_main_module_path(cwd.join("eval.mjs"));
+            } else {
+                runtime.set_main_module_path(cwd.join("eval.js"));
+            }
 
             match runtime.execute_code(&code) {
                 Ok(result) => {
@@ -4614,6 +4624,67 @@ fn main() -> Result<()> {
             };
 
             if let Some(test_file) = file {
+                if test_file.is_dir() {
+                    use beejs::testing::test_discoverer::{TestDiscoverer, TestDiscovererConfig};
+
+                    let mut discoverer_config = TestDiscovererConfig {
+                        root_path: test_file.clone(),
+                        ..Default::default()
+                    };
+                    discoverer_config.exclude_patterns.extend([
+                        ".git".to_string(),
+                        "target".to_string(),
+                        "dist".to_string(),
+                        "manual".to_string(),
+                        "__snapshots__".to_string(),
+                    ]);
+                    let discovery = TestDiscoverer::new(discoverer_config)
+                        .discover_with_read_permission(|path| {
+                            check_file_read_permission(path).map_err(|e| {
+                                std::io::Error::new(
+                                    std::io::ErrorKind::PermissionDenied,
+                                    e.to_string(),
+                                )
+                            })
+                        })?;
+
+                    if discovery.test_files.is_empty() {
+                        return Err(anyhow!("No test files found in {}", test_file.display()));
+                    }
+
+                    if parallel {
+                        eprintln!(
+                            "⚠️  --parallel is not supported for directory test mode; running serially"
+                        );
+                    }
+
+                    let mut passed_files = 0;
+                    let mut failed_files = 0;
+                    for discovered in discovery.test_files {
+                        println!("Running test file: {}", discovered.display());
+                        match execute_test_file(&discovered, &test_file_options) {
+                            Ok(result) => {
+                                println!("Test result: {}", result);
+                                passed_files += 1;
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Test failed in {}: {}", discovered.display(), e);
+                                failed_files += 1;
+                                if bail {
+                                    eprintln!("🛑 Stopping on first failure");
+                                    std::process::exit(1);
+                                }
+                            }
+                        }
+                    }
+                    if failed_files > 0 {
+                        eprintln!("❌ {failed_files} test file(s) failed, {passed_files} passed");
+                        std::process::exit(1);
+                    }
+                    println!("✅ {passed_files} test file(s) passed");
+                    return Ok(());
+                }
+
                 // Run specific test file
                 println!("Running test file: {}", test_file.display());
                 if parallel {
@@ -4987,17 +5058,8 @@ fn main() -> Result<()> {
             println!("  Save exact: {}", save_exact);
             println!("  As devDependency: {}", dev);
 
-            // Parse package name and version
-            let (name, version) = if package.contains('@') {
-                let parts: Vec<&str> = package.splitn(2, '@').collect();
-                let ver = parts
-                    .get(1)
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "latest".to_string());
-                (parts[0].to_string(), ver)
-            } else {
-                (package.clone(), "latest".to_string())
-            };
+            // Parse package name and version (`@scope/name@version` included)
+            let (name, version) = beejs::package_manager::parse_npm_package_spec(&package);
 
             println!("  Package: {}", name);
             println!("  Version: {}", version);
@@ -5080,11 +5142,15 @@ fn main() -> Result<()> {
                             // Update existing lock file with new dependency
                             let locked_dep = beejs::package_manager::LockedDependency {
                                 version: result.package.version.clone(),
-                                resolved: Some(format!(
-                                    "https://registry.npmjs.org/{}/-/{}-{}.tgz",
-                                    name, name, result.package.version
-                                )),
-                                integrity: None,
+                                resolved: result.tarball_url.clone().or_else(|| {
+                                    Some(format!(
+                                        "https://registry.npmjs.org/{}/-/{}-{}.tgz",
+                                        name,
+                                        name.split('/').next_back().unwrap_or(&name),
+                                        result.package.version
+                                    ))
+                                }),
+                                integrity: result.integrity.clone(),
                                 dev: Some(dev),
                                 dependencies: None,
                             };
@@ -5357,19 +5423,7 @@ fn main() -> Result<()> {
             println!("🚀 Running package: {}", package);
             println!("  Args: {:?}", args);
 
-            // Parse package name and version (e.g., "lodash@4.17.21" or "typescript")
-            let (name, version) = if package.contains('@') {
-                let parts: Vec<&str> = package.splitn(2, '@').collect();
-                (
-                    parts[0].to_string(),
-                    parts
-                        .get(1)
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| "latest".to_string()),
-                )
-            } else {
-                (package.clone(), "latest".to_string())
-            };
+            let (name, version) = beejs::package_manager::parse_npm_package_spec(&package);
 
             println!("  Package: {}", name);
             println!("  Version: {}", version);
@@ -5614,7 +5668,7 @@ fn main() -> Result<()> {
             println!("  test [file]      Run tests (built-in or from file)");
             println!("  bundle <file>    Bundle code for production");
             println!("  debug <file>     Debug a script with detailed output");
-            println!("  serve [options]  Start HTTP server");
+            println!("  serve [options]  Health stub (fixed JSON, not an app server)");
             println!("  init [name]      Initialize new project");
             println!("  add <package>    Add dependency package");
             println!("  remove <package> Remove dependency package");

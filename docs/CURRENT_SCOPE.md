@@ -8,9 +8,15 @@ Optimization sprint notes (2026-08-12):
 - Event-loop keep-alive no longer silently drops timers after 75ms.
 - New builtins wired: `assert`, `zlib`, `https`, `tls`, `vm`, `worker_threads`, `perf_hooks`.
 - WorkerHost multi-isolate scaffold is available (`BeeWorkerHost` / progressive `Worker`).
-- `bee serve` binds a real HTTP listener (HTTPS still external-TLS).
+- `bee serve` is a **health stub**: it binds with `tiny_http` and returns fixed `{"ok":true}`. It does **not** execute user scripts. Application servers use `http.createServer` + `bee run`.
+- `bee run` keeps the process alive while an `http.Server` is listening and pumps requests on the event loop.
+- Node conformance scorecard is a CI hard gate (`tests/conformance/`, currently 19 fixtures).
+- Honest benchmarks live in `benches/honest/`. Do not publish performance numbers from elsewhere.
 - TypeScript transpile uses oxc 0.147 (`src/typescript/oxc_backend.rs`) with a content-hash cache (`src/typescript/cache.rs`). Language surface is TypeScript 6.0 (transpile-only). TS 7.0 added no new syntax.
 - rusty_v8 remains on 0.22; see `docs/V8_UPGRADE.md` for the 0.32 migration branch plan.
+- `bee run` can load a V8 warmup snapshot (`v8_snapshot::cached_startup_blob`). Disable with `BEEJS_DISABLE_STARTUP_SNAPSHOT=1`.
+- V8 Fast API is not available on rusty_v8 0.22. Hot paths for `path` / hash / `fs.readFileSync` stay in Rust (`src/nodejs_core/fast_path.rs`).
+- `https.createServer({ key, cert })` performs a rustls handshake on accept. WebSocket upgrades stay on the same listen port.
 
 This page is the user-facing capability boundary for the current Beejs checkout. It is intentionally narrower than many historical stage reports in this repository.
 
@@ -66,7 +72,8 @@ Experimental means the capability exists as code, command surface, module surfac
 Current experimental scope:
 
 - `bee test` and the Jest-style framework under `src/testing/`. The CLI command can execute test files and built-in smoke cases, but the full test-runner contract is still under repair.
-- `bee bundle`, `bee debug`, `bee serve`, `bee init`, `bee create`, `bee add`, `bee remove`, `bee install`, `bee prune`, `bee bunx`, and `bee upgrade`.
+- `bee bundle` (concatenates local static imports; not a bundler), `bee debug`, `bee serve` (health stub only), `bee init`, `bee create`, `bee add`, `bee remove`, `bee install`, `bee prune`, `bee bunx`, and `bee upgrade`.
+- N-API / native addons: researched only. There is no `napi` loader and no commitment to Prisma, sharp, or other native packages in this release.
 - Lightweight package-management and project setup behavior, including resolver, lifecycle, supply-chain, and package execution paths.
 - V8 snapshot, benchmarking helpers, performance reporting, memory/fallback/error support modules, and ecosystem-lite helpers beyond the behaviors covered by current tests.
 - Optional Cargo features: `ai`, `benchmarks`, `cloudnative`, `enterprise`, `multilang`, `observability`, `tch`, and `verbose_logging`.

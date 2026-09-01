@@ -151,7 +151,8 @@ fn stop_all_http_server_states() {
 fn stop_http_server_state(host: &str, port: u16) {
     let mut states = ACTIVE_HTTP_SERVER_STATES.lock().unwrap();
     for state in states.iter() {
-        if state.port == port && state.host == host {
+        let bound = state.bound_port.load(Ordering::SeqCst) as u16;
+        if state.host == host && (state.port == port || bound == port) {
             state.listening.store(false, Ordering::SeqCst);
         }
     }
@@ -183,6 +184,8 @@ pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageCha
 #[allow(static_mut_refs)]
 pub fn reset_http_server_channel() {
     stop_all_http_server_states();
+    clear_parked_http_responses();
+    PENDING_ASYNC_HTTP_RESPONSES.store(0, Ordering::SeqCst);
 
     unsafe {
         if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
@@ -240,6 +243,148 @@ pub fn try_recv_http_request() -> Option<HttpRequestMessage> {
             }
         } else {
             None
+        }
+    }
+}
+
+static PARKED_HTTP_RESPONSES: Lazy<Mutex<HashMap<u64, HttpResponseMessage>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+static FALLBACK_HTTP_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
+static PENDING_ASYNC_HTTP_RESPONSES: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Debug)]
+pub enum HttpDispatchResult {
+    Response(HttpResponseMessage),
+    Pending,
+    NoHandler,
+    Error,
+}
+
+fn take_parked_http_response(connection_id: u64) -> Option<HttpResponseMessage> {
+    PARKED_HTTP_RESPONSES
+        .lock()
+        .ok()
+        .and_then(|mut parked| parked.remove(&connection_id))
+}
+
+fn park_http_response(response: HttpResponseMessage) {
+    if let Ok(mut parked) = PARKED_HTTP_RESPONSES.lock() {
+        parked.insert(response.connection_id, response);
+    }
+}
+
+fn clear_parked_http_responses() {
+    if let Ok(mut parked) = PARKED_HTTP_RESPONSES.lock() {
+        parked.clear();
+    }
+}
+
+/// True when at least one `http.Server` is still marked listening.
+pub fn has_listening_http_servers() -> bool {
+    ACTIVE_HTTP_SERVER_STATES
+        .lock()
+        .map(|states| {
+            states
+                .iter()
+                .any(|state| state.listening.load(Ordering::SeqCst))
+        })
+        .unwrap_or(false)
+}
+
+/// True when a handler returned without calling `res.end` yet.
+pub fn has_pending_async_http_responses() -> bool {
+    PENDING_ASYNC_HTTP_RESPONSES.load(Ordering::SeqCst) > 0
+}
+
+/// True when the request channel has at least one queued message.
+pub fn has_pending_http_requests() -> bool {
+    unsafe {
+        if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
+            if let Ok(guard) = channel_arc.lock() {
+                if let Some(ref channel) = *guard {
+                    return !channel.request_receiver.is_empty();
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Allocate a process-wide connection/request id for response matching.
+pub fn allocate_http_connection_id() -> u64 {
+    if let Some(channel_arc) = get_http_server_channel() {
+        if let Ok(guard) = channel_arc.lock() {
+            if let Some(ref channel) = *guard {
+                return channel.next_connection_id();
+            }
+        }
+    }
+    FALLBACK_HTTP_CONNECTION_ID.fetch_add(1, Ordering::SeqCst)
+}
+
+fn recv_http_response_for(
+    receiver: &crossbeam::channel::Receiver<HttpResponseMessage>,
+    connection_id: u64,
+) -> Result<HttpResponseMessage, crossbeam::channel::RecvError> {
+    loop {
+        if let Some(response) = take_parked_http_response(connection_id) {
+            return Ok(response);
+        }
+        match receiver.recv() {
+            Ok(response) if response.connection_id == connection_id => return Ok(response),
+            Ok(response) => park_http_response(response),
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+/// Drain queued HTTP requests using the caller's existing V8 scope.
+/// Safe to call from `execute_code` (do not nest `pump_http_messages`).
+pub fn pump_pending_http_requests_in_scope(
+    scope: &mut v8::HandleScope,
+    context: &v8::Local<v8::Context>,
+) -> usize {
+    let mut processed = 0;
+    while let Some(request) = try_recv_http_request() {
+        dispatch_http_request_in_scope(scope, context, &request);
+        processed += 1;
+    }
+    processed
+}
+
+/// Dispatch one request to the JS handler and send the matching response.
+pub fn dispatch_http_request_in_scope(
+    scope: &mut v8::HandleScope,
+    context: &v8::Local<v8::Context>,
+    request: &HttpRequestMessage,
+) {
+    let handler = get_global_request_handler(scope, context);
+    match process_http_request_in_v8(request, scope, context, handler) {
+        HttpDispatchResult::Response(mut response) => {
+            if !response.headers.contains_key("Content-Length") {
+                response.headers.insert(
+                    "Content-Length".to_string(),
+                    response.body.len().to_string(),
+                );
+            }
+            send_http_response(response);
+        }
+        HttpDispatchResult::Pending => {}
+        HttpDispatchResult::NoHandler => {
+            send_http_response(create_http_response(
+                request.connection_id,
+                404,
+                "No handler",
+                "text/plain",
+            ));
+        }
+        HttpDispatchResult::Error => {
+            send_http_response(create_http_response(
+                request.connection_id,
+                500,
+                "Handler error",
+                "text/plain",
+            ));
         }
     }
 }
@@ -556,53 +701,112 @@ fn http_agent_get_pool_stats_callback(
     let stats_val: _ = v8::String::new(scope, &stats).unwrap();
     retval.set(stats_val.into());
 }
+/// Shared by `http.createServer` and `https.createServer`.
+pub(crate) fn build_http_server_object<'a>(
+    scope: &mut v8::HandleScope<'a>,
+) -> v8::Local<'a, v8::Object> {
+    let server_obj = v8::Object::new(scope);
+
+    let listen_func = v8::FunctionTemplate::new(scope, http_server_listen_callback);
+    let listen_instance = listen_func.get_function(scope).unwrap();
+    let listen_key = v8::String::new(scope, "listen").unwrap();
+    server_obj.set(scope, listen_key.into(), listen_instance.into());
+
+    let on_func = v8::FunctionTemplate::new(scope, http_server_on_callback);
+    let on_instance = on_func.get_function(scope).unwrap();
+    let on_key = v8::String::new(scope, "on").unwrap();
+    server_obj.set(scope, on_key.into(), on_instance.into());
+
+    let close_func = v8::FunctionTemplate::new(scope, http_server_close_callback);
+    let close_instance = close_func.get_function(scope).unwrap();
+    let close_key = v8::String::new(scope, "close").unwrap();
+    server_obj.set(scope, close_key.into(), close_instance.into());
+
+    let _message_channel = init_http_server_channel();
+    let channel_key = v8::String::new(scope, "_messageChannel").unwrap();
+    let channel_initialized = v8::Boolean::new(scope, true);
+    server_obj.set(scope, channel_key.into(), channel_initialized.into());
+
+    server_obj
+}
+
 /// v0.3.93: http.createServer callback 版本，可以访问全局对象
 fn http_create_server_with_global_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let request_handler: _ = args.get(0);
+    let (options, request_handler) = if args.get(0).is_function() {
+        (v8::undefined(scope).into(), args.get(0))
+    } else if args.get(0).is_object() {
+        (args.get(0), args.get(1))
+    } else {
+        (v8::undefined(scope).into(), args.get(0))
+    };
 
-    // 直接从当前 scope 获取 context 和全局对象
-    let context = scope.get_current_context();
-    let global = context.global(scope);
-
-    let server_obj: _ = v8::Object::new(scope);
-
-    // 如果提供了 request handler，立即存储到 _requestHandler
+    let server_obj = build_http_server_object(scope);
     if request_handler.is_function() {
         let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
         server_obj.set(scope, handler_key.into(), request_handler);
-
-        // v0.3.93: 同时设置全局 HTTP request handler
+        let context = scope.get_current_context();
+        let global = context.global(scope);
         let global_handler_key = v8::String::new(scope, "_httpServerRequestHandler").unwrap();
         global.set(scope, global_handler_key.into(), request_handler);
     }
-
-    // listen
-    let listen_func: _ = v8::FunctionTemplate::new(scope, http_server_listen_callback);
-    let listen_instance: _ = listen_func.get_function(scope).unwrap();
-    let listen_key: _ = v8::String::new(scope, "listen").unwrap();
-    server_obj.set(scope, listen_key.into(), listen_instance.into());
-    // on
-    let on_func: _ = v8::FunctionTemplate::new(scope, http_server_on_callback);
-    let on_instance: _ = on_func.get_function(scope).unwrap();
-    let on_key: _ = v8::String::new(scope, "on").unwrap();
-    server_obj.set(scope, on_key.into(), on_instance.into());
-    // close
-    let close_func: _ = v8::FunctionTemplate::new(scope, http_server_close_callback);
-    let close_instance: _ = close_func.get_function(scope).unwrap();
-    let close_key: _ = v8::String::new(scope, "close").unwrap();
-    server_obj.set(scope, close_key.into(), close_instance.into());
-
-    // 初始化消息通道
-    let _message_channel = init_http_server_channel();
-    let channel_key = v8::String::new(scope, "_messageChannel").unwrap();
-    let channel_initialized = v8::Boolean::new(scope, true);
-    server_obj.set(scope, channel_key.into(), channel_initialized.into());
-
+    attach_tls_options_to_server(scope, server_obj, options);
     retval.set(server_obj.into());
+}
+
+pub(crate) fn attach_tls_options_to_server(
+    scope: &mut v8::HandleScope,
+    server_obj: v8::Local<v8::Object>,
+    options: v8::Local<v8::Value>,
+) {
+    let cert = extract_string_option(scope, &options, "cert", "");
+    let key = extract_string_option(scope, &options, "key", "");
+    if cert.is_empty() && key.is_empty() {
+        return;
+    }
+    let cert_key = v8::String::new(scope, "_tlsCert").unwrap();
+    let cert_val = v8::String::new(scope, &cert).unwrap();
+    server_obj.set(scope, cert_key.into(), cert_val.into());
+    let key_key = v8::String::new(scope, "_tlsKey").unwrap();
+    let key_val = v8::String::new(scope, &key).unwrap();
+    server_obj.set(scope, key_key.into(), key_val.into());
+    let tls_flag = v8::Boolean::new(scope, true);
+    let tls_key = v8::String::new(scope, "_beeUsesTls").unwrap();
+    server_obj.set(scope, tls_key.into(), tls_flag.into());
+}
+
+fn tls_config_from_server_object(
+    scope: &mut v8::HandleScope,
+    server_obj: v8::Local<v8::Object>,
+) -> Option<Arc<rustls::ServerConfig>> {
+    let cert_key = v8::String::new(scope, "_tlsCert").unwrap();
+    let key_key = v8::String::new(scope, "_tlsKey").unwrap();
+    let cert = server_obj
+        .get(scope, cert_key.into())
+        .and_then(|value| value.to_string(scope))
+        .map(|value| value.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let key = server_obj
+        .get(scope, key_key.into())
+        .and_then(|value| value.to_string(scope))
+        .map(|value| value.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    if cert.is_empty() || key.is_empty() {
+        return None;
+    }
+    match load_tls_material(&cert, &key) {
+        Ok(cert_material) => Some(create_tls_server_config(
+            &cert_material,
+            &HttpsServerConfig::default(),
+        )),
+        Err(error) => {
+            eprintln!("[Beejs] Failed to load TLS certificate: {error}");
+            None
+        }
+    }
 }
 
 /// http.Agent 构造函数回调
@@ -1058,31 +1262,31 @@ fn http_server_listen_callback(
     // v0.3.87: 创建服务器状态并启动真实 TCP 服务器
     // v0.3.89: 检查是否启用了消息通道模式
     let use_message_channel = get_http_server_channel().is_some();
+    let tls_config = tls_config_from_server_object(scope, this);
     let server_state = Arc::new(HttpServerState {
         listening: Arc::new(AtomicBool::new(true)),
         port,
         host: host.clone(),
         use_message_channel,
+        bound_port: Arc::new(AtomicU64::new(port as u64)),
+        tls_config,
     });
     register_http_server_state(server_state.clone());
 
-    // 检查是否有 request handler
-    let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
-    let has_handler = this
-        .get(scope, handler_key.into())
-        .map(|v| v.is_function())
-        .unwrap_or(false);
-
-    if has_handler {
-        // 启动真实的 HTTP 服务器线程
-        let state_clone = server_state.clone();
-        thread::spawn(move || {
-            run_http_server(state_clone, "handler".to_string());
-        });
-
-        // 等待服务器启动
-        thread::sleep(Duration::from_millis(100));
-    }
+    // Always bind. `on('request')` after listen still needs the accept thread.
+    let state_clone = server_state.clone();
+    thread::spawn(move || {
+        run_http_server(state_clone, "handler".to_string());
+    });
+    thread::sleep(Duration::from_millis(100));
+    let advertised_port = {
+        let bound = server_state.bound_port.load(Ordering::SeqCst) as u16;
+        if bound != 0 {
+            bound
+        } else {
+            port
+        }
+    };
 
     // 设置属性
     let listening_key = v8::String::new(scope, "listening").unwrap();
@@ -1090,15 +1294,16 @@ fn http_server_listen_callback(
     this.set(scope, listening_key.into(), listening_val.into());
 
     let port_key = v8::String::new(scope, "port").unwrap();
-    let port_val = v8::Integer::new(scope, port as i32);
+    let port_val = v8::Integer::new(scope, advertised_port as i32);
     this.set(scope, port_key.into(), port_val.into());
 
+    let address_fn = v8::FunctionTemplate::new(scope, http_server_address_callback);
+    let address_instance = address_fn.get_function(scope).unwrap();
     let address_key = v8::String::new(scope, "address").unwrap();
-    let address_val = v8::String::new(scope, &format!("{}:{}", host, port)).unwrap();
-    this.set(scope, address_key.into(), address_val.into());
+    this.set(scope, address_key.into(), address_instance.into());
 
     let server_port_key = v8::String::new(scope, "_serverPort").unwrap();
-    let server_port_val = v8::Integer::new(scope, port as i32);
+    let server_port_val = v8::Integer::new(scope, advertised_port as i32);
     this.set(scope, server_port_key.into(), server_port_val.into());
 
     let server_host_key = v8::String::new(scope, "_serverHost").unwrap();
@@ -1118,6 +1323,46 @@ fn http_server_listen_callback(
     // 返回 this
     retval.set(this.into());
 }
+
+fn http_server_address_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this = args.this();
+    let port = {
+        let port_key = v8::String::new(scope, "_serverPort").unwrap();
+        this.get(scope, port_key.into())
+            .and_then(|value| value.to_integer(scope))
+            .map(|value| value.value() as i32)
+            .unwrap_or(0)
+    };
+    let host = {
+        let host_key = v8::String::new(scope, "_serverHost").unwrap();
+        this.get(scope, host_key.into())
+            .and_then(|value| value.to_string(scope))
+            .map(|value| value.to_rust_string_lossy(scope))
+            .unwrap_or_else(|| "0.0.0.0".to_string())
+    };
+    let family = if host.contains(':') && !host.contains('.') {
+        "IPv6"
+    } else {
+        "IPv4"
+    };
+
+    let obj = v8::Object::new(scope);
+    let port_key = v8::String::new(scope, "port").unwrap();
+    let port_val = v8::Integer::new(scope, port);
+    obj.set(scope, port_key.into(), port_val.into());
+    let family_key = v8::String::new(scope, "family").unwrap();
+    let family_val = v8::String::new(scope, family).unwrap();
+    obj.set(scope, family_key.into(), family_val.into());
+    let address_key = v8::String::new(scope, "address").unwrap();
+    let address_val = v8::String::new(scope, &host).unwrap();
+    obj.set(scope, address_key.into(), address_val.into());
+    retval.set(obj.into());
+}
+
 fn http_server_on_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -1140,6 +1385,11 @@ fn http_server_on_callback(
         // Store the request handler for later use
         let handler_key = v8::String::new(scope, "_requestHandler").unwrap();
         this.set(scope, handler_key.into(), listener);
+
+        let context = scope.get_current_context();
+        if let Ok(handler_fn) = v8::Local::<v8::Function>::try_from(listener) {
+            set_global_request_handler(scope, &context, handler_fn);
+        }
     }
 
     // 支持链式调用
@@ -1690,6 +1940,10 @@ pub fn http_res_write_head_callback(
         this.set(scope, headers_key.into(), existing_headers.into());
     }
 
+    let headers_sent_key = v8::String::new(scope, "headersSent").unwrap();
+    let headers_sent_val = v8::Boolean::new(scope, true);
+    this.set(scope, headers_sent_key.into(), headers_sent_val.into());
+
     retval.set(this.into());
 }
 /// response.end() 回调 - v0.3.64
@@ -1729,6 +1983,36 @@ pub fn http_res_end_callback(
             // 存储新数据
             this.set(scope, body_key.into(), data);
         }
+    }
+
+    let ended_key = v8::String::new(scope, "_ended").unwrap();
+    let ended_val = v8::Boolean::new(scope, true);
+    this.set(scope, ended_key.into(), ended_val.into());
+    let headers_sent_key = v8::String::new(scope, "headersSent").unwrap();
+    let headers_sent_val = v8::Boolean::new(scope, true);
+    this.set(scope, headers_sent_key.into(), headers_sent_val.into());
+
+    let async_key = v8::String::new(scope, "_asyncPending").unwrap();
+    let async_pending = this
+        .get(scope, async_key.into())
+        .map(|value| value.boolean_value(scope))
+        .unwrap_or(false);
+    let sent_key = v8::String::new(scope, "_responseSent").unwrap();
+    let already_sent = this
+        .get(scope, sent_key.into())
+        .map(|value| value.boolean_value(scope))
+        .unwrap_or(false);
+    if async_pending && !already_sent {
+        let conn_key = v8::String::new(scope, "_connectionId").unwrap();
+        let connection_id = this
+            .get(scope, conn_key.into())
+            .and_then(|value| value.to_number(scope))
+            .map(|value| value.value() as u64)
+            .unwrap_or(0);
+        let sent_val = v8::Boolean::new(scope, true);
+        this.set(scope, sent_key.into(), sent_val.into());
+        send_http_response(extract_http_response_from_res(scope, this, connection_id));
+        PENDING_ASYNC_HTTP_RESPONSES.fetch_sub(1, Ordering::SeqCst);
     }
 
     retval.set(this.into());
@@ -1815,6 +2099,8 @@ pub struct HttpServerState {
     pub host: String,
     /// v0.3.89: 是否使用消息通道模式
     pub use_message_channel: bool,
+    pub bound_port: Arc<AtomicU64>,
+    pub tls_config: Option<Arc<rustls::ServerConfig>>,
 }
 
 impl HttpServerState {
@@ -1824,6 +2110,8 @@ impl HttpServerState {
             port: 3000,
             host: "0.0.0.0".to_string(),
             use_message_channel: false,
+            bound_port: Arc::new(AtomicU64::new(3000)),
+            tls_config: None,
         }
     }
 }
@@ -1955,7 +2243,14 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
 
     // 创建 TCP 监听器
     let listener = match TcpListener::bind(&addr) {
-        Ok(l) => l,
+        Ok(l) => {
+            if let Ok(local) = l.local_addr() {
+                server_state
+                    .bound_port
+                    .store(local.port() as u64, Ordering::SeqCst);
+            }
+            l
+        }
         Err(e) => {
             eprintln!("[Beejs] Failed to bind to {}: {}", addr, e);
             server_state.listening.store(false, Ordering::SeqCst);
@@ -2003,8 +2298,6 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
 
     eprintln!("[Beejs] HTTP Server listening on {}", addr);
 
-    // 接受连接循环
-    let mut connection_id = 0u64;
     loop {
         // 检查是否应该停止
         if !server_state.listening.load(Ordering::SeqCst) {
@@ -2014,13 +2307,12 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
         // 接受连接（使用 set_nonblocking 后需要轮询）
         match listener.accept() {
             Ok((stream, _addr)) => {
-                connection_id += 1;
                 let state = server_state.clone();
                 let code = handler_code.clone();
 
                 // 在新线程中处理连接
                 thread::spawn(move || {
-                    handle_connection(stream, &state, &code, connection_id);
+                    handle_connection(stream, &state, &code);
                 });
             }
             Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -2045,6 +2337,74 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
 /// v0.3.89: 修改为使用消息通道模式，支持跨线程 V8 上下文调用
 /// 检查是否应该保持连接（Keep-Alive）
 /// v0.3.96: 新增功能
+fn header_value_ignore_case<'a>(
+    headers: &'a HashMap<String, String>,
+    name: &str,
+) -> Option<&'a str> {
+    headers.iter().find_map(|(key, value)| {
+        if key.eq_ignore_ascii_case(name) {
+            Some(value.as_str())
+        } else {
+            None
+        }
+    })
+}
+
+fn is_websocket_upgrade(headers: &HashMap<String, String>) -> bool {
+    header_value_ignore_case(headers, "Upgrade")
+        .map(|value| value.eq_ignore_ascii_case("websocket"))
+        .unwrap_or(false)
+}
+
+struct PrefixedStream<S> {
+    prefix: std::io::Cursor<Vec<u8>>,
+    inner: S,
+}
+
+impl<S: Read> Read for PrefixedStream<S> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if (self.prefix.position() as usize) < self.prefix.get_ref().len() {
+            let read = std::io::Read::read(&mut self.prefix, buf)?;
+            if read > 0 {
+                return Ok(read);
+            }
+        }
+        self.inner.read(buf)
+    }
+}
+
+impl<S: Write> Write for PrefixedStream<S> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+fn handle_same_port_websocket_upgrade<S: Read + Write>(stream: S, request_data: Vec<u8>) {
+    let prefixed = PrefixedStream {
+        prefix: std::io::Cursor::new(request_data),
+        inner: stream,
+    };
+    match tungstenite::accept(prefixed) {
+        Ok(mut websocket) => loop {
+            match websocket.read() {
+                Ok(message) if message.is_close() => break,
+                Ok(message) if message.is_text() || message.is_binary() => {
+                    if websocket.send(message).is_err() {
+                        break;
+                    }
+                }
+                Ok(_) => {}
+                Err(_) => break,
+            }
+        },
+        Err(error) => eprintln!("[Beejs] WebSocket upgrade failed: {error}"),
+    }
+}
+
 fn should_keep_alive(headers: &HashMap<String, String>, http_version: &str) -> bool {
     // HTTP/1.1 默认 Keep-Alive，HTTP/1.0 默认 Close
     if http_version == "HTTP/1.1" {
@@ -2064,15 +2424,69 @@ fn should_keep_alive(headers: &HashMap<String, String>, http_version: &str) -> b
     }
 }
 
+enum ServerIo {
+    Plain(TcpStream),
+    Tls(rustls::StreamOwned<rustls::ServerConnection, TcpStream>),
+}
+
+impl Read for ServerIo {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            ServerIo::Plain(stream) => stream.read(buf),
+            ServerIo::Tls(stream) => stream.read(buf),
+        }
+    }
+}
+
+impl Write for ServerIo {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        match self {
+            ServerIo::Plain(stream) => stream.write(buf),
+            ServerIo::Tls(stream) => stream.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            ServerIo::Plain(stream) => stream.flush(),
+            ServerIo::Tls(stream) => stream.flush(),
+        }
+    }
+}
+
+impl ServerIo {
+    fn shutdown_write(&mut self) {
+        match self {
+            ServerIo::Plain(stream) => {
+                let _ = stream.shutdown(std::net::Shutdown::Write);
+            }
+            ServerIo::Tls(stream) => {
+                let _ = stream.sock.shutdown(std::net::Shutdown::Write);
+            }
+        }
+    }
+}
+
+fn wrap_accepted_stream(stream: TcpStream, server_state: &HttpServerState) -> Option<ServerIo> {
+    match &server_state.tls_config {
+        Some(config) => match rustls::ServerConnection::new(config.clone()) {
+            Ok(connection) => Some(ServerIo::Tls(rustls::StreamOwned::new(connection, stream))),
+            Err(error) => {
+                eprintln!("[Beejs] TLS accept failed: {error}");
+                None
+            }
+        },
+        None => Some(ServerIo::Plain(stream)),
+    }
+}
+
 /// 处理 HTTP 连接（支持 Keep-Alive）
 /// v0.3.96: 添加 Keep-Alive 支持
 /// v0.3.87: 基础功能
-fn handle_connection(
-    mut stream: TcpStream,
-    server_state: &HttpServerState,
-    _handler_code: &str,
-    connection_id: u64,
-) {
+fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler_code: &str) {
+    let Some(mut stream) = wrap_accepted_stream(stream, server_state) else {
+        return;
+    };
     // v0.3.97: Keep-Alive 循环：处理多个请求
     const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -2146,6 +2560,11 @@ fn handle_connection(
             }
         };
 
+        if is_websocket_upgrade(&parsed_request.headers) {
+            handle_same_port_websocket_upgrade(stream, request_data);
+            return;
+        }
+
         // 判断是否 Keep-Alive
         _is_keep_alive = should_keep_alive(&parsed_request.headers, &parsed_request.http_version);
 
@@ -2161,7 +2580,8 @@ fn handle_connection(
 
         let mut message_channel_used = false;
 
-        // 创建请求消息
+        // 每条请求一个 id，避免 Keep-Alive 复用时把响应串到上一笔
+        let connection_id = allocate_http_connection_id();
         let request_msg = HttpRequestMessage {
             method: parsed_request.method.clone(),
             url: parsed_request.url.clone(),
@@ -2215,7 +2635,7 @@ fn handle_connection(
                 eprintln!("[Beejs] Write error: {}", e);
             }
 
-            let _ = stream.shutdown(std::net::Shutdown::Write);
+            let _ = stream.shutdown_write();
             break;
         }
 
@@ -2237,9 +2657,9 @@ fn handle_connection(
             };
             // guard 现在被释放，锁已释放
 
-            // 等待响应
+            // 等待与本请求 connection_id 匹配的响应（错序的先停放）
             if let Some(receiver) = response_receiver {
-                match receiver.recv() {
+                match recv_http_response_for(&receiver, connection_id) {
                     Ok(response) => {
                         // 收到响应，根据 _is_keep_alive 决定是否关闭连接
                         let connection_header = if _is_keep_alive {
@@ -2316,14 +2736,14 @@ fn handle_connection(
 
                         // 如果不是 Keep-Alive，关闭连接
                         if !_is_keep_alive {
-                            let _ = stream.shutdown(std::net::Shutdown::Write);
+                            let _ = stream.shutdown_write();
                             break;
                         }
                         // 否则继续循环等待下一个请求
                     }
                     Err(_) => {
                         // 通道断开，关闭连接
-                        let _ = stream.shutdown(std::net::Shutdown::Write);
+                        let _ = stream.shutdown_write();
                         break;
                     }
                 }
@@ -2332,7 +2752,7 @@ fn handle_connection(
     }
 
     // 连接关闭
-    let _ = stream.shutdown(std::net::Shutdown::Write);
+    let _ = stream.shutdown_write();
 }
 
 /// response.removeHeader() 回调 - v0.3.87
@@ -2388,9 +2808,10 @@ pub fn process_http_request_in_v8(
     scope: &mut v8::HandleScope,
     _context: &v8::Local<v8::Context>,
     request_handler: Option<v8::Global<v8::Function>>,
-) -> Option<HttpResponseMessage> {
-    // 如果没有 handler，返回 404
-    let handler = request_handler?;
+) -> HttpDispatchResult {
+    let Some(handler) = request_handler else {
+        return HttpDispatchResult::NoHandler;
+    };
     let handler_fn = v8::Local::new(scope, &handler);
 
     // 创建请求对象 (IncomingMessage)
@@ -2426,6 +2847,23 @@ pub fn process_http_request_in_v8(
     let headers_key = v8::String::new(scope, "headers").unwrap();
     req_obj.set(scope, headers_key.into(), headers_obj.into());
 
+    let body_text = String::from_utf8_lossy(&request.body).into_owned();
+    let req_body_key = v8::String::new(scope, "body").unwrap();
+    let req_body_val = v8::String::new(scope, &body_text).unwrap();
+    req_obj.set(scope, req_body_key.into(), req_body_val.into());
+    let req_raw_body_key = v8::String::new(scope, "_rawBody").unwrap();
+    req_obj.set(scope, req_raw_body_key.into(), req_body_val.into());
+    let data_listeners = v8::Array::new(scope, 0);
+    let end_listeners = v8::Array::new(scope, 0);
+    let data_key = v8::String::new(scope, "_dataListeners").unwrap();
+    let req_end_listeners_key = v8::String::new(scope, "_endListeners").unwrap();
+    req_obj.set(scope, data_key.into(), data_listeners.into());
+    req_obj.set(scope, req_end_listeners_key.into(), end_listeners.into());
+    let req_on_fn = v8::FunctionTemplate::new(scope, http_req_on_callback);
+    let req_on_instance = req_on_fn.get_function(scope).unwrap();
+    let req_on_key = v8::String::new(scope, "on").unwrap();
+    req_obj.set(scope, req_on_key.into(), req_on_instance.into());
+
     // 创建响应对象 (ServerResponse)
     let res_obj = v8::Object::new(scope);
 
@@ -2448,6 +2886,19 @@ pub fn process_http_request_in_v8(
     let body_key = v8::String::new(scope, "_body").unwrap();
     let empty_body = v8::String::new(scope, "").unwrap();
     res_obj.set(scope, body_key.into(), empty_body.into());
+
+    let ended_key = v8::String::new(scope, "_ended").unwrap();
+    let false_val = v8::Boolean::new(scope, false);
+    res_obj.set(scope, ended_key.into(), false_val.into());
+    let sent_key = v8::String::new(scope, "_responseSent").unwrap();
+    res_obj.set(scope, sent_key.into(), false_val.into());
+    let async_key = v8::String::new(scope, "_asyncPending").unwrap();
+    res_obj.set(scope, async_key.into(), false_val.into());
+    let headers_sent_key = v8::String::new(scope, "headersSent").unwrap();
+    res_obj.set(scope, headers_sent_key.into(), false_val.into());
+    let conn_key = v8::String::new(scope, "_connectionId").unwrap();
+    let conn_val = v8::Number::new(scope, request.connection_id as f64);
+    res_obj.set(scope, conn_key.into(), conn_val.into());
 
     // 设置 end 方法
     let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
@@ -2500,7 +2951,22 @@ pub fn process_http_request_in_v8(
     let args = [req_obj.into(), res_obj.into()];
 
     if handler_fn.call(scope, this_val, &args).is_none() {
-        return None;
+        return HttpDispatchResult::Error;
+    }
+
+    emit_incoming_request_body_events(scope, req_obj, &body_text);
+
+    let ended_key = v8::String::new(scope, "_ended").unwrap();
+    let ended = res_obj
+        .get(scope, ended_key.into())
+        .map(|value| value.boolean_value(scope))
+        .unwrap_or(false);
+    if !ended {
+        let async_key = v8::String::new(scope, "_asyncPending").unwrap();
+        let true_val = v8::Boolean::new(scope, true);
+        res_obj.set(scope, async_key.into(), true_val.into());
+        PENDING_ASYNC_HTTP_RESPONSES.fetch_add(1, Ordering::SeqCst);
+        return HttpDispatchResult::Pending;
     }
 
     // 从响应对象提取数据
@@ -2563,12 +3029,141 @@ pub fn process_http_request_in_v8(
         response_headers
     );
 
-    Some(HttpResponseMessage {
+    HttpDispatchResult::Response(HttpResponseMessage {
         connection_id: request.connection_id,
         status_code,
         headers: response_headers,
         body: body_bytes,
     })
+}
+
+fn http_req_on_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this = args.this();
+    let event = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let listener = args.get(1);
+    if listener.is_function() {
+        let key_name = if event == "data" {
+            "_dataListeners"
+        } else if event == "end" {
+            "_endListeners"
+        } else {
+            retval.set(this.into());
+            return;
+        };
+        let key = v8::String::new(scope, key_name).unwrap();
+        let list = this
+            .get(scope, key.into())
+            .and_then(|value| v8::Local::<v8::Array>::try_from(value).ok())
+            .unwrap_or_else(|| v8::Array::new(scope, 0));
+        let index = list.length();
+        list.set_index(scope, index, listener);
+        this.set(scope, key.into(), list.into());
+    }
+    retval.set(this.into());
+}
+
+fn emit_incoming_request_body_events(
+    scope: &mut v8::HandleScope,
+    req_obj: v8::Local<v8::Object>,
+    body_text: &str,
+) {
+    let data_key = v8::String::new(scope, "_dataListeners").unwrap();
+    if let Some(list_val) = req_obj.get(scope, data_key.into()) {
+        if let Ok(list) = v8::Local::<v8::Array>::try_from(list_val) {
+            if !body_text.is_empty() {
+                let chunk = v8::String::new(scope, body_text).unwrap();
+                for i in 0..list.length() {
+                    if let Some(listener) = list.get_index(scope, i) {
+                        if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
+                            let _ = func.call(scope, req_obj.into(), &[chunk.into()]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let end_key = v8::String::new(scope, "_endListeners").unwrap();
+    if let Some(list_val) = req_obj.get(scope, end_key.into()) {
+        if let Ok(list) = v8::Local::<v8::Array>::try_from(list_val) {
+            for i in 0..list.length() {
+                if let Some(listener) = list.get_index(scope, i) {
+                    if let Ok(func) = v8::Local::<v8::Function>::try_from(listener) {
+                        let _ = func.call(scope, req_obj.into(), &[]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn extract_http_response_from_res(
+    scope: &mut v8::HandleScope,
+    res_obj: v8::Local<v8::Object>,
+    connection_id: u64,
+) -> HttpResponseMessage {
+    let status_code_key = v8::String::new(scope, "statusCode").unwrap();
+    let status_code_val = res_obj
+        .get(scope, status_code_key.into())
+        .unwrap_or(v8::Integer::new(scope, 200).into());
+    let status_code = status_code_val
+        .to_int32(scope)
+        .map(|i| i.value() as u16)
+        .unwrap_or(200);
+
+    let body_key = v8::String::new(scope, "_body").unwrap();
+    let body_val = res_obj
+        .get(scope, body_key.into())
+        .unwrap_or(v8::String::new(scope, "").unwrap().into());
+    let body_str = body_val
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let mut response_headers = HashMap::new();
+    let res_headers_key = v8::String::new(scope, "headers").unwrap();
+    if let Some(headers_val) = res_obj.get(scope, res_headers_key.into()) {
+        if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
+            let props = headers_obj
+                .get_property_names(scope)
+                .unwrap_or(v8::Array::new(scope, 0));
+            for i in 0..props.length() {
+                if let Some(key_val) = props.get_index(scope, i) {
+                    if let Some(key_str) = key_val.to_string(scope) {
+                        let key = key_str.to_rust_string_lossy(scope);
+                        if let Some(value_val) = headers_obj.get(scope, key_val) {
+                            if let Some(value_str) = value_val.to_string(scope) {
+                                response_headers.insert(key, value_str.to_rust_string_lossy(scope));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if !response_headers.contains_key("Content-Type") {
+        response_headers.insert(
+            "Content-Type".to_string(),
+            "text/plain; charset=utf-8".to_string(),
+        );
+    }
+    if !response_headers.contains_key("Content-Length") {
+        response_headers.insert("Content-Length".to_string(), body_str.len().to_string());
+    }
+
+    HttpResponseMessage {
+        connection_id,
+        status_code,
+        headers: response_headers,
+        body: body_str.into_bytes(),
+    }
 }
 
 /// 在 V8 上下文中处理 HTTP 请求（获取 response 对象）
@@ -2585,9 +3180,10 @@ pub fn handle_http_request_v8(
     let handler = get_global_request_handler(scope, context)?;
 
     // 处理请求
-    let response = process_http_request_in_v8(request, scope, context, Some(handler))?;
-
-    Some((response.status_code, response.body))
+    match process_http_request_in_v8(request, scope, context, Some(handler)) {
+        HttpDispatchResult::Response(response) => Some((response.status_code, response.body)),
+        _ => None,
+    }
 }
 
 /// 获取全局 request handler
@@ -2737,6 +3333,62 @@ pub fn load_tls_certificate(cert_path: &str, key_path: &str) -> Result<TlsCertif
 
     if keys.is_empty() {
         return Err("No private key found in file".to_string());
+    }
+
+    Ok(TlsCertificate {
+        cert_chain: certs,
+        private_key: keys.remove(0),
+    })
+}
+
+fn pem_or_path_bytes(value: &str) -> Result<Vec<u8>, String> {
+    let trimmed = value.trim();
+    if trimmed.contains("-----BEGIN") {
+        return Ok(trimmed.as_bytes().to_vec());
+    }
+    std::fs::read(trimmed)
+        .map_err(|error| format!("Failed to read TLS material {trimmed}: {error}"))
+}
+
+/// Load TLS material from PEM text or filesystem paths.
+pub fn load_tls_material(cert: &str, key: &str) -> Result<TlsCertificate, String> {
+    let cert_bytes = pem_or_path_bytes(cert)?;
+    let key_bytes = pem_or_path_bytes(key)?;
+    load_tls_certificate_from_pem(&cert_bytes, &key_bytes)
+}
+
+pub fn load_tls_certificate_from_pem(
+    cert_pem: &[u8],
+    key_pem: &[u8],
+) -> Result<TlsCertificate, String> {
+    let mut cert_reader = BufReader::new(std::io::Cursor::new(cert_pem));
+    let certs_result = rustls_pemfile::certs(&mut cert_reader);
+    let mut certs = Vec::new();
+    for cert in certs_result {
+        let cert_der = cert.map_err(|e| format!("Failed to parse certificate: {}", e))?;
+        certs.push(rustls::Certificate(cert_der.to_vec()));
+    }
+    if certs.is_empty() {
+        return Err("No certificates found in PEM".to_string());
+    }
+
+    let mut key_reader = BufReader::new(std::io::Cursor::new(key_pem));
+    let mut keys = Vec::new();
+    let keys_result = rustls_pemfile::rsa_private_keys(&mut key_reader);
+    for key in keys_result {
+        let key_bytes = key.map_err(|e| format!("Failed to parse private key: {}", e))?;
+        keys.push(rustls::PrivateKey(key_bytes.secret_pkcs1_der().to_vec()));
+    }
+    if keys.is_empty() {
+        let mut key_reader = BufReader::new(std::io::Cursor::new(key_pem));
+        let pkcs8_result = rustls_pemfile::pkcs8_private_keys(&mut key_reader);
+        for key in pkcs8_result {
+            let key_bytes = key.map_err(|e| format!("Failed to parse PKCS8 private key: {}", e))?;
+            keys.push(rustls::PrivateKey(key_bytes.secret_pkcs8_der().to_vec()));
+        }
+    }
+    if keys.is_empty() {
+        return Err("No private key found in PEM".to_string());
     }
 
     Ok(TlsCertificate {

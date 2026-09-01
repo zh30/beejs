@@ -205,6 +205,30 @@ pub fn setup_fs_api(
     Ok(())
 }
 
+/// If `then()`'s fulfillment callback returns another thenable, chain to it.
+/// Existing tests still read `__result__` on the original object.
+fn thenable_chain_return(
+    scope: &mut v8::HandleScope,
+    this: v8::Local<v8::Object>,
+    maybe_result: Option<v8::Local<v8::Value>>,
+    retval: &mut v8::ReturnValue,
+) {
+    if let Some(result) = maybe_result {
+        if result.is_object() {
+            if let Ok(obj) = v8::Local::<v8::Object>::try_from(result) {
+                let then_key = v8::String::new(scope, "then").unwrap();
+                if let Some(then_val) = obj.get(scope, then_key.into()) {
+                    if then_val.is_function() {
+                        retval.set(result);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    retval.set(this.into());
+}
+
 /// 创建 fs.promises 对象 - v0.3.64
 fn create_fs_promises<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Object> {
     let promises_obj = v8::Object::new(scope);
@@ -858,6 +882,7 @@ fn fs_promises_read_file_callback(
                             Ok(bytes) => {
                                 // 创建 Buffer 对象
                                 let buffer_val = create_buffer_from_bytes(scope, &bytes);
+                                let mut fulfillment = None;
                                 if on_fulfilled.is_function() {
                                     if let Ok(func) =
                                         v8::Local::<v8::Function>::try_from(on_fulfilled)
@@ -872,10 +897,11 @@ fn fs_promises_read_file_callback(
                                             let result_key =
                                                 v8::String::new(scope, "__result__").unwrap();
                                             this.set(scope, result_key.into(), r);
+                                            fulfillment = Some(r);
                                         }
                                     }
                                 }
-                                retval.set(this.into());
+                                thenable_chain_return(scope, this, fulfillment, &mut retval);
                                 return;
                             }
                             Err(e) => Err(format!("Error reading file: {}", e)),
@@ -891,6 +917,7 @@ fn fs_promises_read_file_callback(
                 }
             };
 
+            let mut fulfillment = None;
             match read_result {
                 Ok(content) => {
                     if on_fulfilled.is_function() {
@@ -902,6 +929,7 @@ fn fs_promises_read_file_callback(
                             if let Some(r) = result {
                                 let result_key = v8::String::new(scope, "__result__").unwrap();
                                 this.set(scope, result_key.into(), r);
+                                fulfillment = Some(r);
                             }
                         }
                     }
@@ -917,13 +945,13 @@ fn fs_promises_read_file_callback(
                             if let Some(r) = result {
                                 let result_key = v8::String::new(scope, "__result__").unwrap();
                                 this.set(scope, result_key.into(), r);
+                                fulfillment = Some(r);
                             }
                         }
                     }
                 }
             }
-            // v0.3.64: Return this thenable so execute_code can access __result__
-            retval.set(this.into());
+            thenable_chain_return(scope, this, fulfillment, &mut retval);
         },
     );
 
@@ -1037,6 +1065,7 @@ fn fs_promises_write_file_callback(
                 return;
             }
 
+            let mut fulfillment = None;
             match std::fs::write(&path_str, &data_str) {
                 Ok(()) => {
                     if on_fulfilled.is_function() {
@@ -1047,6 +1076,7 @@ fn fs_promises_write_file_callback(
                             if let Some(r) = result {
                                 let result_key = v8::String::new(scope, "__result__").unwrap();
                                 this.set(scope, result_key.into(), r);
+                                fulfillment = Some(r);
                             }
                         }
                     }
@@ -1063,13 +1093,13 @@ fn fs_promises_write_file_callback(
                             if let Some(r) = result {
                                 let result_key = v8::String::new(scope, "__result__").unwrap();
                                 this.set(scope, result_key.into(), r);
+                                fulfillment = Some(r);
                             }
                         }
                     }
                 }
             }
-            // v0.3.64: Return this thenable so execute_code can access __result__
-            retval.set(this.into());
+            thenable_chain_return(scope, this, fulfillment, &mut retval);
         },
     );
 

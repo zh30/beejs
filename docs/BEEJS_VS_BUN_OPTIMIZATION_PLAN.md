@@ -14,7 +14,7 @@ Bun 最近不是在比谁功能清单更长，而是在做三件事：
 
 Beejs 已经站在 Bun 刚花大成本才到达的位置：**Rust + 引擎绑定**。引擎还是 V8，和 Node / Chrome 同族，这是中长期兼容性的真正护城河。
 
-但当前产品事实是：Beejs 是 `0.1.0`，默认路径只有 `eval` / `run` / `repl` 算稳定；`serve` 仍是 `tiny_http` 固定 JSON；`bundle` 是按行拼接本地 import；Node 符合性只有 6 个基础 fixture。**现在去抄 `Bun.Image` / S3 / HTTP/3，只会再堆一层空的阶段报告。**
+但当前产品事实是：Beejs 是 `0.1.1`，默认路径只有 `eval` / `run` / `repl` 算稳定；`bee serve` 仍是 `tiny_http` 固定 JSON health stub（应用服务器走 `http.createServer` + `bee run`）；`bundle` 是按行拼接本地 import；Node 符合性以 `tests/conformance/` 分数为准。**现在去抄 `Bun.Image` / S3 / HTTP/3，只会再堆一层空的阶段报告。**
 
 要比 Bun 强，不是功能数量超过它，而是在一条更窄的产品线上做到三件事同时成立：
 
@@ -61,12 +61,12 @@ Beejs 已经站在 Bun 刚花大成本才到达的位置：**Rust + 引擎绑定
 
 | 层级 | 现状 |
 |------|------|
-| 版本 | `0.1.0`，默认 feature 为空 |
+| 版本 | `0.1.1`，默认 feature 为空 |
 | 引擎 | `rusty_v8 = "0.22"`，升级到 0.32 / `v8` crate 必须独立分支（`docs/V8_UPGRADE.md`） |
 | 稳定 | `bee eval` / `bee run` / `bee repl`，V8 执行小脚本 |
 | 预览 | TS/TSX 转译 + 内容哈希缓存；`nodejs_core` / `web_api` 已安装但合同未锁死；`--watch` |
 | 实验 | `test` / `bundle` / `debug` / `serve` / `init` / `create` / `add` / `install` / `bunx` / `upgrade` |
-| 符合性 | `tests/conformance/` 仅 6 个基础 fixture（assert / buffer / events / path / querystring / url） |
+| 符合性 | `tests/conformance/` scorecard（CI 硬门禁，目标 ≥16 fixture） |
 | 权限 | CLI 已有 Deno 风格 `--deny-*` / `--allow-*` / `--permission-policy`，这是 Bun 没有做成产品的面 |
 | `bee serve` | `tiny_http` 对任意请求返回 `{"runtime":"beejs","ok":true}`，HTTPS 只打印提示 |
 | `bee bundle` | 按行解析静态 `import`/`export from` 后拼接，不是 bundler |
