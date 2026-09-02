@@ -172,6 +172,74 @@ fn serde_json_value_to_v8<'scope>(
     }
 }
 
+fn env_permission_check_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let name = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    if let Err(error) = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Environment,
+        crate::permissions::PermissionAction::Read,
+        crate::permissions::ResourceId::Name(name),
+    ) {
+        let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+        let error_obj = v8::Exception::error(scope, error_message);
+        scope.throw_exception(error_obj.into());
+    }
+}
+
+fn wrap_process_env_proxy<'scope>(
+    scope: &mut v8::HandleScope<'scope>,
+    env_obj: v8::Local<'scope, v8::Object>,
+) -> v8::Local<'scope, v8::Object> {
+    let Some(code) = v8::String::new(
+        scope,
+        r#"
+(function(raw) {
+  return new Proxy(raw, {
+    get(target, prop, receiver) {
+      if (typeof prop !== 'string') {
+        return Reflect.get(target, prop, receiver);
+      }
+      if (Object.prototype.hasOwnProperty.call(target, prop)) {
+        return target[prop];
+      }
+      globalThis.__beeCheckEnv(prop);
+      return undefined;
+    },
+    has(target, prop) {
+      if (typeof prop === 'string' && !Object.prototype.hasOwnProperty.call(target, prop)) {
+        globalThis.__beeCheckEnv(prop);
+      }
+      return Reflect.has(target, prop);
+    }
+  });
+})
+"#,
+    ) else {
+        return env_obj;
+    };
+    let Some(script) = v8::Script::compile(scope, code, None) else {
+        return env_obj;
+    };
+    let Some(factory) = script.run(scope) else {
+        return env_obj;
+    };
+    let Ok(factory) = v8::Local::<v8::Function>::try_from(factory) else {
+        return env_obj;
+    };
+    let undefined = v8::undefined(scope).into();
+    match factory.call(scope, undefined, &[env_obj.into()]) {
+        Some(value) if value.is_object() => value.to_object(scope).unwrap_or(env_obj),
+        _ => env_obj,
+    }
+}
+
 fn create_process_env_object<'scope>(
     scope: &mut v8::HandleScope<'scope>,
 ) -> v8::Local<'scope, v8::Object> {
@@ -193,7 +261,11 @@ fn create_process_env_object<'scope>(
         env_obj.set(scope, key_value.into(), env_value.into());
     }
 
-    env_obj
+    if crate::permissions::sandbox_strict_env() {
+        wrap_process_env_proxy(scope, env_obj)
+    } else {
+        env_obj
+    }
 }
 
 /// Get the timer registry, initializing it if needed
@@ -6200,9 +6272,7 @@ impl MinimalRuntime {
                 &main_module_path,
                 timer_drain_limit_ms,
             )?;
-
-            let namespace = module.get_module_namespace();
-            let namespace_global = v8::Global::new(scope, namespace);
+            let namespace_global = v8::Global::new(scope, module.get_module_namespace());
             let source_fingerprints = ESM_MODULE_LOAD_STATE.with(|state| {
                 state
                     .borrow()
@@ -8069,7 +8139,10 @@ impl MinimalRuntime {
 
             // Run the script once and keep its completion value for the final result.
             match script.run(scope) {
-                Some(result) => result,
+                Some(result) => {
+                    Self::publish_cjs_tool_exports(scope, &context);
+                    result
+                }
                 None => {
                     if scope.has_caught() {
                         // Get the exception from TryCatch
@@ -8435,6 +8508,75 @@ impl MinimalRuntime {
         crate::web_api::background_sync::reset_pending_wait_until();
         let result_str = value_to_string_after_microtasks(scope, result)?;
         Ok(result_str)
+    }
+
+    fn publish_tool_exports<'scope>(
+        scope: &mut v8::HandleScope<'scope>,
+        namespace: v8::Local<'scope, v8::Value>,
+    ) {
+        let context = scope.get_current_context();
+        let global = context.global(scope);
+        if let Some(key) = v8::String::new(scope, "__beeToolExports") {
+            global.set(scope, key.into(), namespace);
+        }
+    }
+
+    fn publish_cjs_tool_exports(scope: &mut v8::HandleScope, context: &v8::Local<v8::Context>) {
+        let global = context.global(scope);
+        if let Some(existing_key) = v8::String::new(scope, "__beeToolExports") {
+            if let Some(existing) = global.get(scope, existing_key.into()) {
+                if existing.is_object() && !existing.is_null() && !existing.is_undefined() {
+                    return;
+                }
+            }
+        }
+        let Some(module_key) = v8::String::new(scope, "module") else {
+            return;
+        };
+        let Some(module_val) = global.get(scope, module_key.into()) else {
+            return;
+        };
+        if !module_val.is_object() {
+            return;
+        }
+        let Some(module_obj) = module_val.to_object(scope) else {
+            return;
+        };
+        let Some(exports_key) = v8::String::new(scope, "exports") else {
+            return;
+        };
+        if let Some(exports) = module_obj.get(scope, exports_key.into()) {
+            Self::publish_tool_exports(scope, exports);
+        }
+    }
+
+    /// Call a previously loaded named export. Used by `bee session` / `bee mcp`.
+    pub fn call_named_export(&mut self, name: &str, args_json: &str) -> Result<String> {
+        let name_json = serde_json::to_string(name)
+            .map_err(|e| anyhow::anyhow!("Failed to encode tool name: {e}"))?;
+        let args_literal = serde_json::to_string(args_json)
+            .map_err(|e| anyhow::anyhow!("Failed to encode tool arguments: {e}"))?;
+        let code = format!(
+            r#"
+(async () => {{
+  const name = {name_json};
+  const args = JSON.parse({args_literal});
+  const bag = globalThis.__beeToolExports
+    || (typeof module !== 'undefined' && module.exports)
+    || {{}};
+  const fn = bag[name];
+  if (typeof fn !== 'function') {{
+    throw new Error('unknown tool: ' + name);
+  }}
+  const result = await fn(args);
+  if (result === undefined) {{
+    return 'null';
+  }}
+  return JSON.stringify(result);
+}})()
+"#
+        );
+        self.execute_code(&code)
     }
 
     /// Execute code multiple times and measure performance
@@ -20460,8 +20602,10 @@ require.resolve = function(specifier) {{
         }
 
         // import.meta (progressive): bind url to the real main module path.
-        // Full HostInitializeImportMetaObjectCallback is wired in ESM evaluate path.
-        let import_meta_key = v8::String::new(scope, "import").unwrap().into();
+        // Full HostInitializeImportMetaObjectCallback lands with rusty_v8 0.32.
+        let import_key = v8::String::new(scope, "import").unwrap().into();
+        let import_obj = v8::Object::new(scope);
+        let meta_key = v8::String::new(scope, "meta").unwrap().into();
         let import_meta_obj = v8::Object::new(scope);
 
         let url_key = v8::String::new(scope, "url").unwrap().into();
@@ -20507,8 +20651,9 @@ require.resolve = function(specifier) {{
         .unwrap();
         let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
         import_meta_obj.set(scope, resolve_key, resolve_fn.into());
+        import_obj.set(scope, meta_key, import_meta_obj.into());
 
-        global.set(scope, import_meta_key, import_meta_obj.into());
+        global.set(scope, import_key, import_obj.into());
 
         Ok(())
     }
@@ -20552,6 +20697,10 @@ require.resolve = function(specifier) {{
         use std::env;
 
         let global = context.global(scope);
+        if let Some(check_env) = v8::Function::new(scope, env_permission_check_callback) {
+            let check_key = v8::String::new(scope, "__beeCheckEnv").unwrap();
+            global.set(scope, check_key.into(), check_env.into());
+        }
 
         // Pre-create all V8 values to avoid scope borrowing issues
         let version_key = v8::String::new(scope, "version").unwrap();
@@ -21636,7 +21785,9 @@ require.resolve = function(specifier) {{
                 if let Err(error) = crate::permissions::check_global_permission(
                     crate::permissions::PermissionKind::Process,
                     crate::permissions::PermissionAction::Execute,
-                    crate::permissions::ResourceId::Name(command.clone()),
+                    crate::permissions::ResourceId::Name(crate::permissions::process_command_name(
+                        &command,
+                    )),
                 ) {
                     let error_message = v8::String::new(scope, &error.to_string()).unwrap();
                     let error_obj = v8::Exception::error(scope, error_message);
@@ -21672,7 +21823,9 @@ require.resolve = function(specifier) {{
                 if let Err(error) = crate::permissions::check_global_permission(
                     crate::permissions::PermissionKind::Process,
                     crate::permissions::PermissionAction::Execute,
-                    crate::permissions::ResourceId::Name(command.clone()),
+                    crate::permissions::ResourceId::Name(crate::permissions::process_command_name(
+                        &command,
+                    )),
                 ) {
                     let error_message = v8::String::new(scope, &error.to_string()).unwrap();
                     let error_obj = v8::Exception::error(scope, error_message);
@@ -21704,7 +21857,9 @@ require.resolve = function(specifier) {{
                 if let Err(error) = crate::permissions::check_global_permission(
                     crate::permissions::PermissionKind::Process,
                     crate::permissions::PermissionAction::Execute,
-                    crate::permissions::ResourceId::Name(file.clone()),
+                    crate::permissions::ResourceId::Name(crate::permissions::process_command_name(
+                        &file,
+                    )),
                 ) {
                     let error_message = v8::String::new(scope, &error.to_string()).unwrap();
                     let error_obj = v8::Exception::error(scope, error_message);

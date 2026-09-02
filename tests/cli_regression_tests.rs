@@ -7437,3 +7437,254 @@ fn run_hello_server_answers_http_without_manual_pump() {
         "hello_server should return 200 hello. response: {body}"
     );
 }
+
+#[test]
+fn run_sandbox_denies_fs_read_outside_allow_prefix() {
+    let dir = tempdir().expect("failed to create tempdir");
+    let jail = dir.path().join("workspace");
+    std::fs::create_dir_all(&jail).expect("failed to create jail");
+    std::fs::write(jail.join("ok.txt"), "ok").expect("failed to write jail file");
+    std::fs::write(dir.path().join("secret.txt"), "nope").expect("failed to write secret");
+    let script = dir.path().join("tool.js");
+    std::fs::write(
+        &script,
+        r#"
+const fs = require("fs");
+const path = require("path");
+const results = [];
+try {
+  results.push(fs.readFileSync(path.join(__dirname, "workspace", "ok.txt"), "utf8").trim());
+} catch (error) {
+  results.push("jail-denied");
+}
+try {
+  fs.readFileSync(path.join(__dirname, "secret.txt"), "utf8");
+  results.push("secret-allowed");
+} catch (error) {
+  results.push(String(error && error.message || error).includes("permission denied") ? "secret-denied" : "secret-other");
+}
+console.log(results.join("|"));
+"#,
+    )
+    .expect("failed to write script");
+
+    let output = Command::new(bee_path())
+        .current_dir(dir.path())
+        .args([
+            "run",
+            "--sandbox",
+            "--allow-read",
+            jail.to_str().unwrap(),
+            script.to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to execute bee run --sandbox");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output.status.success(),
+        "sandbox prefix jail should keep the process successful. output: {combined}"
+    );
+    assert!(
+        combined.contains("ok|secret-denied"),
+        "sandbox should allow the jail prefix and deny sibling paths. output: {combined}"
+    );
+}
+
+#[test]
+fn run_sandbox_writes_audit_jsonl_without_secret_values() {
+    let dir = tempdir().expect("failed to create tempdir");
+    let audit = dir.path().join("audit.jsonl");
+    let script = dir.path().join("probe.js");
+    std::fs::write(dir.path().join("secret.txt"), "classified-value")
+        .expect("failed to write secret");
+    std::fs::write(
+        &script,
+        r#"
+try { require("fs").readFileSync(require("path").join(__dirname, "secret.txt"), "utf8"); }
+catch (error) { console.log("denied"); }
+"#,
+    )
+    .expect("failed to write script");
+
+    let output = Command::new(bee_path())
+        .current_dir(dir.path())
+        .args([
+            "run",
+            "--sandbox",
+            "--audit-log",
+            audit.to_str().unwrap(),
+            script.to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to execute bee run --audit-log");
+
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        output.status.success(),
+        "denied read should stay catchable. output: {combined}"
+    );
+    let log = std::fs::read_to_string(&audit).expect("audit log should exist");
+    assert!(
+        log.contains("\"decision\":\"Deny\"") && log.contains("FileSystem"),
+        "audit log should record a filesystem deny. log: {log}"
+    );
+    assert!(
+        !log.contains("classified-value"),
+        "audit log must not include file contents. log: {log}"
+    );
+}
+
+#[test]
+fn run_export_tools_prints_echo_schema() {
+    let output = Command::new(bee_path())
+        .args([
+            "run",
+            "--sandbox",
+            "--export-tools",
+            "examples/agent/echo_tool.ts",
+        ])
+        .output()
+        .expect("failed to execute bee run --export-tools");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "export-tools should succeed. stderr: {stderr}"
+    );
+    assert!(
+        stdout.contains("\"name\": \"echo\"") || stdout.contains("\"name\":\"echo\""),
+        "export-tools should print the echo tool. stdout: {stdout}"
+    );
+}
+
+#[test]
+fn session_jsonrpc_calls_echo_tool() {
+    let mut child = Command::new(bee_path())
+        .args(["session", "--sandbox", "examples/agent/echo_tool.ts"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("failed to spawn bee session");
+
+    {
+        let stdin = child.stdin.as_mut().expect("stdin");
+        use std::io::Write;
+        writeln!(stdin, r#"{{"jsonrpc":"2.0","id":1,"method":"tools/list"}}"#).unwrap();
+        writeln!(
+            stdin,
+            r#"{{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{{"name":"echo","arguments":{{"text":"hi"}}}}}}"#
+        )
+        .unwrap();
+    }
+    drop(child.stdin.take());
+
+    let output = child.wait_with_output().expect("session should exit");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "bee session should exit successfully. stderr: {stderr} stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("echo"),
+        "tools/list should mention echo. stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("hi"),
+        "tools/call should echo the text. stdout: {stdout}"
+    );
+}
+
+#[test]
+fn session_isolate_per_call_echoes_twice() {
+    let mut child = Command::new(bee_path())
+        .args([
+            "session",
+            "--sandbox",
+            "--isolate-per-call",
+            "examples/agent/echo_tool.ts",
+        ])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("failed to spawn bee session --isolate-per-call");
+
+    {
+        let stdin = child.stdin.as_mut().expect("stdin");
+        use std::io::Write;
+        writeln!(
+            stdin,
+            r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"echo","arguments":{{"text":"one"}}}}}}"#
+        )
+        .unwrap();
+        writeln!(
+            stdin,
+            r#"{{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{{"name":"echo","arguments":{{"text":"two"}}}}}}"#
+        )
+        .unwrap();
+    }
+    drop(child.stdin.take());
+
+    let output = child.wait_with_output().expect("session should exit");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "isolate-per-call session should succeed. stderr: {stderr} stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("one") && stdout.contains("two"),
+        "both isolate-per-call tool results should appear. stdout: {stdout}"
+    );
+}
+
+#[test]
+fn mcp_initialize_lists_echo_tool() {
+    let request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {}
+    })
+    .to_string();
+    let framed = format!("Content-Length: {}\r\n\r\n{}", request.len(), request);
+
+    let mut child = Command::new(bee_path())
+        .args(["mcp", "--sandbox", "examples/agent/echo_tool.ts"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("failed to spawn bee mcp");
+
+    {
+        let stdin = child.stdin.as_mut().expect("stdin");
+        use std::io::Write;
+        stdin.write_all(framed.as_bytes()).unwrap();
+    }
+    drop(child.stdin.take());
+
+    let output = child.wait_with_output().expect("mcp should exit");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "bee mcp initialize should succeed. stderr: {stderr} stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("beejs") && stdout.contains("protocolVersion"),
+        "MCP initialize should return server info. stdout: {stdout}"
+    );
+}

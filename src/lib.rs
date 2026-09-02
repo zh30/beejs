@@ -51,6 +51,7 @@ pub mod performance_reporter;
 #[cfg(feature = "observability")]
 pub mod monitor;
 
+pub mod agent; // Tool export, JSON-RPC session, MCP stdio
 pub mod event_loop;
 pub mod nodejs_core; // Core Node.js compatible modules (fs, path, crypto, http, net, timers)
 pub mod package_manager; // Package manager

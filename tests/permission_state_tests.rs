@@ -11,6 +11,7 @@ fn path_for_js(path: &std::path::Path) -> String {
 }
 
 fn reset_global_broker() {
+    beejs::permissions::reset_runtime_permission_state();
     *global_resource_broker()
         .write()
         .expect("resource broker lock should not be poisoned") = ResourceBroker::default();
@@ -93,6 +94,41 @@ fn broker_keeps_read_and_write_rules_separate() {
     );
     assert_eq!(
         broker.check(PermissionKind::FileSystem, PermissionAction::Write, path),
+        PermissionDecision::Deny
+    );
+}
+
+#[test]
+fn broker_allows_path_prefix_under_deny_all() {
+    let temp = tempfile::tempdir().unwrap();
+    let jail = temp.path().join("workspace");
+    fs::create_dir_all(jail.join("nested")).unwrap();
+    fs::write(jail.join("nested/ok.txt"), "ok").unwrap();
+    let outside = temp.path().join("secret.txt");
+    fs::write(&outside, "nope").unwrap();
+
+    let mut broker = ResourceBroker::default();
+    broker.deny_all();
+    broker.allow(
+        PermissionKind::FileSystem,
+        PermissionAction::Read,
+        ResourceId::Path(jail.clone()),
+    );
+
+    assert_eq!(
+        broker.check(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(jail.join("nested/ok.txt")),
+        ),
+        PermissionDecision::Allow
+    );
+    assert_eq!(
+        broker.check(
+            PermissionKind::FileSystem,
+            PermissionAction::Read,
+            ResourceId::Path(outside),
+        ),
         PermissionDecision::Deny
     );
 }
@@ -1282,6 +1318,49 @@ fn child_process_uses_global_process_permission_broker() {
         result.matches("permission denied").count(),
         3,
         "child_process exec/spawn/execFile must all use broker, got: {result}"
+    );
+}
+
+#[test]
+#[serial]
+fn child_process_exec_matches_argv0_not_full_string() {
+    {
+        let mut broker = global_resource_broker()
+            .write()
+            .expect("resource broker lock should not be poisoned");
+        *broker = ResourceBroker::default();
+        broker.deny(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Any,
+        );
+        broker.allow(
+            PermissionKind::Process,
+            PermissionAction::Execute,
+            ResourceId::Name("echo".into()),
+        );
+    }
+
+    let mut runtime = MinimalRuntime::new().unwrap();
+    let result = runtime
+        .execute_code(
+            r#"
+            try {
+                require("child_process").exec("echo beejs-argv0");
+                "allowed";
+            } catch (error) {
+                String(error && error.message ? error.message : error);
+            }
+            "#,
+        )
+        .unwrap();
+
+    reset_global_broker();
+
+    assert_eq!(
+        result.trim(),
+        "allowed",
+        "exec('echo ...') must match --allow-run echo, got: {result}"
     );
 }
 

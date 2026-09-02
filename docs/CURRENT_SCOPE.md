@@ -1,6 +1,6 @@
 # Current Scope
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-02
 
 Optimization sprint notes (2026-08-12):
 
@@ -10,7 +10,9 @@ Optimization sprint notes (2026-08-12):
 - WorkerHost multi-isolate scaffold is available (`BeeWorkerHost` / progressive `Worker`).
 - `bee serve` is a **health stub**: it binds with `tiny_http` and returns fixed `{"ok":true}`. It does **not** execute user scripts. Application servers use `http.createServer` + `bee run`.
 - `bee run` keeps the process alive while an `http.Server` is listening and pumps requests on the event loop.
-- Node conformance scorecard is a CI hard gate (`tests/conformance/`, currently 19 fixtures).
+- Node conformance scorecard is a CI hard gate (`tests/conformance/`). Agent denial fixtures (`fs_read_denied`, `fs_jail_allows_prefix`, `env_denied`, `run_denied`, `fetch_allowlist`) are part of that gate.
+- `bee run --sandbox` denies fs/net/env/run, then overlays `--allow-*` / `--permission-policy`. Path allows are directory prefixes. `--audit-log` writes JSONL decisions without secret values. `--export-tools` prints tool schemas. `bee session` is stdin JSON-RPC; `bee mcp` is an MCP stdio server.
+- Optional Cargo feature `ai` is **not** a product LLM. It is historical in-process ML/ops code and may not compile. Models stay outside Beejs.
 - Honest benchmarks live in `benches/honest/`. Do not publish performance numbers from elsewhere.
 - TypeScript transpile uses oxc 0.147 (`src/typescript/oxc_backend.rs`) with a content-hash cache (`src/typescript/cache.rs`). Language surface is TypeScript 6.0 (transpile-only). TS 7.0 added no new syntax.
 - rusty_v8 remains on 0.22; see `docs/V8_UPGRADE.md` for the 0.32 migration branch plan.
@@ -31,7 +33,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `0.1.1`.
+- Package version is `0.1.2`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.
@@ -49,6 +51,7 @@ Current stable scope:
 - Inspect the CLI with `bee --help`, `bee --version`, or `bee version`.
 - Evaluate simple JavaScript snippets with `bee eval <code>`.
 - Run JavaScript files with `bee run <file>`.
+- Run a tool file under `--sandbox` with explicit `--allow-*` / `--permission-policy`.
 - Use the basic REPL with `bee repl`.
 - Use V8-backed execution through `src/runtime_minimal.rs` for repository examples and small scripts.
 
@@ -64,6 +67,7 @@ Current preview scope:
 - Node.js compatibility modules under `src/nodejs_core/` are installed into the runtime, including areas such as `fs`, `crypto`, `events`, `buffer`, `path`, `os`, `url`, `dns`, `process`, timers, streams, HTTP, networking, readline, and CommonJS `require`. Treat these as compatibility work in progress unless a behavior is covered by current executable tests.
 - Web API modules under `src/web_api/` are installed into the runtime, including areas such as fetch, WebSocket, Web Crypto, URL, events, FormData, Abort, Blob, timers, encoding, performance, streams, compression, structured clone, workers, service workers, broadcast channels, and message channels. Treat these as API-specific preview work, not blanket Web platform compatibility.
 - Watch and hot reload code paths exist through `bee run --watch`, `src/watcher.rs`, and `src/watcher_websocket.rs`.
+- Agent host surface: `bee run --sandbox --export-tools`, `bee session` (stdin JSON-RPC), and `bee mcp` (MCP stdio). Models stay external. `feature=ai` is not a product LLM and may not compile.
 
 ### Experimental
 

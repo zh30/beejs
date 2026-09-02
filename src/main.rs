@@ -43,6 +43,12 @@ struct PermissionCliOptions {
     /// Deny JavaScript child process execution unless explicitly allowed
     #[arg(long = "deny-run")]
     deny_run: bool,
+    /// Deny all JavaScript I/O, then overlay --allow-* / --permission-policy
+    #[arg(long = "sandbox")]
+    sandbox: bool,
+    /// Append ResourceBroker decisions as JSONL (kind/action/resource/decision only)
+    #[arg(long = "audit-log", value_name = "PATH")]
+    audit_log: Option<PathBuf>,
     /// Allow JavaScript file-system reads for an exact path (repeatable)
     #[arg(long = "allow-read", value_name = "PATH")]
     allow_read: Vec<PathBuf>,
@@ -109,6 +115,29 @@ enum Command {
         /// Alias of --preload for Node.js compatibility
         #[arg(long = "require", value_name = "MODULE")]
         require: Vec<String>,
+        /// Print exported tool schemas as JSON and exit
+        #[arg(long = "export-tools")]
+        export_tools: bool,
+    },
+    /// JSON-RPC session over stdin/stdout for Agent hosts
+    Session {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+        /// Tool module entry (JS/TS)
+        file: PathBuf,
+        /// New isolate + core APIs for every tools/call
+        #[arg(long = "isolate-per-call")]
+        isolate_per_call: bool,
+    },
+    /// MCP stdio server (tools/list + tools/call)
+    Mcp {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+        /// Tool module entry (JS/TS)
+        file: PathBuf,
+        /// New isolate + core APIs for every tools/call
+        #[arg(long = "isolate-per-call")]
+        isolate_per_call: bool,
     },
     /// Evaluate JavaScript code
     Eval {
@@ -1092,6 +1121,30 @@ fn normalize_create_args(name: String, template: String) -> (String, String) {
     }
 }
 
+fn allow_sandbox_entry_file(sandbox: bool, file: &Path) -> Result<()> {
+    if !sandbox {
+        return Ok(());
+    }
+    let mut broker = beejs::permissions::global_resource_broker()
+        .write()
+        .map_err(|_| anyhow!("resource broker lock poisoned"))?;
+    broker.allow(
+        beejs::permissions::PermissionKind::FileSystem,
+        beejs::permissions::PermissionAction::Read,
+        beejs::permissions::ResourceId::Path(file.to_path_buf()),
+    );
+    Ok(())
+}
+
+fn print_exported_tools(file: &Path) -> Result<()> {
+    let tools = beejs::agent::export_tools_from_entry(file)?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&beejs::agent::tools_list_json(&tools))?
+    );
+    Ok(())
+}
+
 fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
     use beejs::permissions::{
         global_resource_broker, PermissionAction, PermissionKind, ResourceBroker, ResourceId,
@@ -1101,6 +1154,15 @@ fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
         .write()
         .map_err(|_| anyhow!("resource broker lock poisoned"))?;
     *broker = ResourceBroker::default();
+    beejs::permissions::reset_runtime_permission_state();
+    beejs::permissions::set_sandbox_strict_env(options.sandbox);
+    if let Some(audit_log) = &options.audit_log {
+        beejs::permissions::set_audit_log_path(Some(audit_log.clone())).map_err(|e| anyhow!(e))?;
+    }
+
+    if options.sandbox {
+        broker.deny_all();
+    }
 
     if let Some(policy_path) = &options.policy {
         apply_permission_policy_file(&mut broker, policy_path)?;
@@ -4355,8 +4417,14 @@ fn main() -> Result<()> {
             websocket_port,
             preloads,
             require,
+            export_tools,
         }) => {
             apply_permission_cli_options(&permissions)?;
+            allow_sandbox_entry_file(permissions.sandbox, &file)?;
+            if export_tools {
+                print_exported_tools(&file)?;
+                return Ok(());
+            }
 
             // Combine preloads and require (they are equivalent)
             let all_preloads: Vec<String> =
@@ -5655,6 +5723,33 @@ fn main() -> Result<()> {
 
             return Ok(());
         }
+        Some(Command::Session {
+            permissions,
+            file,
+            isolate_per_call,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
+            allow_sandbox_entry_file(permissions.sandbox, &file)?;
+            check_file_read_permission(&file)?;
+            beejs::agent::run_jsonrpc_session(
+                file,
+                isolate_per_call,
+                io::BufReader::new(io::stdin()),
+                io::stdout(),
+            )?;
+            return Ok(());
+        }
+        Some(Command::Mcp {
+            permissions,
+            file,
+            isolate_per_call,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
+            allow_sandbox_entry_file(permissions.sandbox, &file)?;
+            check_file_read_permission(&file)?;
+            beejs::agent::run_mcp_server(file, isolate_per_call, io::stdin(), io::stdout())?;
+            return Ok(());
+        }
         None => {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
@@ -5663,6 +5758,8 @@ fn main() -> Result<()> {
             println!();
             println!("Commands:");
             println!("  run <file>       Run a JavaScript/TypeScript file");
+            println!("  session <file>   JSON-RPC tool session over stdin");
+            println!("  mcp <file>       MCP stdio server for the tool file");
             println!("  eval <code>      Evaluate JavaScript code");
             println!("  repl             Start interactive REPL");
             println!("  test [file]      Run tests (built-in or from file)");
@@ -5679,6 +5776,7 @@ fn main() -> Result<()> {
             println!();
             println!("Examples:");
             println!("  bee run script.js");
+            println!("  bee run --sandbox --allow-read ./workspace tool.ts");
             println!("  bee eval 'console.log(\"Hello\")'");
             println!("  bee repl");
             println!("  bee test");

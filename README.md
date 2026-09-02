@@ -1,7 +1,7 @@
 # Beejs
 
 [![Website](https://img.shields.io/badge/website-bee.zhanghe.dev-amber)](https://bee.zhanghe.dev)
-[![Release](https://img.shields.io/badge/release-v0.1.1-blue)](#current-status)
+[![Release](https://img.shields.io/badge/release-v0.1.2-blue)](#current-status)
 [![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -15,14 +15,14 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 
 - **Rust + V8 execution**: Default runtime path is `src/runtime_minimal.rs` with Tokio-backed timers and I/O work in progress.
 - **TypeScript support**: `.ts` / `.tsx` files are transpiled by oxc before execution (TypeScript 6.0 syntax, transpile-only; no `tsc` type-check).
-- **Fail-closed permissions**: Granular broker flags such as `--deny-fs` / `--deny-net`.
+- **Agent sandbox**: `bee run --sandbox` is default-deny for fs/net/env/run. Overlay `--allow-read` (directory prefix), `--allow-net`, `--allow-env`, `--allow-run`, or `--permission-policy`. `--audit-log` records decisions without secret values.
 - **Node.js & Web API surface (incremental)**: Partial `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified.
 
 ---
 
 ## Current Status
 
-Package version is **`0.1.1`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
+Package version is **`0.1.2`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
 
 Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/`. Performance claims require the scripts in `benchmarks/` against the binary you just built.
 
@@ -39,7 +39,7 @@ curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 Or specify a custom version tag or installation directory:
 
 ```bash
-curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.1.1 sh
+curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.1.2 sh
 curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_INSTALL_DIR="$HOME/.local/bin" sh
 ```
 
@@ -69,6 +69,13 @@ Run a JavaScript or TypeScript file natively:
 ```bash
 bee run examples/basics/hello_world.js
 bee run examples/basics/typescript_demo.ts
+```
+
+Run an Agent tool under a default-deny sandbox:
+
+```bash
+bee run --sandbox --permission-policy examples/agent/echo.policy.json --export-tools examples/agent/echo_tool.ts
+bee session --sandbox --permission-policy examples/agent/echo.policy.json examples/agent/echo_tool.ts
 ```
 
 Start the interactive REPL:

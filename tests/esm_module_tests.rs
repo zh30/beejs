@@ -86,6 +86,21 @@ fn test_module_id() {
     assert!(result.trim() == "string");
 }
 
+/// Progressive import.meta.url on the default isolate (0.22 host callback).
+#[test]
+#[serial]
+fn test_import_meta_url_is_file_url() {
+    let mut runtime = MinimalRuntime::new().expect("Failed to create runtime");
+    runtime.set_main_module_path("eval.mjs");
+    let result = runtime
+        .execute_code("String(globalThis.import && globalThis.import.meta && globalThis.import.meta.url || '')")
+        .expect("Execution failed");
+    assert!(
+        result.contains("file:"),
+        "import.meta.url should be a file URL, got {result}"
+    );
+}
+
 /// Test module.exports exists
 #[test]
 #[serial]

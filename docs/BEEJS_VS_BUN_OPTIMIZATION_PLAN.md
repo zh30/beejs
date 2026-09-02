@@ -1,5 +1,7 @@
 # Beejs 对标 Bun 优化计划
 
+**当前主叙事（2026-09）：** Beejs 是 Agent 工具沙箱，Node 够用即可。不要把「对标 Bun 的 all-in-one」当成产品目标。性能数字只来自 `benches/honest/`。`feature=ai` 不是可服务 LLM。
+
 - 日期：2026-08-17
 - 依据：[@bunjavascript](https://x.com/bunjavascript) 2026-05 至 2026-08 公开推文、[Bun 博客](https://bun.com/blog)、[Rewriting Bun in Rust](https://bun.com/blog/bun-in-rust)、Beejs `docs/CURRENT_SCOPE.md` / `Cargo.toml` / `src/lib.rs` / `src/main.rs`
 - 原则：只按当前可编译、可测试的事实排优先级。历史 `STAGE_*` 报告和旧性能倍数不作为目标。
@@ -14,7 +16,7 @@ Bun 最近不是在比谁功能清单更长，而是在做三件事：
 
 Beejs 已经站在 Bun 刚花大成本才到达的位置：**Rust + 引擎绑定**。引擎还是 V8，和 Node / Chrome 同族，这是中长期兼容性的真正护城河。
 
-但当前产品事实是：Beejs 是 `0.1.1`，默认路径只有 `eval` / `run` / `repl` 算稳定；`bee serve` 仍是 `tiny_http` 固定 JSON health stub（应用服务器走 `http.createServer` + `bee run`）；`bundle` 是按行拼接本地 import；Node 符合性以 `tests/conformance/` 分数为准。**现在去抄 `Bun.Image` / S3 / HTTP/3，只会再堆一层空的阶段报告。**
+但当前产品事实是：Beejs 是 `0.1.2`，默认路径只有 `eval` / `run` / `repl` 算稳定；`bee serve` 仍是 `tiny_http` 固定 JSON health stub（应用服务器走 `http.createServer` + `bee run`）；`bundle` 是按行拼接本地 import；Node 符合性以 `tests/conformance/` 分数为准。**现在去抄 `Bun.Image` / S3 / HTTP/3，只会再堆一层空的阶段报告。**
 
 要比 Bun 强，不是功能数量超过它，而是在一条更窄的产品线上做到三件事同时成立：
 
@@ -61,7 +63,7 @@ Beejs 已经站在 Bun 刚花大成本才到达的位置：**Rust + 引擎绑定
 
 | 层级 | 现状 |
 |------|------|
-| 版本 | `0.1.1`，默认 feature 为空 |
+| 版本 | `0.1.2`，默认 feature 为空 |
 | 引擎 | `rusty_v8 = "0.22"`，升级到 0.32 / `v8` crate 必须独立分支（`docs/V8_UPGRADE.md`） |
 | 稳定 | `bee eval` / `bee run` / `bee repl`，V8 执行小脚本 |
 | 预览 | TS/TSX 转译 + 内容哈希缓存；`nodejs_core` / `web_api` 已安装但合同未锁死；`--watch` |

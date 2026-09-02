@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow_read": ["echo_tool.ts", "tools.json"]
+  }
+}

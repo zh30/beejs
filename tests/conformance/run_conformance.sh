@@ -43,6 +43,13 @@ for fixture in "${fixtures[@]}"; do
   if [[ -f "$policy" ]]; then
     extra+=(--permission-policy "$policy")
   fi
+  flags="${fixture%.js}.flags"
+  if [[ -f "$flags" ]]; then
+    while IFS= read -r flag || [[ -n "$flag" ]]; do
+      [[ -z "$flag" || "$flag" == \#* ]] && continue
+      extra+=("$flag")
+    done <"$flags"
+  fi
   # macOS bash 3.2 + `set -u` treats empty "${arr[@]}" as unbound.
   if [[ ${#extra[@]} -gt 0 ]]; then
     run_cmd=("${BEE[@]}" run "${extra[@]}" "$fixture")
