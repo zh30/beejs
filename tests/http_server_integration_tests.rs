@@ -406,13 +406,18 @@ fn test_create_http_response() {
 #[test]
 #[serial]
 fn test_http_server_channel_initialization() {
-    use beejs::nodejs_core::http::init_http_server_channel;
+    use beejs::nodejs_core::http::{init_http_server_channel, reset_http_server_channel};
+
+    // 重置通道以确保从干净状态初始化
+    reset_http_server_channel();
 
     // 初始化全局消息通道
     let channel = init_http_server_channel();
 
     // 验证 channel 被正确初始化
-    let inner = channel.lock().unwrap();
+    let inner = channel
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     assert!(inner.is_some(), "Channel should be initialized");
 
     let channel_ref = inner.as_ref().unwrap();
