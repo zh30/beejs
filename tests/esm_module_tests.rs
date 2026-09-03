@@ -205,12 +205,15 @@ fn runtime_static_default_import_loads_commonjs_module() {
         r#"
         globalThis.__dirname = "{}";
         import settings from './settings.js';
-        settings.answer;
+        globalThis.__esmStaticDefaultResult = settings.answer;
         "#,
         path_for_js(&app_dir)
     );
 
-    let result = runtime.execute_code(&code).expect("Execution failed");
+    runtime.execute_code(&code).expect("Execution failed");
+    let result = runtime
+        .execute_code("globalThis.__esmStaticDefaultResult")
+        .expect("Failed to read static default import result");
 
     assert_eq!(result.trim(), "42");
 }
@@ -234,12 +237,15 @@ fn runtime_static_named_import_loads_commonjs_module() {
         r#"
         globalThis.__dirname = "{}";
         import {{ answer as value, label }} from './math.js';
-        `${{label}}:${{value}}`;
+        globalThis.__esmStaticNamedResult = `${{label}}:${{value}}`;
         "#,
         path_for_js(&app_dir)
     );
 
-    let result = runtime.execute_code(&code).expect("Execution failed");
+    runtime.execute_code(&code).expect("Execution failed");
+    let result = runtime
+        .execute_code("globalThis.__esmStaticNamedResult")
+        .expect("Failed to read static named import result");
 
     assert_eq!(result.trim(), "bee:42");
 }
@@ -269,12 +275,15 @@ fn runtime_static_namespace_and_side_effect_imports_load_commonjs_modules() {
         globalThis.__dirname = "{}";
         import './side-effect.js';
         import * as math from './math.js';
-        `${{globalThis.__sideEffectLoaded}}:${{math.multiply(6, 7)}}`;
+        globalThis.__esmStaticNamespaceResult = `${{globalThis.__sideEffectLoaded}}:${{math.multiply(6, 7)}}`;
         "#,
         path_for_js(&app_dir)
     );
 
-    let result = runtime.execute_code(&code).expect("Execution failed");
+    runtime.execute_code(&code).expect("Execution failed");
+    let result = runtime
+        .execute_code("globalThis.__esmStaticNamespaceResult")
+        .expect("Failed to read static namespace import result");
 
     assert_eq!(result.trim(), "loaded:42");
 }

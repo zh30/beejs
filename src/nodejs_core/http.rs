@@ -137,11 +137,16 @@ static ACTIVE_HTTP_SERVER_STATES: Lazy<Mutex<Vec<Arc<HttpServerState>>>> =
     Lazy::new(|| Mutex::new(Vec::new()));
 
 fn register_http_server_state(state: Arc<HttpServerState>) {
-    ACTIVE_HTTP_SERVER_STATES.lock().unwrap().push(state);
+    ACTIVE_HTTP_SERVER_STATES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .push(state);
 }
 
 fn stop_all_http_server_states() {
-    let mut states = ACTIVE_HTTP_SERVER_STATES.lock().unwrap();
+    let mut states = ACTIVE_HTTP_SERVER_STATES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     for state in states.iter() {
         state.listening.store(false, Ordering::SeqCst);
     }
@@ -149,7 +154,9 @@ fn stop_all_http_server_states() {
 }
 
 fn stop_http_server_state(host: &str, port: u16) {
-    let mut states = ACTIVE_HTTP_SERVER_STATES.lock().unwrap();
+    let mut states = ACTIVE_HTTP_SERVER_STATES
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     for state in states.iter() {
         let bound = state.bound_port.load(Ordering::SeqCst) as u16;
         if state.host == host && (state.port == port || bound == port) {
@@ -189,7 +196,9 @@ pub fn reset_http_server_channel() {
 
     unsafe {
         if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
-            let mut channel_guard = channel_arc.lock().unwrap();
+            let mut channel_guard = channel_arc
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             // 创建一个新通道，丢弃所有未处理的消息
             *channel_guard = Some(HttpServerMessageChannel::new(100));
         }
@@ -202,7 +211,10 @@ pub fn reset_http_server_channel() {
 pub fn send_http_response(response: HttpResponseMessage) {
     unsafe {
         if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
-            if let Some(ref channel) = *channel_arc.lock().unwrap() {
+            if let Some(ref channel) = *channel_arc
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+            {
                 let _ = channel.send_response(response);
             }
         }
@@ -216,7 +228,10 @@ pub fn send_http_response(response: HttpResponseMessage) {
 pub fn get_http_request_receiver() -> Option<crossbeam::channel::Receiver<HttpRequestMessage>> {
     unsafe {
         HTTP_SERVER_CHANNEL.as_ref().and_then(|channel_arc| {
-            let _ = channel_arc.lock().unwrap().as_ref()?;
+            let _ = channel_arc
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .as_ref()?;
             // 使用 try_recv_http_request 替代
             None
         })
@@ -229,7 +244,10 @@ pub fn get_http_request_receiver() -> Option<crossbeam::channel::Receiver<HttpRe
 pub fn try_recv_http_request() -> Option<HttpRequestMessage> {
     unsafe {
         if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
-            if let Some(ref channel) = *channel_arc.lock().unwrap() {
+            if let Some(ref channel) = *channel_arc
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+            {
                 match channel.request_receiver.try_recv() {
                     Ok(request) => Some(request),
                     Err(crossbeam::channel::TryRecvError::Empty) => {
@@ -2594,7 +2612,9 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
 
         if use_message_channel {
             if let Some(ref channel_ref) = channel {
-                let locked = channel_ref.lock().unwrap();
+                let locked = channel_ref
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 if let Some(ref msg_channel) = *locked {
                     match msg_channel.send_request(request_msg) {
                         Ok(()) => {
@@ -2647,7 +2667,9 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
         if let Some(ref channel_ref) = channel {
             // 获取响应接收器并释放锁，避免阻塞其他线程
             let response_receiver = {
-                let guard = channel_ref.lock().unwrap();
+                let guard = channel_ref
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 if let Some(ref msg_channel) = *guard {
                     // v0.3.95: 克隆 receiver 并释放锁后再等待
                     Some(msg_channel.response_receiver.clone())
