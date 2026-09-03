@@ -25,10 +25,11 @@ It must not interleave with Node compatibility feature work.
 
 ## Interim mitigation in this sprint
 
-- Branch `upgrade/rusty-v8-0.32` exists. After `rusty_v8 = "0.32"` and
-  `new_default_platform(0, false).make_shared()`, `cargo check --lib` succeeds
-  on that branch. `main` stays on 0.22 until a dedicated merge.
-- Keep 0.22 as the default compile pin for stability.
+- Branch `upgrade/rusty-v8-0.32-prep` (worktree) bumps `rusty_v8` to 0.32 and
+  uses `new_default_platform(0, false).make_shared()`. `cargo check --lib`
+  succeeds there. Do **not** mix that merge with Agent sandbox / session / MCP.
+- Keep 0.22 as the default compile pin on this tree for stability.
 - Land warmup-artifact snapshot (`SnapshotManager::generate_snapshot`) and
-  `HostInitializeImportMetaObject`-shaped progressive `import.meta` wiring.
-- Track upgrade completion with CI once the branch compiles.
+  progressive `import.meta` (`global.import.meta.url` plus ESM namespace
+  publish). Full `HostInitializeImportMetaObjectCallback` lands with 0.32.
+- Track upgrade completion with CI once the dedicated branch is merged.

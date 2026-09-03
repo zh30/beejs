@@ -25,7 +25,7 @@ const copy = {
     footer: {
       statusLabel: 'System Status',
       statusValue: 'Operational',
-      stage: 'v0.1.1',
+      stage: 'v0.1.2',
       contact: 'Contact',
       email: 'support@bee.zhanghe.dev',
       rights: 'All rights reserved.',
@@ -36,7 +36,7 @@ const copy = {
       copyright: `© ${new Date().getFullYear()} Beejs. Open-source under MIT.`,
     },
     home: {
-      heroBadge: 'v0.1.1 Released',
+      heroBadge: 'v0.1.2 Released',
       heroBadgeSub: 'Sub-Millisecond Cold Starts',
       heroTitlePrefix: 'Fast, Secure ',
       heroTitleAccent: 'JavaScript & TypeScript Runtime',
@@ -75,7 +75,7 @@ const copy = {
         },
         {
           title: 'Fail-Closed Security Sandbox',
-          desc: 'Granular permission broker for filesystem, network, and process execution isolation.',
+          desc: 'Default-deny --sandbox with directory jail, audit JSONL, and allow-listed fs/net/env/run.',
         },
         {
           title: 'Node.js & Web Standard APIs',
@@ -302,7 +302,7 @@ const copy = {
     footer: {
       statusLabel: '系统状态',
       statusValue: '运行中',
-      stage: 'v0.1.1',
+      stage: 'v0.1.2',
       contact: '联系',
       email: 'support@bee.zhanghe.dev',
       rights: '保留所有权利。',
@@ -313,7 +313,7 @@ const copy = {
       copyright: `© ${new Date().getFullYear()} Beejs. 基于 MIT 协议开源。`,
     },
     home: {
-      heroBadge: 'v0.1.1 已发布',
+      heroBadge: 'v0.1.2 已发布',
       heroBadgeSub: '亚毫秒级冷启动',
       heroTitlePrefix: '基于 Rust 与 V8 的超高速、安全 ',
       heroTitleAccent: 'JavaScript & TypeScript 运行时',
@@ -351,7 +351,7 @@ const copy = {
         },
         {
           title: '默认闭合安全沙箱',
-          desc: '细粒度的权限管控机制，严格隔离文件系统、网络访问与子进程执行。',
+          desc: '默认拒绝的 --sandbox：目录 jail、审计 JSONL，以及显式放行的 fs/net/env/run。',
         },
         {
           title: 'Node.js 与 Web 标准 API',

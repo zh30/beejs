@@ -99,15 +99,47 @@ kill "$HTTP_PID" 2>/dev/null || true
 wait "$HTTP_PID" 2>/dev/null || true
 rm -f "$PORT_JS"
 
-echo -n "idle 10s CPU sample (bee eval sleep): "
-python3 - "$BEE" <<'PY'
-import subprocess, sys, time, os
-bee = sys.argv[1]
-# Approximate idle by running a 10s timeout and reporting user+sys if /usr/bin/time exists.
+IDLE_SECS="${HONEST_IDLE_SECS:-5}"
+echo -n "idle ${IDLE_SECS}s bee session --sandbox (user+sys if available): "
+python3 - "$BEE" "$IDLE_SECS" <<'PY'
+import subprocess, sys, time, os, shutil
+bee, idle_secs = sys.argv[1], float(sys.argv[2])
+tool = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "examples", "agent", "echo_tool.ts")
+# Fallback: repo-root relative from benches/honest
+root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+tool = os.path.join(root, "examples", "agent", "echo_tool.ts")
+cmd = [bee, "session", "--sandbox", tool]
 start = time.perf_counter()
-subprocess.run([bee, "eval", "const s=Date.now(); while(Date.now()-s<50){}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-print(f"{(time.perf_counter()-start)*1000:.1f} ms busy-50ms (idle-10s needs an external sampler)")
+proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+time.sleep(idle_secs)
+proc.terminate()
+try:
+    proc.wait(timeout=2)
+except subprocess.TimeoutExpired:
+    proc.kill()
+    proc.wait()
+print(f"{(time.perf_counter()-start)*1000:.1f} ms wall")
 PY
+
+FETCH_ITERS="${HONEST_FETCH_ITERS:-200}"
+FETCH_JS="$(mktemp)"
+cat >"$FETCH_JS" <<EOF
+let denied = 0;
+let other = 0;
+for (let i = 0; i < $FETCH_ITERS; i++) {
+  try { fetch("http://127.0.0.1:9/honest-leak"); }
+  catch (error) {
+    const text = String(error && error.message || error);
+    if (text.includes("permission")) denied += 1;
+    else other += 1;
+  }
+}
+console.log("fetch-iter=" + $FETCH_ITERS + " denied=" + denied + " other=" + other);
+EOF
+echo -n "sandbox fetch ${FETCH_ITERS}x: "
+time_ms run --sandbox --allow-net 127.0.0.1 "$FETCH_JS"
+echo " ms"
+rm -f "$FETCH_JS"
 
 echo
 echo "Optional peer runtimes:"

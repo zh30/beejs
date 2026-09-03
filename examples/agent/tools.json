@@ -1,0 +1,14 @@
+{
+  "tools": [
+    {
+      "name": "echo",
+      "description": "Echo the input text back to the host",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string" }
+        }
+      }
+    }
+  ]
+}

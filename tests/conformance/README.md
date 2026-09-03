@@ -21,5 +21,8 @@ Exit code is non-zero if any fixture fails. CI publishes the printed pass rate.
 ## Scope policy
 
 Start with pure-logic / sync modules (`path`, `buffer`, `events`, `assert`, `url`,
-`util`, `querystring`). Async I/O fixtures are added as the event loop lands
-true keep-alive and non-blocking APIs.
+`util`, `querystring`). Agent sandbox fixtures (`fs_read_denied`,
+`fs_jail_allows_prefix`, `env_denied`, `run_denied`, `fetch_allowlist`) use a
+sidecar `.flags` file for `--sandbox` / `--allow-*`.
+
+Optional `.policy.json` next to a fixture is passed as `--permission-policy`.

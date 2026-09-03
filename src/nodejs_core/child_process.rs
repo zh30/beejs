@@ -185,7 +185,7 @@ fn cp_exec_callback(
     if let Err(error) = crate::permissions::check_global_permission(
         crate::permissions::PermissionKind::Process,
         crate::permissions::PermissionAction::Execute,
-        crate::permissions::ResourceId::Name(command.clone()),
+        crate::permissions::ResourceId::Name(crate::permissions::process_command_name(&command)),
     ) {
         let error_message = v8::String::new(scope, &error.to_string()).unwrap();
         let error_obj = v8::Exception::error(scope, error_message);
@@ -220,7 +220,7 @@ fn cp_spawn_callback(
     if let Err(error) = crate::permissions::check_global_permission(
         crate::permissions::PermissionKind::Process,
         crate::permissions::PermissionAction::Execute,
-        crate::permissions::ResourceId::Name(command.clone()),
+        crate::permissions::ResourceId::Name(crate::permissions::process_command_name(&command)),
     ) {
         let error_message = v8::String::new(scope, &error.to_string()).unwrap();
         let error_obj = v8::Exception::error(scope, error_message);
@@ -273,7 +273,7 @@ fn cp_exec_file_callback(
     if let Err(error) = crate::permissions::check_global_permission(
         crate::permissions::PermissionKind::Process,
         crate::permissions::PermissionAction::Execute,
-        crate::permissions::ResourceId::Name(file.clone()),
+        crate::permissions::ResourceId::Name(crate::permissions::process_command_name(&file)),
     ) {
         let error_message = v8::String::new(scope, &error.to_string()).unwrap();
         let error_obj = v8::Exception::error(scope, error_message);
