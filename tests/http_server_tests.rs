@@ -125,7 +125,8 @@ fn test_http_server_listen_sets_address() {
     let code = r#"
         const server = http.createServer();
         server.listen(3000, 'localhost');
-        server.address;
+        const addr = typeof server.address === 'function' ? server.address() : server.address;
+        `${addr.address}:${addr.port}`;
     "#;
     let result = runtime.execute_code(code).expect("Execution failed");
     assert!(
