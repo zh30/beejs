@@ -18,11 +18,17 @@ pub fn enable_startup_snapshot_for_cli() {
     CLI_STARTUP_SNAPSHOT.store(true, Ordering::SeqCst);
 }
 
-/// Returns the snapshot file name tied to the current package version.
+/// Returns the snapshot file name tied to the current package version and build profile.
 pub fn startup_snapshot_name() -> String {
+    let mode = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
     format!(
-        "beejs-startup-v{}-rusty_v8-0.22-warmup-v2.bin",
-        env!("CARGO_PKG_VERSION")
+        "beejs-startup-v{}-{}-rusty_v8-0.22-warmup-v2.bin",
+        env!("CARGO_PKG_VERSION"),
+        mode
     )
 }
 

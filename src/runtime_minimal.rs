@@ -215,17 +215,29 @@ fn env_is_allowed_callback(
 fn wrap_process_env_proxy<'scope>(
     scope: &mut v8::HandleScope<'scope>,
     env_obj: v8::Local<'scope, v8::Object>,
+    is_sandbox: bool,
 ) -> v8::Local<'scope, v8::Object> {
     let Some(code) = v8::String::new(
         scope,
         r#"
-(function(raw) {
+(function(raw, isSandbox) {
   return new Proxy(raw, {
     get(target, prop, receiver) {
       if (typeof prop !== 'string') {
         return Reflect.get(target, prop, receiver);
       }
+      if (isSandbox) {
+        if (!Object.prototype.hasOwnProperty.call(target, prop)) {
+          if (typeof globalThis.__beeCheckEnv === 'function') {
+            globalThis.__beeCheckEnv(prop);
+          }
+          return undefined;
+        }
+      }
       if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+        if (isSandbox && typeof globalThis.__beeCheckEnv === 'function') {
+          globalThis.__beeCheckEnv(prop);
+        }
         return undefined;
       }
       return target[prop];
@@ -239,7 +251,17 @@ fn wrap_process_env_proxy<'scope>(
     },
     has(target, prop) {
       if (typeof prop === 'string') {
+        if (isSandbox) {
+          if (!Object.prototype.hasOwnProperty.call(target, prop)) {
+            if (typeof globalThis.__beeCheckEnv === 'function') {
+              globalThis.__beeCheckEnv(prop);
+            }
+          }
+        }
         if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+          if (isSandbox && typeof globalThis.__beeCheckEnv === 'function') {
+            globalThis.__beeCheckEnv(prop);
+          }
           return false;
         }
       }
@@ -282,7 +304,8 @@ fn wrap_process_env_proxy<'scope>(
         return env_obj;
     };
     let undefined = v8::undefined(scope).into();
-    match factory.call(scope, undefined, &[env_obj.into()]) {
+    let is_sandbox_v8 = v8::Boolean::new(scope, is_sandbox);
+    match factory.call(scope, undefined, &[env_obj.into(), is_sandbox_v8.into()]) {
         Some(value) if value.is_object() => value.to_object(scope).unwrap_or(env_obj),
         _ => env_obj,
     }
@@ -294,12 +317,23 @@ fn create_process_env_object<'scope>(
     let env_obj = v8::Object::new(scope);
 
     for (key, value) in std::env::vars() {
+        if crate::permissions::check_global_permission(
+            crate::permissions::PermissionKind::Environment,
+            crate::permissions::PermissionAction::Read,
+            crate::permissions::ResourceId::Name(key.clone()),
+        )
+        .is_err()
+        {
+            continue;
+        }
+
         let key_value = v8::String::new(scope, &key).unwrap();
         let env_value = v8::String::new(scope, &value).unwrap();
         env_obj.set(scope, key_value.into(), env_value.into());
     }
 
-    wrap_process_env_proxy(scope, env_obj)
+    let is_sandbox = crate::permissions::sandbox_strict_env();
+    wrap_process_env_proxy(scope, env_obj, is_sandbox)
 }
 
 /// Get the timer registry, initializing it if needed
