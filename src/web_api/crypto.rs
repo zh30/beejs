@@ -755,7 +755,17 @@ fn get_random_values_callback(
     }
 
     let mut data = vec![0u8; byte_length];
-    if let Err(e) = rng.fill(&mut data) {
+    if let Some(seed) = crate::permissions::get_deterministic_seed() {
+        static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let count = COUNTER.fetch_add(byte_length as u64, std::sync::atomic::Ordering::SeqCst);
+        let mut state = seed.wrapping_add(count);
+        for byte in data.iter_mut() {
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            *byte = (state >> 33) as u8;
+        }
+    } else if let Err(e) = rng.fill(&mut data) {
         let error_msg = format!("Failed to generate random values: {}", e);
         let error = v8::String::new(scope, &error_msg).unwrap();
         let error_obj = v8::Exception::error(scope, error);

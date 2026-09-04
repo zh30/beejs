@@ -1,7 +1,7 @@
 # Beejs
 
 [![Website](https://img.shields.io/badge/website-bee.zhanghe.dev-amber)](https://bee.zhanghe.dev)
-[![Release](https://img.shields.io/badge/release-v0.3.0-blue)](#current-status)
+[![Release](https://img.shields.io/badge/release-v0.4.0-blue)](#current-status)
 [![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -16,16 +16,17 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 - **Rust + V8 execution**: Default runtime path is `src/runtime_minimal.rs` with Tokio-backed timers and I/O work in progress.
 - **Sub-millisecond Cold Start**: V8 startup snapshot 2.0 with versioned caches, integrity verification, and self-healing fallback (`bee snapshot`).
 - **TypeScript support**: `.ts` / `.tsx` files are transpiled by oxc before execution (TypeScript 6.0 syntax, transpile-only; no `tsc` type-check).
-- **Agent sandbox & MCP**: `bee run --sandbox` is default-deny for fs/net/env/run. Native stdio MCP server (`bee mcp`) and JSON-RPC session (`bee session`) with structured schemas, audit trail recording, and error formatting.
-- **Node.js & Web API surface (incremental)**: Multi-isolate `worker_threads`, WebAssembly streaming, `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified (100% on 30/30 fixtures).
+- **Agent sandbox, deterministic replay & MCP**: `bee run --sandbox` is default-deny for fs/net/env/run with structured audit logging. Deterministic virtual time (`--freeze-time`) and PRNG seeding (`--seed`) for reproducible agent runs. Native stdio MCP server (`bee mcp`) and JSON-RPC session (`bee session`).
+- **Node.js & Web API surface (incremental)**: Multi-isolate `worker_threads`, WebAssembly streaming, `child_process` sync execution, `zlib`, `util`, `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified (100% on 35/35 fixtures).
+- **Native Test Runner**: Fast built-in test discovery and watch mode (`bee test`, `bee test --watch`).
 
 ---
 
 ## Current Status
 
-Package version is **`0.3.0`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
+Package version is **`0.4.0`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
 
-Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/`. Performance claims require the scripts in `benchmarks/` against the binary you just built.
+Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/` (35/35 passed, 100%). Performance claims require the scripts in `benchmarks/` against the binary you just built.
 
 ---
 
@@ -40,7 +41,7 @@ curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 Or specify a custom version tag or installation directory:
 
 ```bash
-curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.3.0 sh
+curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.4.0 sh
 curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_INSTALL_DIR="$HOME/.local/bin" sh
 ```
 
@@ -85,10 +86,11 @@ Start the interactive REPL:
 bee repl
 ```
 
-Run test suite smoke checks:
+Run test suite with automatic discovery:
 
 ```bash
-bee test examples/testing/math.test.js
+bee test
+bee test --watch
 ```
 
 ---
@@ -102,6 +104,7 @@ bee --version
 bee --help
 bee run <file> [args...]
 bee eval <code>
+bee test [files...] [--watch]
 bee repl
 bee version
 ```

@@ -1,13 +1,16 @@
 # Beejs Node conformance scorecard
 
-Generated: 2026-09-04T06:45Z
+Generated: 2026-09-04T10:21Z
 
 | Fixture | Result | Notes |
 |---------|--------|-------|
 | assert_basics.js | PASS |
 | buffer_basics.js | PASS |
+| child_process_exec_denied.js | PASS |
+| child_process_exec_sync.js | PASS |
 | create_require.js | PASS |
 | crypto_hash.js | PASS |
+| crypto_hmac_uuid.js | PASS |
 | crypto_random.js | PASS |
 | dns_lookup.js | PASS |
 | env_denied.js | PASS |
@@ -31,8 +34,10 @@ Generated: 2026-09-04T06:45Z
 | timers_order.js | PASS |
 | timers_setimmediate.js | PASS |
 | url_basics.js | PASS |
+| util_basics.js | PASS |
 | wasm_instantiate.js | PASS |
 | web_worker_basics.js | PASS |
 | worker_threads_basics.js | PASS |
+| zlib_sync.js | PASS |
 
-**Pass rate: 30/30 (100%)**
+**Pass rate: 35/35 (100%)**

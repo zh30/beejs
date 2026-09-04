@@ -119,6 +119,9 @@ fn get_time_origin() -> Instant {
 }
 
 fn system_epoch_millis() -> f64 {
+    if let Some(frozen) = crate::permissions::get_frozen_time_ms() {
+        return frozen as f64;
+    }
     let now = SystemTime::now();
     let duration = now
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -128,6 +131,9 @@ fn system_epoch_millis() -> f64 {
 
 /// Get high-resolution time in milliseconds (since time origin)
 fn get_high_res_time() -> f64 {
+    if crate::permissions::get_frozen_time_ms().is_some() {
+        return 0.0;
+    }
     PERFORMANCE_CLOCK.start_instant.elapsed().as_secs_f64() * 1000.0
 }
 
