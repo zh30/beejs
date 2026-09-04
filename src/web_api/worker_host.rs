@@ -530,6 +530,8 @@ pub fn resolve_script_source(script_ref: &str) -> Result<(String, String)> {
     if script_ref.starts_with("data:") {
         let code = decode_data_url(script_ref)?;
         Ok((code, script_ref.to_string()))
+    } else if script_ref.contains('\n') {
+        Ok((script_ref.to_string(), "[inline]".to_string()))
     } else {
         let path = Path::new(script_ref);
         let target_path = if path.is_file() {
@@ -541,16 +543,15 @@ pub fn resolve_script_source(script_ref: &str) -> Result<(String, String)> {
                 rel
             } else {
                 return Err(anyhow!(
-                    "Worker script '{}' not found. Pass a readable file path or data: URL.",
+                    "WorkerHost could not load script '{}'. Pass a readable file path.",
                     script_ref
                 ));
             }
         };
-        let code = std::fs::read_to_string(&target_path).map_err(|e| {
+        let code = std::fs::read_to_string(&target_path).map_err(|_| {
             anyhow!(
-                "failed to read worker file '{}': {}",
-                target_path.display(),
-                e
+                "WorkerHost could not load script '{}'. Pass a readable file path.",
+                script_ref
             )
         })?;
         Ok((code, target_path.display().to_string()))
@@ -751,7 +752,7 @@ pub fn setup_worker_host_api(
             constructor(filename, options = {}) {
                 super();
                 if (!filename || typeof filename !== 'string') {
-                    throw new TypeError("Worker constructor requires a script path or URL");
+                    throw new TypeError("Worker requires a script URL or source");
                 }
 
                 let source = '';
