@@ -854,6 +854,44 @@ fn child_process_on_callback(
     retval.set(this.into());
 }
 
+fn child_process_bytes_to_v8_value<'s>(
+    scope: &mut v8::HandleScope<'s>,
+    bytes: &[u8],
+    encoding: Option<&str>,
+) -> v8::Local<'s, v8::Value> {
+    if let Some(enc) = encoding {
+        if enc != "buffer" {
+            let s = String::from_utf8_lossy(bytes);
+            return v8::String::new(scope, &s).unwrap().into();
+        }
+    }
+    let ab = v8::ArrayBuffer::new(scope, bytes.len());
+    if !bytes.is_empty() {
+        let bs = ab.get_backing_store();
+        unsafe {
+            let ptr = bs.as_ref().as_ptr() as *mut u8;
+            std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, bytes.len());
+        }
+    }
+    let ctx = scope.get_current_context();
+    let global = ctx.global(scope);
+    let buffer_key = v8::String::new(scope, "Buffer").unwrap();
+    if let Some(buf_ctor) = global.get(scope, buffer_key.into()) {
+        if let Ok(buf_fn) = v8::Local::<v8::Function>::try_from(buf_ctor) {
+            let from_key = v8::String::new(scope, "from").unwrap();
+            if let Some(from_val) = buf_fn.get(scope, from_key.into()) {
+                if let Ok(from_fn) = v8::Local::<v8::Function>::try_from(from_val) {
+                    let fargs = [ab.into()];
+                    if let Some(wrapped) = from_fn.call(scope, buf_ctor, &fargs) {
+                        return wrapped;
+                    }
+                }
+            }
+        }
+    }
+    ab.into()
+}
+
 fn get_i64_property(
     scope: &mut v8::HandleScope,
     obj: v8::Local<v8::Object>,
@@ -2314,12 +2352,20 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                 vec![search_value.to_integer(scope).unwrap().value() as u8]
             } else if search_value.is_array_buffer() || search_value.is_typed_array() {
                 if let Ok(arr_buffer) = v8::Local::<v8::ArrayBuffer>::try_from(search_value) {
-                    let store = arr_buffer.get_backing_store();
                     let len = arr_buffer.byte_length();
-                    let slice = unsafe {
-                        std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len)
-                    };
-                    slice.to_vec()
+                    if len == 0 {
+                        vec![]
+                    } else {
+                        let store = arr_buffer.get_backing_store();
+                        let ptr = store.as_ref().as_ptr();
+                        if ptr.is_null() {
+                            vec![]
+                        } else {
+                            let slice =
+                                unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
+                            slice.to_vec()
+                        }
+                    }
                 } else {
                     vec![]
                 }
@@ -2362,8 +2408,73 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
          mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let first = args.get(0);
-                let bytes: Vec<u8> = if let Some(str_val) = first.to_string(scope) {
-                    let rust_string = str_val.to_rust_string_lossy(scope);
+                let bytes: Vec<u8> = if first.is_array_buffer() {
+                    if let Ok(buf) = v8::Local::<v8::ArrayBuffer>::try_from(first) {
+                        let len = buf.byte_length();
+                        if len == 0 {
+                            vec![]
+                        } else {
+                            let store = buf.get_backing_store();
+                            let ptr = store.as_ref().as_ptr();
+                            if ptr.is_null() {
+                                vec![]
+                            } else {
+                                let slice =
+                                    unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
+                                slice.to_vec()
+                            }
+                        }
+                    } else {
+                        vec![]
+                    }
+                } else if first.is_typed_array() {
+                    if let Ok(ta) = v8::Local::<v8::TypedArray>::try_from(first) {
+                        let len = ta.byte_length();
+                        if len == 0 {
+                            vec![]
+                        } else {
+                            let offset = ta.byte_offset();
+                            if let Some(buf) = ta.buffer(scope) {
+                                let store = buf.get_backing_store();
+                                let ptr = store.as_ref().as_ptr();
+                                if ptr.is_null() {
+                                    vec![]
+                                } else {
+                                    let slice = unsafe {
+                                        std::slice::from_raw_parts(
+                                            (ptr as *const u8).add(offset),
+                                            len,
+                                        )
+                                    };
+                                    slice.to_vec()
+                                }
+                            } else {
+                                vec![]
+                            }
+                        }
+                    } else {
+                        vec![]
+                    }
+                } else if first.is_array() {
+                    if let Ok(arr) = v8::Local::<v8::Array>::try_from(first) {
+                        let len = arr.length();
+                        let mut b = Vec::with_capacity(len as usize);
+                        for i in 0..len {
+                            if let Some(elem) = arr.get_index(scope, i) {
+                                b.push(
+                                    elem.to_integer(scope).map(|n| n.value() as u8).unwrap_or(0),
+                                );
+                            }
+                        }
+                        b
+                    } else {
+                        vec![]
+                    }
+                } else if first.is_string() {
+                    let rust_string = first
+                        .to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
                     let encoding = if args.length() >= 2 {
                         args.get(1)
                             .to_string(scope)
@@ -2376,6 +2487,9 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                 } else if first.is_number() {
                     let size = first.to_integer(scope).unwrap().value() as usize;
                     vec![0u8; size]
+                } else if let Some(str_val) = first.to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    encode_string_to_bytes(&rust_string, "utf8")
                 } else {
                     vec![]
                 };
@@ -5405,9 +5519,8 @@ impl MinimalRuntime {
     fn normalized_esm_builtin_name(specifier: &str) -> Option<&str> {
         let builtin_name = specifier.strip_prefix("node:").unwrap_or(specifier);
         match builtin_name {
-            "path" | "fs" | "url" | "events" | "os" | "stream" | "process" | "crypto" => {
-                Some(builtin_name)
-            }
+            "path" | "fs" | "url" | "events" | "os" | "stream" | "process" | "crypto"
+            | "child_process" => Some(builtin_name),
             _ => None,
         }
     }
@@ -5623,8 +5736,51 @@ impl MinimalRuntime {
                     Self::evaluate_process_builtin_synthetic_module,
                 ))
             }
+            "child_process" => {
+                let export_names = [
+                    v8::String::new(scope, "default").unwrap(),
+                    v8::String::new(scope, "exec").unwrap(),
+                    v8::String::new(scope, "spawn").unwrap(),
+                    v8::String::new(scope, "execFile").unwrap(),
+                    v8::String::new(scope, "execSync").unwrap(),
+                    v8::String::new(scope, "spawnSync").unwrap(),
+                ];
+                let module_name = v8::String::new(scope, "node:child_process").unwrap();
+                Some(v8::Module::create_synthetic_module(
+                    scope,
+                    module_name,
+                    &export_names,
+                    Self::evaluate_child_process_builtin_synthetic_module,
+                ))
+            }
             _ => None,
         }
+    }
+
+    fn evaluate_child_process_builtin_synthetic_module<'scope>(
+        context: v8::Local<'scope, v8::Context>,
+        module: v8::Local<'scope, v8::Module>,
+    ) -> Option<v8::Local<'scope, v8::Value>> {
+        let scope = &mut unsafe { v8::CallbackScope::new(context) };
+        let global = context.global(scope);
+        let cp_key = v8::String::new(scope, "child_process").unwrap();
+        let cp_value = global
+            .get(scope, cp_key.into())
+            .unwrap_or_else(|| v8::undefined(scope).into());
+
+        let default_key = v8::String::new(scope, "default").unwrap();
+        module.set_synthetic_module_export(scope, default_key, cp_value)?;
+
+        let cp_object = cp_value.to_object(scope);
+        for export_name in ["exec", "spawn", "execFile", "execSync", "spawnSync"] {
+            let export_key = v8::String::new(scope, export_name).unwrap();
+            let export_value = cp_object
+                .and_then(|object| object.get(scope, export_key.into()))
+                .unwrap_or_else(|| v8::undefined(scope).into());
+            module.set_synthetic_module_export(scope, export_key, export_value)?;
+        }
+
+        Some(v8::undefined(scope).into())
     }
 
     fn evaluate_path_builtin_synthetic_module<'scope>(
@@ -8141,6 +8297,62 @@ impl MinimalRuntime {
         }
 
         Self::apply_process_argv(scope, &context, &self.process_argv)?;
+
+        if let Some(seed) = crate::permissions::get_deterministic_seed() {
+            let prng_script = format!(
+                r#"
+                (function() {{
+                    let s = BigInt({});
+                    Math.random = function() {{
+                        s = (s + 0x6D2B79F5n) & 0xFFFFFFFFn;
+                        let t = s;
+                        let z = Math.imul(Number(t ^ (t >> 15n)), Number(t | 1n));
+                        z ^= z + Math.imul(z ^ (z >>> 7), z | 61);
+                        return ((z ^ (z >>> 14)) >>> 0) / 4294967296;
+                    }};
+                }})();
+                "#,
+                seed
+            );
+            if let Some(code) = v8::String::new(scope, &prng_script) {
+                if let Some(script) = v8::Script::compile(scope, code, None) {
+                    let _ = script.run(scope);
+                }
+            }
+        }
+
+        if let Some(frozen_ms) = crate::permissions::get_frozen_time_ms() {
+            let date_script = format!(
+                r#"
+                (function() {{
+                    const _frozen = {};
+                    const _OrigDate = Date;
+                    function PatchedDate(...args) {{
+                        if (!(this instanceof PatchedDate)) {{
+                            return new _OrigDate(_frozen).toString();
+                        }}
+                        if (args.length === 0) {{
+                            return new _OrigDate(_frozen);
+                        }}
+                        return new _OrigDate(...args);
+                    }}
+                    PatchedDate.prototype = _OrigDate.prototype;
+                    PatchedDate.now = function() {{
+                        return _frozen;
+                    }};
+                    PatchedDate.parse = _OrigDate.parse;
+                    PatchedDate.UTC = _OrigDate.UTC;
+                    Date = PatchedDate;
+                }})();
+                "#,
+                frozen_ms
+            );
+            if let Some(code) = v8::String::new(scope, &date_script) {
+                if let Some(script) = v8::Script::compile(scope, code, None) {
+                    let _ = script.run(scope);
+                }
+            }
+        }
 
         // Use TryCatch for proper error handling
         let scope = &mut v8::TryCatch::new(scope);
@@ -10747,15 +10959,34 @@ impl MinimalRuntime {
         let date_fn = v8::Function::new(
             scope,
             |scope: &mut v8::HandleScope,
-             _args: v8::FunctionCallbackArguments,
+             args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let now = chrono::Utc::now();
+                let now_ms = if args.length() > 0 {
+                    let first = args.get(0);
+                    if let Some(num) = first.to_number(scope) {
+                        num.value() as i64
+                    } else if let Some(s) = first.to_string(scope) {
+                        let s_str = s.to_rust_string_lossy(scope);
+                        if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&s_str) {
+                            dt.timestamp_millis()
+                        } else {
+                            crate::permissions::get_frozen_time_ms()
+                                .unwrap_or_else(|| chrono::Utc::now().timestamp_millis())
+                        }
+                    } else {
+                        crate::permissions::get_frozen_time_ms()
+                            .unwrap_or_else(|| chrono::Utc::now().timestamp_millis())
+                    }
+                } else {
+                    crate::permissions::get_frozen_time_ms()
+                        .unwrap_or_else(|| chrono::Utc::now().timestamp_millis())
+                };
                 // Create a Date object with timestamp property and getTime method
                 let date_obj = v8::Object::new(scope);
 
                 // Add timestamp property (used by structuredClone)
                 let timestamp_key = v8::String::new(scope, "timestamp").unwrap().into();
-                let timestamp_val = v8::Number::new(scope, now.timestamp_millis() as f64);
+                let timestamp_val = v8::Number::new(scope, now_ms as f64);
                 date_obj.set(scope, timestamp_key, timestamp_val.into());
 
                 // Add getTime() method for structuredClone support
@@ -10773,7 +11004,8 @@ impl MinimalRuntime {
                             }
                         }
                         // Fallback
-                        let now = chrono::Utc::now().timestamp_millis() as f64;
+                        let now = crate::permissions::get_frozen_time_ms()
+                            .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()) as f64;
                         retval.set(v8::Number::new(scope, now).into());
                     },
                 )
@@ -10805,7 +11037,12 @@ impl MinimalRuntime {
                             }
                         }
                         // Fallback to current time
-                        let now = chrono::Utc::now();
+                        let now = if let Some(frozen_ms) = crate::permissions::get_frozen_time_ms() {
+                            chrono::DateTime::from_timestamp_millis(frozen_ms)
+                                .unwrap_or_else(chrono::Utc::now)
+                        } else {
+                            chrono::Utc::now()
+                        };
                         let date_str = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
                         let date_val = v8::String::new(scope, &date_str).unwrap();
                         retval.set(date_val.into());
@@ -10919,7 +11156,8 @@ impl MinimalRuntime {
             |_scope: &mut v8::HandleScope,
              _args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let now_ms = chrono::Utc::now().timestamp_millis();
+                let now_ms = crate::permissions::get_frozen_time_ms()
+                    .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
                 let now_num = v8::Number::new(_scope, now_ms as f64);
                 retval.set(now_num.into());
             },
@@ -13840,102 +14078,75 @@ impl MinimalRuntime {
                 let buf_a = args.get(0);
                 let buf_b = args.get(1);
 
-                // Check if both are array-like (TypedArray or ArrayBuffer)
-                if !buf_a.is_typed_array() && !buf_a.is_array_buffer() {
-                    let error_msg = v8::String::new(
-                        scope,
-                        "First argument must be a TypedArray or ArrayBuffer",
-                    )
-                    .unwrap();
+                let extract_bytes = |val: v8::Local<v8::Value>, scope: &mut v8::HandleScope| -> Option<Vec<u8>> {
+                    if val.is_array_buffer() {
+                        let ab = v8::Local::<v8::ArrayBuffer>::try_from(val).ok()?;
+                        let len = ab.byte_length();
+                        if len == 0 { return Some(Vec::new()); }
+                        let store = ab.get_backing_store();
+                        let ptr = store.as_ref().as_ptr();
+                        if ptr.is_null() { return Some(Vec::new()); }
+                        let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
+                        return Some(slice.to_vec());
+                    }
+                    if val.is_typed_array() {
+                        let ta = v8::Local::<v8::TypedArray>::try_from(val).ok()?;
+                        let len = ta.byte_length();
+                        if len == 0 { return Some(Vec::new()); }
+                        let ab = ta.buffer(scope)?;
+                        let store = ab.get_backing_store();
+                        let ptr = store.as_ref().as_ptr();
+                        if ptr.is_null() { return Some(Vec::new()); }
+                        let offset = ta.byte_offset();
+                        let slice = unsafe { std::slice::from_raw_parts((ptr as *const u8).add(offset), len) };
+                        return Some(slice.to_vec());
+                    }
+                    if val.is_object() {
+                        if let Ok(obj) = v8::Local::<v8::Object>::try_from(val) {
+                            let bk = v8::String::new(scope, "buffer").unwrap();
+                            if let Some(inner) = obj.get(scope, bk.into()) {
+                                if inner.is_array_buffer() {
+                                    let ab = v8::Local::<v8::ArrayBuffer>::try_from(inner).ok()?;
+                                    let len = ab.byte_length();
+                                    if len == 0 { return Some(Vec::new()); }
+                                    let store = ab.get_backing_store();
+                                    let ptr = store.as_ref().as_ptr();
+                                    if ptr.is_null() { return Some(Vec::new()); }
+                                    let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
+                                    return Some(slice.to_vec());
+                                }
+                            }
+                        }
+                    }
+                    None
+                };
+
+                let Some(bytes_a) = extract_bytes(buf_a, scope) else {
+                    let error_msg = v8::String::new(scope, "First argument must be a Buffer, TypedArray, or ArrayBuffer").unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                };
+
+                let Some(bytes_b) = extract_bytes(buf_b, scope) else {
+                    let error_msg = v8::String::new(scope, "Second argument must be a Buffer, TypedArray, or ArrayBuffer").unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error_msg);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                };
+
+                if bytes_a.len() != bytes_b.len() {
+                    let error_msg = v8::String::new(scope, "Input buffers must have the same length").unwrap();
                     let error_obj = v8::Exception::type_error(scope, error_msg);
                     scope.throw_exception(error_obj.into());
                     return;
                 }
 
-                if !buf_b.is_typed_array() && !buf_b.is_array_buffer() {
-                    let error_msg = v8::String::new(
-                        scope,
-                        "Second argument must be a TypedArray or ArrayBuffer",
-                    )
-                    .unwrap();
-                    let error_obj = v8::Exception::type_error(scope, error_msg);
-                    scope.throw_exception(error_obj.into());
-                    return;
+                let mut diff: u8 = 0;
+                for i in 0..bytes_a.len() {
+                    diff |= bytes_a[i] ^ bytes_b[i];
                 }
-
-                // Get the byte lengths
-                let len_a = if buf_a.is_typed_array() {
-                    let ta = v8::Local::<v8::TypedArray>::try_from(buf_a).unwrap();
-                    ta.byte_length()
-                } else {
-                    let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_a).unwrap();
-                    ab.byte_length()
-                };
-
-                let len_b = if buf_b.is_typed_array() {
-                    let ta = v8::Local::<v8::TypedArray>::try_from(buf_b).unwrap();
-                    ta.byte_length()
-                } else {
-                    let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_b).unwrap();
-                    ab.byte_length()
-                };
-
-                // Lengths must match
-                if len_a != len_b {
-                    let error_msg =
-                        v8::String::new(scope, "Input buffers must have the same length").unwrap();
-                    let error_obj = v8::Exception::type_error(scope, error_msg);
-                    scope.throw_exception(error_obj.into());
-                    return;
-                }
-
-                // Extract bytes from buffer A using unsafe pointer access (consistent with existing code)
-                let bytes_a: Vec<u8> = if len_a == 0 {
-                    Vec::new()
-                } else if buf_a.is_typed_array() {
-                    let ta = v8::Local::<v8::TypedArray>::try_from(buf_a).unwrap();
-                    let buffer = ta.buffer(scope).unwrap();
-                    let store = buffer.get_backing_store();
-                    let ptr = store.as_ref().as_ptr() as *const u8;
-                    unsafe { std::slice::from_raw_parts(ptr, len_a).to_vec() }
-                } else {
-                    let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_a).unwrap();
-                    let store = ab.get_backing_store();
-                    let ptr = store.as_ref().as_ptr() as *const u8;
-                    unsafe { std::slice::from_raw_parts(ptr, len_a).to_vec() }
-                };
-
-                // Extract bytes from buffer B using unsafe pointer access (consistent with existing code)
-                let bytes_b: Vec<u8> = if len_b == 0 {
-                    Vec::new()
-                } else if buf_b.is_typed_array() {
-                    let ta = v8::Local::<v8::TypedArray>::try_from(buf_b).unwrap();
-                    let buffer = ta.buffer(scope).unwrap();
-                    let store = buffer.get_backing_store();
-                    let ptr = store.as_ref().as_ptr() as *const u8;
-                    unsafe { std::slice::from_raw_parts(ptr, len_b).to_vec() }
-                } else {
-                    let ab = v8::Local::<v8::ArrayBuffer>::try_from(buf_b).unwrap();
-                    let store = ab.get_backing_store();
-                    let ptr = store.as_ref().as_ptr() as *const u8;
-                    unsafe { std::slice::from_raw_parts(ptr, len_b).to_vec() }
-                };
-
-                // Constant-time comparison
-                let start = std::time::Instant::now();
-                let mut result: u8 = 0;
-                for i in 0..len_a as usize {
-                    result |= bytes_a[i] ^ bytes_b[i];
-                }
-                // Prevent compiler from optimizing out the loop
-                let elapsed = start.elapsed();
-                let _ = elapsed.as_nanos();
-
-                // result is 0 if equal, non-zero if different
-                // Use a constant-time conversion to boolean
-                let equal = result == 0;
-
-                retval.set(v8::Boolean::new(scope, equal).into());
+                retval.set(v8::Boolean::new(scope, diff == 0).into());
             },
         );
         let timing_safe_equal_fn = match timing_safe_equal_fn {
@@ -21977,6 +22188,216 @@ require.resolve = function(specifier) {{
         let exec_file_fn = exec_file_fn_template.get_function(scope).unwrap();
         let exec_file_key = v8::String::new(scope, "execFile").unwrap();
         cp_obj.set(scope, exec_file_key.into(), exec_file_fn.into());
+
+        // execSync function
+        let exec_sync_fn_template = v8::FunctionTemplate::new(
+            scope,
+            |scope: &mut v8::HandleScope,
+             args: v8::FunctionCallbackArguments,
+             mut retval: v8::ReturnValue| {
+                let command = args
+                    .get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Process,
+                    crate::permissions::PermissionAction::Execute,
+                    crate::permissions::ResourceId::Name(crate::permissions::process_command_name(
+                        &command,
+                    )),
+                ) {
+                    let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_message);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+                let mut encoding: Option<String> = None;
+                if args.length() > 1 && args.get(1).is_object() {
+                    if let Ok(opts_obj) = v8::Local::<v8::Object>::try_from(args.get(1)) {
+                        let enc_key = v8::String::new(scope, "encoding").unwrap();
+                        if let Some(enc_val) = opts_obj.get(scope, enc_key.into()) {
+                            if let Some(s) = enc_val.to_string(scope) {
+                                encoding = Some(s.to_rust_string_lossy(scope));
+                            }
+                        }
+                    }
+                }
+                match run_shell_command(&command) {
+                    Ok(output) => {
+                        if !output.status.success() {
+                            let exit_code = output.status.code().unwrap_or(1);
+                            let stderr_str = String::from_utf8_lossy(&output.stderr);
+                            let msg = format!("Command failed: {}\n{}", command, stderr_str);
+                            let msg_val = v8::String::new(scope, &msg).unwrap();
+                            let err_val = v8::Exception::error(scope, msg_val);
+                            if let Ok(err_obj) = v8::Local::<v8::Object>::try_from(err_val) {
+                                let status_key = v8::String::new(scope, "status").unwrap();
+                                let status_val = v8::Integer::new(scope, exit_code);
+                                err_obj.set(scope, status_key.into(), status_val.into());
+                                let stdout_key = v8::String::new(scope, "stdout").unwrap();
+                                let stdout_val = child_process_bytes_to_v8_value(
+                                    scope,
+                                    &output.stdout,
+                                    encoding.as_deref(),
+                                );
+                                err_obj.set(scope, stdout_key.into(), stdout_val);
+                                let stderr_key = v8::String::new(scope, "stderr").unwrap();
+                                let stderr_val = child_process_bytes_to_v8_value(
+                                    scope,
+                                    &output.stderr,
+                                    encoding.as_deref(),
+                                );
+                                err_obj.set(scope, stderr_key.into(), stderr_val);
+                            }
+                            scope.throw_exception(err_val);
+                            return;
+                        }
+                        let val = child_process_bytes_to_v8_value(
+                            scope,
+                            &output.stdout,
+                            encoding.as_deref(),
+                        );
+                        retval.set(val);
+                    }
+                    Err(e) => {
+                        let msg = format!("Command failed: {}: {}", command, e);
+                        let msg_val = v8::String::new(scope, &msg).unwrap();
+                        let err_val = v8::Exception::error(scope, msg_val);
+                        scope.throw_exception(err_val);
+                    }
+                }
+            },
+        );
+        let exec_sync_fn = exec_sync_fn_template.get_function(scope).unwrap();
+        let exec_sync_key = v8::String::new(scope, "execSync").unwrap();
+        cp_obj.set(scope, exec_sync_key.into(), exec_sync_fn.into());
+
+        // spawnSync function
+        let spawn_sync_fn_template = v8::FunctionTemplate::new(
+            scope,
+            |scope: &mut v8::HandleScope,
+             args: v8::FunctionCallbackArguments,
+             mut retval: v8::ReturnValue| {
+                let command = args
+                    .get(0)
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                if let Err(error) = crate::permissions::check_global_permission(
+                    crate::permissions::PermissionKind::Process,
+                    crate::permissions::PermissionAction::Execute,
+                    crate::permissions::ResourceId::Name(crate::permissions::process_command_name(
+                        &command,
+                    )),
+                ) {
+                    let error_message = v8::String::new(scope, &error.to_string()).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_message);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+                let mut cmd_args: Vec<String> = Vec::new();
+                let mut encoding: Option<String> = None;
+                let arg1 = args.get(1);
+                let arg2 = args.get(2);
+                if arg1.is_array() {
+                    cmd_args = string_vec_from_v8_array_value(scope, arg1);
+                    if arg2.is_object() {
+                        if let Ok(opts) = v8::Local::<v8::Object>::try_from(arg2) {
+                            let enc_k = v8::String::new(scope, "encoding").unwrap();
+                            if let Some(enc_v) = opts.get(scope, enc_k.into()) {
+                                if let Some(s) = enc_v.to_string(scope) {
+                                    encoding = Some(s.to_rust_string_lossy(scope));
+                                }
+                            }
+                        }
+                    }
+                } else if arg1.is_object() {
+                    if let Ok(opts) = v8::Local::<v8::Object>::try_from(arg1) {
+                        let enc_k = v8::String::new(scope, "encoding").unwrap();
+                        if let Some(enc_v) = opts.get(scope, enc_k.into()) {
+                            if let Some(s) = enc_v.to_string(scope) {
+                                encoding = Some(s.to_rust_string_lossy(scope));
+                            }
+                        }
+                    }
+                }
+                let res_obj = v8::Object::new(scope);
+                match Command::new(&command).args(&cmd_args).output() {
+                    Ok(output) => {
+                        let status_key = v8::String::new(scope, "status").unwrap();
+                        let status_val = v8::Integer::new(scope, output.status.code().unwrap_or(0));
+                        res_obj.set(scope, status_key.into(), status_val.into());
+
+                        let signal_key = v8::String::new(scope, "signal").unwrap();
+                        let signal_val = v8::null(scope);
+                        res_obj.set(scope, signal_key.into(), signal_val.into());
+
+                        let pid_key = v8::String::new(scope, "pid").unwrap();
+                        let pid_val = v8::Integer::new(scope, 0);
+                        res_obj.set(scope, pid_key.into(), pid_val.into());
+
+                        let stdout_val = child_process_bytes_to_v8_value(
+                            scope,
+                            &output.stdout,
+                            encoding.as_deref(),
+                        );
+                        let stdout_key = v8::String::new(scope, "stdout").unwrap();
+                        res_obj.set(scope, stdout_key.into(), stdout_val);
+
+                        let stderr_val = child_process_bytes_to_v8_value(
+                            scope,
+                            &output.stderr,
+                            encoding.as_deref(),
+                        );
+                        let stderr_key = v8::String::new(scope, "stderr").unwrap();
+                        res_obj.set(scope, stderr_key.into(), stderr_val);
+
+                        let output_arr = v8::Array::new(scope, 3);
+                        let null_elem = v8::null(scope);
+                        output_arr.set_index(scope, 0, null_elem.into());
+                        output_arr.set_index(scope, 1, stdout_val);
+                        output_arr.set_index(scope, 2, stderr_val);
+                        let output_key = v8::String::new(scope, "output").unwrap();
+                        res_obj.set(scope, output_key.into(), output_arr.into());
+
+                        let error_key = v8::String::new(scope, "error").unwrap();
+                        let undef_val = v8::undefined(scope);
+                        res_obj.set(scope, error_key.into(), undef_val.into());
+                    }
+                    Err(e) => {
+                        let status_key = v8::String::new(scope, "status").unwrap();
+                        let status_val = v8::Integer::new(scope, 1);
+                        res_obj.set(scope, status_key.into(), status_val.into());
+
+                        let signal_key = v8::String::new(scope, "signal").unwrap();
+                        let null_signal = v8::null(scope);
+                        res_obj.set(scope, signal_key.into(), null_signal.into());
+
+                        let pid_key = v8::String::new(scope, "pid").unwrap();
+                        let pid_val = v8::Integer::new(scope, 0);
+                        res_obj.set(scope, pid_key.into(), pid_val.into());
+
+                        let empty_str = v8::String::new(scope, "").unwrap();
+                        let stdout_key = v8::String::new(scope, "stdout").unwrap();
+                        res_obj.set(scope, stdout_key.into(), empty_str.into());
+
+                        let stderr_val = v8::String::new(scope, &e.to_string()).unwrap();
+                        let stderr_key = v8::String::new(scope, "stderr").unwrap();
+                        res_obj.set(scope, stderr_key.into(), stderr_val.into());
+
+                        let err_msg = v8::String::new(scope, &e.to_string()).unwrap();
+                        let err_obj = v8::Exception::error(scope, err_msg);
+                        let error_key = v8::String::new(scope, "error").unwrap();
+                        res_obj.set(scope, error_key.into(), err_obj);
+                    }
+                }
+                retval.set(res_obj.into());
+            },
+        );
+        let spawn_sync_fn = spawn_sync_fn_template.get_function(scope).unwrap();
+        let spawn_sync_key = v8::String::new(scope, "spawnSync").unwrap();
+        cp_obj.set(scope, spawn_sync_key.into(), spawn_sync_fn.into());
 
         // Set child_process as global
         let cp_key = v8::String::new(scope, "child_process").unwrap();

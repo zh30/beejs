@@ -450,9 +450,53 @@ pub fn record_tool_call_audit(tool_name: &str, is_allowed: bool) {
     write_audit_record(&kind, &action, &resource, decision);
 }
 
+static DETERMINISTIC_SEED: Lazy<RwLock<Option<u64>>> = Lazy::new(|| RwLock::new(None));
+static FROZEN_TIME_MS: Lazy<RwLock<Option<i64>>> = Lazy::new(|| RwLock::new(None));
+
+pub fn set_deterministic_seed(seed: Option<u64>) {
+    if let Ok(mut lock) = DETERMINISTIC_SEED.write() {
+        *lock = seed;
+    }
+}
+
+pub fn get_deterministic_seed() -> Option<u64> {
+    DETERMINISTIC_SEED.read().ok().and_then(|lock| *lock)
+}
+
+pub fn set_frozen_time_ms(time_ms: Option<i64>) {
+    if let Ok(mut lock) = FROZEN_TIME_MS.write() {
+        *lock = time_ms;
+    }
+}
+
+pub fn get_frozen_time_ms() -> Option<i64> {
+    FROZEN_TIME_MS.read().ok().and_then(|lock| *lock)
+}
+
+pub fn parse_time_spec(spec: &str) -> Result<i64, String> {
+    let trimmed = spec.trim();
+    if let Ok(ts) = trimmed.parse::<i64>() {
+        return Ok(ts);
+    }
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(trimmed) {
+        return Ok(dt.timestamp_millis());
+    }
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%d %H:%M:%S") {
+        return Ok(dt.and_utc().timestamp_millis());
+    }
+    if let Ok(d) = chrono::NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
+        return Ok(d.and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis());
+    }
+    Err(format!(
+        "invalid time specification '{spec}', expected integer millis or RFC3339/ISO string"
+    ))
+}
+
 pub fn reset_runtime_permission_state() {
     set_sandbox_strict_env(false);
     let _ = set_audit_log_path(None);
+    set_deterministic_seed(None);
+    set_frozen_time_ms(None);
 }
 
 pub static GLOBAL_RESOURCE_BROKER: Lazy<RwLock<ResourceBroker>> =

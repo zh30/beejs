@@ -898,8 +898,20 @@ fn random_bytes_callback(
     // Generate random bytes (only if size > 0)
     let random_data = if size > 0 {
         let mut data = vec![0u8; size];
-        let rand: _ = ring::rand::SystemRandom::new();
-        ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
+        if let Some(seed) = crate::permissions::get_deterministic_seed() {
+            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let count = COUNTER.fetch_add(size as u64, std::sync::atomic::Ordering::SeqCst);
+            let mut state = seed.wrapping_add(count);
+            for byte in data.iter_mut() {
+                state = state
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
+                *byte = (state >> 33) as u8;
+            }
+        } else {
+            let rand: _ = ring::rand::SystemRandom::new();
+            ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
+        }
         data
     } else {
         vec![]
@@ -957,8 +969,20 @@ fn random_bytes_sync_callback(
     // Generate random bytes (only if size > 0)
     let random_data = if size > 0 {
         let mut data = vec![0u8; size];
-        let rand: _ = ring::rand::SystemRandom::new();
-        ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
+        if let Some(seed) = crate::permissions::get_deterministic_seed() {
+            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let count = COUNTER.fetch_add(size as u64, std::sync::atomic::Ordering::SeqCst);
+            let mut state = seed.wrapping_add(count);
+            for byte in data.iter_mut() {
+                state = state
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
+                *byte = (state >> 33) as u8;
+            }
+        } else {
+            let rand: _ = ring::rand::SystemRandom::new();
+            ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
+        }
         data
     } else {
         vec![]

@@ -67,6 +67,12 @@ struct PermissionCliOptions {
     /// Allow JavaScript child process execution for an exact command name (repeatable)
     #[arg(long = "allow-run", value_name = "COMMAND")]
     allow_run: Vec<String>,
+    /// Seed for deterministic PRNG (Math.random & crypto.getRandomValues)
+    #[arg(long = "seed", value_name = "SEED")]
+    seed: Option<u64>,
+    /// Freeze virtual clock time to fixed timestamp or ISO8601 string (Date.now & performance.now)
+    #[arg(long = "freeze-time", value_name = "TIMESTAMP_OR_ISO")]
+    freeze_time: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -178,6 +184,9 @@ enum Command {
         /// Verbose output
         #[arg(short = 'v', long = "verbose")]
         verbose: bool,
+        /// Watch files for changes and re-run tests
+        #[arg(short = 'w', long = "watch")]
+        watch: bool,
     },
     /// Bundle code (experimental: concatenates local static imports, not a bundler)
     Bundle {
@@ -1173,6 +1182,11 @@ fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
     beejs::permissions::set_sandbox_strict_env(options.sandbox);
     if let Some(audit_log) = &options.audit_log {
         beejs::permissions::set_audit_log_path(Some(audit_log.clone())).map_err(|e| anyhow!(e))?;
+    }
+    beejs::permissions::set_deterministic_seed(options.seed);
+    if let Some(freeze_time_str) = &options.freeze_time {
+        let ts = beejs::permissions::parse_time_spec(freeze_time_str).map_err(|e| anyhow!(e))?;
+        beejs::permissions::set_frozen_time_ms(Some(ts));
     }
 
     if options.sandbox {
@@ -4707,6 +4721,7 @@ fn main() -> Result<()> {
             timeout,
             update_snapshots,
             verbose,
+            watch,
         }) => {
             apply_permission_cli_options(&permissions)?;
 
@@ -4833,7 +4848,43 @@ fn main() -> Result<()> {
                     }
                     Err(e) => {
                         eprintln!("❌ Test failed: {}", e);
-                        std::process::exit(1);
+                        if !watch {
+                            std::process::exit(1);
+                        }
+                    }
+                }
+
+                if watch {
+                    println!(
+                        "\n👀 Watching for changes in {}... (Ctrl+C to quit)",
+                        test_file.display()
+                    );
+                    let watch_dir = test_file
+                        .parent()
+                        .unwrap_or_else(|| Path::new("."))
+                        .to_path_buf();
+                    let watcher_config = beejs::watcher::WatcherConfigBuilder::new()
+                        .debounce_ms(200)
+                        .build();
+                    let mut reloader = beejs::watcher::HotReloader::with_config(watcher_config);
+                    let rx = reloader
+                        .watch(&watch_dir)
+                        .map_err(|e| anyhow::anyhow!("Failed to start watcher: {}", e))?;
+                    loop {
+                        if let Ok(change) = rx.recv() {
+                            let ext = change
+                                .path
+                                .extension()
+                                .and_then(|s| s.to_str())
+                                .unwrap_or("");
+                            if ext == "js" || ext == "ts" {
+                                println!(
+                                    "\n🔄 File changed: {}. Re-running test...",
+                                    change.path.display()
+                                );
+                                let _ = execute_test_file(&test_file, &test_file_options);
+                            }
+                        }
                     }
                 }
             } else {
@@ -4847,6 +4898,9 @@ fn main() -> Result<()> {
                     ".git".to_string(),
                     "target".to_string(),
                     "dist".to_string(),
+                    "manual".to_string(),
+                    "__snapshots__".to_string(),
+                    "node_modules".to_string(),
                 ]);
                 let discovery = TestDiscoverer::new(discoverer_config)
                     .discover_with_read_permission(|path| {
@@ -4873,9 +4927,9 @@ fn main() -> Result<()> {
 
                     let mut passed_files = 0;
                     let mut failed_files = 0;
-                    for test_file in discovery.test_files {
+                    for test_file in &discovery.test_files {
                         println!("Running test file: {}", test_file.display());
-                        match execute_test_file(&test_file, &test_file_options) {
+                        match execute_test_file(test_file, &test_file_options) {
                             Ok(result) => {
                                 println!("Test result: {}", result);
                                 passed_files += 1;
@@ -4895,6 +4949,34 @@ fn main() -> Result<()> {
                         "\n📊 Test File Summary: {} passed, {} failed",
                         passed_files, failed_files
                     );
+                    if watch {
+                        println!("\n👀 Watching for changes in workspace... (Ctrl+C to quit)");
+                        let watcher_config = beejs::watcher::WatcherConfigBuilder::new()
+                            .debounce_ms(200)
+                            .build();
+                        let mut reloader = beejs::watcher::HotReloader::with_config(watcher_config);
+                        let rx = reloader
+                            .watch(Path::new("."))
+                            .map_err(|e| anyhow::anyhow!("Failed to start watcher: {}", e))?;
+                        loop {
+                            if let Ok(change) = rx.recv() {
+                                let ext = change
+                                    .path
+                                    .extension()
+                                    .and_then(|s| s.to_str())
+                                    .unwrap_or("");
+                                if ext == "js" || ext == "ts" {
+                                    println!(
+                                        "\n🔄 File changed: {}. Re-running discovered tests...",
+                                        change.path.display()
+                                    );
+                                    for f in &discovery.test_files {
+                                        let _ = execute_test_file(f, &test_file_options);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if failed_files > 0 {
                         std::process::exit(1);
                     }

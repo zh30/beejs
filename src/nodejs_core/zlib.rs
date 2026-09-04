@@ -53,22 +53,46 @@ fn throw_err(scope: &mut v8::HandleScope, message: &str) {
 fn bytes_from_arg(scope: &mut v8::HandleScope, value: v8::Local<v8::Value>) -> Option<Vec<u8>> {
     if value.is_array_buffer() {
         let buf = v8::Local::<v8::ArrayBuffer>::try_from(value).ok()?;
-        let store = buf.get_backing_store();
         let len = buf.byte_length();
-        let slice =
-            unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+        if len == 0 {
+            return Some(Vec::new());
+        }
+        let store = buf.get_backing_store();
+        let ptr = store.as_ref().as_ptr();
+        if ptr.is_null() {
+            return Some(Vec::new());
+        }
+        let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, len) };
         return Some(slice.to_vec());
     }
     if value.is_typed_array() {
         let ta = v8::Local::<v8::TypedArray>::try_from(value).ok()?;
         let len = ta.byte_length() as usize;
+        if len == 0 {
+            return Some(Vec::new());
+        }
         let buf = ta.buffer(scope)?;
         let store = buf.get_backing_store();
-        let slice =
-            unsafe { std::slice::from_raw_parts(store.as_ref().as_ptr() as *const u8, len) };
+        let ptr = store.as_ref().as_ptr();
+        if ptr.is_null() {
+            return Some(Vec::new());
+        }
+        let offset = ta.byte_offset();
+        let slice = unsafe { std::slice::from_raw_parts((ptr as *const u8).add(offset), len) };
         return Some(slice.to_vec());
     }
-    if let Some(s) = value.to_string(scope) {
+    if value.is_object() {
+        if let Ok(obj) = v8::Local::<v8::Object>::try_from(value) {
+            let buffer_key = v8::String::new(scope, "buffer").unwrap();
+            if let Some(inner) = obj.get(scope, buffer_key.into()) {
+                if inner.is_array_buffer() {
+                    return bytes_from_arg(scope, inner);
+                }
+            }
+        }
+    }
+    if value.is_string() {
+        let s = value.to_string(scope)?;
         return Some(s.to_rust_string_lossy(scope).into_bytes());
     }
     None
@@ -82,6 +106,21 @@ fn return_buffer(scope: &mut v8::HandleScope, bytes: &[u8], rv: &mut v8::ReturnV
             std::slice::from_raw_parts_mut(store.as_ref().as_ptr() as *mut u8, bytes.len())
         };
         slice.copy_from_slice(bytes);
+    }
+    let global = scope.get_current_context().global(scope);
+    let buffer_key = v8::String::new(scope, "Buffer").unwrap();
+    if let Some(buf_ctor_val) = global.get(scope, buffer_key.into()) {
+        if let Ok(buf_ctor) = v8::Local::<v8::Object>::try_from(buf_ctor_val) {
+            let from_key = v8::String::new(scope, "from").unwrap();
+            if let Some(from_val) = buf_ctor.get(scope, from_key.into()) {
+                if let Ok(from_fn) = v8::Local::<v8::Function>::try_from(from_val) {
+                    if let Some(buf_obj) = from_fn.call(scope, buf_ctor_val, &[buffer.into()]) {
+                        rv.set(buf_obj);
+                        return;
+                    }
+                }
+            }
+        }
     }
     rv.set(buffer.into());
 }
