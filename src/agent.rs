@@ -88,21 +88,45 @@ fn tools_json_path(entry: &Path) -> PathBuf {
 
 fn scan_exported_functions(source: &str) -> Vec<ToolSchema> {
     let mut tools = Vec::new();
+    let mut pending_doc = Vec::new();
+
     for line in source.lines() {
         let trimmed = line.trim();
+        if trimmed.starts_with("/**") || trimmed.starts_with('*') || trimmed.starts_with("//") {
+            let clean = trimmed
+                .trim_start_matches("/**")
+                .trim_end_matches("*/")
+                .trim_start_matches('*')
+                .trim_start_matches("//")
+                .trim();
+            if !clean.is_empty() && !clean.starts_with('@') {
+                pending_doc.push(clean.to_string());
+            }
+            continue;
+        }
+
         let name = trimmed
             .strip_prefix("export async function ")
             .or_else(|| trimmed.strip_prefix("export function "))
             .and_then(|rest| rest.split(|c: char| !is_ident_char(c)).next())
             .filter(|name| !name.is_empty());
+
         if let Some(name) = name {
             if !tools.iter().any(|tool: &ToolSchema| tool.name == name) {
+                let description = if !pending_doc.is_empty() {
+                    pending_doc.join(" ")
+                } else {
+                    format!("Exported function `{name}`")
+                };
                 tools.push(ToolSchema {
                     name: name.to_string(),
-                    description: format!("Exported function `{name}`"),
+                    description,
                     input_schema: default_object_schema(),
                 });
             }
+            pending_doc.clear();
+        } else if !trimmed.is_empty() {
+            pending_doc.clear();
         }
     }
     tools
@@ -271,6 +295,24 @@ fn dispatch_jsonrpc(
                 Err(error) => jsonrpc_error(&request.jsonrpc, id, -32000, error.to_string()),
             }
         }
+        "prompts/list" => json!({
+            "jsonrpc": request.jsonrpc,
+            "id": id,
+            "result": { "prompts": [] }
+        })
+        .to_string(),
+        "resources/list" => json!({
+            "jsonrpc": request.jsonrpc,
+            "id": id,
+            "result": { "resources": [] }
+        })
+        .to_string(),
+        "resources/templates/list" => json!({
+            "jsonrpc": request.jsonrpc,
+            "id": id,
+            "result": { "resourceTemplates": [] }
+        })
+        .to_string(),
         "initialize" => json!({
             "jsonrpc": request.jsonrpc,
             "id": id,
@@ -300,7 +342,11 @@ fn jsonrpc_error(version: &str, id: Value, code: i32, message: impl Into<String>
 fn mcp_initialize_result() -> Value {
     json!({
         "protocolVersion": "2024-11-05",
-        "capabilities": { "tools": {} },
+        "capabilities": {
+            "tools": {},
+            "prompts": {},
+            "resources": {}
+        },
         "serverInfo": {
             "name": "beejs",
             "version": env!("CARGO_PKG_VERSION")
@@ -372,16 +418,20 @@ pub fn run_mcp_server(
                     "jsonrpc": request.jsonrpc,
                     "id": request.id.unwrap_or(Value::Null),
                     "result": {
-                        "content": [{ "type": "text", "text": stringify_tool_content(&result) }]
+                        "content": [{ "type": "text", "text": stringify_tool_content(&result) }],
+                        "isError": false
                     }
                 })
                 .to_string(),
-                Err(error) => jsonrpc_error(
-                    &request.jsonrpc,
-                    request.id.unwrap_or(Value::Null),
-                    -32000,
-                    error.to_string(),
-                ),
+                Err(error) => json!({
+                    "jsonrpc": request.jsonrpc,
+                    "id": request.id.unwrap_or(Value::Null),
+                    "result": {
+                        "content": [{ "type": "text", "text": error.to_string() }],
+                        "isError": true
+                    }
+                })
+                .to_string(),
             }
         } else {
             dispatch_jsonrpc(&tools, &mut session, request)

@@ -21155,17 +21155,8 @@ require.resolve = function(specifier) {{
         // v0.3.40: Add process.ppid - parent process ID
         process_obj.set(scope, ppid_key.into(), ppid_value.into());
         process_obj.set(scope, title_key.into(), title_value.into());
-        process_obj.set_accessor(
-            scope,
-            env_key.into(),
-            |scope: &mut v8::HandleScope,
-             _name: v8::Local<v8::Name>,
-             _args: v8::PropertyCallbackArguments,
-             mut retval: v8::ReturnValue| {
-                let env_obj = create_process_env_object(scope);
-                retval.set(env_obj.into());
-            },
-        );
+        let env_obj = create_process_env_object(scope);
+        process_obj.set(scope, env_key.into(), env_obj.into());
         process_obj.set(scope, argv_key.into(), argv_array.into());
         process_obj.set(scope, exec_argv_key.into(), exec_argv_array.into());
         process_obj.set(scope, exec_path_key.into(), exec_path_val.into());
@@ -21910,7 +21901,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // Check if user passed options with read or _read
                 let opts = args.get(0);
@@ -22380,7 +22376,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // v0.3.59: Support options with write or _write function
                 let opts = args.get(0);
@@ -22592,7 +22593,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // 提取用户提供的 transform 函数
                 let options = args.get(0);
@@ -23084,7 +23090,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // 提取用户提供的 _write 函数
                 let options = args.get(0);

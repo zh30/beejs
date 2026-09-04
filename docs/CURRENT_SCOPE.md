@@ -1,23 +1,23 @@
 # Current Scope
 
-Last reviewed: 2026-09-02
+Last reviewed: 2026-09-04
 
-Optimization sprint notes (2026-08-12):
+Optimization sprint notes (2026-09-04):
 
-- Node conformance fixtures live in `tests/conformance/` (scorecard-driven).
+- Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 27/27 100% PASS).
+- V8 Startup Snapshot 2.0: versioned cache bound to package version, payload header verification, and automatic self-healing fallback (`bee snapshot [build|status|clean]`).
+- Agent tool sandbox & MCP 2.0: `bee run --sandbox` denies fs/net/env/run with fine-grained allows; `bee session` (stdin JSON-RPC) and `bee mcp` (MCP stdio server) with JSDoc schema extraction and standard error handling.
 - Event-loop keep-alive no longer silently drops timers after 75ms.
 - New builtins wired: `assert`, `zlib`, `https`, `tls`, `vm`, `worker_threads`, `perf_hooks`.
 - WorkerHost multi-isolate scaffold is available (`BeeWorkerHost` / progressive `Worker`).
 - `bee serve` is a **health stub**: it binds with `tiny_http` and returns fixed `{"ok":true}`. It does **not** execute user scripts. Application servers use `http.createServer` + `bee run`.
 - `bee run` keeps the process alive while an `http.Server` is listening and pumps requests on the event loop.
 - Node conformance scorecard is a CI hard gate (`tests/conformance/`). Agent denial fixtures (`fs_read_denied`, `fs_jail_allows_prefix`, `env_denied`, `run_denied`, `fetch_allowlist`) are part of that gate.
-- `bee run --sandbox` denies fs/net/env/run, then overlays `--allow-*` / `--permission-policy`. Path allows are directory prefixes. `--audit-log` writes JSONL decisions without secret values. `--export-tools` prints tool schemas. `bee session` is stdin JSON-RPC; `bee mcp` is an MCP stdio server.
 - Optional Cargo feature `ai` is **not** a product LLM. It is historical in-process ML/ops code and may not compile. Models stay outside Beejs.
 - Honest benchmarks live in `benches/honest/`. Do not publish performance numbers from elsewhere.
 - TypeScript transpile uses oxc 0.147 (`src/typescript/oxc_backend.rs`) with a content-hash cache (`src/typescript/cache.rs`). Language surface is TypeScript 6.0 (transpile-only). TS 7.0 added no new syntax.
 - rusty_v8 remains on 0.22; see `docs/V8_UPGRADE.md` for the 0.32 migration branch plan.
-- `bee run` can load a V8 warmup snapshot (`v8_snapshot::cached_startup_blob`). Disable with `BEEJS_DISABLE_STARTUP_SNAPSHOT=1`.
-- V8 Fast API is not available on rusty_v8 0.22. Hot paths for `path` / hash / `fs.readFileSync` stay in Rust (`src/nodejs_core/fast_path.rs`).
+- Hot paths for `path` / hash / `fs.readFileSync` stay in Rust (`src/nodejs_core/fast_path.rs`).
 - `https.createServer({ key, cert })` performs a rustls handshake on accept. WebSocket upgrades stay on the same listen port.
 
 This page is the user-facing capability boundary for the current Beejs checkout. It is intentionally narrower than many historical stage reports in this repository.
@@ -33,7 +33,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `0.1.2`.
+- Package version is `0.2.0`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.
@@ -43,7 +43,7 @@ Current facts from those sources:
 
 ### Stable
 
-Stable means the capability is part of the current v0.1 default scope, is reachable from the active `bee` binary or default library surface, and should be kept working by focused smoke tests or Rust tests.
+Stable means the capability is part of the current v0.2 default scope, is reachable from the active `bee` binary or default library surface, and should be kept working by focused smoke tests or Rust tests.
 
 Current stable scope:
 
@@ -51,7 +51,9 @@ Current stable scope:
 - Inspect the CLI with `bee --help`, `bee --version`, or `bee version`.
 - Evaluate simple JavaScript snippets with `bee eval <code>`.
 - Run JavaScript files with `bee run <file>`.
+- Manage V8 startup snapshots with `bee snapshot [build|status|clean]`.
 - Run a tool file under `--sandbox` with explicit `--allow-*` / `--permission-policy`.
+- Agent tool execution via `bee session` (stdin JSON-RPC) and `bee mcp` (MCP stdio server).
 - Use the basic REPL with `bee repl`.
 - Use V8-backed execution through `src/runtime_minimal.rs` for repository examples and small scripts.
 
