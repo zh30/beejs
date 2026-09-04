@@ -193,6 +193,25 @@ fn env_permission_check_callback(
     }
 }
 
+fn env_is_allowed_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let name = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let allowed = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Environment,
+        crate::permissions::PermissionAction::Read,
+        crate::permissions::ResourceId::Name(name),
+    )
+    .is_ok();
+    retval.set(v8::Boolean::new(scope, allowed).into());
+}
+
 fn wrap_process_env_proxy<'scope>(
     scope: &mut v8::HandleScope<'scope>,
     env_obj: v8::Local<'scope, v8::Object>,
@@ -206,17 +225,46 @@ fn wrap_process_env_proxy<'scope>(
       if (typeof prop !== 'string') {
         return Reflect.get(target, prop, receiver);
       }
-      if (Object.prototype.hasOwnProperty.call(target, prop)) {
-        return target[prop];
+      if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+        return undefined;
       }
-      globalThis.__beeCheckEnv(prop);
-      return undefined;
+      return target[prop];
+    },
+    set(target, prop, value, receiver) {
+      if (typeof prop === 'string') {
+        target[prop] = String(value);
+        return true;
+      }
+      return Reflect.set(target, prop, value, receiver);
     },
     has(target, prop) {
-      if (typeof prop === 'string' && !Object.prototype.hasOwnProperty.call(target, prop)) {
-        globalThis.__beeCheckEnv(prop);
+      if (typeof prop === 'string') {
+        if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+          return false;
+        }
       }
       return Reflect.has(target, prop);
+    },
+    deleteProperty(target, prop) {
+      return Reflect.deleteProperty(target, prop);
+    },
+    ownKeys(target) {
+      return Reflect.ownKeys(target).filter(prop => {
+        if (typeof prop === 'string') {
+          if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (typeof prop === 'string') {
+        if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+          return undefined;
+        }
+      }
+      return Reflect.getOwnPropertyDescriptor(target, prop);
     }
   });
 })
@@ -246,26 +294,12 @@ fn create_process_env_object<'scope>(
     let env_obj = v8::Object::new(scope);
 
     for (key, value) in std::env::vars() {
-        if crate::permissions::check_global_permission(
-            crate::permissions::PermissionKind::Environment,
-            crate::permissions::PermissionAction::Read,
-            crate::permissions::ResourceId::Name(key.clone()),
-        )
-        .is_err()
-        {
-            continue;
-        }
-
         let key_value = v8::String::new(scope, &key).unwrap();
         let env_value = v8::String::new(scope, &value).unwrap();
         env_obj.set(scope, key_value.into(), env_value.into());
     }
 
-    if crate::permissions::sandbox_strict_env() {
-        wrap_process_env_proxy(scope, env_obj)
-    } else {
-        env_obj
-    }
+    wrap_process_env_proxy(scope, env_obj)
 }
 
 /// Get the timer registry, initializing it if needed
@@ -20700,6 +20734,10 @@ require.resolve = function(specifier) {{
         if let Some(check_env) = v8::Function::new(scope, env_permission_check_callback) {
             let check_key = v8::String::new(scope, "__beeCheckEnv").unwrap();
             global.set(scope, check_key.into(), check_env.into());
+        }
+        if let Some(is_allowed) = v8::Function::new(scope, env_is_allowed_callback) {
+            let key = v8::String::new(scope, "__beeIsEnvAllowed").unwrap();
+            global.set(scope, key.into(), is_allowed.into());
         }
 
         // Pre-create all V8 values to avoid scope borrowing issues
