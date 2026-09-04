@@ -272,8 +272,15 @@ observability = ["dep:prometheus", "dep:opentelemetry", "dep:opentelemetry_sdk",
 ai = []
 benchmarks = []
 
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0
+
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
+
