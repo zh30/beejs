@@ -123,7 +123,12 @@ fn readable_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let stream_obj: _ = v8::Object::new(scope);
+    let this = args.this();
+    let stream_obj: _ = if this.is_object() {
+        this
+    } else {
+        v8::Object::new(scope)
+    };
 
     // v0.3.59: 支持 options 参数，包含用户自定义的 _read 函数
     let options: _ = args.get(0);
@@ -527,7 +532,12 @@ fn writable_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let stream_obj: _ = v8::Object::new(scope);
+    let this = args.this();
+    let stream_obj: _ = if this.is_object() {
+        this
+    } else {
+        v8::Object::new(scope)
+    };
 
     // v0.3.59: 支持 options 参数，包含用户自定义的 _write 函数
     let options: _ = args.get(0);
@@ -764,7 +774,12 @@ fn transform_constructor_callback(
     mut retval: v8::ReturnValue,
 ) {
     // [TRANSFORM_CONSTRUCTOR_UNIQUE_ID]
-    let stream_obj: _ = v8::Object::new(scope);
+    let this = args.this();
+    let stream_obj: _ = if this.is_object() {
+        this
+    } else {
+        v8::Object::new(scope)
+    };
 
     // v0.3.59: 支持 options 参数
     let options: _ = args.get(0);
@@ -1024,7 +1039,12 @@ fn duplex_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let stream_obj: _ = v8::Object::new(scope);
+    let this = args.this();
+    let stream_obj: _ = if this.is_object() {
+        this
+    } else {
+        v8::Object::new(scope)
+    };
 
     // v0.3.59: 支持 options 参数
     let options: _ = args.get(0);

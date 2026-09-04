@@ -1,6 +1,6 @@
 # Beejs Node conformance scorecard
 
-Generated: 2026-09-02T10:28Z
+Generated: 2026-09-04T03:42Z
 
 | Fixture | Result | Notes |
 |---------|--------|-------|
@@ -8,6 +8,7 @@ Generated: 2026-09-02T10:28Z
 | buffer_basics.js | PASS |
 | create_require.js | PASS |
 | crypto_hash.js | PASS |
+| crypto_random.js | PASS |
 | dns_lookup.js | PASS |
 | env_denied.js | PASS |
 | events_basics.js | PASS |
@@ -21,12 +22,14 @@ Generated: 2026-09-02T10:28Z
 | net_listen_denied.js | PASS |
 | os_basics.js | PASS |
 | path_basics.js | PASS |
+| process_env_isolation.js | PASS |
 | process_nexttick.js | PASS |
 | querystring_basics.js | PASS |
 | run_denied.js | PASS |
 | stream_pipe.js | PASS |
+| stream_transform.js | PASS |
 | timers_order.js | PASS |
 | timers_setimmediate.js | PASS |
 | url_basics.js | PASS |
 
-**Pass rate: 24/24 (100%)**
+**Pass rate: 27/27 (100%)**

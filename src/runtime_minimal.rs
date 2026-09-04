@@ -193,30 +193,100 @@ fn env_permission_check_callback(
     }
 }
 
+fn env_is_allowed_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let name = args
+        .get(0)
+        .to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let allowed = crate::permissions::check_global_permission(
+        crate::permissions::PermissionKind::Environment,
+        crate::permissions::PermissionAction::Read,
+        crate::permissions::ResourceId::Name(name),
+    )
+    .is_ok();
+    retval.set(v8::Boolean::new(scope, allowed).into());
+}
+
 fn wrap_process_env_proxy<'scope>(
     scope: &mut v8::HandleScope<'scope>,
     env_obj: v8::Local<'scope, v8::Object>,
+    is_sandbox: bool,
 ) -> v8::Local<'scope, v8::Object> {
     let Some(code) = v8::String::new(
         scope,
         r#"
-(function(raw) {
+(function(raw, isSandbox) {
   return new Proxy(raw, {
     get(target, prop, receiver) {
       if (typeof prop !== 'string') {
         return Reflect.get(target, prop, receiver);
       }
-      if (Object.prototype.hasOwnProperty.call(target, prop)) {
-        return target[prop];
+      if (isSandbox) {
+        if (!Object.prototype.hasOwnProperty.call(target, prop)) {
+          if (typeof globalThis.__beeCheckEnv === 'function') {
+            globalThis.__beeCheckEnv(prop);
+          }
+          return undefined;
+        }
       }
-      globalThis.__beeCheckEnv(prop);
-      return undefined;
+      if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+        if (isSandbox && typeof globalThis.__beeCheckEnv === 'function') {
+          globalThis.__beeCheckEnv(prop);
+        }
+        return undefined;
+      }
+      return target[prop];
+    },
+    set(target, prop, value, receiver) {
+      if (typeof prop === 'string') {
+        target[prop] = String(value);
+        return true;
+      }
+      return Reflect.set(target, prop, value, receiver);
     },
     has(target, prop) {
-      if (typeof prop === 'string' && !Object.prototype.hasOwnProperty.call(target, prop)) {
-        globalThis.__beeCheckEnv(prop);
+      if (typeof prop === 'string') {
+        if (isSandbox) {
+          if (!Object.prototype.hasOwnProperty.call(target, prop)) {
+            if (typeof globalThis.__beeCheckEnv === 'function') {
+              globalThis.__beeCheckEnv(prop);
+            }
+          }
+        }
+        if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+          if (isSandbox && typeof globalThis.__beeCheckEnv === 'function') {
+            globalThis.__beeCheckEnv(prop);
+          }
+          return false;
+        }
       }
       return Reflect.has(target, prop);
+    },
+    deleteProperty(target, prop) {
+      return Reflect.deleteProperty(target, prop);
+    },
+    ownKeys(target) {
+      return Reflect.ownKeys(target).filter(prop => {
+        if (typeof prop === 'string') {
+          if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    },
+    getOwnPropertyDescriptor(target, prop) {
+      if (typeof prop === 'string') {
+        if (typeof globalThis.__beeIsEnvAllowed === 'function' && !globalThis.__beeIsEnvAllowed(prop)) {
+          return undefined;
+        }
+      }
+      return Reflect.getOwnPropertyDescriptor(target, prop);
     }
   });
 })
@@ -234,7 +304,8 @@ fn wrap_process_env_proxy<'scope>(
         return env_obj;
     };
     let undefined = v8::undefined(scope).into();
-    match factory.call(scope, undefined, &[env_obj.into()]) {
+    let is_sandbox_v8 = v8::Boolean::new(scope, is_sandbox);
+    match factory.call(scope, undefined, &[env_obj.into(), is_sandbox_v8.into()]) {
         Some(value) if value.is_object() => value.to_object(scope).unwrap_or(env_obj),
         _ => env_obj,
     }
@@ -261,11 +332,8 @@ fn create_process_env_object<'scope>(
         env_obj.set(scope, key_value.into(), env_value.into());
     }
 
-    if crate::permissions::sandbox_strict_env() {
-        wrap_process_env_proxy(scope, env_obj)
-    } else {
-        env_obj
-    }
+    let is_sandbox = crate::permissions::sandbox_strict_env();
+    wrap_process_env_proxy(scope, env_obj, is_sandbox)
 }
 
 /// Get the timer registry, initializing it if needed
@@ -20701,6 +20769,10 @@ require.resolve = function(specifier) {{
             let check_key = v8::String::new(scope, "__beeCheckEnv").unwrap();
             global.set(scope, check_key.into(), check_env.into());
         }
+        if let Some(is_allowed) = v8::Function::new(scope, env_is_allowed_callback) {
+            let key = v8::String::new(scope, "__beeIsEnvAllowed").unwrap();
+            global.set(scope, key.into(), is_allowed.into());
+        }
 
         // Pre-create all V8 values to avoid scope borrowing issues
         let version_key = v8::String::new(scope, "version").unwrap();
@@ -21155,17 +21227,8 @@ require.resolve = function(specifier) {{
         // v0.3.40: Add process.ppid - parent process ID
         process_obj.set(scope, ppid_key.into(), ppid_value.into());
         process_obj.set(scope, title_key.into(), title_value.into());
-        process_obj.set_accessor(
-            scope,
-            env_key.into(),
-            |scope: &mut v8::HandleScope,
-             _name: v8::Local<v8::Name>,
-             _args: v8::PropertyCallbackArguments,
-             mut retval: v8::ReturnValue| {
-                let env_obj = create_process_env_object(scope);
-                retval.set(env_obj.into());
-            },
-        );
+        let env_obj = create_process_env_object(scope);
+        process_obj.set(scope, env_key.into(), env_obj.into());
         process_obj.set(scope, argv_key.into(), argv_array.into());
         process_obj.set(scope, exec_argv_key.into(), exec_argv_array.into());
         process_obj.set(scope, exec_path_key.into(), exec_path_val.into());
@@ -21910,7 +21973,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // Check if user passed options with read or _read
                 let opts = args.get(0);
@@ -22380,7 +22448,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // v0.3.59: Support options with write or _write function
                 let opts = args.get(0);
@@ -22592,7 +22665,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // 提取用户提供的 transform 函数
                 let options = args.get(0);
@@ -23084,7 +23162,12 @@ require.resolve = function(specifier) {{
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
-                let stream_obj = v8::Object::new(scope);
+                let this = args.this();
+                let stream_obj = if this.is_object() {
+                    this
+                } else {
+                    v8::Object::new(scope)
+                };
 
                 // 提取用户提供的 _write 函数
                 let options = args.get(0);

@@ -210,6 +210,11 @@ enum Command {
     },
     /// Display version information
     Version,
+    /// Manage V8 startup snapshots for sub-millisecond cold start
+    Snapshot {
+        #[command(subcommand)]
+        action: SnapshotAction,
+    },
     /// Start HTTP/HTTPS server (experimental: serves a fixed health response,
     /// not user scripts yet)
     Serve {
@@ -297,6 +302,16 @@ enum Command {
         /// Package to upgrade (all if not specified)
         package: Option<String>,
     },
+}
+
+#[derive(Subcommand, Debug)]
+enum SnapshotAction {
+    /// Build or rebuild the startup snapshot
+    Build,
+    /// Display snapshot status, path, and size
+    Status,
+    /// Clean and remove the cached snapshot
+    Clean,
 }
 
 /// Read and compile source code (JavaScript or TypeScript)
@@ -4637,6 +4652,50 @@ fn main() -> Result<()> {
             println!("Built with Rust + V8");
             return Ok(());
         }
+        Some(Command::Snapshot { action }) => {
+            match action {
+                SnapshotAction::Build => {
+                    println!("🔨 Building V8 startup snapshot...");
+                    let start = std::time::Instant::now();
+                    match beejs::v8_snapshot::rebuild_startup_blob() {
+                        Ok(size) => {
+                            let duration = start.elapsed().as_millis();
+                            let path = beejs::v8_snapshot::startup_blob_path();
+                            println!(
+                                "✅ Snapshot built successfully in {}ms ({} bytes)",
+                                duration, size
+                            );
+                            println!("📁 Path: {}", path.display());
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Failed to build snapshot: {e}");
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                SnapshotAction::Status => {
+                    let status = beejs::v8_snapshot::startup_blob_status();
+                    println!("🐝 Beejs Snapshot Status:");
+                    println!("  Version:       {}", status.version);
+                    println!(
+                        "  Enabled:       {}",
+                        if status.enabled { "yes" } else { "no" }
+                    );
+                    println!(
+                        "  File Exists:   {}",
+                        if status.exists { "yes" } else { "no" }
+                    );
+                    println!("  Size:          {} bytes", status.size_bytes);
+                    println!("  Location:      {}", status.path.display());
+                }
+                SnapshotAction::Clean => match beejs::v8_snapshot::clear_startup_blob_cache() {
+                    Ok(true) => println!("✅ Snapshot cache removed successfully"),
+                    Ok(false) => println!("ℹ️ Snapshot cache was not present"),
+                    Err(e) => eprintln!("❌ Failed to clear snapshot cache: {e}"),
+                },
+            }
+            return Ok(());
+        }
         Some(Command::Test {
             permissions,
             file,
@@ -5760,6 +5819,7 @@ fn main() -> Result<()> {
             println!("  run <file>       Run a JavaScript/TypeScript file");
             println!("  session <file>   JSON-RPC tool session over stdin");
             println!("  mcp <file>       MCP stdio server for the tool file");
+            println!("  snapshot <act>   Manage V8 startup snapshot (build, status, clean)");
             println!("  eval <code>      Evaluate JavaScript code");
             println!("  repl             Start interactive REPL");
             println!("  test [file]      Run tests (built-in or from file)");
