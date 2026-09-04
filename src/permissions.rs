@@ -438,6 +438,18 @@ fn write_audit_record(
     }
 }
 
+pub fn record_tool_call_audit(tool_name: &str, is_allowed: bool) {
+    let kind = PermissionKind::Process;
+    let action = PermissionAction::Execute;
+    let resource = ResourceId::Name(format!("tool:{tool_name}"));
+    let decision = if is_allowed {
+        PermissionDecision::Allow
+    } else {
+        PermissionDecision::Deny
+    };
+    write_audit_record(&kind, &action, &resource, decision);
+}
+
 pub fn reset_runtime_permission_state() {
     set_sandbox_strict_env(false);
     let _ = set_audit_log_path(None);
