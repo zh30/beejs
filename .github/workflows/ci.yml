@@ -192,23 +192,21 @@ jobs:
         with:
           path: release
 
-      - name: Generate changelog
+      - name: Generate formal release notes and checksums
         run: |
-          version="${GITHUB_REF#refs/tags/}"
-          previous_tag="$(git describe --tags --abbrev=0 "${version}^" 2>/dev/null || true)"
-          echo "## Changes in ${version}" > CHANGELOG.md
-          if [ -n "$previous_tag" ]; then
-            git log --pretty=format:"- %s" "${previous_tag}..${version}" >> CHANGELOG.md
-          else
-            git log --pretty=format:"- %s" "${version}" >> CHANGELOG.md
-          fi
+          python3 scripts/generate_release_notes.py \
+            --tag "${GITHUB_REF#refs/tags/}" \
+            --release-dir release \
+            --output RELEASE_NOTES.md
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
-          body_path: CHANGELOG.md
-          files: release/**/bee-*.tar.gz
+          body_path: RELEASE_NOTES.md
+          files: |
+            release/**/bee-*.tar.gz
+            release/checksums.txt
           draft: false
           prerelease: false
 
