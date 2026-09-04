@@ -1,0 +1,20 @@
+const assert = require('assert');
+
+const bytes = new Uint8Array([
+  0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+  0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f,
+  0x03, 0x02, 0x01, 0x00,
+  0x07, 0x08, 0x01, 0x04, 0x6d, 0x61, 0x69, 0x6e, 0x00, 0x00,
+  0x0a, 0x06, 0x01, 0x04, 0x00, 0x41, 0x2a, 0x0b
+]);
+
+assert.strictEqual(WebAssembly.validate(bytes), true);
+
+const res = new Response(bytes);
+WebAssembly.instantiateStreaming(res).then(({ module, instance }) => {
+  assert.ok(module instanceof WebAssembly.Module);
+  assert.ok(instance instanceof WebAssembly.Instance);
+  assert.strictEqual(typeof instance.exports.main, 'function');
+  assert.strictEqual(instance.exports.main(), 42);
+  console.log('CONFORMANCE_PASS');
+});

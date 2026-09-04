@@ -26,9 +26,10 @@ pub mod structured_clone; // v0.3.299: structuredClone global function
 pub mod timers; // Stage 74: Timer APIs
 pub mod url;
 pub mod url_search_params;
+pub mod wasm;
 pub mod websocket;
 pub mod worker; // v0.3.320: Worker API (Web Worker support for parallel execution) // v0.3.353: URLSearchParams API (query string manipulation)
-pub mod worker_host; // Multi-isolate WorkerHost
+pub mod worker_host; // Multi-isolate WorkerHost // WebAssembly streaming APIs (compileStreaming, instantiateStreaming)
 use anyhow::Result;
 use rusty_v8 as v8;
 // 从各模块导入设置函数
@@ -116,6 +117,8 @@ pub fn init_web_api(
     setup_dom_parser_api(scope, context)?;
     // v0.3.342: Clipboard API (copy/paste for AI workloads)
     setup_clipboard_api(scope, context)?;
+    // WebAssembly streaming APIs (compileStreaming, instantiateStreaming)
+    wasm::setup_wasm_streaming_api(scope, context)?;
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     Ok(())

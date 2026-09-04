@@ -1806,13 +1806,14 @@ fn value_to_string_after_microtasks<'s>(
     scope: &mut v8::HandleScope<'s>,
     mut value: v8::Local<'s, v8::Value>,
 ) -> Result<String> {
-    for _ in 0..32 {
+    for _ in 0..64 {
         if !value.is_promise() {
             break;
         }
 
         let promise = v8::Local::<v8::Promise>::try_from(value)
             .map_err(|_| anyhow::anyhow!("Failed to inspect promise result"))?;
+        execute_next_tick_callbacks(scope);
         scope.perform_microtask_checkpoint();
 
         match promise.state() {
@@ -1831,10 +1832,18 @@ fn value_to_string_after_microtasks<'s>(
                 ));
             }
             v8::PromiseState::Pending => {
-                return Err(anyhow::anyhow!(
-                    "Pending Promise did not settle before runtime completion"
-                ));
+                std::thread::sleep(std::time::Duration::from_millis(2));
             }
+        }
+    }
+
+    if value.is_promise() {
+        let promise = v8::Local::<v8::Promise>::try_from(value)
+            .map_err(|_| anyhow::anyhow!("Failed to inspect promise result"))?;
+        if promise.state() == v8::PromiseState::Pending {
+            return Err(anyhow::anyhow!(
+                "Pending Promise did not settle before runtime completion"
+            ));
         }
     }
 
@@ -8008,6 +8017,7 @@ impl MinimalRuntime {
         crate::web_api::worker_host::setup_worker_host_api(scope, context)?;
         let _ = setup_worker_api; // keep import used for historical call sites
         setup_shared_array_buffer_api(scope, context)?;
+        crate::web_api::wasm::setup_wasm_streaming_api(scope, context)?;
 
         use crate::web_api::events::setup_events_api as setup_web_events_api;
         setup_web_events_api(scope, context)?;
@@ -8324,6 +8334,7 @@ impl MinimalRuntime {
             execute_next_tick_callbacks(scope);
             scope.perform_microtask_checkpoint();
             crate::nodejs_core::http::pump_pending_http_requests_in_scope(scope, &context);
+            crate::web_api::worker_host::WorkerHost::pump_parent_messages(scope);
 
             // v0.3.339: Reset pending work flag at start of each iteration
             // This ensures we re-check the actual state rather than using stale values
@@ -8346,6 +8357,7 @@ impl MinimalRuntime {
                     || has_wait_until
                     || has_pending_next_ticks()
                     || has_pending_immediates()
+                    || crate::web_api::worker_host::WorkerHost::has_active_workers()
             };
 
             if !has_initial_pending_work {
@@ -8371,10 +8383,24 @@ impl MinimalRuntime {
                 let has_wait_until_timers = has_scheduled && has_wait_until;
                 let has_next_ticks = has_pending_next_ticks();
 
-                if has_fired || has_zero_delay_timers || has_next_ticks || has_pending_immediates()
+                if has_fired
+                    || has_zero_delay_timers
+                    || has_next_ticks
+                    || has_pending_immediates()
+                    || crate::web_api::worker_host::WorkerHost::has_parent_messages()
                 {
                     has_pending_work = true;
                     break;
+                }
+
+                if crate::web_api::worker_host::WorkerHost::has_active_workers() {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    if crate::web_api::worker_host::WorkerHost::has_parent_messages() {
+                        has_pending_work = true;
+                        break;
+                    }
+                    iterations_without_progress += 1;
+                    continue;
                 }
 
                 if has_drainable_timers {
@@ -8432,6 +8458,7 @@ impl MinimalRuntime {
 
             // Execute all currently fired timers (setTimeout/setInterval with delay > 0)
             execute_fired_timers(scope);
+            crate::web_api::worker_host::WorkerHost::pump_parent_messages(scope);
 
             // Timer callbacks may have queued nextTick callbacks; those have
             // higher priority than the check phase (setImmediate) below.
@@ -8487,12 +8514,14 @@ impl MinimalRuntime {
                         remaining_timer_drain_ms(timer_drain_started_at, timer_drain_limit_ms),
                     )
             };
+            let has_active_workers = crate::web_api::worker_host::WorkerHost::has_active_workers();
             // v0.3.339: Don't include has_pending_work in break condition since it's a stored value
             // that may be stale. Instead, check the actual state of timers and nextTicks.
             if !has_pending_next_ticks_now
                 && !has_new_timers
                 && !has_scheduled_timers
                 && !has_pending_immediates()
+                && !has_active_workers
             {
                 // Run any remaining microtasks before exiting
                 scope.perform_microtask_checkpoint();

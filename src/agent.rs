@@ -175,15 +175,19 @@ impl AgentSession {
 
     pub fn call_tool(&mut self, name: &str, arguments: &Value) -> Result<Value> {
         let args_json = serde_json::to_string(arguments)?;
-        if self.isolate_per_call {
+        let result = if self.isolate_per_call {
             let mut runtime = self.spawn_runtime()?;
-            return parse_tool_result(&runtime.call_named_export(name, &args_json)?);
-        }
-        let runtime = self
-            .runtime
-            .as_mut()
-            .ok_or_else(|| anyhow!("session runtime missing"))?;
-        parse_tool_result(&runtime.call_named_export(name, &args_json)?)
+            parse_tool_result(&runtime.call_named_export(name, &args_json)?)
+        } else {
+            let runtime = self
+                .runtime
+                .as_mut()
+                .ok_or_else(|| anyhow!("session runtime missing"))?;
+            parse_tool_result(&runtime.call_named_export(name, &args_json)?)
+        };
+
+        crate::permissions::record_tool_call_audit(name, result.is_ok());
+        result
     }
 }
 

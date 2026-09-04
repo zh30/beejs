@@ -1,6 +1,6 @@
 # Beejs Node conformance scorecard
 
-Generated: 2026-09-04T03:42Z
+Generated: 2026-09-04T06:45Z
 
 | Fixture | Result | Notes |
 |---------|--------|-------|
@@ -31,5 +31,8 @@ Generated: 2026-09-04T03:42Z
 | timers_order.js | PASS |
 | timers_setimmediate.js | PASS |
 | url_basics.js | PASS |
+| wasm_instantiate.js | PASS |
+| web_worker_basics.js | PASS |
+| worker_threads_basics.js | PASS |
 
-**Pass rate: 27/27 (100%)**
+**Pass rate: 30/30 (100%)**

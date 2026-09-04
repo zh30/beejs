@@ -1101,6 +1101,21 @@ fn response_constructor_callback(
 fn body_value_to_bytes(scope: &mut v8::HandleScope, body: v8::Local<v8::Value>) -> Vec<u8> {
     if body.is_null_or_undefined() {
         Vec::new()
+    } else if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(body) {
+        let mut buf = vec![0u8; view.byte_length()];
+        view.copy_contents(&mut buf);
+        buf
+    } else if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(body) {
+        let store = ab.get_backing_store();
+        let len = ab.byte_length();
+        let ptr = store.as_ref().as_ptr() as *const u8;
+        let mut buf = vec![0u8; len];
+        if len > 0 && !ptr.is_null() {
+            unsafe {
+                std::ptr::copy_nonoverlapping(ptr, buf.as_mut_ptr(), len);
+            }
+        }
+        buf
     } else {
         body.to_string(scope)
             .map(|body| body.to_rust_string_lossy(scope).into_bytes())
@@ -1829,9 +1844,12 @@ fn array_buffer_callback(
     let buffer = v8::ArrayBuffer::new(scope, body.len());
     let store = buffer.get_backing_store();
     let store_ptr = store.as_ref().as_ptr() as *mut u8;
-    unsafe {
-        std::ptr::copy_nonoverlapping(body.as_ptr(), store_ptr, body.len());
+    if !body.is_empty() && !store_ptr.is_null() {
+        unsafe {
+            std::ptr::copy_nonoverlapping(body.as_ptr(), store_ptr, body.len());
+        }
     }
+
     retval.set(buffer.into());
 }
 

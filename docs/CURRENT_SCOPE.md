@@ -4,15 +4,16 @@ Last reviewed: 2026-09-04
 
 Optimization sprint notes (2026-09-04):
 
-- Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 27/27 100% PASS).
+- Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 30/30 100% PASS).
+- Multi-Isolate Concurrency 2.0: OS-thread backed V8 isolates for `require('worker_threads')` and `globalThis.Worker`, with bi-directional `postMessage`, `parentPort`, `workerData`, and main event loop integration.
+- WebAssembly 2.0: Streaming compilation and instantiation (`WebAssembly.compileStreaming`, `WebAssembly.instantiateStreaming`) consuming `Response` and `Promise<Response>` without intermediate ArrayBuffer string corruption.
+- Agent tool sandbox & MCP 2.0: `bee run --sandbox` denies fs/net/env/run with fine-grained allows and structured JSONL audit trail recording (`--audit-log <path>`); `bee session` (stdin JSON-RPC) and `bee mcp` (MCP stdio server) with JSDoc schema extraction and standard error handling.
 - V8 Startup Snapshot 2.0: versioned cache bound to package version, payload header verification, and automatic self-healing fallback (`bee snapshot [build|status|clean]`).
-- Agent tool sandbox & MCP 2.0: `bee run --sandbox` denies fs/net/env/run with fine-grained allows; `bee session` (stdin JSON-RPC) and `bee mcp` (MCP stdio server) with JSDoc schema extraction and standard error handling.
 - Event-loop keep-alive no longer silently drops timers after 75ms.
-- New builtins wired: `assert`, `zlib`, `https`, `tls`, `vm`, `worker_threads`, `perf_hooks`.
-- WorkerHost multi-isolate scaffold is available (`BeeWorkerHost` / progressive `Worker`).
+- Builtins wired: `assert`, `zlib`, `https`, `tls`, `vm`, `worker_threads`, `perf_hooks`.
 - `bee serve` is a **health stub**: it binds with `tiny_http` and returns fixed `{"ok":true}`. It does **not** execute user scripts. Application servers use `http.createServer` + `bee run`.
-- `bee run` keeps the process alive while an `http.Server` is listening and pumps requests on the event loop.
-- Node conformance scorecard is a CI hard gate (`tests/conformance/`). Agent denial fixtures (`fs_read_denied`, `fs_jail_allows_prefix`, `env_denied`, `run_denied`, `fetch_allowlist`) are part of that gate.
+- `bee run` keeps the process alive while an `http.Server` is listening or active workers are executing, pumping requests and worker messages on the event loop.
+- Node conformance scorecard is a CI hard gate (`tests/conformance/`). Conformance suite covers basic JS/ES, streams, HTTP, crypto, path, Worker threads, Web Workers, WebAssembly streaming, and agent denial fixtures (`fs_read_denied`, `fs_jail_allows_prefix`, `env_denied`, `run_denied`, `fetch_allowlist`).
 - Optional Cargo feature `ai` is **not** a product LLM. It is historical in-process ML/ops code and may not compile. Models stay outside Beejs.
 - Honest benchmarks live in `benches/honest/`. Do not publish performance numbers from elsewhere.
 - TypeScript transpile uses oxc 0.147 (`src/typescript/oxc_backend.rs`) with a content-hash cache (`src/typescript/cache.rs`). Language surface is TypeScript 6.0 (transpile-only). TS 7.0 added no new syntax.
@@ -33,7 +34,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `0.2.0`.
+- Package version is `0.3.0`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.
@@ -43,7 +44,7 @@ Current facts from those sources:
 
 ### Stable
 
-Stable means the capability is part of the current v0.2 default scope, is reachable from the active `bee` binary or default library surface, and should be kept working by focused smoke tests or Rust tests.
+Stable means the capability is part of the current v0.3 default scope, is reachable from the active `bee` binary or default library surface, and should be kept working by focused smoke tests or Rust tests.
 
 Current stable scope:
 
@@ -51,8 +52,10 @@ Current stable scope:
 - Inspect the CLI with `bee --help`, `bee --version`, or `bee version`.
 - Evaluate simple JavaScript snippets with `bee eval <code>`.
 - Run JavaScript files with `bee run <file>`.
+- Multi-isolate worker threads via `require('worker_threads')` and `Worker` with bi-directional messaging.
+- WebAssembly streaming compilation and instantiation via `WebAssembly.compileStreaming` / `instantiateStreaming`.
 - Manage V8 startup snapshots with `bee snapshot [build|status|clean]`.
-- Run a tool file under `--sandbox` with explicit `--allow-*` / `--permission-policy`.
+- Run a tool file under `--sandbox` with explicit `--allow-*` / `--permission-policy` and structured JSONL audit trail (`--audit-log`).
 - Agent tool execution via `bee session` (stdin JSON-RPC) and `bee mcp` (MCP stdio server).
 - Use the basic REPL with `bee repl`.
 - Use V8-backed execution through `src/runtime_minimal.rs` for repository examples and small scripts.
