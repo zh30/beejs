@@ -1,7 +1,7 @@
 # Beejs
 
 [![Website](https://img.shields.io/badge/website-bee.zhanghe.dev-amber)](https://bee.zhanghe.dev)
-[![Release](https://img.shields.io/badge/release-v0.4.1-blue)](#current-status)
+[![Release](https://img.shields.io/badge/release-v0.4.2-blue)](#current-status)
 [![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -18,16 +18,16 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 - **High-Throughput HTTP & Active Idle Memory Trimming**: Point-to-point response routing achieving **21,426 req/s** (HTTP baseline) and native **Express** support (**8,023 req/s**). Automatic OS physical memory reclamation (17.8% returned to OS during idle cooldown).
 - **TypeScript support**: `.ts` / `.tsx` files are transpiled by oxc before execution (TypeScript 6.0 syntax, transpile-only; no `tsc` type-check).
 - **Agent sandbox, deterministic replay & MCP**: `bee run --sandbox` is default-deny for fs/net/env/run with structured audit logging. Deterministic virtual time (`--freeze-time`) and PRNG seeding (`--seed`) for reproducible agent runs. Native stdio MCP server (`bee mcp`) and JSON-RPC session (`bee session`).
-- **Node.js & Web API surface (incremental)**: Multi-isolate `worker_threads`, WebAssembly streaming, `child_process` sync execution, `zlib`, `util`, `tty`, `events`, `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified (100% on 35/35 fixtures).
+- **Node.js & Web API surface (incremental)**: Multi-isolate `worker_threads`, WebAssembly streaming, `child_process` sync execution, `zlib`, `util`, `tty`, `events`, `fs` / `http` / `crypto` / `fetch` / Streams / WebCrypto. See [Current Scope](docs/CURRENT_SCOPE.md) and `tests/conformance/` for what is actually verified (100% on 45/45 fixtures).
 - **Native Test Runner**: Fast built-in test discovery and watch mode (`bee test`, `bee test --watch`).
 
 ---
 
 ## Current Status
 
-Package version is **`0.4.1`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
+Package version is **`0.4.2`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
 
-Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/` (35/35 passed, 100%). Performance claims require the scripts in `benchmarks/` against the binary you just built.
+Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/` (45/45 passed, 100%). Performance claims require the scripts in `benchmarks/` against the binary you just built.
 
 ---
 

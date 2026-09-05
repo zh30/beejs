@@ -39,6 +39,35 @@ fn get_headers_cache() -> &'static Mutex<HashMap<usize, Vec<(String, String)>>> 
     HEADERS_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Shared Tokio runtime for fetch requests (avoids constructing runtimes per fetch)
+static FETCH_RUNTIME: OnceLock<Runtime> = OnceLock::new();
+
+fn get_fetch_runtime() -> &'static Runtime {
+    FETCH_RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .thread_name("beejs-fetch-worker")
+            .build()
+            .expect("Failed to initialize fetch runtime")
+    })
+}
+
+/// Shared Reqwest Client with persistent connection pooling
+static FETCH_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+fn get_fetch_client() -> &'static reqwest::Client {
+    FETCH_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .user_agent(format!("Beejs/{}", env!("CARGO_PKG_VERSION")))
+            .timeout(std::time::Duration::from_secs(30))
+            .pool_idle_timeout(std::time::Duration::from_secs(90))
+            .pool_max_idle_per_host(32)
+            .build()
+            .expect("Failed to initialize fetch client")
+    })
+}
+
 /// Fetch API configuration
 #[derive(Debug, Clone)]
 pub struct FetchConfig {
@@ -312,19 +341,15 @@ fn fetch_callback(
     let body_clone = body.clone();
     let redirect_clone = redirect.clone();
 
-    let result: _ = std::thread::spawn(move || {
-        let rt: _ =
-            Runtime::new().map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
-        rt.block_on(execute_fetch(
-            &url,
-            method_clone,
-            headers_clone,
-            body_clone,
-            &redirect_clone,
-        ))
-    });
-    match result.join() {
-        Ok(Ok(response)) => {
+    let result = get_fetch_runtime().block_on(execute_fetch(
+        &url,
+        method_clone,
+        headers_clone,
+        body_clone,
+        &redirect_clone,
+    ));
+    match result {
+        Ok(response) => {
             // Convert response to V8 object
             let response_obj: _ = v8::Object::new(scope);
             let ok_key: _ = v8::String::new(scope, "ok").unwrap();
@@ -381,13 +406,8 @@ fn fetch_callback(
             response_obj.set(scope, headers_key.into(), headers_obj.into());
             retval.set(response_obj.into());
         }
-        Ok(Err(e)) => {
+        Err(e) => {
             let error: _ = v8::String::new(scope, &format!("Fetch error: {}", e)).unwrap();
-            let error_obj: _ = v8::Exception::error(scope, error);
-            scope.throw_exception(error_obj.into());
-        }
-        Err(_) => {
-            let error: _ = v8::String::new(scope, "Fetch panic").unwrap();
             let error_obj: _ = v8::Exception::error(scope, error);
             scope.throw_exception(error_obj.into());
         }
@@ -419,21 +439,7 @@ async fn execute_fetch(
         )
         .map_err(|error| anyhow::anyhow!(error.to_string()))?;
 
-        let client: _ = match reqwest::Client::builder()
-            .user_agent(format!("Beejs/{}", env!("CARGO_PKG_VERSION")))
-            .timeout(std::time::Duration::from_secs(30))
-            // Honor system/env proxy configuration (removed explicit no_proxy()).
-            .build()
-        {
-            Ok(client) => client,
-            Err(error) => {
-                return Err(anyhow::anyhow!(
-                    "failed to create fetch client for {}: {}",
-                    current_url,
-                    error
-                ));
-            }
-        };
+        let client = get_fetch_client();
 
         let request: _ = client.request(
             match method {

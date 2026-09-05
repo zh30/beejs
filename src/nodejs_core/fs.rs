@@ -34,6 +34,9 @@ fn throw_permission_error(scope: &mut v8::HandleScope, error: PermissionError) {
 }
 
 fn ensure_fs_permission(scope: &mut v8::HandleScope, action: PermissionAction, path: &str) -> bool {
+    if !crate::permissions::has_restrictions() {
+        return true;
+    }
     match check_global_permission(
         PermissionKind::FileSystem,
         action,
@@ -306,10 +309,69 @@ fn fs_read_file_sync_callback(
         return;
     }
 
-    // 读取文件内容
-    match std::fs::read_to_string(&path) {
-        Ok(content) => {
-            retval.set(v8::String::new(scope, &content).unwrap().into());
+    let encoding = if args.length() > 1 {
+        let arg1 = args.get(1);
+        if arg1.is_string() {
+            arg1.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
+        } else if arg1.is_object() {
+            let enc_key = v8::String::new(scope, "encoding").unwrap();
+            v8::Local::<v8::Object>::try_from(arg1)
+                .ok()
+                .and_then(|o| o.get(scope, enc_key.into()))
+                .and_then(|v| v.to_string(scope))
+                .map(|s| s.to_rust_string_lossy(scope))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    match std::fs::read(&path) {
+        Ok(bytes) => {
+            if let Some(enc) = encoding {
+                let s = match enc.to_ascii_lowercase().as_str() {
+                    "utf8" | "utf-8" => String::from_utf8_lossy(&bytes).into_owned(),
+                    "hex" => hex::encode(&bytes),
+                    "base64" => {
+                        use base64::Engine;
+                        base64::engine::general_purpose::STANDARD.encode(&bytes)
+                    }
+                    _ => String::from_utf8_lossy(&bytes).into_owned(),
+                };
+                if let Some(v8_str) = v8::String::new(scope, &s) {
+                    retval.set(v8_str.into());
+                }
+            } else {
+                let len = bytes.len();
+                let ab = v8::ArrayBuffer::new(scope, len);
+                if len > 0 {
+                    let store = ab.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *mut u8;
+                    if !ptr.is_null() {
+                        unsafe {
+                            std::slice::from_raw_parts_mut(ptr, len).copy_from_slice(&bytes);
+                        }
+                    }
+                }
+                if let Some(u8_arr) = v8::Uint8Array::new(scope, ab, 0, len) {
+                    let global = scope.get_current_context().global(scope);
+                    let buf_str = v8::String::new(scope, "Buffer").unwrap();
+                    if let Some(b_val) = global.get(scope, buf_str.into()) {
+                        if let Ok(b_fn) = v8::Local::<v8::Function>::try_from(b_val) {
+                            let proto_key = v8::String::new(scope, "prototype").unwrap();
+                            if let Some(proto) = b_fn.get(scope, proto_key.into()) {
+                                u8_arr.set_prototype(scope, proto);
+                            }
+                        }
+                    }
+                    retval.set(u8_arr.into());
+                } else if let Some(v8_str) =
+                    v8::String::new(scope, &String::from_utf8_lossy(&bytes))
+                {
+                    retval.set(v8_str.into());
+                }
+            }
         }
         Err(e) => {
             let error_msg = format!("Error reading file: {}", e);
@@ -332,18 +394,86 @@ fn fs_write_file_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
-    let data: String = args
-        .get(1)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
-
     if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
         return;
     }
 
-    // 写入文件
-    match std::fs::write(&path, &data) {
+    let val = args.get(1);
+    let res = if val.is_string() {
+        if let Some(s) = val.to_string(scope) {
+            let rust_s = s.to_rust_string_lossy(scope);
+            std::fs::write(&path, rust_s.as_bytes())
+        } else {
+            std::fs::write(&path, b"")
+        }
+    } else if val.is_array_buffer_view() || val.is_typed_array() {
+        if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(val) {
+            if let Some(ab) = view.buffer(scope) {
+                let offset = view.byte_offset();
+                let len = view.byte_length();
+                let store = ab.get_backing_store();
+                let ptr = store.as_ref().as_ptr() as *const u8;
+                if !ptr.is_null() {
+                    let slice = unsafe { std::slice::from_raw_parts(ptr.add(offset), len) };
+                    std::fs::write(&path, slice)
+                } else {
+                    std::fs::write(&path, b"")
+                }
+            } else {
+                std::fs::write(&path, b"")
+            }
+        } else {
+            std::fs::write(&path, b"")
+        }
+    } else if val.is_object() {
+        if let Ok(obj) = v8::Local::<v8::Object>::try_from(val) {
+            let buf_key = v8::String::new(scope, "buffer").unwrap();
+            if let Some(buf_val) = obj.get(scope, buf_key.into()) {
+                if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buf_val) {
+                    let len_key = v8::String::new(scope, "length").unwrap();
+                    let len = obj
+                        .get(scope, len_key.into())
+                        .and_then(|v| v.to_integer(scope))
+                        .map(|i| i.value() as usize)
+                        .unwrap_or_else(|| ab.byte_length());
+                    let store = ab.get_backing_store();
+                    let ptr = store.as_ref().as_ptr() as *const u8;
+                    if !ptr.is_null() {
+                        let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
+                        std::fs::write(&path, slice)
+                    } else {
+                        std::fs::write(&path, b"")
+                    }
+                } else {
+                    let rust_s = val
+                        .to_string(scope)
+                        .map(|s| s.to_rust_string_lossy(scope))
+                        .unwrap_or_default();
+                    std::fs::write(&path, rust_s.as_bytes())
+                }
+            } else {
+                let rust_s = val
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_default();
+                std::fs::write(&path, rust_s.as_bytes())
+            }
+        } else {
+            let rust_s = val
+                .to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            std::fs::write(&path, rust_s.as_bytes())
+        }
+    } else {
+        let rust_s = val
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        std::fs::write(&path, rust_s.as_bytes())
+    };
+
+    match res {
         Ok(()) => {
             retval.set(v8::undefined(scope).into());
         }

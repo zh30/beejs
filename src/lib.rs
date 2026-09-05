@@ -285,10 +285,11 @@ pub fn initialize_v8() -> Result<()> {
         // Stage 92: V8 初始化优化 - 使用高性能运行时配置
         // 参考 Bun 和 Node.js 的优化策略
         let v8_flags: _ = vec![
-            // JIT 编译器优化（使用稳定支持的标志）
-            "--opt".to_string(),                     // 启用优化
-            "--max-old-space-size=4096".to_string(), // 4GB 老生代堆（生产环境）
-            "--gc-interval=240".to_string(),         // GC 间隔（降低频率提升吞吐量）
+            // JIT 编译器优化（生产环境高性能配置）
+            "--opt".to_string(),                     // 启用 TurboFan JIT 优化
+            "--max-old-space-size=4096".to_string(), // 4GB 老生代堆
+            "--turbo-fast-api-calls".to_string(),    // 快速 C++/Rust API 调用
+            "--harmony".to_string(),                 // ECMAScript 高性能特性
         ];
         let v8_flags_str: _ = v8_flags.join(" ");
         v8::V8::set_flags_from_string(&v8_flags_str);
