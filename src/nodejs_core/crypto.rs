@@ -8,10 +8,7 @@ use base64::{
     },
     Engine,
 };
-use blake3::Hasher;
 use openssl::symm::{Cipher, Crypter, Mode};
-use ring::digest;
-use ring::hmac;
 use rusty_v8 as v8;
 use sha1::{Digest, Sha1};
 
@@ -77,6 +74,7 @@ fn is_supported_hash_algorithm(algorithm: &str) -> bool {
     )
 }
 
+#[allow(dead_code)]
 fn array_buffer_bytes(
     value: v8::Local<v8::ArrayBuffer>,
     offset: usize,
@@ -86,13 +84,19 @@ fn array_buffer_bytes(
         return Ok(Vec::new());
     }
 
+    let byte_len = value.byte_length();
+    if offset >= byte_len {
+        return Ok(Vec::new());
+    }
+    let actual_len = length.min(byte_len - offset);
+
     let backing_store = value.get_backing_store();
     let ptr = backing_store.data() as *const u8;
     if ptr.is_null() {
         return Err("buffer data is unavailable".to_string());
     }
 
-    Ok(unsafe { std::slice::from_raw_parts(ptr.add(offset), length).to_vec() })
+    Ok(unsafe { std::slice::from_raw_parts(ptr.add(offset), actual_len).to_vec() })
 }
 
 fn encode_digest_bytes(bytes: &[u8], encoding: &str) -> String {
@@ -152,11 +156,141 @@ fn hmac_key_encoding_arg(
     object_string_property(scope, options, "encoding")
 }
 
-fn bytes_from_update_value(
+#[allow(dead_code)]
+static SYSTEM_RANDOM: std::sync::OnceLock<ring::rand::SystemRandom> = std::sync::OnceLock::new();
+
+#[allow(dead_code)]
+fn get_system_random() -> &'static ring::rand::SystemRandom {
+    SYSTEM_RANDOM.get_or_init(ring::rand::SystemRandom::new)
+}
+
+#[derive(Clone)]
+enum StreamingHasher {
+    Ring(ring::digest::Context),
+    Sha1(sha1::Sha1),
+    Md5(md5::Context),
+    Blake3(blake3::Hasher),
+}
+
+impl StreamingHasher {
+    fn new(algo: &str) -> Option<Self> {
+        match algo {
+            "sha256" => Some(StreamingHasher::Ring(ring::digest::Context::new(
+                &ring::digest::SHA256,
+            ))),
+            "sha384" => Some(StreamingHasher::Ring(ring::digest::Context::new(
+                &ring::digest::SHA384,
+            ))),
+            "sha512" => Some(StreamingHasher::Ring(ring::digest::Context::new(
+                &ring::digest::SHA512,
+            ))),
+            "sha1" => Some(StreamingHasher::Sha1(sha1::Sha1::new())),
+            "md5" => Some(StreamingHasher::Md5(md5::Context::new())),
+            "blake3" => Some(StreamingHasher::Blake3(blake3::Hasher::new())),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn update(&mut self, data: &[u8]) {
+        match self {
+            StreamingHasher::Ring(ctx) => ctx.update(data),
+            StreamingHasher::Sha1(hasher) => hasher.update(data),
+            StreamingHasher::Md5(ctx) => ctx.consume(data),
+            StreamingHasher::Blake3(hasher) => {
+                hasher.update(data);
+            }
+        }
+    }
+
+    fn finalize(self) -> Vec<u8> {
+        match self {
+            StreamingHasher::Ring(ctx) => ctx.finish().as_ref().to_vec(),
+            StreamingHasher::Sha1(hasher) => hasher.finalize().to_vec(),
+            StreamingHasher::Md5(ctx) => ctx.finalize().0.to_vec(),
+            StreamingHasher::Blake3(hasher) => hasher.finalize().as_bytes().to_vec(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct StreamingHmac {
+    algorithm: String,
+    key_bytes: Vec<u8>,
+    data: Vec<u8>,
+}
+
+impl StreamingHmac {
+    fn new(algo: &str, key_bytes: &[u8]) -> Option<Self> {
+        Some(StreamingHmac {
+            algorithm: algo.to_string(),
+            key_bytes: key_bytes.to_vec(),
+            data: Vec::new(),
+        })
+    }
+
+    #[inline]
+    fn update(&mut self, chunk: &[u8]) {
+        self.data.extend_from_slice(chunk);
+    }
+
+    fn finalize(self) -> Vec<u8> {
+        match self.algorithm.as_str() {
+            "sha256" => {
+                let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, &self.key_bytes);
+                ring::hmac::sign(&key, &self.data).as_ref().to_vec()
+            }
+            "sha384" => compute_hmac_with_hash(&self.key_bytes, &self.data, 128, |d| {
+                ring::digest::digest(&ring::digest::SHA384, d)
+                    .as_ref()
+                    .to_vec()
+            }),
+            "sha512" => compute_hmac_with_hash(&self.key_bytes, &self.data, 128, |d| {
+                ring::digest::digest(&ring::digest::SHA512, d)
+                    .as_ref()
+                    .to_vec()
+            }),
+            "sha1" => compute_hmac_with_hash(&self.key_bytes, &self.data, 64, sha1_digest_bytes),
+            "md5" => compute_hmac_with_hash(&self.key_bytes, &self.data, 64, |d| {
+                md5::compute(d).0.to_vec()
+            }),
+            "blake3" => {
+                let mut key_32 = [0u8; 32];
+                if self.key_bytes.len() > 32 {
+                    let mut hasher = blake3::Hasher::new();
+                    hasher.update(&self.key_bytes);
+                    let hashed = hasher.finalize();
+                    key_32.copy_from_slice(hashed.as_bytes());
+                } else {
+                    key_32[..self.key_bytes.len()].copy_from_slice(&self.key_bytes);
+                }
+                blake3::keyed_hash(&key_32, &self.data).as_bytes().to_vec()
+            }
+            _ => Vec::new(),
+        }
+    }
+}
+
+thread_local! {
+    static ACTIVE_HASHERS: std::cell::RefCell<std::collections::HashMap<u32, StreamingHasher>> = std::cell::RefCell::new(std::collections::HashMap::new());
+    static ACTIVE_HMACS: std::cell::RefCell<std::collections::HashMap<u32, StreamingHmac>> = std::cell::RefCell::new(std::collections::HashMap::new());
+    static NEXT_CRYPTO_ID: std::cell::Cell<u32> = std::cell::Cell::new(1);
+}
+
+fn next_crypto_id() -> u32 {
+    NEXT_CRYPTO_ID.with(|c| {
+        let id = c.get();
+        c.set(id.wrapping_add(1).max(1));
+        id
+    })
+}
+
+fn with_bytes_from_update_value<R>(
     scope: &mut v8::HandleScope,
     value: v8::Local<v8::Value>,
     string_encoding: Option<&str>,
-) -> Result<Vec<u8>, String> {
+    f: impl FnOnce(&[u8]) -> R,
+) -> Result<R, String> {
     if value.is_string() {
         let text = value
             .to_string(scope)
@@ -164,89 +298,98 @@ fn bytes_from_update_value(
             .unwrap_or_default();
         let encoding = string_encoding.unwrap_or("utf8").to_ascii_lowercase();
         return match encoding.as_str() {
-            "hex" => hex::decode(&text).map_err(|error| format!("invalid hex data: {}", error)),
-            "base64" => BASE64_STANDARD
-                .decode(text.as_bytes())
-                .map_err(|error| format!("invalid base64 data: {}", error)),
-            "base64url" => decode_base64url(&text)
-                .map_err(|error| format!("invalid base64url data: {}", error)),
-            "latin1" | "binary" => Ok(text.chars().map(|ch| ch as u8).collect()),
-            _ => Ok(text.into_bytes()),
+            "hex" => {
+                let bytes =
+                    hex::decode(&text).map_err(|error| format!("invalid hex data: {}", error))?;
+                Ok(f(&bytes))
+            }
+            "base64" => {
+                let bytes = BASE64_STANDARD
+                    .decode(text.as_bytes())
+                    .map_err(|error| format!("invalid base64 data: {}", error))?;
+                Ok(f(&bytes))
+            }
+            "base64url" => {
+                let bytes = decode_base64url(&text)
+                    .map_err(|error| format!("invalid base64url data: {}", error))?;
+                Ok(f(&bytes))
+            }
+            "latin1" | "binary" => {
+                let bytes: Vec<u8> = text.chars().map(|ch| ch as u8).collect();
+                Ok(f(&bytes))
+            }
+            _ => Ok(f(text.as_bytes())),
         };
     }
 
     if value.is_array_buffer() {
         let buffer = v8::Local::<v8::ArrayBuffer>::try_from(value)
             .map_err(|_| "data must be an ArrayBuffer".to_string())?;
-        return array_buffer_bytes(buffer, 0, buffer.byte_length());
+        let store = buffer.get_backing_store();
+        let ptr = store.data() as *const u8;
+        if ptr.is_null() {
+            return Ok(f(&[]));
+        }
+        let slice = unsafe { std::slice::from_raw_parts(ptr, buffer.byte_length()) };
+        return Ok(f(slice));
     }
 
-    if value.is_typed_array() {
-        let typed_array = v8::Local::<v8::TypedArray>::try_from(value)
-            .map_err(|_| "data must be a TypedArray".to_string())?;
-        let buffer = typed_array
+    if value.is_array_buffer_view() {
+        let view = v8::Local::<v8::ArrayBufferView>::try_from(value)
+            .map_err(|_| "data must be an ArrayBufferView".to_string())?;
+        let buffer = view
             .buffer(scope)
-            .ok_or_else(|| "typed array buffer is unavailable".to_string())?;
-        return array_buffer_bytes(buffer, typed_array.byte_offset(), typed_array.byte_length());
+            .ok_or_else(|| "view buffer is unavailable".to_string())?;
+        let store = buffer.get_backing_store();
+        let ptr = store.data() as *const u8;
+        if ptr.is_null() {
+            return Ok(f(&[]));
+        }
+        let offset = view.byte_offset();
+        let length = view.byte_length();
+        let slice = unsafe { std::slice::from_raw_parts(ptr.add(offset), length) };
+        return Ok(f(slice));
     }
 
-    Err("data must be a string, ArrayBuffer, or TypedArray".to_string())
-}
-
-fn append_data_chunk(
-    scope: &mut v8::HandleScope,
-    this: v8::Local<v8::Object>,
-    bytes: &[u8],
-) -> Result<(), String> {
-    let data_key =
-        v8::String::new(scope, "_data").ok_or_else(|| "allocation failed".to_string())?;
-    let data_array = this
-        .get(scope, data_key.into())
-        .ok_or_else(|| "data buffer is unavailable".to_string())?;
-    let arr = v8::Local::<v8::Array>::try_from(data_array)
-        .map_err(|_| "data buffer is invalid".to_string())?;
-    let length = arr.length();
-    let chunk = v8::String::new(scope, &hex::encode(bytes))
-        .ok_or_else(|| "allocation failed".to_string())?;
-    arr.set_index(scope, length, chunk.into());
-    Ok(())
-}
-
-fn data_chunks_bytes(
-    scope: &mut v8::HandleScope,
-    this: v8::Local<v8::Object>,
-) -> Result<Vec<u8>, String> {
-    let data_key =
-        v8::String::new(scope, "_data").ok_or_else(|| "allocation failed".to_string())?;
-    let data_array = this
-        .get(scope, data_key.into())
-        .ok_or_else(|| "data buffer is unavailable".to_string())?;
-    let arr = v8::Local::<v8::Array>::try_from(data_array)
-        .map_err(|_| "data buffer is invalid".to_string())?;
-    let mut combined_data = Vec::new();
-    for i in 0..arr.length() {
-        if let Some(data_str) = arr.get_index(scope, i).and_then(|v| v.to_string(scope)) {
-            let chunk_hex = data_str.to_rust_string_lossy(scope);
-            let mut chunk = hex::decode(&chunk_hex)
-                .map_err(|error| format!("invalid internal update chunk: {}", error))?;
-            combined_data.append(&mut chunk);
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(value) {
+        let buf_key = v8::String::new(scope, "buffer").unwrap();
+        if let Some(buf_val) = obj.get(scope, buf_key.into()) {
+            if buf_val.is_array_buffer() {
+                if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buf_val) {
+                    let mut tc = v8::TryCatch::new(scope);
+                    let offset_key = v8::String::new(&mut tc, "byteOffset").unwrap();
+                    let offset = obj
+                        .get(&mut tc, offset_key.into())
+                        .and_then(|v| v.to_integer(&mut tc))
+                        .map(|i| i.value() as usize)
+                        .unwrap_or(0);
+                    let len_key = v8::String::new(&mut tc, "length").unwrap();
+                    let len = obj
+                        .get(&mut tc, len_key.into())
+                        .and_then(|v| v.to_integer(&mut tc))
+                        .map(|i| i.value() as usize)
+                        .unwrap_or_else(|| ab.byte_length().saturating_sub(offset));
+                    let store = ab.get_backing_store();
+                    let ptr = store.data() as *const u8;
+                    if ptr.is_null() {
+                        return Ok(f(&[]));
+                    }
+                    let slice = unsafe { std::slice::from_raw_parts(ptr.add(offset), len) };
+                    return Ok(f(slice));
+                }
+            }
         }
     }
-    Ok(combined_data)
+
+    Err("data must be a string, Buffer, ArrayBuffer, or TypedArray".to_string())
 }
 
-fn hmac_key_bytes(
+fn bytes_from_update_value(
     scope: &mut v8::HandleScope,
-    this: v8::Local<v8::Object>,
+    value: v8::Local<v8::Value>,
+    string_encoding: Option<&str>,
 ) -> Result<Vec<u8>, String> {
-    if let Some(key_hex) = object_string_property(scope, this, "_key_bytes") {
-        return hex::decode(&key_hex)
-            .map_err(|error| format!("invalid internal HMAC key: {}", error));
-    }
-
-    Ok(object_string_property(scope, this, "_key")
-        .unwrap_or_default()
-        .into_bytes())
+    with_bytes_from_update_value(scope, value, string_encoding, |slice| slice.to_vec())
 }
 
 fn object_bool_property(
@@ -494,9 +637,60 @@ pub fn setup_crypto_api(
         create_decipheriv_key.into(),
         create_decipheriv_instance.into(),
     );
+    // Create shared Hash prototype
+    let hash_proto = v8::Object::new(scope);
+    let hash_update_func = v8::FunctionTemplate::new(scope, hash_update_callback);
+    let hash_update_inst = hash_update_func.get_function(scope).unwrap();
+    let update_key = v8::String::new(scope, "update").unwrap();
+    hash_proto.set(scope, update_key.into(), hash_update_inst.into());
+
+    let hash_digest_func = v8::FunctionTemplate::new(scope, hash_digest_callback);
+    let hash_digest_inst = hash_digest_func.get_function(scope).unwrap();
+    let digest_key = v8::String::new(scope, "digest").unwrap();
+    hash_proto.set(scope, digest_key.into(), hash_digest_inst.into());
+
+    let hash_copy_func = v8::FunctionTemplate::new(scope, hash_copy_callback);
+    let hash_copy_inst = hash_copy_func.get_function(scope).unwrap();
+    let copy_key = v8::String::new(scope, "copy").unwrap();
+    hash_proto.set(scope, copy_key.into(), hash_copy_inst.into());
+
+    let hash_proto_key = v8::String::new(scope, "_HashPrototype").unwrap();
+    crypto_obj.set(scope, hash_proto_key.into(), hash_proto.into());
+
+    // Create shared Hmac prototype
+    let hmac_proto = v8::Object::new(scope);
+    let hmac_update_func = v8::FunctionTemplate::new(scope, hmac_update_callback);
+    let hmac_update_inst = hmac_update_func.get_function(scope).unwrap();
+    hmac_proto.set(scope, update_key.into(), hmac_update_inst.into());
+
+    let hmac_digest_func = v8::FunctionTemplate::new(scope, hmac_digest_callback);
+    let hmac_digest_inst = hmac_digest_func.get_function(scope).unwrap();
+    hmac_proto.set(scope, digest_key.into(), hmac_digest_inst.into());
+
+    let hmac_proto_key = v8::String::new(scope, "_HmacPrototype").unwrap();
+    crypto_obj.set(scope, hmac_proto_key.into(), hmac_proto.into());
+
     // 设置crypto对象到全局
     global.set(scope, crypto_key.into(), crypto_obj.into());
     Ok(())
+}
+
+#[inline]
+fn fill_secure_random(slice: &mut [u8]) {
+    #[cfg(target_os = "macos")]
+    {
+        extern "C" {
+            fn arc4random_buf(buf: *mut std::ffi::c_void, nbytes: usize);
+        }
+        unsafe {
+            arc4random_buf(slice.as_mut_ptr() as *mut std::ffi::c_void, slice.len());
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let rng = get_system_random();
+        let _ = ring::rand::SecureRandom::fill(rng, slice);
+    }
 }
 
 fn set_hash_methods(scope: &mut v8::HandleScope, hash_obj: v8::Local<v8::Object>) {
@@ -535,20 +729,45 @@ fn create_hash_callback(
         return;
     }
 
-    // 创建hash对象
     let hash_obj: _ = v8::Object::new(scope);
-    set_hash_methods(scope, hash_obj);
-    // 保存算法到对象内部
+    let global = scope.get_current_context().global(scope);
+    let crypto_key = v8::String::new(scope, "crypto").unwrap();
+    let mut prototype_set = false;
+    if let Some(c_val) = global.get(scope, crypto_key.into()) {
+        if let Ok(c_obj) = v8::Local::<v8::Object>::try_from(c_val) {
+            let hash_proto_key = v8::String::new(scope, "_HashPrototype").unwrap();
+            if let Some(p_val) = c_obj.get(scope, hash_proto_key.into()) {
+                hash_obj.set_prototype(scope, p_val);
+                prototype_set = true;
+            }
+        }
+    }
+    if !prototype_set {
+        set_hash_methods(scope, hash_obj);
+    }
+
     let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
     let algo_val: _ = v8::String::new(scope, &algorithm).unwrap();
     hash_obj.set(scope, algo_key.into(), algo_val.into());
-    // 保存数据缓冲区
-    let data_key: _ = v8::String::new(scope, "_data").unwrap();
-    let data_val: _ = v8::Array::new(scope, 0);
-    hash_obj.set(scope, data_key.into(), data_val.into());
+
+    let hasher = StreamingHasher::new(&algorithm).unwrap();
+    let hash_id = next_crypto_id();
+    ACTIVE_HASHERS.with(|m| {
+        let mut map = m.borrow_mut();
+        if map.len() > 10000 {
+            map.clear();
+        }
+        map.insert(hash_id, hasher);
+    });
+
+    let id_key = v8::String::new(scope, "_hash_id").unwrap();
+    let id_val = v8::Integer::new(scope, hash_id as i32);
+    hash_obj.set(scope, id_key.into(), id_val.into());
+
     set_object_bool_property(scope, hash_obj, "_digest_called", false);
     retval.set(hash_obj.into());
 }
+
 fn hash_update_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -560,17 +779,26 @@ fn hash_update_callback(
         return;
     }
 
+    let id_key = v8::String::new(scope, "_hash_id").unwrap();
+    let hash_id = this
+        .get(scope, id_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|i| i.value() as u32)
+        .unwrap_or(0);
+
     let string_encoding = optional_string_arg(scope, &args, 1);
-    let bytes = match bytes_from_update_value(scope, args.get(0), string_encoding.as_deref()) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            let message = v8::String::new(scope, &error).unwrap();
-            let error = v8::Exception::type_error(scope, message);
-            scope.throw_exception(error);
-            return;
-        }
-    };
-    if let Err(error) = append_data_chunk(scope, this, &bytes) {
+    let res =
+        with_bytes_from_update_value(scope, args.get(0), string_encoding.as_deref(), |bytes| {
+            if hash_id != 0 {
+                ACTIVE_HASHERS.with(|m| {
+                    if let Some(hasher) = m.borrow_mut().get_mut(&hash_id) {
+                        hasher.update(bytes);
+                    }
+                });
+            }
+        });
+
+    if let Err(error) = res {
         let message = v8::String::new(scope, &error).unwrap();
         let error = v8::Exception::type_error(scope, message);
         scope.throw_exception(error);
@@ -598,18 +826,28 @@ fn hash_copy_callback(
     let algo_val = v8::String::new(scope, &algorithm).unwrap();
     copied_hash.set(scope, algo_key.into(), algo_val.into());
 
-    let data_key = v8::String::new(scope, "_data").unwrap();
-    let copied_data = v8::Array::new(scope, 0);
-    if let Some(data_value) = this.get(scope, data_key.into()) {
-        if let Ok(source_data) = v8::Local::<v8::Array>::try_from(data_value) {
-            for i in 0..source_data.length() {
-                if let Some(value) = source_data.get_index(scope, i) {
-                    copied_data.set_index(scope, i, value);
-                }
-            }
+    let id_key = v8::String::new(scope, "_hash_id").unwrap();
+    let hash_id = this
+        .get(scope, id_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|i| i.value() as u32)
+        .unwrap_or(0);
+
+    let new_id = if hash_id != 0 {
+        let cloned = ACTIVE_HASHERS.with(|m| m.borrow().get(&hash_id).cloned());
+        if let Some(hasher) = cloned {
+            let nid = next_crypto_id();
+            ACTIVE_HASHERS.with(|m| m.borrow_mut().insert(nid, hasher));
+            nid
+        } else {
+            0
         }
-    }
-    copied_hash.set(scope, data_key.into(), copied_data.into());
+    } else {
+        0
+    };
+
+    let id_val = v8::Integer::new(scope, new_id as i32);
+    copied_hash.set(scope, id_key.into(), id_val.into());
     set_object_bool_property(scope, copied_hash, "_digest_called", false);
     retval.set(copied_hash.into());
 }
@@ -626,60 +864,19 @@ fn hash_digest_callback(
     }
 
     let encoding = digest_encoding_arg(scope, &args);
-    // 获取算法
-    let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
-    let algorithm: _ = this
-        .get(scope, algo_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
-        .unwrap_or_default();
-    let combined_data = match data_chunks_bytes(scope, this) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            let message = v8::String::new(scope, &error).unwrap();
-            let error = v8::Exception::type_error(scope, message);
-            scope.throw_exception(error);
-            return;
-        }
-    };
-    let digest_bytes: Vec<u8> = match algorithm.as_str() {
-        "sha256" => {
-            let digest: _ = digest::digest(&digest::SHA256, &combined_data);
-            digest.as_ref().to_vec()
-        }
-        "sha384" => {
-            let digest: _ = digest::digest(&digest::SHA384, &combined_data);
-            digest.as_ref().to_vec()
-        }
-        "sha512" => {
-            let digest: _ = digest::digest(&digest::SHA512, &combined_data);
-            digest.as_ref().to_vec()
-        }
-        "sha1" => {
-            // 使用 sha1 crate 正确计算 SHA1 哈希
-            let mut hasher = Sha1::new();
-            hasher.update(&combined_data);
-            let digest = hasher.finalize();
-            digest.to_vec()
-        }
-        "blake3" => {
-            let mut hasher = Hasher::new();
-            hasher.update(&combined_data);
-            let hash = hasher.finalize();
-            hash.as_bytes().to_vec()
-        }
-        "md5" => {
-            let digest: _ = md5::compute(&combined_data);
-            digest.0.to_vec()
-        }
-        _ => {
-            // 抛出错误：不支持的算法
-            let error_msg =
-                v8::String::new(scope, &format!("Unsupported hash algorithm: {}", algorithm))
-                    .unwrap();
-            let error = v8::Exception::type_error(scope, error_msg);
-            scope.throw_exception(error);
-            return;
-        }
+    let id_key = v8::String::new(scope, "_hash_id").unwrap();
+    let hash_id = this
+        .get(scope, id_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|i| i.value() as u32)
+        .unwrap_or(0);
+
+    let digest_bytes = if hash_id != 0 {
+        ACTIVE_HASHERS
+            .with(|m| m.borrow_mut().remove(&hash_id).map(|h| h.finalize()))
+            .unwrap_or_default()
+    } else {
+        Vec::new()
     };
 
     set_object_bool_property(scope, this, "_digest_called", true);
@@ -692,6 +889,7 @@ fn hash_digest_callback(
         return_output(scope, &digest_bytes, "buffer", retval);
     }
 }
+
 fn create_hmac_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -703,11 +901,6 @@ fn create_hmac_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let algorithm = normalize_hash_algorithm(&algorithm);
-    let key: _ = args
-        .get(1)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
     let key_encoding = hmac_key_encoding_arg(scope, &args);
     let key_bytes = if args.length() <= 1 || args.get(1).is_undefined() {
         Vec::new()
@@ -722,7 +915,6 @@ fn create_hmac_callback(
             }
         }
     };
-    // 验证算法是否支持
     if !is_supported_hash_algorithm(&algorithm) {
         let error_msg =
             v8::String::new(scope, &format!("Unsupported HMAC algorithm: {}", algorithm)).unwrap();
@@ -730,34 +922,40 @@ fn create_hmac_callback(
         scope.throw_exception(error);
         return;
     }
-    // 创建hmac对象
     let hmac_obj: _ = v8::Object::new(scope);
-    // update方法
-    let update_func: _ = v8::FunctionTemplate::new(scope, hmac_update_callback);
-    let update_instance: _ = update_func.get_function(scope).unwrap();
-    let update_key: _ = v8::String::new(scope, "update").unwrap();
-    hmac_obj.set(scope, update_key.into(), update_instance.into());
-    // digest方法
-    let digest_func: _ = v8::FunctionTemplate::new(scope, hmac_digest_callback);
-    let digest_instance: _ = digest_func.get_function(scope).unwrap();
-    let digest_key: _ = v8::String::new(scope, "digest").unwrap();
-    hmac_obj.set(scope, digest_key.into(), digest_instance.into());
-    // 保存数据
+    let global = scope.get_current_context().global(scope);
+    let crypto_key = v8::String::new(scope, "crypto").unwrap();
+    if let Some(c_val) = global.get(scope, crypto_key.into()) {
+        if let Ok(c_obj) = v8::Local::<v8::Object>::try_from(c_val) {
+            let hmac_proto_key = v8::String::new(scope, "_HmacPrototype").unwrap();
+            if let Some(p_val) = c_obj.get(scope, hmac_proto_key.into()) {
+                hmac_obj.set_prototype(scope, p_val);
+            }
+        }
+    }
+
     let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
     let algo_val: _ = v8::String::new(scope, &algorithm).unwrap();
     hmac_obj.set(scope, algo_key.into(), algo_val.into());
-    let key_key: _ = v8::String::new(scope, "_key").unwrap();
-    let key_val: _ = v8::String::new(scope, &key).unwrap();
-    hmac_obj.set(scope, key_key.into(), key_val.into());
-    let key_bytes_key: _ = v8::String::new(scope, "_key_bytes").unwrap();
-    let key_bytes_val: _ = v8::String::new(scope, &hex::encode(&key_bytes)).unwrap();
-    hmac_obj.set(scope, key_bytes_key.into(), key_bytes_val.into());
-    let data_key: _ = v8::String::new(scope, "_data").unwrap();
-    let data_val: _ = v8::Array::new(scope, 0);
-    hmac_obj.set(scope, data_key.into(), data_val.into());
+
+    let hmac_instance = StreamingHmac::new(&algorithm, &key_bytes).unwrap();
+    let hmac_id = next_crypto_id();
+    ACTIVE_HMACS.with(|m| {
+        let mut map = m.borrow_mut();
+        if map.len() > 10000 {
+            map.clear();
+        }
+        map.insert(hmac_id, hmac_instance);
+    });
+
+    let id_key = v8::String::new(scope, "_hmac_id").unwrap();
+    let id_val = v8::Integer::new(scope, hmac_id as i32);
+    hmac_obj.set(scope, id_key.into(), id_val.into());
+
     set_object_bool_property(scope, hmac_obj, "_digest_called", false);
     retval.set(hmac_obj.into());
 }
+
 fn hmac_update_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -769,17 +967,26 @@ fn hmac_update_callback(
         return;
     }
 
+    let id_key = v8::String::new(scope, "_hmac_id").unwrap();
+    let hmac_id = this
+        .get(scope, id_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|i| i.value() as u32)
+        .unwrap_or(0);
+
     let string_encoding = optional_string_arg(scope, &args, 1);
-    let bytes = match bytes_from_update_value(scope, args.get(0), string_encoding.as_deref()) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            let message = v8::String::new(scope, &error).unwrap();
-            let error = v8::Exception::type_error(scope, message);
-            scope.throw_exception(error);
-            return;
-        }
-    };
-    if let Err(error) = append_data_chunk(scope, this, &bytes) {
+    let res =
+        with_bytes_from_update_value(scope, args.get(0), string_encoding.as_deref(), |bytes| {
+            if hmac_id != 0 {
+                ACTIVE_HMACS.with(|m| {
+                    if let Some(hmac) = m.borrow_mut().get_mut(&hmac_id) {
+                        hmac.update(bytes);
+                    }
+                });
+            }
+        });
+
+    if let Err(error) = res {
         let message = v8::String::new(scope, &error).unwrap();
         let error = v8::Exception::type_error(scope, message);
         scope.throw_exception(error);
@@ -787,6 +994,7 @@ fn hmac_update_callback(
     }
     retval.set(this.into());
 }
+
 fn hmac_digest_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -804,72 +1012,19 @@ fn hmac_digest_callback(
         return;
     }
 
-    let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
-    let algorithm: _ = this
-        .get(scope, algo_key.into())
-        .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
-        .unwrap_or_default();
-    let key_bytes = match hmac_key_bytes(scope, this) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            let message = v8::String::new(scope, &error).unwrap();
-            let error = v8::Exception::type_error(scope, message);
-            scope.throw_exception(error);
-            return;
-        }
-    };
-    let combined_data = match data_chunks_bytes(scope, this) {
-        Ok(bytes) => bytes,
-        Err(error) => {
-            let message = v8::String::new(scope, &error).unwrap();
-            let error = v8::Exception::type_error(scope, message);
-            scope.throw_exception(error);
-            return;
-        }
-    };
-    let digest_bytes: Vec<u8> = match algorithm.as_str() {
-        "sha256" => {
-            let signing_key: _ = hmac::Key::new(hmac::HMAC_SHA256, &key_bytes);
-            let hmac_result: _ = hmac::sign(&signing_key, &combined_data);
-            hmac_result.as_ref().to_vec()
-        }
-        "sha1" => compute_hmac_with_hash(&key_bytes, &combined_data, 64, sha1_digest_bytes),
-        "sha384" => compute_hmac_with_hash(&key_bytes, &combined_data, 128, |data| {
-            digest::digest(&digest::SHA384, data).as_ref().to_vec()
-        }),
-        "sha512" => compute_hmac_with_hash(&key_bytes, &combined_data, 128, |data| {
-            digest::digest(&digest::SHA512, data).as_ref().to_vec()
-        }),
-        "md5" => compute_hmac_with_hash(&key_bytes, &combined_data, 64, |data| {
-            md5::compute(data).0.to_vec()
-        }),
-        "blake3" => {
-            // 使用 blake3 crate 实现 HMAC-BLAKE3
-            // blake3::keyed_hash 需要 32 字节密钥，需要标准化密钥长度
-            let mut key_32 = [0u8; 32];
-            if key_bytes.len() > 32 {
-                // 如果密钥过长，先哈希
-                let mut hasher = blake3::Hasher::new();
-                hasher.update(&key_bytes);
-                let hashed = hasher.finalize();
-                key_32.copy_from_slice(hashed.as_bytes());
-            } else {
-                // 如果密钥过短或正好 32 字节，直接复制或填充
-                key_32[..key_bytes.len()].copy_from_slice(&key_bytes);
-            }
-            // 使用 blake3::keyed_hash 进行带密钥的哈希
-            let result = blake3::keyed_hash(&key_32, &combined_data);
-            result.as_bytes().to_vec()
-        }
-        _ => {
-            // 抛出错误：不支持的算法
-            let error_msg =
-                v8::String::new(scope, &format!("Unsupported HMAC algorithm: {}", algorithm))
-                    .unwrap();
-            let error = v8::Exception::type_error(scope, error_msg);
-            scope.throw_exception(error);
-            return;
-        }
+    let id_key = v8::String::new(scope, "_hmac_id").unwrap();
+    let hmac_id = this
+        .get(scope, id_key.into())
+        .and_then(|v| v.to_integer(scope))
+        .map(|i| i.value() as u32)
+        .unwrap_or(0);
+
+    let digest_bytes = if hmac_id != 0 {
+        ACTIVE_HMACS
+            .with(|m| m.borrow_mut().remove(&hmac_id).map(|h| h.finalize()))
+            .unwrap_or_default()
+    } else {
+        Vec::new()
     };
 
     set_object_bool_property(scope, this, "_digest_called", true);
@@ -882,6 +1037,7 @@ fn hmac_digest_callback(
         return_output(scope, &digest_bytes, "buffer", retval);
     }
 }
+
 fn random_bytes_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -894,52 +1050,34 @@ fn random_bytes_callback(
         .value() as usize;
 
     let size = size.max(0);
-
-    // Generate random bytes (only if size > 0)
-    let random_data = if size > 0 {
-        let mut data = vec![0u8; size];
-        if let Some(seed) = crate::permissions::get_deterministic_seed() {
-            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-            let count = COUNTER.fetch_add(size as u64, std::sync::atomic::Ordering::SeqCst);
-            let mut state = seed.wrapping_add(count);
-            for byte in data.iter_mut() {
-                state = state
-                    .wrapping_mul(6364136223846793005)
-                    .wrapping_add(1442695040888963407);
-                *byte = (state >> 33) as u8;
-            }
-        } else {
-            let rand: _ = ring::rand::SystemRandom::new();
-            ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
-        }
-        data
-    } else {
-        vec![]
-    };
-
-    // Create ArrayBuffer and copy random data
     let buffer_obj: _ = v8::ArrayBuffer::new(scope, size);
 
-    // Copy random data to ArrayBuffer's backing store (only if size > 0)
     if size > 0 {
         let store = buffer_obj.get_backing_store();
         let ptr = store.data() as *mut u8;
         if !ptr.is_null() {
             let slice = unsafe { std::slice::from_raw_parts_mut(ptr, size) };
-            slice.copy_from_slice(&random_data);
+            if let Some(seed) = crate::permissions::get_deterministic_seed() {
+                static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+                let count = COUNTER.fetch_add(size as u64, std::sync::atomic::Ordering::SeqCst);
+                let mut state = seed.wrapping_add(count);
+                for byte in slice.iter_mut() {
+                    state = state
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(1442695040888963407);
+                    *byte = (state >> 33) as u8;
+                }
+            } else {
+                fill_secure_random(slice);
+            }
         }
     }
 
-    // Check if callback is provided as second argument
     let callback = args.get(1);
     if callback.is_function() {
-        // Callback API: randomBytes(size, callback)
         if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
-            // Create null error (no error occurred)
             let null_val = v8::null(scope).into();
             let undefined_val = v8::undefined(scope).into();
-
-            // Create the buffer as Uint8Array for better compatibility
             if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
                 let cb_args: &[v8::Local<v8::Value>] = &[null_val, uint8_array.into()];
                 cb_func.call(scope, undefined_val, cb_args);
@@ -947,7 +1085,6 @@ fn random_bytes_callback(
         }
     }
 
-    // Return Uint8Array for consistency with Node.js
     if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
         retval.set(uint8_array.into());
     }
@@ -965,43 +1102,29 @@ fn random_bytes_sync_callback(
         .value() as usize;
 
     let size = size.max(0);
-
-    // Generate random bytes (only if size > 0)
-    let random_data = if size > 0 {
-        let mut data = vec![0u8; size];
-        if let Some(seed) = crate::permissions::get_deterministic_seed() {
-            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-            let count = COUNTER.fetch_add(size as u64, std::sync::atomic::Ordering::SeqCst);
-            let mut state = seed.wrapping_add(count);
-            for byte in data.iter_mut() {
-                state = state
-                    .wrapping_mul(6364136223846793005)
-                    .wrapping_add(1442695040888963407);
-                *byte = (state >> 33) as u8;
-            }
-        } else {
-            let rand: _ = ring::rand::SystemRandom::new();
-            ring::rand::SecureRandom::fill(&rand, &mut data).unwrap_or(());
-        }
-        data
-    } else {
-        vec![]
-    };
-
-    // Create ArrayBuffer and copy random data
     let buffer_obj: _ = v8::ArrayBuffer::new(scope, size);
 
-    // Copy random data to ArrayBuffer's backing store (only if size > 0)
     if size > 0 {
         let store = buffer_obj.get_backing_store();
         let ptr = store.data() as *mut u8;
         if !ptr.is_null() {
             let slice = unsafe { std::slice::from_raw_parts_mut(ptr, size) };
-            slice.copy_from_slice(&random_data);
+            if let Some(seed) = crate::permissions::get_deterministic_seed() {
+                static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+                let count = COUNTER.fetch_add(size as u64, std::sync::atomic::Ordering::SeqCst);
+                let mut state = seed.wrapping_add(count);
+                for byte in slice.iter_mut() {
+                    state = state
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(1442695040888963407);
+                    *byte = (state >> 33) as u8;
+                }
+            } else {
+                fill_secure_random(slice);
+            }
         }
     }
 
-    // Return Uint8Array for consistency with Node.js
     if let Some(uint8_array) = v8::Uint8Array::new(scope, buffer_obj, 0, size) {
         retval.set(uint8_array.into());
     }

@@ -285,10 +285,11 @@ pub fn initialize_v8() -> Result<()> {
         // Stage 92: V8 初始化优化 - 使用高性能运行时配置
         // 参考 Bun 和 Node.js 的优化策略
         let v8_flags: _ = vec![
-            // JIT 编译器优化（使用稳定支持的标志）
-            "--opt".to_string(),                     // 启用优化
-            "--max-old-space-size=4096".to_string(), // 4GB 老生代堆（生产环境）
-            "--gc-interval=240".to_string(),         // GC 间隔（降低频率提升吞吐量）
+            // JIT 编译器优化（生产环境高性能配置）
+            "--opt".to_string(),                     // 启用 TurboFan JIT 优化
+            "--max-old-space-size=4096".to_string(), // 4GB 老生代堆
+            "--turbo-fast-api-calls".to_string(),    // 快速 C++/Rust API 调用
+            "--harmony".to_string(),                 // ECMAScript 高性能特性
         ];
         let v8_flags_str: _ = v8_flags.join(" ");
         v8::V8::set_flags_from_string(&v8_flags_str);
@@ -512,33 +513,65 @@ pub fn console_log_callback(
     }
     println!("{}", output);
 }
+fn format_console_args(
+    scope: &mut v8::HandleScope,
+    args: &v8::FunctionCallbackArguments,
+) -> String {
+    let mut output = String::new();
+    for i in 0..args.length() {
+        if i > 0 {
+            output.push(' ');
+        }
+        let arg = args.get(i);
+        if arg.is_native_error() {
+            let stack_key = v8::String::new(scope, "stack").unwrap();
+            if let Some(obj) = arg.to_object(scope) {
+                if let Some(stack_val) = obj.get(scope, stack_key.into()) {
+                    if !stack_val.is_undefined() {
+                        output.push_str(&stack_val.to_rust_string_lossy(scope));
+                        continue;
+                    }
+                }
+            }
+        }
+        let arg_str = arg
+            .to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "<unknown>").unwrap());
+        output.push_str(&arg_str.to_rust_string_lossy(scope));
+    }
+    output
+}
+
 pub fn console_error_callback(
-    _scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
-    println!("console.error called");
+    eprintln!("{}", format_console_args(scope, &args));
 }
+
 pub fn console_warn_callback(
-    _scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
-    println!("console.warn called");
+    eprintln!("{}", format_console_args(scope, &args));
 }
+
 pub fn console_info_callback(
-    _scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
-    println!("console.info called");
+    println!("{}", format_console_args(scope, &args));
 }
+
 pub fn console_debug_callback(
-    _scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
-    println!("console.debug called");
+    println!("{}", format_console_args(scope, &args));
 }
 
 /// Console table callback - formats data as a table

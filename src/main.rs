@@ -124,6 +124,9 @@ enum Command {
         /// Print exported tool schemas as JSON and exit
         #[arg(long = "export-tools")]
         export_tools: bool,
+        /// Number of parallel multi-isolate worker threads for parallel HTTP execution (default: 1, or via BEE_WORKERS)
+        #[arg(short = 'w', long = "workers", default_value = "1")]
+        workers: usize,
     },
     /// JSON-RPC session over stdin/stdout for Agent hosts
     Session {
@@ -4447,6 +4450,7 @@ fn main() -> Result<()> {
             preloads,
             require,
             export_tools,
+            workers,
         }) => {
             apply_permission_cli_options(&permissions)?;
             allow_sandbox_entry_file(permissions.sandbox, &file)?;
@@ -4590,7 +4594,92 @@ fn main() -> Result<()> {
                 // Stop WebSocket server
                 ws_reloader.stop();
             } else {
-                // Normal execution mode
+                // Normal execution mode (Single or Multi-worker)
+                let num_workers = if workers > 1 {
+                    workers
+                } else {
+                    std::env::var("BEE_WORKERS")
+                        .ok()
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(1)
+                };
+
+                let code = read_and_compile_source(&file)?;
+
+                if num_workers > 1 {
+                    if verbose {
+                        println!(
+                            "🚀 Starting {} parallel multi-isolate workers...",
+                            num_workers
+                        );
+                    }
+                    let mut worker_handles = Vec::with_capacity(num_workers - 1);
+
+                    for worker_id in 1..num_workers {
+                        let file_clone = file.clone();
+                        let args_clone = args.clone();
+                        let preloads_clone = all_preloads.clone();
+                        let code_clone = code.clone();
+
+                        let handle = std::thread::Builder::new()
+                            .name(format!("bee-worker-{}", worker_id))
+                            .spawn(move || {
+                                beejs::v8_snapshot::enable_startup_snapshot_for_cli();
+                                let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                                    .expect("Failed to create worker runtime");
+                                runtime
+                                    .set_process_argv(build_process_argv(&file_clone, &args_clone));
+                                runtime.set_main_module_path(&file_clone);
+                                runtime.set_http_server_keep_alive(true);
+
+                                for preload in &preloads_clone {
+                                    if let Ok(preload_code) = preload_require_source(preload) {
+                                        let _ = runtime.execute_code(&preload_code);
+                                    }
+                                }
+
+                                if let Err(e) = runtime.execute_code(&code_clone) {
+                                    eprintln!("[Worker {} Error] {}", worker_id, e);
+                                }
+                            })
+                            .expect("Failed to spawn worker thread");
+                        worker_handles.push(handle);
+                    }
+
+                    // Run worker 0 on the main thread
+                    beejs::v8_snapshot::enable_startup_snapshot_for_cli();
+                    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                        .expect("Failed to create runtime");
+                    runtime.set_process_argv(build_process_argv(&file, &args));
+                    runtime.set_main_module_path(&file);
+                    runtime.set_http_server_keep_alive(true);
+
+                    for preload in &all_preloads {
+                        if let Ok(preload_code) = preload_require_source(preload) {
+                            let _ = runtime.execute_code(&preload_code);
+                        }
+                    }
+
+                    match runtime.execute_code(&code) {
+                        Ok(result) => {
+                            let trimmed = result.trim();
+                            if !trimmed.is_empty() && trimmed != "undefined" {
+                                println!("{trimmed}");
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            std::process::exit(1);
+                        }
+                    }
+
+                    for handle in worker_handles {
+                        let _ = handle.join();
+                    }
+                    return Ok(());
+                }
+
+                // Default single-isolate execution
                 beejs::v8_snapshot::enable_startup_snapshot_for_cli();
                 let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
                     .expect("Failed to create runtime");
@@ -4603,16 +4692,12 @@ fn main() -> Result<()> {
                     if verbose {
                         println!("Loading preload: {}", preload);
                     }
-                    // Use CommonJS loading for both file paths and module names so
-                    // preload files get their own __dirname and local require().
                     let preload_code = preload_require_source(preload)?;
 
                     if let Err(e) = runtime.execute_code(&preload_code) {
                         return Err(anyhow!("Preload '{}' failed: {}", preload, e));
                     }
                 }
-
-                let code = read_and_compile_source(&file)?;
 
                 match runtime.execute_code(&code) {
                     Ok(result) => {

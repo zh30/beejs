@@ -10,14 +10,17 @@ const ESM_EXPORT_CONDITIONS: &[&str] = &["import", "node", "default"];
 const BUILTIN_MODULES: &[&str] = &[
     "assert",
     "assert/strict",
+    "async_hooks",
     "buffer",
     "child_process",
     "crypto",
+    "diagnostics_channel",
     "dns",
     "events",
     "fs",
     "fs/promises",
     "http",
+    "http2",
     "https",
     "module",
     "net",
@@ -33,6 +36,7 @@ const BUILTIN_MODULES: &[&str] = &[
     "tcp_async",
     "timers",
     "tls",
+    "tty",
     "url",
     "util",
     "vm",
@@ -587,12 +591,15 @@ fn resolve_as_file(candidate: &Path) -> Option<PathBuf> {
         return canonical_file(candidate);
     }
 
-    if candidate.extension().is_none() {
-        for extension in JS_EXTENSIONS {
-            let with_extension = candidate.with_extension(extension);
-            if with_extension.is_file() {
-                return canonical_file(&with_extension);
-            }
+    let candidate_str = candidate.to_string_lossy();
+    for extension in JS_EXTENSIONS {
+        let appended = PathBuf::from(format!("{candidate_str}.{extension}"));
+        if appended.is_file() {
+            return canonical_file(&appended);
+        }
+        let with_extension = candidate.with_extension(extension);
+        if with_extension.is_file() {
+            return canonical_file(&with_extension);
         }
     }
 

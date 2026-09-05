@@ -485,9 +485,9 @@ pub fn setup_require_api(
                 // v0.3.99: Handle builtin modules that are set as global objects
                 // v0.3.281: Fixed readline support - directly return the global object
                 // These modules are set up as global objects in the runtime
-                "os" | "crypto" | "events" | "net" | "http" | "util" | "url" |
+                "os" | "crypto" | "events" | "net" | "http" | "http2" | "https" | "util" | "url" |
                 "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
-                "readline" | "performance" => {
+                "readline" | "performance" | "diagnostics_channel" | "async_hooks" => {
                     // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);
                     let module_key = v8::String::new(scope, &module_id_str).unwrap().into();

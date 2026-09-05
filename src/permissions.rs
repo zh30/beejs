@@ -129,6 +129,7 @@ impl ResourceBroker {
         };
         self.allow_rules.remove(&rule);
         self.deny_rules.insert(rule);
+        HAS_RESTRICTIONS.store(true, Ordering::SeqCst);
     }
 
     /// Deny every kind/action pair. Used by `--sandbox` before allow overlays.
@@ -497,6 +498,14 @@ pub fn reset_runtime_permission_state() {
     let _ = set_audit_log_path(None);
     set_deterministic_seed(None);
     set_frozen_time_ms(None);
+    HAS_RESTRICTIONS.store(false, Ordering::SeqCst);
+}
+
+pub static HAS_RESTRICTIONS: AtomicBool = AtomicBool::new(false);
+
+#[inline(always)]
+pub fn has_restrictions() -> bool {
+    HAS_RESTRICTIONS.load(Ordering::Relaxed)
 }
 
 pub static GLOBAL_RESOURCE_BROKER: Lazy<RwLock<ResourceBroker>> =
@@ -511,6 +520,9 @@ pub fn check_global_permission(
     action: PermissionAction,
     resource: ResourceId,
 ) -> Result<(), PermissionError> {
+    if !has_restrictions() {
+        return Ok(());
+    }
     GLOBAL_RESOURCE_BROKER
         .read()
         .expect("resource broker lock poisoned")

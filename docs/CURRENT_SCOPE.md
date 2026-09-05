@@ -1,10 +1,10 @@
 # Current Scope
 
-Last reviewed: 2026-09-04
+Last reviewed: 2026-09-05
 
-Optimization sprint notes (2026-09-04):
+Optimization sprint notes (2026-09-05):
 
-- Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 35/35 100% PASS).
+- Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 45/45 100% PASS).
 - Native Test Runner 2.0 (`bee test` promoted to **Stable**): zero-argument discovery excluding `manual`, `node_modules`, and `__snapshots__`; built-in `--watch` mode.
 - Agent Deterministic Sandbox & Virtual Time 1.0 (Deterministic Replay): `--seed <u64>` (deterministic PRNG for `Math.random()`, `crypto.getRandomValues()`, `crypto.randomBytes()`) and `--freeze-time <spec>` (virtual deterministic clock for `Date.now()`, `new Date()`, `performance.now()`).
 - Node Conformance 4.0: `child_process.execSync` & `child_process.spawnSync` under permission broker; `zlib` sync methods returning standard Buffer instances; `Buffer.from(ArrayBuffer)` alignment.
@@ -37,7 +37,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `0.4.0`.
+- Package version is `0.4.2`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.

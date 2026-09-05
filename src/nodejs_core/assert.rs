@@ -16,6 +16,7 @@ pub fn setup_assert_api(
     let deep_fn = v8::Function::new(scope, assert_deep_strict_equal).unwrap();
     let throws_fn = v8::Function::new(scope, assert_throws).unwrap();
     let fail_fn = v8::Function::new(scope, assert_fail).unwrap();
+    let if_error_fn = v8::Function::new(scope, assert_if_error).unwrap();
 
     for (name, func) in [
         ("ok", ok_fn),
@@ -25,6 +26,7 @@ pub fn setup_assert_api(
         ("deepStrictEqual", deep_fn),
         ("throws", throws_fn),
         ("fail", fail_fn),
+        ("ifError", if_error_fn),
         ("assert", ok_fn),
     ] {
         let key = v8::String::new(scope, name).unwrap();
@@ -224,4 +226,15 @@ fn assert_fail(
         "Failed".into()
     };
     throw_assertion(scope, &message);
+}
+
+fn assert_if_error(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    let val = args.get(0);
+    if !val.is_null() && !val.is_undefined() {
+        scope.throw_exception(val);
+    }
 }

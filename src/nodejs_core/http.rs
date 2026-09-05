@@ -77,6 +77,14 @@ pub struct HttpServerMessageChannel {
     pub next_connection_id: Arc<AtomicU64>,
 }
 
+impl std::fmt::Debug for HttpServerMessageChannel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HttpServerMessageChannel")
+            .field("enabled", &self.enabled)
+            .finish()
+    }
+}
+
 impl HttpServerMessageChannel {
     /// 创建新的消息通道
     #[allow(clippy::redundant_closure)]
@@ -172,7 +180,7 @@ pub fn init_http_server_channel() -> Arc<Mutex<Option<HttpServerMessageChannel>>
     unsafe {
         if HTTP_SERVER_CHANNEL.is_none() {
             HTTP_SERVER_CHANNEL = Some(Arc::new(Mutex::new(Some(HttpServerMessageChannel::new(
-                100,
+                4096,
             )))));
         }
         HTTP_SERVER_CHANNEL.as_ref().unwrap().clone()
@@ -191,7 +199,9 @@ pub fn get_http_server_channel() -> Option<Arc<Mutex<Option<HttpServerMessageCha
 #[allow(static_mut_refs)]
 pub fn reset_http_server_channel() {
     stop_all_http_server_states();
-    clear_parked_http_responses();
+    if let Ok(mut map) = RESPONSE_WAITERS.lock() {
+        map.clear();
+    }
     PENDING_ASYNC_HTTP_RESPONSES.store(0, Ordering::SeqCst);
 
     unsafe {
@@ -200,7 +210,7 @@ pub fn reset_http_server_channel() {
                 .lock()
                 .unwrap_or_else(|poisoned| poisoned.into_inner());
             // 创建一个新通道，丢弃所有未处理的消息
-            *channel_guard = Some(HttpServerMessageChannel::new(100));
+            *channel_guard = Some(HttpServerMessageChannel::new(4096));
         }
     }
 }
@@ -209,13 +219,23 @@ pub fn reset_http_server_channel() {
 /// v0.3.90: 实现跨线程响应传递
 #[allow(static_mut_refs)]
 pub fn send_http_response(response: HttpResponseMessage) {
-    unsafe {
-        if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
-            if let Some(ref channel) = *channel_arc
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner())
-            {
-                let _ = channel.send_response(response);
+    let waiter = if let Ok(mut map) = RESPONSE_WAITERS.lock() {
+        map.remove(&response.connection_id)
+    } else {
+        None
+    };
+
+    if let Some(tx) = waiter {
+        let _ = tx.send(response);
+    } else {
+        unsafe {
+            if let Some(ref channel_arc) = HTTP_SERVER_CHANNEL {
+                if let Some(ref channel) = *channel_arc
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                {
+                    let _ = channel.send_response(response);
+                }
             }
         }
     }
@@ -265,8 +285,25 @@ pub fn try_recv_http_request() -> Option<HttpRequestMessage> {
     }
 }
 
-static PARKED_HTTP_RESPONSES: Lazy<Mutex<HashMap<u64, HttpResponseMessage>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+static RESPONSE_WAITERS: Lazy<
+    Mutex<HashMap<u64, crossbeam::channel::Sender<HttpResponseMessage>>>,
+> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+pub fn register_http_response_waiter(
+    connection_id: u64,
+    sender: crossbeam::channel::Sender<HttpResponseMessage>,
+) {
+    if let Ok(mut map) = RESPONSE_WAITERS.lock() {
+        map.insert(connection_id, sender);
+    }
+}
+
+pub fn unregister_http_response_waiter(connection_id: u64) {
+    if let Ok(mut map) = RESPONSE_WAITERS.lock() {
+        map.remove(&connection_id);
+    }
+}
+
 static FALLBACK_HTTP_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 static PENDING_ASYNC_HTTP_RESPONSES: AtomicU64 = AtomicU64::new(0);
 
@@ -276,25 +313,6 @@ pub enum HttpDispatchResult {
     Pending,
     NoHandler,
     Error,
-}
-
-fn take_parked_http_response(connection_id: u64) -> Option<HttpResponseMessage> {
-    PARKED_HTTP_RESPONSES
-        .lock()
-        .ok()
-        .and_then(|mut parked| parked.remove(&connection_id))
-}
-
-fn park_http_response(response: HttpResponseMessage) {
-    if let Ok(mut parked) = PARKED_HTTP_RESPONSES.lock() {
-        parked.insert(response.connection_id, response);
-    }
-}
-
-fn clear_parked_http_responses() {
-    if let Ok(mut parked) = PARKED_HTTP_RESPONSES.lock() {
-        parked.clear();
-    }
 }
 
 /// True when at least one `http.Server` is still marked listening.
@@ -340,22 +358,6 @@ pub fn allocate_http_connection_id() -> u64 {
     FALLBACK_HTTP_CONNECTION_ID.fetch_add(1, Ordering::SeqCst)
 }
 
-fn recv_http_response_for(
-    receiver: &crossbeam::channel::Receiver<HttpResponseMessage>,
-    connection_id: u64,
-) -> Result<HttpResponseMessage, crossbeam::channel::RecvError> {
-    loop {
-        if let Some(response) = take_parked_http_response(connection_id) {
-            return Ok(response);
-        }
-        match receiver.recv() {
-            Ok(response) if response.connection_id == connection_id => return Ok(response),
-            Ok(response) => park_http_response(response),
-            Err(error) => return Err(error),
-        }
-    }
-}
-
 /// Drain queued HTTP requests using the caller's existing V8 scope.
 /// Safe to call from `execute_code` (do not nest `pump_http_messages`).
 pub fn pump_pending_http_requests_in_scope(
@@ -366,6 +368,9 @@ pub fn pump_pending_http_requests_in_scope(
     while let Some(request) = try_recv_http_request() {
         dispatch_http_request_in_scope(scope, context, &request);
         processed += 1;
+        if processed >= 256 {
+            break;
+        }
     }
     processed
 }
@@ -376,8 +381,9 @@ pub fn dispatch_http_request_in_scope(
     context: &v8::Local<v8::Context>,
     request: &HttpRequestMessage,
 ) {
-    let handler = get_global_request_handler(scope, context);
-    match process_http_request_in_v8(request, scope, context, handler) {
+    let req_scope = &mut v8::HandleScope::new(scope);
+    let handler = get_global_request_handler(req_scope, context);
+    match process_http_request_in_v8(request, req_scope, context, handler) {
         HttpDispatchResult::Response(mut response) => {
             if !response.headers.contains_key("Content-Length") {
                 response.headers.insert(
@@ -663,6 +669,298 @@ pub fn setup_http_api(
     let global: _ = context.global(scope);
     let http_key: _ = v8::String::new(scope, "http").unwrap();
     global.set(scope, http_key.into(), http_obj.into());
+
+    let http_bootstrap_script = r#"
+    (function() {
+        if (!globalThis.http) return;
+        const http = globalThis.http;
+
+        http.METHODS = [
+            'ACL', 'BIND', 'CHECKOUT', 'CONNECT', 'COPY', 'DELETE', 'GET', 'HEAD',
+            'LINK', 'LOCK', 'M-SEARCH', 'MERGE', 'MKACTIVITY', 'MKCALENDAR', 'MKCOL',
+            'MOVE', 'NOTIFY', 'OPTIONS', 'PATCH', 'POST', 'PRI', 'PROPFIND', 'PROPPATCH',
+            'PURGE', 'PUT', 'REBIND', 'REPORT', 'SEARCH', 'SOURCE', 'SUBSCRIBE',
+            'TRACE', 'UNBIND', 'UNLINK', 'UNLOCK', 'UNSUBSCRIBE'
+        ];
+
+        http.STATUS_CODES = {
+            100: 'Continue',
+            101: 'Switching Protocols',
+            102: 'Processing',
+            103: 'Early Hints',
+            200: 'OK',
+            201: 'Created',
+            202: 'Accepted',
+            203: 'Non-Authoritative Information',
+            204: 'No Content',
+            205: 'Reset Content',
+            206: 'Partial Content',
+            207: 'Multi-Status',
+            208: 'Already Reported',
+            226: 'IM Used',
+            300: 'Multiple Choices',
+            301: 'Moved Permanently',
+            302: 'Found',
+            303: 'See Other',
+            304: 'Not Modified',
+            305: 'Use Proxy',
+            307: 'Temporary Redirect',
+            308: 'Permanent Redirect',
+            400: 'Bad Request',
+            401: 'Unauthorized',
+            402: 'Payment Required',
+            403: 'Forbidden',
+            404: 'Not Found',
+            405: 'Method Not Allowed',
+            406: 'Not Acceptable',
+            407: 'Proxy Authentication Required',
+            408: 'Request Timeout',
+            409: 'Conflict',
+            410: 'Gone',
+            411: 'Length Required',
+            412: 'Precondition Failed',
+            413: 'Payload Too Large',
+            414: 'URI Too Long',
+            415: 'Unsupported Media Type',
+            416: 'Range Not Satisfiable',
+            417: 'Expectation Failed',
+            418: "I'm a Teapot",
+            421: 'Misdirected Request',
+            422: 'Unprocessable Entity',
+            423: 'Locked',
+            424: 'Failed Dependency',
+            425: 'Too Early',
+            426: 'Upgrade Required',
+            428: 'Precondition Required',
+            429: 'Too Many Requests',
+            431: 'Request Header Fields Too Large',
+            451: 'Unavailable For Legal Reasons',
+            500: 'Internal Server Error',
+            501: 'Not Implemented',
+            502: 'Bad Gateway',
+            503: 'Service Unavailable',
+            504: 'Gateway Timeout',
+            505: 'HTTP Version Not Supported',
+            506: 'Variant Also Negotiates',
+            507: 'Insufficient Storage',
+            508: 'Loop Detected',
+            509: 'Bandwidth Limit Exceeded',
+            510: 'Not Extended',
+            511: 'Network Authentication Required'
+        };
+
+        const EE = globalThis.EventEmitter || function() {};
+        const proto = (EE.prototype || Object.prototype);
+
+        function IncomingMessage() {
+            if (typeof EE === 'function') EE.call(this);
+            this._events = Object.create(null);
+            this._eventsCount = 0;
+            this._dataListeners = [];
+            this._endListeners = [];
+        }
+        IncomingMessage.prototype = Object.create(proto);
+        IncomingMessage.prototype.constructor = IncomingMessage;
+        IncomingMessage.prototype.on = function(event, listener) {
+            if (typeof listener === 'function') {
+                if (event === 'data') {
+                    this._dataListeners = this._dataListeners || [];
+                    this._dataListeners.push(listener);
+                } else if (event === 'end') {
+                    this._endListeners = this._endListeners || [];
+                    this._endListeners.push(listener);
+                }
+            }
+            return (typeof EE === 'function' && EE.prototype.on ? EE.prototype.on : function(){}).apply(this, arguments);
+        };
+        IncomingMessage.prototype.addListener = IncomingMessage.prototype.on;
+        http.IncomingMessage = IncomingMessage;
+
+        function ServerResponse() {
+            if (typeof EE === 'function') EE.call(this);
+            this._events = Object.create(null);
+            this._eventsCount = 0;
+            this.headers = Object.create(null);
+            this.statusCode = 200;
+            this.statusMessage = 'OK';
+            this._body = '';
+            this._ended = false;
+            this._responseSent = false;
+            this._asyncPending = false;
+            this.headersSent = false;
+            this._connectionId = 0;
+        }
+        ServerResponse.prototype = Object.create(proto);
+        ServerResponse.prototype.constructor = ServerResponse;
+        ServerResponse.prototype.setHeader = function(name, value) {
+            if (!this.headers) this.headers = Object.create(null);
+            this.headers[name] = value;
+            return this;
+        };
+        ServerResponse.prototype.getHeader = function(name) {
+            if (!this.headers) return undefined;
+            if (this.headers[name] !== undefined) return this.headers[name];
+            const lower = String(name).toLowerCase();
+            for (const k in this.headers) {
+                if (k.toLowerCase() === lower) return this.headers[k];
+            }
+            return undefined;
+        };
+        ServerResponse.prototype.hasHeader = function(name) {
+            if (!this.headers) return false;
+            if (this.headers[name] !== undefined) return true;
+            const lower = String(name).toLowerCase();
+            for (const k in this.headers) {
+                if (k.toLowerCase() === lower) return true;
+            }
+            return false;
+        };
+        ServerResponse.prototype.removeHeader = function(name) {
+            if (this.headers) {
+                delete this.headers[name];
+                const lower = String(name).toLowerCase();
+                for (const k in this.headers) {
+                    if (k.toLowerCase() === lower) delete this.headers[k];
+                }
+            }
+            return this;
+        };
+        ServerResponse.prototype.writeHead = function(statusCode, statusMessage, headers) {
+            this.statusCode = statusCode;
+            let hdrs = headers;
+            if (typeof statusMessage === 'object' && statusMessage !== null && !headers) {
+                hdrs = statusMessage;
+            } else if (typeof statusMessage === 'string') {
+                this.statusMessage = statusMessage;
+            }
+            if (hdrs && typeof hdrs === 'object') {
+                for (const k of Object.keys(hdrs)) {
+                    this.setHeader(k, hdrs[k]);
+                }
+            }
+            return this;
+        };
+        ServerResponse.prototype.getHeaderNames = function() {
+            return this.headers ? Object.keys(this.headers) : [];
+        };
+        ServerResponse.prototype.getHeaders = function() {
+            return this.headers ? Object.assign(Object.create(null), this.headers) : Object.create(null);
+        };
+        ServerResponse.prototype.flushHeaders = function() {
+            this.headersSent = true;
+        };
+        ServerResponse.prototype.write = function(chunk) {
+            if (chunk !== undefined && chunk !== null) {
+                this._body = (this._body || '') + String(chunk);
+            }
+            return true;
+        };
+        http.ServerResponse = ServerResponse;
+
+        function Socket() {
+            if (typeof EE === 'function') EE.call(this);
+            this.remoteAddress = '127.0.0.1';
+            this.remotePort = 12345;
+            this.encrypted = false;
+        }
+        Socket.prototype = Object.create(proto);
+        Socket.prototype.constructor = Socket;
+        Socket.prototype.destroy = function() { return this; };
+        Socket.prototype.ref = function() { return this; };
+        Socket.prototype.unref = function() { return this; };
+        Socket.prototype.setTimeout = function(msecs, callback) {
+            if (typeof callback === 'function') callback();
+            return this;
+        };
+        http.Socket = Socket;
+
+        function Server(options, requestListener) {
+            if (typeof EE === 'function') EE.call(this);
+            this._events = Object.create(null);
+            this._eventsCount = 0;
+            if (typeof options === 'function') {
+                requestListener = options;
+                options = {};
+            }
+            if (typeof requestListener === 'function') {
+                this.on('request', requestListener);
+            }
+        }
+        Server.prototype = Object.create(proto);
+        Server.prototype.constructor = Server;
+        Server.prototype.setTimeout = function(msecs, callback) {
+            if (typeof callback === 'function') this.on('timeout', callback);
+            return this;
+        };
+        Server.prototype.ref = function() { return this; };
+        Server.prototype.unref = function() { return this; };
+        Server.prototype.closeAllConnections = function() { return this; };
+        Server.prototype.closeIdleConnections = function() { return this; };
+        Server.prototype.address = function() {
+            return {
+                port: this._serverPort || 0,
+                family: (this._serverHost && this._serverHost.includes(':') && !this._serverHost.includes('.')) ? 'IPv6' : 'IPv4',
+                address: this._serverHost || '0.0.0.0'
+            };
+        };
+        Server.prototype.on = function(event, listener) {
+            if (event === 'request' && typeof listener === 'function') {
+                this._requestHandler = listener;
+                if (typeof globalThis !== 'undefined') {
+                    globalThis._httpServerRequestHandler = listener;
+                }
+            }
+            return (typeof EE === 'function' && EE.prototype.on ? EE.prototype.on : function(){}).apply(this, arguments);
+        };
+        Server.prototype.addListener = Server.prototype.on;
+        http.Server = Server;
+
+        function ClientRequest() {
+            if (typeof EE === 'function') EE.call(this);
+        }
+        ClientRequest.prototype = Object.create(proto);
+        ClientRequest.prototype.constructor = ClientRequest;
+        http.ClientRequest = ClientRequest;
+
+        const _nativeCreateServer = http.createServer;
+        http.createServer = function(options, requestListener) {
+            const server = _nativeCreateServer.call(http, options, requestListener);
+            Object.setPrototypeOf(server, Server.prototype);
+            server._events = Object.create(null);
+            server._eventsCount = 0;
+            if (typeof options === 'function') {
+                requestListener = options;
+            }
+            if (typeof requestListener === 'function') {
+                server.on('request', requestListener);
+            }
+            return server;
+        };
+    })();
+    "#;
+    if let Some(code) = v8::String::new(scope, http_bootstrap_script) {
+        if let Some(script) = v8::Script::compile(scope, code, None) {
+            let _ = script.run(scope);
+        }
+    }
+
+    // Attach native end callback to http.ServerResponse.prototype
+    let sr_key = v8::String::new(scope, "ServerResponse").unwrap();
+    if let Some(sr_val) = http_obj.get(scope, sr_key.into()) {
+        if let Ok(sr_fn) = v8::Local::<v8::Function>::try_from(sr_val) {
+            let proto_key = v8::String::new(scope, "prototype").unwrap();
+            if let Some(proto_val) = sr_fn.get(scope, proto_key.into()) {
+                if let Ok(proto_obj) = v8::Local::<v8::Object>::try_from(proto_val) {
+                    let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
+                    if let Some(end_instance) = end_fn.get_function(scope) {
+                        let end_key = v8::String::new(scope, "end").unwrap();
+                        proto_obj.set(scope, end_key.into(), end_instance.into());
+                    }
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -729,11 +1027,6 @@ pub(crate) fn build_http_server_object<'a>(
     let listen_instance = listen_func.get_function(scope).unwrap();
     let listen_key = v8::String::new(scope, "listen").unwrap();
     server_obj.set(scope, listen_key.into(), listen_instance.into());
-
-    let on_func = v8::FunctionTemplate::new(scope, http_server_on_callback);
-    let on_instance = on_func.get_function(scope).unwrap();
-    let on_key = v8::String::new(scope, "on").unwrap();
-    server_obj.set(scope, on_key.into(), on_instance.into());
 
     let close_func = v8::FunctionTemplate::new(scope, http_server_close_callback);
     let close_instance = close_func.get_function(scope).unwrap();
@@ -1243,30 +1536,52 @@ fn http_server_listen_callback(
     // - listen(port)
     // - listen(port, callback)
     // - listen(port, host, callback)
-    let port = args
-        .get(0)
-        .to_integer(scope)
-        .map(|i| i.value() as u16)
-        .unwrap_or(3000);
-
-    // 检查第二个参数是 host 还是 callback
-    let arg1 = args.get(1);
-    let (host, callback) = if arg1.is_undefined() || arg1.is_null() {
-        // 没有第二个参数
-        ("0.0.0.0".to_string(), args.get(2))
-    } else if arg1.is_function() {
-        // 第二个参数是回调函数: listen(port, callback)
-        ("0.0.0.0".to_string(), arg1)
-    } else if arg1.is_string() {
-        // 第二个参数是 host
-        let host_str = arg1
-            .to_string(scope)
-            .map(|s| s.to_rust_string_lossy(scope))
-            .unwrap_or_else(|| "0.0.0.0".to_string());
-        (host_str, args.get(2))
-    } else {
-        // 默认值
-        ("0.0.0.0".to_string(), args.get(2))
+    // - listen(options, callback)
+    let (port, host, callback) = {
+        let arg0 = args.get(0);
+        if arg0.is_object() && !arg0.is_function() {
+            let opts = arg0.to_object(scope).unwrap();
+            let port_key = v8::String::new(scope, "port").unwrap();
+            let host_key = v8::String::new(scope, "host").unwrap();
+            let p = opts
+                .get(scope, port_key.into())
+                .and_then(|v| v.to_integer(scope))
+                .map(|i| i.value() as u16)
+                .unwrap_or(3000);
+            let h = opts
+                .get(scope, host_key.into())
+                .and_then(|v| v.to_string(scope))
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "0.0.0.0".to_string());
+            let cb = if args.get(1).is_function() {
+                args.get(1)
+            } else {
+                let cb_key = v8::String::new(scope, "cb").unwrap();
+                opts.get(scope, cb_key.into())
+                    .unwrap_or_else(|| v8::undefined(scope).into())
+            };
+            (p, h, cb)
+        } else {
+            let p = arg0
+                .to_integer(scope)
+                .map(|i| i.value() as u16)
+                .unwrap_or(3000);
+            let arg1 = args.get(1);
+            let (h, cb) = if arg1.is_undefined() || arg1.is_null() {
+                ("0.0.0.0".to_string(), args.get(2))
+            } else if arg1.is_function() {
+                ("0.0.0.0".to_string(), arg1)
+            } else if arg1.is_string() {
+                let host_str = arg1
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "0.0.0.0".to_string());
+                (host_str, args.get(2))
+            } else {
+                ("0.0.0.0".to_string(), args.get(2))
+            };
+            (p, h, cb)
+        }
     };
 
     if let Err(error) = check_http_network_listen_permission(&host, port) {
@@ -1277,9 +1592,8 @@ fn http_server_listen_callback(
         return;
     }
 
-    // v0.3.87: 创建服务器状态并启动真实 TCP 服务器
-    // v0.3.89: 检查是否启用了消息通道模式
-    let use_message_channel = get_http_server_channel().is_some();
+    let channel = get_http_server_channel();
+    let use_message_channel = channel.is_some();
     let tls_config = tls_config_from_server_object(scope, this);
     let server_state = Arc::new(HttpServerState {
         listening: Arc::new(AtomicBool::new(true)),
@@ -1288,6 +1602,7 @@ fn http_server_listen_callback(
         use_message_channel,
         bound_port: Arc::new(AtomicU64::new(port as u64)),
         tls_config,
+        channel,
     });
     register_http_server_state(server_state.clone());
 
@@ -1296,7 +1611,7 @@ fn http_server_listen_callback(
     thread::spawn(move || {
         run_http_server(state_clone, "handler".to_string());
     });
-    thread::sleep(Duration::from_millis(100));
+    thread::sleep(Duration::from_millis(5));
     let advertised_port = {
         let bound = server_state.bound_port.load(Ordering::SeqCst) as u16;
         if bound != 0 {
@@ -1328,15 +1643,25 @@ fn http_server_listen_callback(
     let server_host_val = v8::String::new(scope, &host).unwrap();
     this.set(scope, server_host_key.into(), server_host_val.into());
 
-    // 调用回调函数（如果提供）
+    // 如果提供了回调函数，挂载为 'listening' 的一次性监听器
     if callback.is_function() {
-        if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
-            let _ = cb_func.call(scope, this.into(), &[]);
+        let once_key = v8::String::new(scope, "once").unwrap();
+        if let Some(once_val) = this.get(scope, once_key.into()) {
+            if let Ok(once_func) = v8::Local::<v8::Function>::try_from(once_val) {
+                let listening_event = v8::String::new(scope, "listening").unwrap();
+                let _ = once_func.call(scope, this.into(), &[listening_event.into(), callback]);
+            }
         }
     }
 
-    // 打印启动信息
-    eprintln!("[Beejs] HTTP Server listening on {}:{}", host, port);
+    // 触发 'listening' 事件
+    let emit_key = v8::String::new(scope, "emit").unwrap();
+    if let Some(emit_val) = this.get(scope, emit_key.into()) {
+        if let Ok(emit_func) = v8::Local::<v8::Function>::try_from(emit_val) {
+            let listening_event = v8::String::new(scope, "listening").unwrap();
+            let _ = emit_func.call(scope, this.into(), &[listening_event.into()]);
+        }
+    }
 
     // 返回 this
     retval.set(this.into());
@@ -1381,6 +1706,7 @@ fn http_server_address_callback(
     retval.set(obj.into());
 }
 
+#[allow(dead_code)]
 fn http_server_on_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -1965,6 +2291,57 @@ pub fn http_res_write_head_callback(
     retval.set(this.into());
 }
 /// response.end() 回调 - v0.3.64
+pub fn extract_http_body_string(scope: &mut v8::HandleScope, data: v8::Local<v8::Value>) -> String {
+    if data.is_string() {
+        return data
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+    }
+    if data.is_array_buffer_view() || data.is_uint8_array() {
+        if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(data) {
+            let mut buffer = vec![0u8; view.byte_length()];
+            let _ = view.copy_contents(buffer.as_mut_slice());
+            return String::from_utf8_lossy(&buffer).to_string();
+        }
+    }
+    if data.is_array_buffer() {
+        if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(data) {
+            let bs = ab.get_backing_store();
+            let ptr = bs.data() as *const u8;
+            if !ptr.is_null() {
+                let slice = unsafe { std::slice::from_raw_parts(ptr, ab.byte_length()) };
+                return String::from_utf8_lossy(slice).into_owned();
+            }
+        }
+    }
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(data) {
+        let buf_key = v8::String::new(scope, "buffer").unwrap();
+        if let Some(buf_val) = obj.get(scope, buf_key.into()) {
+            if buf_val.is_array_buffer() {
+                if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buf_val) {
+                    let len_key = v8::String::new(scope, "length").unwrap();
+                    let len = obj
+                        .get(scope, len_key.into())
+                        .and_then(|v| v.to_integer(scope))
+                        .map(|i| i.value() as usize)
+                        .unwrap_or_else(|| ab.byte_length());
+                    let bs = ab.get_backing_store();
+                    let ptr = bs.data() as *const u8;
+                    if !ptr.is_null() {
+                        let actual_len = len.min(ab.byte_length());
+                        let slice = unsafe { std::slice::from_raw_parts(ptr, actual_len) };
+                        return String::from_utf8_lossy(slice).into_owned();
+                    }
+                }
+            }
+        }
+    }
+    data.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default()
+}
+
 pub fn http_res_end_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -1974,33 +2351,24 @@ pub fn http_res_end_callback(
     let data: _ = args.get(0);
 
     // 处理 end() 的数据参数，存储到 _body
-    if !data.is_undefined() {
+    if !data.is_undefined() && !data.is_null() {
         let body_key: _ = v8::String::new(scope, "_body").unwrap();
         // 获取现有 body
         let existing_body = this
             .get(scope, body_key.into())
             .unwrap_or(v8::undefined(scope).into());
 
-        // 追加新数据到现有 body
-        if existing_body.is_string() {
-            // 字符串拼接 - 预先构建 Rust 字符串避免双重借用
+        let existing_rust = if existing_body.is_string() {
             let existing_str = existing_body.to_string(scope).unwrap();
-            let existing_rust = existing_str.to_rust_string_lossy(scope);
-
-            let data_rust = if data.is_string() {
-                let data_str = data.to_string(scope).unwrap();
-                data_str.to_rust_string_lossy(scope)
-            } else {
-                "[data]".to_string()
-            };
-
-            let combined_rust = format!("{}{}", existing_rust, data_rust);
-            let combined = v8::String::new(scope, &combined_rust).unwrap();
-            this.set(scope, body_key.into(), combined.into());
+            existing_str.to_rust_string_lossy(scope)
         } else {
-            // 存储新数据
-            this.set(scope, body_key.into(), data);
-        }
+            String::new()
+        };
+
+        let data_rust = extract_http_body_string(scope, data);
+        let combined_rust = format!("{}{}", existing_rust, data_rust);
+        let combined = v8::String::new(scope, &combined_rust).unwrap();
+        this.set(scope, body_key.into(), combined.into());
     }
 
     let ended_key = v8::String::new(scope, "_ended").unwrap();
@@ -2119,6 +2487,7 @@ pub struct HttpServerState {
     pub use_message_channel: bool,
     pub bound_port: Arc<AtomicU64>,
     pub tls_config: Option<Arc<rustls::ServerConfig>>,
+    pub channel: Option<Arc<Mutex<Option<HttpServerMessageChannel>>>>,
 }
 
 impl HttpServerState {
@@ -2130,6 +2499,7 @@ impl HttpServerState {
             use_message_channel: false,
             bound_port: Arc::new(AtomicU64::new(3000)),
             tls_config: None,
+            channel: None,
         }
     }
 }
@@ -2138,39 +2508,31 @@ impl HttpServerState {
 pub fn parse_http_request(data: &[u8]) -> Option<HttpServerRequest> {
     let request_str = std::str::from_utf8(data).ok()?;
 
-    // 分割 headers 和 body
-    let parts: Vec<&str> = request_str.split("\r\n\r\n").collect();
-    let header_section = parts.get(0)?;
-    let body = parts.get(1).unwrap_or(&"");
+    // 分割 headers 和 body (零拷贝切片)
+    let (header_section, body) = match request_str.split_once("\r\n\r\n") {
+        Some((h, b)) => (h, b),
+        None => (request_str, ""),
+    };
 
-    let lines: Vec<&str> = header_section.split("\r\n").collect();
-    if lines.is_empty() {
-        return None;
-    }
-
-    // 解析请求行: "METHOD PATH HTTP/VERSION"
-    let request_line = lines.get(0)?;
-    let request_parts: Vec<&str> = request_line.split(' ').collect();
-    if request_parts.len() < 3 {
-        return None;
-    }
-
-    let method = request_parts.get(0)?.to_string();
-    let url = request_parts.get(1)?.to_string();
-    let http_version = request_parts.get(2)?.to_string();
+    let mut lines = header_section.split("\r\n");
+    let request_line = lines.next()?;
+    let mut request_parts = request_line.splitn(3, ' ');
+    let method = request_parts.next()?.to_string();
+    let url = request_parts.next()?.to_string();
+    let http_version = request_parts.next()?.to_string();
 
     // 提取 path（去掉 query string）
     let path: String = url.split('?').next().unwrap_or(&url).to_string();
 
-    // 解析 headers
+    // 解析 headers（直接使用 lowercase 键，避免后续遍历反复小写化）
     let mut headers = HashMap::new();
-    for line in lines.iter().skip(1) {
+    for line in lines {
         if line.is_empty() {
             continue;
         }
-        if let Some(pos) = line.find(':') {
-            let key = line[..pos].trim().to_string();
-            let value = line[pos + 1..].trim().to_string();
+        if let Some((k, v)) = line.split_once(':') {
+            let key = k.trim().to_ascii_lowercase();
+            let value = v.trim().to_string();
             headers.insert(key, value);
         }
     }
@@ -2222,24 +2584,34 @@ fn http_reason_phrase(status_code: u16) -> &'static str {
 }
 
 /// 生成 HTTP 响应（从 HttpResponseMessage）
-/// v0.3.89: 添加跨线程消息传递支持
-/// v0.3.95: 移除重复的 Content-Length 添加（ headers 中已包含）
-pub fn generate_http_response_v2(response: &HttpResponseMessage) -> Vec<u8> {
-    let mut result = Vec::new();
+/// 优化为单次内存预分配并直接写入 bytes，支持在头部生成阶段注入 Connection 属性避免后续切片拷贝
+pub fn generate_http_response_v2(
+    response: &HttpResponseMessage,
+    default_connection: Option<&str>,
+) -> Vec<u8> {
+    use std::io::Write;
+    let mut result = Vec::with_capacity(128 + response.headers.len() * 32 + response.body.len());
 
     // Status line
-    result.extend_from_slice(
-        format!(
-            "HTTP/1.1 {} {}\r\n",
-            response.status_code,
-            http_reason_phrase(response.status_code)
-        )
-        .as_bytes(),
+    let _ = write!(
+        result,
+        "HTTP/1.1 {} {}\r\n",
+        response.status_code,
+        http_reason_phrase(response.status_code)
     );
 
-    // Headers - Content-Length 已在 send_http_response 中从 JS 对象提取
+    let mut has_connection = false;
     for (name, value) in &response.headers {
-        result.extend_from_slice(format!("{}: {}\r\n", name, value).as_bytes());
+        if name.eq_ignore_ascii_case("connection") {
+            has_connection = true;
+        }
+        let _ = write!(result, "{}: {}\r\n", name, value);
+    }
+
+    if !has_connection {
+        if let Some(conn) = default_connection {
+            let _ = write!(result, "Connection: {}\r\n", conn);
+        }
     }
 
     // End of headers
@@ -2251,6 +2623,87 @@ pub fn generate_http_response_v2(response: &HttpResponseMessage) -> Vec<u8> {
     result
 }
 
+fn create_reuse_port_listener(addr_str: &str) -> std::io::Result<TcpListener> {
+    #[cfg(unix)]
+    {
+        use std::net::ToSocketAddrs;
+        use std::os::unix::io::FromRawFd;
+
+        let socket_addr = addr_str.to_socket_addrs()?.next().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid address")
+        })?;
+
+        let (domain, sockaddr_storage, sockaddr_len) = match socket_addr {
+            std::net::SocketAddr::V4(v4) => {
+                let mut storage: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+                let sin = &mut storage as *mut libc::sockaddr_storage as *mut libc::sockaddr_in;
+                unsafe {
+                    (*sin).sin_family = libc::AF_INET as libc::sa_family_t;
+                    (*sin).sin_port = v4.port().to_be();
+                    (*sin).sin_addr = libc::in_addr {
+                        s_addr: u32::from_ne_bytes(v4.ip().octets()),
+                    };
+                }
+                (
+                    libc::AF_INET,
+                    storage,
+                    std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+                )
+            }
+            std::net::SocketAddr::V6(v6) => {
+                let mut storage: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+                let sin6 = &mut storage as *mut libc::sockaddr_storage as *mut libc::sockaddr_in6;
+                unsafe {
+                    (*sin6).sin6_family = libc::AF_INET6 as libc::sa_family_t;
+                    (*sin6).sin6_port = v6.port().to_be();
+                    (*sin6).sin6_addr = libc::in6_addr {
+                        s6_addr: v6.ip().octets(),
+                    };
+                }
+                (
+                    libc::AF_INET6,
+                    storage,
+                    std::mem::size_of::<libc::sockaddr_in6>() as libc::socklen_t,
+                )
+            }
+        };
+
+        let fd = unsafe { libc::socket(domain, libc::SOCK_STREAM, 0) };
+        if fd < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+
+        let val: libc::c_int = 1;
+        let val_ptr = &val as *const libc::c_int as *const libc::c_void;
+        let val_len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+
+        unsafe {
+            libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len);
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "freebsd"))]
+            libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len);
+
+            let ptr = &sockaddr_storage as *const libc::sockaddr_storage as *const libc::sockaddr;
+            if libc::bind(fd, ptr, sockaddr_len) != 0 {
+                let err = std::io::Error::last_os_error();
+                libc::close(fd);
+                return Err(err);
+            }
+
+            if libc::listen(fd, 4096) != 0 {
+                let err = std::io::Error::last_os_error();
+                libc::close(fd);
+                return Err(err);
+            }
+
+            Ok(TcpListener::from_raw_fd(fd))
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        TcpListener::bind(addr_str)
+    }
+}
+
 /// HTTP 服务器运行函数（在独立线程中运行）
 fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
     let addr = format!("{}:{}", server_state.host, server_state.port);
@@ -2259,8 +2712,8 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
         return;
     }
 
-    // 创建 TCP 监听器
-    let listener = match TcpListener::bind(&addr) {
+    // 创建 TCP 监听器（支持多 Worker SO_REUSEPORT 端口重用）
+    let listener = match create_reuse_port_listener(&addr).or_else(|_| TcpListener::bind(&addr)) {
         Ok(l) => {
             if let Ok(local) = l.local_addr() {
                 server_state
@@ -2275,37 +2728,6 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
             return;
         }
     };
-
-    // v0.3.97: 设置 SO_REUSEADDR 和 SO_REUSEPORT 以允许端口重用
-    #[cfg(unix)]
-    {
-        use std::os::unix::io::AsRawFd;
-        let fd = listener.as_raw_fd();
-        let val: libc::c_int = 1;
-        let val_ptr = &val as *const libc::c_int as *const libc::c_void;
-        let val_len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
-        if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len) }
-            != 0
-        {
-            eprintln!(
-                "[Beejs] Failed to set SO_REUSEADDR: {}",
-                std::io::Error::last_os_error()
-            );
-        }
-        // macOS 需要 SO_REUSEPORT 来完全解决端口重用问题
-        #[cfg(target_os = "macos")]
-        {
-            if unsafe {
-                libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len)
-            } != 0
-            {
-                eprintln!(
-                    "[Beejs] Failed to set SO_REUSEPORT: {}",
-                    std::io::Error::last_os_error()
-                );
-            }
-        }
-    }
 
     // 设置为非阻塞模式
     listener.set_nonblocking(true).ok();
@@ -2322,30 +2744,29 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
             break;
         }
 
-        // 接受连接（使用 set_nonblocking 后需要轮询）
-        match listener.accept() {
-            Ok((stream, _addr)) => {
-                let state = server_state.clone();
-                let code = handler_code.clone();
+        loop {
+            match listener.accept() {
+                Ok((stream, _addr)) => {
+                    let state = server_state.clone();
+                    let code = handler_code.clone();
 
-                // 在新线程中处理连接
-                thread::spawn(move || {
-                    handle_connection(stream, &state, &code);
-                });
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                // 没有连接可用，等待后继续
-                thread::sleep(Duration::from_millis(100));
-                continue;
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => {
-                // 被中断，继续循环
-                continue;
-            }
-            Err(e) => {
-                eprintln!("[Beejs] Accept failed: {}", e);
+                    thread::spawn(move || {
+                        handle_connection(stream, &state, &code);
+                    });
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    break;
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => {
+                    continue;
+                }
+                Err(e) => {
+                    eprintln!("[Beejs] Accept failed: {}", e);
+                    break;
+                }
             }
         }
+        thread::sleep(Duration::from_millis(1));
     }
 
     eprintln!("[Beejs] HTTP Server stopped");
@@ -2486,6 +2907,10 @@ impl ServerIo {
 }
 
 fn wrap_accepted_stream(stream: TcpStream, server_state: &HttpServerState) -> Option<ServerIo> {
+    let _ = stream.set_nodelay(true);
+    let _ = stream.set_nonblocking(false);
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
     match &server_state.tls_config {
         Some(config) => match rustls::ServerConnection::new(config.clone()) {
             Ok(connection) => Some(ServerIo::Tls(rustls::StreamOwned::new(connection, stream))),
@@ -2505,15 +2930,15 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
     let Some(mut stream) = wrap_accepted_stream(stream, server_state) else {
         return;
     };
-    // v0.3.97: Keep-Alive 循环：处理多个请求
     const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(30);
 
+    let mut buffer = [0u8; 8192];
+    let mut request_data = Vec::with_capacity(2048);
+
     loop {
-        let mut buffer = [0u8; 8192];
-        let mut request_data = Vec::new();
+        request_data.clear();
         let mut connection_close = false;
         let mut _is_keep_alive = false;
-        let keep_alive_start = Instant::now();
 
         // 读取请求数据
         loop {
@@ -2538,34 +2963,21 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
                         break;
                     }
                 }
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // 没有数据可用，检查是否超时
-                    if keep_alive_start.elapsed() > KEEP_ALIVE_TIMEOUT {
-                        eprintln!(
-                            "[Beejs] Keep-Alive timeout ({}s), closing connection",
-                            KEEP_ALIVE_TIMEOUT.as_secs()
-                        );
-                        break;
-                    }
-                    // 短暂等待后重试
-                    thread::sleep(Duration::from_millis(50));
-                    continue;
+                Err(ref e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    connection_close = true;
+                    break;
                 }
-                Err(e) => {
-                    eprintln!("[Beejs] Read error: {}", e);
+                Err(_e) => {
                     connection_close = true;
                     break;
                 }
             }
         }
 
-        // v0.3.97: 如果连接关闭或没有请求数据，退出循环
-        if connection_close {
-            break;
-        }
-        if request_data.is_empty() {
-            // 没有收到数据但连接未关闭，这是 Keep-Alive 超时
-            eprintln!("[Beejs] Keep-Alive timeout, closing connection");
+        if connection_close || request_data.is_empty() {
             break;
         }
 
@@ -2573,7 +2985,6 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
         let parsed_request = match parse_http_request(&request_data) {
             Some(req) => req,
             None => {
-                eprintln!("[Beejs] Failed to parse request");
                 break;
             }
         };
@@ -2586,31 +2997,29 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
         // 判断是否 Keep-Alive
         _is_keep_alive = should_keep_alive(&parsed_request.headers, &parsed_request.http_version);
 
-        eprintln!(
-            "[Beejs] {} {} {} (Keep-Alive: {})",
-            parsed_request.method, parsed_request.url, parsed_request.http_version, _is_keep_alive
-        );
-
-        // v0.3.89: 尝试通过消息通道发送到主线程处理
-        // v0.3.92: 添加超时机制，防止在没有调用 pump_http_messages 时永久阻塞
-        let channel = get_http_server_channel();
+        let channel = server_state
+            .channel
+            .as_ref()
+            .cloned()
+            .or_else(get_http_server_channel);
         let use_message_channel = server_state.use_message_channel && channel.is_some();
 
         let mut message_channel_used = false;
 
-        // 每条请求一个 id，避免 Keep-Alive 复用时把响应串到上一笔
         let connection_id = allocate_http_connection_id();
         let request_msg = HttpRequestMessage {
-            method: parsed_request.method.clone(),
-            url: parsed_request.url.clone(),
-            path: parsed_request.path.clone(),
-            http_version: parsed_request.http_version.clone(),
-            headers: parsed_request.headers.clone(),
-            body: parsed_request.body.clone(),
+            method: parsed_request.method,
+            url: parsed_request.url,
+            path: parsed_request.path,
+            http_version: parsed_request.http_version,
+            headers: parsed_request.headers,
+            body: parsed_request.body,
             connection_id,
         };
 
+        let (resp_tx, resp_rx) = crossbeam::channel::bounded(1);
         if use_message_channel {
+            register_http_response_waiter(connection_id, resp_tx);
             if let Some(ref channel_ref) = channel {
                 let locked = channel_ref
                     .lock()
@@ -2621,6 +3030,7 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
                             message_channel_used = true;
                         }
                         Err(e) => {
+                            unregister_http_response_waiter(connection_id);
                             eprintln!("[Beejs] Failed to send request via channel: {:?}", e);
                         }
                     }
@@ -2628,152 +3038,46 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
             }
         }
 
-        // v0.3.93: 只有当消息通道未使用时才发送回退响应
-        // v0.3.96: 添加 Keep-Alive 支持
-        // v0.3.98: dispatcher/channel 缺失时 fail-closed，不能返回假 200
         if !message_channel_used {
             let fallback_body = "Beejs HTTP server dispatcher unavailable";
             let connection_header = "close";
 
-            let mut response_data = format!(
-                concat!(
-                    "HTTP/1.1 503 Service Unavailable\r\n",
-                    "Content-Type: text/plain\r\n",
-                    "Content-Length: {}\r\n",
-                    "Connection: {}\r\n\r\n"
-                ),
+            let response_data = format!(
+                "HTTP/1.1 503 Service Unavailable\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: {}\r\n\r\n{}",
                 fallback_body.len(),
-                connection_header
+                connection_header,
+                fallback_body
             );
-            response_data.push_str(&fallback_body);
 
-            eprintln!(
-                "[Beejs] HTTP dispatcher unavailable; sending 503 with Connection: {}",
-                connection_header
-            );
-            if let Err(e) = stream.write_all(response_data.as_bytes()) {
-                eprintln!("[Beejs] Write error: {}", e);
-            }
-
+            let _ = stream.write_all(response_data.as_bytes());
             let _ = stream.shutdown_write();
             break;
         }
 
-        // v0.3.93: 消息通道已使用，等待主线程处理
-        // v0.3.95: 修复 - 移除超时限制，改为无限等待响应
-        // v0.3.95: 修复 deadlock - 释放锁后再等待，避免阻塞其他线程
-        // v0.3.96: 添加 Keep-Alive 支持
-        let channel = get_http_server_channel();
-        if let Some(ref channel_ref) = channel {
-            // 获取响应接收器并释放锁，避免阻塞其他线程
-            let response_receiver = {
-                let guard = channel_ref
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                if let Some(ref msg_channel) = *guard {
-                    // v0.3.95: 克隆 receiver 并释放锁后再等待
-                    Some(msg_channel.response_receiver.clone())
+        match resp_rx.recv_timeout(KEEP_ALIVE_TIMEOUT) {
+            Ok(response) => {
+                let connection_header = if _is_keep_alive {
+                    "keep-alive"
                 } else {
-                    None
+                    "close"
+                };
+
+                let response_data = generate_http_response_v2(&response, Some(connection_header));
+                let _ = stream.write_all(&response_data);
+
+                if !_is_keep_alive {
+                    let _ = stream.shutdown_write();
+                    break;
                 }
-            };
-            // guard 现在被释放，锁已释放
-
-            // 等待与本请求 connection_id 匹配的响应（错序的先停放）
-            if let Some(receiver) = response_receiver {
-                match recv_http_response_for(&receiver, connection_id) {
-                    Ok(response) => {
-                        // 收到响应，根据 _is_keep_alive 决定是否关闭连接
-                        let connection_header = if _is_keep_alive {
-                            "keep-alive"
-                        } else {
-                            "close"
-                        };
-                        eprintln!("[Debug] Received response from message channel");
-                        eprintln!(
-                            "[Debug] response.connection_id: {}, response.status_code: {}",
-                            response.connection_id, response.status_code
-                        );
-                        eprintln!("[Debug] response.headers: {:?}", response.headers);
-
-                        // 生成响应并添加 Connection 头
-                        let mut response_data = generate_http_response_v2(&response);
-                        eprintln!("[Debug] Original response (bytes): {:?}", response_data);
-                        eprintln!(
-                            "[Debug] Original response (utf8): {:?}",
-                            String::from_utf8_lossy(&response_data)
-                        );
-
-                        // 如果还没有 Connection 头，添加它
-                        eprintln!(
-                            "[Debug] response.headers before check: {:?}",
-                            response.headers
-                        );
-                        if !response.headers.contains_key("Connection") {
-                            // 查找 \r\n\r\n（header 和 body 之间的分隔符）
-                            // 注意：windows 找到的 \r\n\r\n 可能是 header 行的结尾 + header/body 分隔符的组合
-                            // 需要在最后一个 header 的 \r\n 之后插入新的 header
-                            if let Some(separator_pos) =
-                                response_data.windows(4).rposition(|w| w == b"\r\n\r\n")
-                            {
-                                eprintln!(
-                                    "[Debug] Found \\r\\n\\r\\n at position {}",
-                                    separator_pos
-                                );
-                                eprintln!(
-                                    "[Debug] 4 bytes at separator_pos: {:?}",
-                                    &response_data[separator_pos..separator_pos + 4]
-                                );
-                                // separator_pos 指向 \r\n\r\n 的第一个 \r
-                                // 需要在最后一个 header 的 \r\n 之后插入，即 separator_pos + 2
-                                let insert_pos = separator_pos + 2;
-                                eprintln!("[Debug] No Connection header in response, will add: {} at position {}", connection_header, insert_pos);
-                                // 使用 insert 逐字节插入，确保正确插入而不是替换
-                                let connection_header_bytes =
-                                    format!("Connection: {}\r\n", connection_header).into_bytes();
-                                for i in (0..connection_header_bytes.len()).rev() {
-                                    response_data.insert(insert_pos, connection_header_bytes[i]);
-                                }
-                                eprintln!(
-                                    "[Debug] After insert, response_data len: {}",
-                                    response_data.len()
-                                );
-                            } else {
-                                eprintln!(
-                                    "[Debug] No separator found, response_data len: {}",
-                                    response_data.len()
-                                );
-                            }
-                        }
-
-                        eprintln!(
-                            "[Debug] Message channel path sending response with Connection: {}",
-                            connection_header
-                        );
-                        eprintln!(
-                            "[Debug] Full response data: {:?}",
-                            String::from_utf8_lossy(&response_data)
-                        );
-                        let _ = stream.write_all(&response_data);
-
-                        // 如果不是 Keep-Alive，关闭连接
-                        if !_is_keep_alive {
-                            let _ = stream.shutdown_write();
-                            break;
-                        }
-                        // 否则继续循环等待下一个请求
-                    }
-                    Err(_) => {
-                        // 通道断开，关闭连接
-                        let _ = stream.shutdown_write();
-                        break;
-                    }
-                }
+            }
+            Err(_) => {
+                unregister_http_response_waiter(connection_id);
+                let _ = stream.shutdown_write();
+                break;
             }
         }
     }
 
-    // 连接关闭
     let _ = stream.shutdown_write();
 }
 
@@ -2828,7 +3132,7 @@ fn http_res_remove_header_callback(
 pub fn process_http_request_in_v8(
     request: &HttpRequestMessage,
     scope: &mut v8::HandleScope,
-    _context: &v8::Local<v8::Context>,
+    context: &v8::Local<v8::Context>,
     request_handler: Option<v8::Global<v8::Function>>,
 ) -> HttpDispatchResult {
     let Some(handler) = request_handler else {
@@ -2836,8 +3140,46 @@ pub fn process_http_request_in_v8(
     };
     let handler_fn = v8::Local::new(scope, &handler);
 
+    // 获取全局 http 模块原型
+    let global = context.global(scope);
+    let http_key = v8::String::new(scope, "http").unwrap();
+    let http_obj_val = global.get(scope, http_key.into());
+
+    let (im_proto, sr_proto, sock_proto) = if let Some(http_val) = http_obj_val {
+        if let Ok(http_obj) = v8::Local::<v8::Object>::try_from(http_val) {
+            let im_key = v8::String::new(scope, "IncomingMessage").unwrap();
+            let sr_key = v8::String::new(scope, "ServerResponse").unwrap();
+            let proto_key = v8::String::new(scope, "prototype").unwrap();
+
+            let sock_key = v8::String::new(scope, "Socket").unwrap();
+            let im_p = http_obj.get(scope, im_key.into()).and_then(|c| {
+                v8::Local::<v8::Function>::try_from(c)
+                    .ok()?
+                    .get(scope, proto_key.into())
+            });
+            let sr_p = http_obj.get(scope, sr_key.into()).and_then(|c| {
+                v8::Local::<v8::Function>::try_from(c)
+                    .ok()?
+                    .get(scope, proto_key.into())
+            });
+            let sock_p = http_obj.get(scope, sock_key.into()).and_then(|c| {
+                v8::Local::<v8::Function>::try_from(c)
+                    .ok()?
+                    .get(scope, proto_key.into())
+            });
+            (im_p, sr_proto_from_p(sr_p), sock_p)
+        } else {
+            (None, None, None)
+        }
+    } else {
+        (None, None, None)
+    };
+
     // 创建请求对象 (IncomingMessage)
     let req_obj = v8::Object::new(scope);
+    if let Some(p) = im_proto {
+        req_obj.set_prototype(scope, p);
+    }
 
     // 设置请求属性
     let method_key = v8::String::new(scope, "method").unwrap();
@@ -2856,13 +3198,10 @@ pub fn process_http_request_in_v8(
     let http_version_val = v8::String::new(scope, &request.http_version).unwrap();
     req_obj.set(scope, http_version_key.into(), http_version_val.into());
 
-    // 设置 headers 对象（使用 lowercase 键名以匹配 Node.js 惯例）
-    // v0.3.95: 修复 header 键名大小写问题
+    // 设置 headers 对象
     let headers_obj = v8::Object::new(scope);
     for (name, value) in &request.headers {
-        // 使用 lowercase 键名，HTTP header 查找是大小写敏感的
-        let name_lower = name.to_lowercase();
-        let name_key = v8::String::new(scope, &name_lower).unwrap();
+        let name_key = v8::String::new(scope, name).unwrap();
         let value_val = v8::String::new(scope, value).unwrap();
         headers_obj.set(scope, name_key.into(), value_val.into());
     }
@@ -2881,30 +3220,49 @@ pub fn process_http_request_in_v8(
     let req_end_listeners_key = v8::String::new(scope, "_endListeners").unwrap();
     req_obj.set(scope, data_key.into(), data_listeners.into());
     req_obj.set(scope, req_end_listeners_key.into(), end_listeners.into());
-    let req_on_fn = v8::FunctionTemplate::new(scope, http_req_on_callback);
-    let req_on_instance = req_on_fn.get_function(scope).unwrap();
-    let req_on_key = v8::String::new(scope, "on").unwrap();
-    req_obj.set(scope, req_on_key.into(), req_on_instance.into());
 
     // 创建响应对象 (ServerResponse)
     let res_obj = v8::Object::new(scope);
+    if let Some(p) = sr_proto {
+        res_obj.set_prototype(scope, p);
+    }
 
-    // 初始化 headers 对象
+    // 创建并挂载 Socket 对象
+    let socket_obj = v8::Object::new(scope);
+    if let Some(p) = sock_proto {
+        socket_obj.set_prototype(scope, p);
+    }
+    let remote_addr_key = v8::String::new(scope, "remoteAddress").unwrap();
+    let remote_addr_val = v8::String::new(scope, "127.0.0.1").unwrap();
+    socket_obj.set(scope, remote_addr_key.into(), remote_addr_val.into());
+    let remote_port_key = v8::String::new(scope, "remotePort").unwrap();
+    let remote_port_val = v8::Integer::new(scope, 12345);
+    socket_obj.set(scope, remote_port_key.into(), remote_port_val.into());
+    let enc_key = v8::String::new(scope, "encrypted").unwrap();
+    let enc_val = v8::Boolean::new(scope, false);
+    socket_obj.set(scope, enc_key.into(), enc_val.into());
+
+    let socket_prop_key = v8::String::new(scope, "socket").unwrap();
+    let conn_prop_key = v8::String::new(scope, "connection").unwrap();
+    req_obj.set(scope, socket_prop_key.into(), socket_obj.into());
+    req_obj.set(scope, conn_prop_key.into(), socket_obj.into());
+    res_obj.set(scope, socket_prop_key.into(), socket_obj.into());
+    res_obj.set(scope, conn_prop_key.into(), socket_obj.into());
+    let req_ref_key = v8::String::new(scope, "req").unwrap();
+    res_obj.set(scope, req_ref_key.into(), req_obj.into());
+
     let res_headers_obj = v8::Object::new(scope);
     let res_headers_key = v8::String::new(scope, "headers").unwrap();
     res_obj.set(scope, res_headers_key.into(), res_headers_obj.into());
 
-    // 初始化 statusCode
     let status_code_key = v8::String::new(scope, "statusCode").unwrap();
     let status_code_val = v8::Integer::new(scope, 200);
     res_obj.set(scope, status_code_key.into(), status_code_val.into());
 
-    // 初始化 statusMessage
     let status_msg_key = v8::String::new(scope, "statusMessage").unwrap();
     let status_msg_val = v8::String::new(scope, "OK").unwrap();
     res_obj.set(scope, status_msg_key.into(), status_msg_val.into());
 
-    // 初始化 _body 用于存储响应体
     let body_key = v8::String::new(scope, "_body").unwrap();
     let empty_body = v8::String::new(scope, "").unwrap();
     res_obj.set(scope, body_key.into(), empty_body.into());
@@ -2922,143 +3280,54 @@ pub fn process_http_request_in_v8(
     let conn_val = v8::Number::new(scope, request.connection_id as f64);
     res_obj.set(scope, conn_key.into(), conn_val.into());
 
-    // 设置 end 方法
-    let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
-    let end_instance = end_fn.get_function(scope).unwrap();
-    let end_key = v8::String::new(scope, "end").unwrap();
-    res_obj.set(scope, end_key.into(), end_instance.into());
-
-    // 设置 writeHead 方法
-    let write_head_fn = v8::FunctionTemplate::new(scope, http_res_write_head_callback);
-    let write_head_instance = write_head_fn.get_function(scope).unwrap();
-    let write_head_key = v8::String::new(scope, "writeHead").unwrap();
-    res_obj.set(scope, write_head_key.into(), write_head_instance.into());
-
-    // 设置 setHeader 方法
-    let set_header_fn = v8::FunctionTemplate::new(scope, http_res_set_header_callback);
-    let set_header_instance = set_header_fn.get_function(scope).unwrap();
-    let set_header_key = v8::String::new(scope, "setHeader").unwrap();
-    res_obj.set(scope, set_header_key.into(), set_header_instance.into());
-
-    // 设置 getHeader 方法
-    let get_header_fn = v8::FunctionTemplate::new(scope, http_res_get_header_callback);
-    let get_header_instance = get_header_fn.get_function(scope).unwrap();
-    let get_header_key = v8::String::new(scope, "getHeader").unwrap();
-    res_obj.set(scope, get_header_key.into(), get_header_instance.into());
-
-    // 设置 removeHeader 方法
-    let remove_header_fn = v8::FunctionTemplate::new(scope, http_res_remove_header_callback);
-    let remove_header_instance = remove_header_fn.get_function(scope).unwrap();
-    let remove_header_key = v8::String::new(scope, "removeHeader").unwrap();
-    res_obj.set(
-        scope,
-        remove_header_key.into(),
-        remove_header_instance.into(),
-    );
-
-    // 设置 hasHeader 方法
-    let has_header_fn = v8::FunctionTemplate::new(scope, http_res_has_header_callback);
-    let has_header_instance = has_header_fn.get_function(scope).unwrap();
-    let has_header_key = v8::String::new(scope, "hasHeader").unwrap();
-    res_obj.set(scope, has_header_key.into(), has_header_instance.into());
-
-    // 设置 write 方法
-    let write_fn = v8::FunctionTemplate::new(scope, http_res_write_callback);
-    let write_instance = write_fn.get_function(scope).unwrap();
-    let write_key = v8::String::new(scope, "write").unwrap();
-    res_obj.set(scope, write_key.into(), write_instance.into());
-
     // 调用 request handler: handler(req, res)
     let this_val = v8::undefined(scope).into();
     let args = [req_obj.into(), res_obj.into()];
 
-    if handler_fn.call(scope, this_val, &args).is_none() {
+    let call_res = {
+        let tc_scope = &mut v8::TryCatch::new(scope);
+        let r = handler_fn.call(tc_scope, this_val, &args);
+        if r.is_none() && tc_scope.has_caught() {
+            if let Some(exc) = tc_scope.exception() {
+                let msg = exc.to_rust_string_lossy(tc_scope);
+                eprintln!("[Beejs HTTP Handler Error] {}", msg);
+                if let Some(stack) = tc_scope.stack_trace() {
+                    let stack_str = stack.to_rust_string_lossy(tc_scope);
+                    eprintln!("{}", stack_str);
+                }
+            }
+        }
+        r
+    };
+    if call_res.is_none() {
         return HttpDispatchResult::Error;
     }
 
     emit_incoming_request_body_events(scope, req_obj, &body_text);
 
-    let ended_key = v8::String::new(scope, "_ended").unwrap();
     let ended = res_obj
         .get(scope, ended_key.into())
         .map(|value| value.boolean_value(scope))
         .unwrap_or(false);
     if !ended {
-        let async_key = v8::String::new(scope, "_asyncPending").unwrap();
         let true_val = v8::Boolean::new(scope, true);
         res_obj.set(scope, async_key.into(), true_val.into());
         PENDING_ASYNC_HTTP_RESPONSES.fetch_add(1, Ordering::SeqCst);
         return HttpDispatchResult::Pending;
     }
 
-    // 从响应对象提取数据
-    let status_code_key = v8::String::new(scope, "statusCode").unwrap();
-    let status_code_val = res_obj
-        .get(scope, status_code_key.into())
-        .unwrap_or(v8::Integer::new(scope, 200).into());
-    let status_code = status_code_val
-        .to_int32(scope)
-        .map(|i| i.value() as u16)
-        .unwrap_or(200);
-
-    // 提取 body
-    let body_key = v8::String::new(scope, "_body").unwrap();
-    let body_val = res_obj
-        .get(scope, body_key.into())
-        .unwrap_or(v8::String::new(scope, "").unwrap().into());
-    let body_str = body_val
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
-    let body_bytes = body_str.into_bytes();
-
-    // 提取 headers - 使用 GetPropertyNames 获取所有属性
-    // v0.3.95: 修复 header 枚举问题，使用更可靠的方法
-    let mut response_headers = HashMap::new();
-    let res_headers_key = v8::String::new(scope, "headers").unwrap();
-    if let Some(headers_val) = res_obj.get(scope, res_headers_key.into()) {
-        if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
-            // 使用 GetPropertyNames 获取所有属性
-            let props = headers_obj
-                .get_property_names(scope)
-                .unwrap_or(v8::Array::new(scope, 0));
-            for i in 0..props.length() {
-                if let Some(key_val) = props.get_index(scope, i) {
-                    if let Some(key_str) = key_val.to_string(scope) {
-                        let key = key_str.to_rust_string_lossy(scope);
-                        if let Some(value_val) = headers_obj.get(scope, key_val) {
-                            if let Some(value_str) = value_val.to_string(scope) {
-                                let value = value_str.to_rust_string_lossy(scope);
-                                response_headers.insert(key, value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 设置默认 headers（如果还没有设置的话）
-    if !response_headers.contains_key("Content-Type") {
-        response_headers.insert(
-            "Content-Type".to_string(),
-            "text/plain; charset=utf-8".to_string(),
-        );
-    }
-
-    eprintln!(
-        "[Debug] Response headers before HttpResponseMessage: {:?}",
-        response_headers
-    );
-
-    HttpDispatchResult::Response(HttpResponseMessage {
-        connection_id: request.connection_id,
-        status_code,
-        headers: response_headers,
-        body: body_bytes,
-    })
+    HttpDispatchResult::Response(extract_http_response_from_res(
+        scope,
+        res_obj,
+        request.connection_id,
+    ))
 }
 
+fn sr_proto_from_p<'a>(p: Option<v8::Local<'a, v8::Value>>) -> Option<v8::Local<'a, v8::Value>> {
+    p
+}
+
+#[allow(dead_code)]
 fn http_req_on_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
