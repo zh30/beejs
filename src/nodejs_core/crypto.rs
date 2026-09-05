@@ -86,13 +86,19 @@ fn array_buffer_bytes(
         return Ok(Vec::new());
     }
 
+    let byte_len = value.byte_length();
+    if offset >= byte_len {
+        return Ok(Vec::new());
+    }
+    let actual_len = length.min(byte_len - offset);
+
     let backing_store = value.get_backing_store();
     let ptr = backing_store.data() as *const u8;
     if ptr.is_null() {
         return Err("buffer data is unavailable".to_string());
     }
 
-    Ok(unsafe { std::slice::from_raw_parts(ptr.add(offset), length).to_vec() })
+    Ok(unsafe { std::slice::from_raw_parts(ptr.add(offset), actual_len).to_vec() })
 }
 
 fn encode_digest_bytes(bytes: &[u8], encoding: &str) -> String {
@@ -181,16 +187,39 @@ fn bytes_from_update_value(
         return array_buffer_bytes(buffer, 0, buffer.byte_length());
     }
 
-    if value.is_typed_array() {
-        let typed_array = v8::Local::<v8::TypedArray>::try_from(value)
-            .map_err(|_| "data must be a TypedArray".to_string())?;
-        let buffer = typed_array
+    if value.is_array_buffer_view() {
+        let view = v8::Local::<v8::ArrayBufferView>::try_from(value)
+            .map_err(|_| "data must be an ArrayBufferView".to_string())?;
+        let buffer = view
             .buffer(scope)
-            .ok_or_else(|| "typed array buffer is unavailable".to_string())?;
-        return array_buffer_bytes(buffer, typed_array.byte_offset(), typed_array.byte_length());
+            .ok_or_else(|| "view buffer is unavailable".to_string())?;
+        return array_buffer_bytes(buffer, view.byte_offset(), view.byte_length());
     }
 
-    Err("data must be a string, ArrayBuffer, or TypedArray".to_string())
+    if let Ok(obj) = v8::Local::<v8::Object>::try_from(value) {
+        let buf_key = v8::String::new(scope, "buffer").unwrap();
+        if let Some(buf_val) = obj.get(scope, buf_key.into()) {
+            if buf_val.is_array_buffer() {
+                if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buf_val) {
+                    let offset_key = v8::String::new(scope, "byteOffset").unwrap();
+                    let offset = obj
+                        .get(scope, offset_key.into())
+                        .and_then(|v| v.to_integer(scope))
+                        .map(|i| i.value() as usize)
+                        .unwrap_or(0);
+                    let len_key = v8::String::new(scope, "length").unwrap();
+                    let len = obj
+                        .get(scope, len_key.into())
+                        .and_then(|v| v.to_integer(scope))
+                        .map(|i| i.value() as usize)
+                        .unwrap_or_else(|| ab.byte_length().saturating_sub(offset));
+                    return array_buffer_bytes(ab, offset, len);
+                }
+            }
+        }
+    }
+
+    Err("data must be a string, Buffer, ArrayBuffer, or TypedArray".to_string())
 }
 
 fn append_data_chunk(

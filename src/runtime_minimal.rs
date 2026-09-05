@@ -8107,6 +8107,7 @@ impl MinimalRuntime {
         setup_buffer_module(scope);
         Self::setup_web_primitives(scope, context)?;
         Self::setup_process_api(scope, context)?;
+        Self::setup_events_api(scope, context)?;
         setup_path_api(scope, context)?;
         setup_fs_api(scope, context)?;
         Self::setup_os_api(scope, context)?;
@@ -8119,7 +8120,6 @@ impl MinimalRuntime {
         setup_http_api(scope, context)?;
         Self::setup_util_api(scope, context)?;
         crate::nodejs_core::querystring::setup_querystring_api(scope, context)?;
-        Self::setup_events_api(scope, context)?;
         Self::setup_dns_api(scope, context)?;
         setup_net_api(scope, context)?;
         Self::setup_string_decoder_api(scope, context)?;
@@ -8136,6 +8136,7 @@ impl MinimalRuntime {
         crate::nodejs_core::tls::setup_tls_api(scope, context)?;
         crate::nodejs_core::vm::setup_vm_api(scope, context)?;
         crate::nodejs_core::worker_threads::setup_worker_threads_api(scope, context)?;
+        crate::nodejs_core::tty::setup_tty_api(scope, context)?;
         // Alias perf_hooks -> performance for Node module name compatibility.
         {
             let global = context.global(scope);
@@ -8783,17 +8784,24 @@ impl MinimalRuntime {
         // CLI `bee run` keeps the process alive while HTTP servers listen.
         // Tests leave `http_server_keep_alive` false so listen() returns.
         if http_server_keep_alive {
+            let mut idle_ticks: u32 = 0;
+            let mut last_trim_time = std::time::Instant::now();
             loop {
-                let pumped =
-                    crate::nodejs_core::http::pump_pending_http_requests_in_scope(scope, &context);
-                execute_next_tick_callbacks(scope);
-                scope.perform_microtask_checkpoint();
-                execute_fired_timers(scope);
-                unmark_immediate_callbacks_deferred();
-                execute_immediate_callbacks(scope);
-                mark_immediate_callbacks_deferred();
-                execute_next_tick_callbacks(scope);
-                scope.perform_microtask_checkpoint();
+                let pumped = {
+                    let iter_scope = &mut v8::HandleScope::new(scope);
+                    let p = crate::nodejs_core::http::pump_pending_http_requests_in_scope(
+                        iter_scope, &context,
+                    );
+                    execute_next_tick_callbacks(iter_scope);
+                    iter_scope.perform_microtask_checkpoint();
+                    execute_fired_timers(iter_scope);
+                    unmark_immediate_callbacks_deferred();
+                    execute_immediate_callbacks(iter_scope);
+                    mark_immediate_callbacks_deferred();
+                    execute_next_tick_callbacks(iter_scope);
+                    iter_scope.perform_microtask_checkpoint();
+                    p
+                };
 
                 let listening = crate::nodejs_core::http::has_listening_http_servers();
                 let pending_req = crate::nodejs_core::http::has_pending_http_requests();
@@ -8806,8 +8814,41 @@ impl MinimalRuntime {
                 {
                     break;
                 }
-                if pumped == 0 {
-                    std::thread::sleep(std::time::Duration::from_millis(10));
+                if pumped > 0 || pending_req || pending_async {
+                    idle_ticks = 0;
+                    // Active traffic: keep pumping without delay while there is work
+                    continue;
+                } else {
+                    idle_ticks = idle_ticks.saturating_add(1);
+                    // Phase 3: Active Idle Memory Trimming (Aligning with Bun v1.4.1)
+                    // When idle for >100ms (after traffic cools down)
+                    if idle_ticks >= 100
+                        && last_trim_time.elapsed() >= std::time::Duration::from_millis(500)
+                    {
+                        for _ in 0..3 {
+                            scope.low_memory_notification();
+                        }
+                        #[cfg(target_os = "macos")]
+                        unsafe {
+                            extern "C" {
+                                fn malloc_zone_pressure_relief(
+                                    zone: *mut std::ffi::c_void,
+                                    goal: usize,
+                                ) -> usize;
+                                fn malloc_default_zone() -> *mut std::ffi::c_void;
+                            }
+                            let zone = malloc_default_zone();
+                            if !zone.is_null() {
+                                malloc_zone_pressure_relief(zone, 0);
+                            }
+                        }
+                        #[cfg(target_os = "linux")]
+                        unsafe {
+                            libc::malloc_trim(0);
+                        }
+                        last_trim_time = std::time::Instant::now();
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(1));
                 }
             }
         }
@@ -9651,6 +9692,24 @@ impl MinimalRuntime {
         let global_key = v8::String::new(scope, "global")
             .ok_or_else(|| anyhow::anyhow!("Failed to create global alias key"))?;
         global.set(scope, global_key.into(), global.into());
+
+        let polyfill_script = r#"
+        (function() {
+            if (!Object.hasOwn) {
+                Object.hasOwn = function(obj, prop) {
+                    if (obj === null || obj === undefined) {
+                        throw new TypeError('Cannot convert undefined or null to object');
+                    }
+                    return Object.prototype.hasOwnProperty.call(obj, prop);
+                };
+            }
+        })();
+        "#;
+        if let Some(code) = v8::String::new(scope, polyfill_script) {
+            if let Some(script) = v8::Script::compile(scope, code, None) {
+                let _ = script.run(scope);
+            }
+        }
 
         Ok(())
     }
@@ -20202,7 +20261,7 @@ impl MinimalRuntime {
                     "os" | "crypto" | "events" | "net" | "http" | "https" | "tls" | "util"
                     | "url" | "querystring" | "dns" | "child_process" | "tcp_async" | "stream"
                     | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
-                    | "zlib" | "vm" | "worker_threads" | "module" => {
+                    | "zlib" | "vm" | "worker_threads" | "module" | "tty" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
@@ -21666,6 +21725,24 @@ require.resolve = function(specifier) {{
         );
         let stdout_write_instance = stdout_write_fn.get_function(scope).unwrap();
         stdout_obj.set(scope, stdout_write_key.into(), stdout_write_instance.into());
+
+        let is_stdout_tty = unsafe { libc::isatty(1) == 1 };
+        let is_stderr_tty = unsafe { libc::isatty(2) == 1 };
+        let is_stdin_tty = unsafe { libc::isatty(0) == 1 };
+
+        let fd_key = v8::String::new(scope, "fd").unwrap();
+        let is_tty_key = v8::String::new(scope, "isTTY").unwrap();
+        let columns_key = v8::String::new(scope, "columns").unwrap();
+        let rows_key = v8::String::new(scope, "rows").unwrap();
+
+        let stdout_fd = v8::Integer::new(scope, 1);
+        let stdout_tty = v8::Boolean::new(scope, is_stdout_tty);
+        let stdout_cols = v8::Integer::new(scope, 80);
+        let stdout_rows = v8::Integer::new(scope, 24);
+        stdout_obj.set(scope, fd_key.into(), stdout_fd.into());
+        stdout_obj.set(scope, is_tty_key.into(), stdout_tty.into());
+        stdout_obj.set(scope, columns_key.into(), stdout_cols.into());
+        stdout_obj.set(scope, rows_key.into(), stdout_rows.into());
         process_obj.set(scope, stdout_key.into(), stdout_obj.into());
 
         // v0.3.238: Add process.stderr (basic implementation)
@@ -21696,16 +21773,26 @@ require.resolve = function(specifier) {{
         );
         let stderr_write_instance = stderr_write_fn.get_function(scope).unwrap();
         stderr_obj.set(scope, stderr_write_key.into(), stderr_write_instance.into());
+        let stderr_fd = v8::Integer::new(scope, 2);
+        let stderr_tty = v8::Boolean::new(scope, is_stderr_tty);
+        let stderr_cols = v8::Integer::new(scope, 80);
+        let stderr_rows = v8::Integer::new(scope, 24);
+        stderr_obj.set(scope, fd_key.into(), stderr_fd.into());
+        stderr_obj.set(scope, is_tty_key.into(), stderr_tty.into());
+        stderr_obj.set(scope, columns_key.into(), stderr_cols.into());
+        stderr_obj.set(scope, rows_key.into(), stderr_rows.into());
         process_obj.set(scope, stderr_key.into(), stderr_obj.into());
 
-        // v0.3.238: Add process.stdin (basic implementation)
+        // v0.3.240: Add process.stdin (basic implementation)
         // v0.3.240: Add stdin.fd and stdin.read()
         let stdin_key = v8::String::new(scope, "stdin").unwrap();
         let stdin_obj = v8::Object::new(scope);
         // stdin.fd - file descriptor (0 for stdin)
         let stdin_fd_key = v8::String::new(scope, "fd").unwrap();
         let stdin_fd_value = v8::Integer::new(scope, 0);
+        let stdin_tty = v8::Boolean::new(scope, is_stdin_tty);
         stdin_obj.set(scope, stdin_fd_key.into(), stdin_fd_value.into());
+        stdin_obj.set(scope, is_tty_key.into(), stdin_tty.into());
         // stdin.read() - returns null (sync mode can't read stdin)
         let stdin_read_fn = v8::FunctionTemplate::new(
             scope,
@@ -24579,6 +24666,28 @@ require.resolve = function(specifier) {{
         let stream_key = v8::String::new(scope, "stream").unwrap();
         global.set(scope, stream_key.into(), stream_obj.into());
 
+        let stream_bootstrap = r#"
+        (function() {
+            const proto = typeof EventEmitter !== 'undefined' ? EventEmitter.prototype : Object.prototype;
+            function Stream(opts) {
+                if (typeof EventEmitter !== 'undefined') {
+                    EventEmitter.call(this, opts);
+                }
+            }
+            Stream.prototype = Object.create(proto);
+            if (globalThis.stream) {
+                Object.assign(Stream, globalThis.stream);
+            }
+            Stream.Stream = Stream;
+            globalThis.stream = Stream;
+        })();
+        "#;
+        if let Some(code) = v8::String::new(scope, stream_bootstrap) {
+            if let Some(script) = v8::Script::compile(scope, code, None) {
+                let _ = script.run(scope);
+            }
+        }
+
         Ok(())
     }
 
@@ -24939,6 +25048,131 @@ require.resolve = function(specifier) {{
         // Set util as global
         let util_key = v8::String::new(scope, "util").unwrap();
         global.set(scope, util_key.into(), util_obj.into());
+
+        let util_script = r#"
+        (function() {
+            if (!globalThis.util) {
+                globalThis.util = {};
+            }
+            const util = globalThis.util;
+
+            util.deprecate = function(fn, msg, code) {
+                if (typeof fn !== 'function') {
+                    throw new TypeError('The "fn" argument must be of type function');
+                }
+                let warned = false;
+                function deprecated(...args) {
+                    if (!warned) {
+                        warned = true;
+                        if (typeof process !== 'undefined' && typeof process.emitWarning === 'function') {
+                            process.emitWarning(msg, 'DeprecationWarning', code);
+                        }
+                    }
+                    if (new.target) {
+                        return Reflect.construct(fn, args, new.target);
+                    }
+                    return fn.apply(this, args);
+                }
+                Object.setPrototypeOf(deprecated, fn);
+                if (fn.prototype) {
+                    deprecated.prototype = fn.prototype;
+                }
+                return deprecated;
+            };
+
+            util.inherits = function(ctor, superCtor) {
+                if (ctor === undefined || ctor === null)
+                    throw new TypeError('The constructor to "inherits" must not be empty');
+                if (superCtor === undefined || superCtor === null)
+                    throw new TypeError('The super constructor to "inherits" must not be empty');
+                if (superCtor.prototype === undefined)
+                    throw new TypeError('The super constructor to "inherits" must have a prototype');
+                ctor.super_ = superCtor;
+                if (!ctor.prototype) ctor.prototype = Object.create(superCtor.prototype);
+                else Object.setPrototypeOf(ctor.prototype, superCtor.prototype);
+            };
+
+            util.callbackify = function(original) {
+                if (typeof original !== 'function') {
+                    throw new TypeError('The "original" argument must be of type function');
+                }
+                return function(...args) {
+                    const cb = args.pop();
+                    if (typeof cb !== 'function') {
+                        throw new TypeError('The last argument must be of type function');
+                    }
+                    Reflect.apply(original, this, args).then(
+                        ret => { cb(null, ret); },
+                        rej => { cb(rej); }
+                    );
+                };
+            };
+
+            const kCustomPromisify = Symbol.for('nodejs.util.promisify.custom');
+            util.promisify = function(original) {
+                if (typeof original !== 'function') {
+                    throw new TypeError('The "original" argument must be of type function');
+                }
+                if (original[kCustomPromisify]) {
+                    return original[kCustomPromisify];
+                }
+                function fn(...args) {
+                    return new Promise((resolve, reject) => {
+                        try {
+                            original.call(this, ...args, (err, ...values) => {
+                                if (err) {
+                                    return reject(err);
+                                }
+                                if (values.length <= 1) {
+                                    resolve(values[0]);
+                                } else {
+                                    resolve(values);
+                                }
+                            });
+                        } catch (err) {
+                            reject(err);
+                        }
+                    });
+                }
+                Object.setPrototypeOf(fn, Object.getPrototypeOf(original));
+                Object.defineProperties(fn, Object.getOwnPropertyDescriptors(original));
+                return fn;
+            };
+            util.promisify.custom = kCustomPromisify;
+
+            util.isUndefined = function(v) { return v === undefined; };
+
+            if (!util.types) {
+                util.types = {};
+            }
+            const types = util.types;
+            types.isAnyArrayBuffer = types.isAnyArrayBuffer || (v => v instanceof ArrayBuffer || (typeof SharedArrayBuffer !== 'undefined' && v instanceof SharedArrayBuffer));
+            types.isArrayBuffer = types.isArrayBuffer || (v => v instanceof ArrayBuffer);
+            types.isArgumentsObject = types.isArgumentsObject || (v => Object.prototype.toString.call(v) === '[object Arguments]');
+            types.isAsyncFunction = types.isAsyncFunction || (v => typeof v === 'function' && v.constructor && v.constructor.name === 'AsyncFunction');
+            types.isBooleanObject = types.isBooleanObject || (v => typeof v === 'object' && v !== null && Object.prototype.toString.call(v) === '[object Boolean]');
+            types.isBoxedPrimitive = types.isBoxedPrimitive || (v => typeof v === 'object' && v !== null && (v instanceof Number || v instanceof String || v instanceof Boolean || v instanceof Symbol || (typeof BigInt !== 'undefined' && v instanceof BigInt)));
+            types.isDataView = types.isDataView || (v => v instanceof DataView);
+            types.isDate = types.isDate || (v => v instanceof Date);
+            types.isGeneratorFunction = types.isGeneratorFunction || (v => typeof v === 'function' && v.constructor && v.constructor.name === 'GeneratorFunction');
+            types.isMap = types.isMap || (v => v instanceof Map);
+            types.isNativeError = types.isNativeError || (v => v instanceof Error);
+            types.isNumberObject = types.isNumberObject || (v => typeof v === 'object' && v !== null && Object.prototype.toString.call(v) === '[object Number]');
+            types.isPromise = types.isPromise || (v => v instanceof Promise || (v && typeof v.then === 'function'));
+            types.isRegExp = types.isRegExp || (v => v instanceof RegExp);
+            types.isSet = types.isSet || (v => v instanceof Set);
+            types.isStringObject = types.isStringObject || (v => typeof v === 'object' && v !== null && Object.prototype.toString.call(v) === '[object String]');
+            types.isSymbolObject = types.isSymbolObject || (v => typeof v === 'object' && v !== null && Object.prototype.toString.call(v) === '[object Symbol]');
+            types.isTypedArray = types.isTypedArray || (v => ArrayBuffer.isView(v) && !(v instanceof DataView));
+            types.isWeakMap = types.isWeakMap || (v => v instanceof WeakMap);
+            types.isWeakSet = types.isWeakSet || (v => v instanceof WeakSet);
+        })();
+        "#;
+        if let Some(code) = v8::String::new(scope, util_script) {
+            if let Some(script) = v8::Script::compile(scope, code, None) {
+                let _ = script.run(scope);
+            }
+        }
 
         Ok(())
     }
@@ -25635,14 +25869,223 @@ require.resolve = function(specifier) {{
             listener_count_instance.into(),
         );
 
-        // Set up prototype chain for instanceof support (v0.3.46)
-        let prototype_obj = v8::Object::new(scope);
-        let prototype_key = v8::String::new(scope, "prototype").unwrap();
-        event_emitter_func.set(scope, prototype_key.into(), prototype_obj.into());
-
         // Set events as global
         let events_key = v8::String::new(scope, "events").unwrap();
         global.set(scope, events_key.into(), event_emitter_func.into());
+
+        let events_bootstrap = r#"
+        (function() {
+            function EventEmitter() {
+                this._events = Object.create(null);
+                this._eventsCount = 0;
+                this._maxListeners = undefined;
+            }
+            EventEmitter.defaultMaxListeners = 10;
+
+            EventEmitter.prototype.setMaxListeners = function(n) {
+                if (typeof n !== 'number' || n < 0 || Number.isNaN(n)) {
+                    throw new RangeError('The value of "n" is out of range');
+                }
+                this._maxListeners = n;
+                return this;
+            };
+
+            EventEmitter.prototype.getMaxListeners = function() {
+                return this._maxListeners === undefined ? EventEmitter.defaultMaxListeners : this._maxListeners;
+            };
+
+            EventEmitter.prototype.emit = function(type, ...args) {
+                if (!this._events) {
+                    this._events = Object.create(null);
+                    this._eventsCount = 0;
+                }
+                if (type === 'error' && !this._events.error) {
+                    const er = args[0];
+                    if (er instanceof Error) throw er;
+                    const err = new Error('Unhandled error.' + (er ? ' (' + er + ')' : ''));
+                    err.context = er;
+                    throw err;
+                }
+                const handler = this._events[type];
+                if (!handler) return false;
+                if (typeof handler === 'function') {
+                    Reflect.apply(handler, this, args);
+                    return true;
+                }
+                const listeners = handler.slice();
+                for (let i = 0; i < listeners.length; ++i) {
+                    Reflect.apply(listeners[i], this, args);
+                }
+                return true;
+            };
+
+            EventEmitter.prototype.addListener = function(type, listener, prepend) {
+                if (typeof listener !== 'function') {
+                    throw new TypeError('The "listener" argument must be of type Function');
+                }
+                if (!this._events) {
+                    this._events = Object.create(null);
+                    this._eventsCount = 0;
+                }
+                if (this._events.newListener) {
+                    this.emit('newListener', type, listener.listener || listener);
+                }
+                const existing = this._events[type];
+                if (!existing) {
+                    this._events[type] = listener;
+                    this._eventsCount++;
+                } else if (typeof existing === 'function') {
+                    this._events[type] = prepend ? [listener, existing] : [existing, listener];
+                } else if (prepend) {
+                    existing.unshift(listener);
+                } else {
+                    existing.push(listener);
+                }
+
+                const max = this.getMaxListeners();
+                if (max > 0) {
+                    const len = Array.isArray(this._events[type]) ? this._events[type].length : 1;
+                    if (len > max) {
+                        const targetName = this.constructor ? this.constructor.name : 'EventEmitter';
+                        const msg = `MaxListenersExceededWarning: Possible EventEmitter memory leak detected. ${len} ${type} listeners added to [${targetName}]. Use emitter.setMaxListeners() to increase limit`;
+                        if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+                            console.warn(msg);
+                        }
+                    }
+                }
+
+                return this;
+            };
+
+            EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+            EventEmitter.prototype.prependListener = function(type, listener) {
+                return this.addListener(type, listener, true);
+            };
+
+            function onceWrapper(...args) {
+                if (!this.fired) {
+                    this.target.removeListener(this.type, this.wrapFn);
+                    this.fired = true;
+                    return Reflect.apply(this.listener, this.target, args);
+                }
+            }
+
+            EventEmitter.prototype.once = function(type, listener) {
+                if (typeof listener !== 'function') {
+                    throw new TypeError('The "listener" argument must be of type Function');
+                }
+                const state = { fired: false, wrapFn: undefined, target: this, type, listener };
+                const wrapped = onceWrapper.bind(state);
+                wrapped.listener = listener;
+                state.wrapFn = wrapped;
+                return this.addListener(type, wrapped, false);
+            };
+
+            EventEmitter.prototype.prependOnceListener = function(type, listener) {
+                if (typeof listener !== 'function') {
+                    throw new TypeError('The "listener" argument must be of type Function');
+                }
+                const state = { fired: false, wrapFn: undefined, target: this, type, listener };
+                const wrapped = onceWrapper.bind(state);
+                wrapped.listener = listener;
+                state.wrapFn = wrapped;
+                return this.addListener(type, wrapped, true);
+            };
+
+            EventEmitter.prototype.removeListener = function(type, listener) {
+                if (typeof listener !== 'function') {
+                    throw new TypeError('The "listener" argument must be of type Function');
+                }
+                if (!this._events) return this;
+                const list = this._events[type];
+                if (!list) return this;
+                if (list === listener || list.listener === listener) {
+                    if (--this._eventsCount === 0) {
+                        this._events = Object.create(null);
+                    } else {
+                        delete this._events[type];
+                        if (this._events.removeListener) {
+                            this.emit('removeListener', type, list.listener || list);
+                        }
+                    }
+                } else if (Array.isArray(list)) {
+                    let position = -1;
+                    for (let i = list.length - 1; i >= 0; i--) {
+                        if (list[i] === listener || list[i].listener === listener) {
+                            position = i;
+                            break;
+                        }
+                    }
+                    if (position < 0) return this;
+                    if (position === 0) list.shift();
+                    else list.splice(position, 1);
+                    if (list.length === 1) this._events[type] = list[0];
+                    if (this._events.removeListener) {
+                        this.emit('removeListener', type, listener);
+                    }
+                }
+                return this;
+            };
+
+            EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+
+            EventEmitter.prototype.removeAllListeners = function(type) {
+                if (!this._events) return this;
+                if (!type) {
+                    this._events = Object.create(null);
+                    this._eventsCount = 0;
+                    return this;
+                }
+                if (this._events[type]) {
+                    delete this._events[type];
+                    this._eventsCount = Reflect.ownKeys(this._events).length;
+                }
+                return this;
+            };
+
+            EventEmitter.prototype.listeners = function(type) {
+                if (!this._events) return [];
+                const ev = this._events[type];
+                if (!ev) return [];
+                if (typeof ev === 'function') return [ev.listener || ev];
+                return ev.map(fn => fn.listener || fn);
+            };
+
+            EventEmitter.prototype.rawListeners = function(type) {
+                if (!this._events) return [];
+                const ev = this._events[type];
+                if (!ev) return [];
+                if (typeof ev === 'function') return [ev];
+                return ev.slice();
+            };
+
+            EventEmitter.prototype.listenerCount = function(type) {
+                if (!this._events) return 0;
+                const ev = this._events[type];
+                if (!ev) return 0;
+                if (typeof ev === 'function') return 1;
+                return ev.length;
+            };
+
+            EventEmitter.prototype.eventNames = function() {
+                return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+            };
+
+            EventEmitter.listenerCount = function(emitter, type) {
+                return typeof emitter.listenerCount === 'function' ? emitter.listenerCount(type) : 0;
+            };
+
+            EventEmitter.EventEmitter = EventEmitter;
+            globalThis.EventEmitter = EventEmitter;
+            globalThis.events = EventEmitter;
+        })();
+        "#;
+        if let Some(code) = v8::String::new(scope, events_bootstrap) {
+            if let Some(script) = v8::Script::compile(scope, code, None) {
+                let _ = script.run(scope);
+            }
+        }
 
         Ok(())
     }

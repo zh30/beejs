@@ -43,6 +43,11 @@ perf: build
 	@echo "Running performance test..."
 	./target/release/bee run examples/performance/performance_test.js
 
+# Idle memory & HTTP throughput benchmark
+bench-idle: build
+	@echo "Running idle memory & throughput benchmark..."
+	python3 benchmarks/idle_memory/runner.py --framework http --duration 5
+
 # Hello world example
 hello: build
 	@echo "Running hello world example..."
@@ -70,8 +75,9 @@ help:
 	@echo "  install - Install to system"
 	@echo "  dev     - Development build"
 	@echo "  release - Release build"
-	@echo "  perf    - Run performance test"
-	@echo "  hello   - Run hello world example"
+	@echo "  perf        - Run performance test"
+	@echo "  bench-idle  - Run idle memory & HTTP throughput benchmark"
+	@echo "  hello       - Run hello world example"
 	@echo "  fmt     - Check code formatting"
 	@echo "  lint    - Lint code"
 	@echo "  help    - Show this help"

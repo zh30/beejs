@@ -33,6 +33,7 @@ const BUILTIN_MODULES: &[&str] = &[
     "tcp_async",
     "timers",
     "tls",
+    "tty",
     "url",
     "util",
     "vm",
@@ -587,12 +588,15 @@ fn resolve_as_file(candidate: &Path) -> Option<PathBuf> {
         return canonical_file(candidate);
     }
 
-    if candidate.extension().is_none() {
-        for extension in JS_EXTENSIONS {
-            let with_extension = candidate.with_extension(extension);
-            if with_extension.is_file() {
-                return canonical_file(&with_extension);
-            }
+    let candidate_str = candidate.to_string_lossy();
+    for extension in JS_EXTENSIONS {
+        let appended = PathBuf::from(format!("{candidate_str}.{extension}"));
+        if appended.is_file() {
+            return canonical_file(&appended);
+        }
+        let with_extension = candidate.with_extension(extension);
+        if with_extension.is_file() {
+            return canonical_file(&with_extension);
         }
     }
 

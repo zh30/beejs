@@ -25,6 +25,7 @@ pub mod stream;
 pub mod tcp_async; // v0.3.71: Async TCP connection module
 pub mod timers; // v0.3.244: Timer API (setTimeout, setInterval, setImmediate)
 pub mod tls;
+pub mod tty;
 pub mod url;
 pub mod util; // v0.3.277: Readline API (createInterface, Interface.question, etc.)
 pub mod vm;
@@ -63,6 +64,7 @@ pub fn setup_nodejs_core_apis(
     assert::setup_assert_api(scope, context)?;
     zlib::setup_zlib_api(scope, context)?;
     vm::setup_vm_api(scope, context)?;
+    tty::setup_tty_api(scope, context)?;
     worker_threads::setup_worker_threads_api(scope, context)?;
     // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
