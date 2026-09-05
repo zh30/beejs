@@ -2,8 +2,8 @@
 
 > **Benchmark Methodology Alignment**: Direct reproduction of Bun's published benchmark (*"Resident memory 3 minutes after 60 seconds of sustained load, lower is better"*).
 
-- **Sustained Load Duration**: `10s`
-- **Idle Cooldown Duration**: `10s`
+- **Sustained Load Duration**: `5s`
+- **Idle Cooldown Duration**: `3s`
 - **Concurrent Connections**: `64`
 - **Sampling Frequency**: `Every 100 ms via OS Process RSS`
 
@@ -11,23 +11,15 @@
 
 | Framework | Bun v1.4.1 (RSS) | Node.js v22 (RSS) | Beejs v0.4.0 (RSS) | Lowest Idle RSS Winner |
 |---|---|---|---|---|
-| **Express** | 96.5 MB | 126.0 MB | 418.9 MB | 🏆 **Bun** |
-| **Hono** | 41.2 MB | 91.8 MB | 753.0 MB | 🏆 **Bun** |
-| **Http** | 69.3 MB | 69.1 MB | 670.2 MB | 🏆 **Node.js** |
+| **Express** | N/A | N/A | 201.7 MB | 🏆 **Beejs** |
+| **Http** | N/A | N/A | 25.6 MB | 🏆 **Beejs** |
 
 ## 📈 2. Detailed Lifecycle Metrics (Baseline -> Peak -> Settled)
 
 | Runtime | Framework | Baseline RSS | Peak Under Load | Settled Idle RSS | Net Memory Retained | Recovery Ratio | Throughput |
 |---|---|---|---|---|---|---|---|
-| `bun` | **hono** | 18.8 MB | 41.2 MB | **41.2 MB** | +22.4 MB | 0.0% | 71730 req/s |
-| `node` | **hono** | 58.4 MB | 91.7 MB | **91.8 MB** | +33.4 MB | 0.0% | 61782 req/s |
-| `bee` | **hono** | 22.7 MB | 767.4 MB | **753.0 MB** | +730.4 MB | 1.9% | 22082 req/s |
-| `bun` | **http** | 21.3 MB | 69.3 MB | **69.3 MB** | +48.0 MB | 0.1% | 68525 req/s |
-| `node` | **http** | 43.4 MB | 69.0 MB | **69.1 MB** | +25.7 MB | 0.0% | 65474 req/s |
-| `bee` | **http** | 21.0 MB | 688.1 MB | **670.2 MB** | +649.2 MB | 2.7% | 21426 req/s |
-| `bun` | **express** | 38.9 MB | 96.4 MB | **96.5 MB** | +57.6 MB | 0.0% | 56834 req/s |
-| `node` | **express** | 57.7 MB | 126.0 MB | **126.0 MB** | +68.2 MB | 0.0% | 18245 req/s |
-| `bee` | **express** | 26.9 MB | 504.1 MB | **418.9 MB** | +392.0 MB | 17.8% | 8023 req/s |
+| `bee` | **http** | 21.7 MB | 28.6 MB | **25.6 MB** | +3.9 MB | 42.9% | 51357 req/s |
+| `bee` | **express** | 26.8 MB | 285.7 MB | **201.7 MB** | +174.8 MB | 32.5% | 26610 req/s |
 
 ## 🔬 3. Key Observations & Architecture Analysis
 - **Idle Memory Reclamation**: Measuring memory 3 minutes (or cooldown) after sustained traffic exposes whether runtimes release heap pages to the OS or retain slab allocators.

@@ -746,16 +746,98 @@ pub fn setup_http_api(
 
         function IncomingMessage() {
             if (typeof EE === 'function') EE.call(this);
+            this._events = Object.create(null);
+            this._eventsCount = 0;
+            this._dataListeners = [];
+            this._endListeners = [];
         }
         IncomingMessage.prototype = Object.create(proto);
         IncomingMessage.prototype.constructor = IncomingMessage;
+        IncomingMessage.prototype.on = function(event, listener) {
+            if (typeof listener === 'function') {
+                if (event === 'data') {
+                    this._dataListeners = this._dataListeners || [];
+                    this._dataListeners.push(listener);
+                } else if (event === 'end') {
+                    this._endListeners = this._endListeners || [];
+                    this._endListeners.push(listener);
+                }
+            }
+            return (typeof EE === 'function' && EE.prototype.on ? EE.prototype.on : function(){}).apply(this, arguments);
+        };
+        IncomingMessage.prototype.addListener = IncomingMessage.prototype.on;
         http.IncomingMessage = IncomingMessage;
 
         function ServerResponse() {
             if (typeof EE === 'function') EE.call(this);
+            this._events = Object.create(null);
+            this._eventsCount = 0;
+            this.headers = Object.create(null);
+            this.statusCode = 200;
+            this.statusMessage = 'OK';
+            this._body = '';
+            this._ended = false;
+            this._responseSent = false;
+            this._asyncPending = false;
+            this.headersSent = false;
+            this._connectionId = 0;
         }
         ServerResponse.prototype = Object.create(proto);
         ServerResponse.prototype.constructor = ServerResponse;
+        ServerResponse.prototype.setHeader = function(name, value) {
+            if (!this.headers) this.headers = Object.create(null);
+            this.headers[name] = value;
+            return this;
+        };
+        ServerResponse.prototype.getHeader = function(name) {
+            if (!this.headers) return undefined;
+            if (this.headers[name] !== undefined) return this.headers[name];
+            const lower = String(name).toLowerCase();
+            for (const k in this.headers) {
+                if (k.toLowerCase() === lower) return this.headers[k];
+            }
+            return undefined;
+        };
+        ServerResponse.prototype.hasHeader = function(name) {
+            if (!this.headers) return false;
+            if (this.headers[name] !== undefined) return true;
+            const lower = String(name).toLowerCase();
+            for (const k in this.headers) {
+                if (k.toLowerCase() === lower) return true;
+            }
+            return false;
+        };
+        ServerResponse.prototype.removeHeader = function(name) {
+            if (this.headers) {
+                delete this.headers[name];
+                const lower = String(name).toLowerCase();
+                for (const k in this.headers) {
+                    if (k.toLowerCase() === lower) delete this.headers[k];
+                }
+            }
+            return this;
+        };
+        ServerResponse.prototype.writeHead = function(statusCode, statusMessage, headers) {
+            this.statusCode = statusCode;
+            let hdrs = headers;
+            if (typeof statusMessage === 'object' && statusMessage !== null && !headers) {
+                hdrs = statusMessage;
+            } else if (typeof statusMessage === 'string') {
+                this.statusMessage = statusMessage;
+            }
+            if (hdrs && typeof hdrs === 'object') {
+                for (const k of Object.keys(hdrs)) {
+                    this.setHeader(k, hdrs[k]);
+                }
+            }
+            return this;
+        };
+        ServerResponse.prototype.write = function(chunk) {
+            if (chunk !== undefined && chunk !== null) {
+                this._body = (this._body || '') + String(chunk);
+            }
+            return true;
+        };
         http.ServerResponse = ServerResponse;
 
         function Server(options, requestListener) {
@@ -810,6 +892,23 @@ pub fn setup_http_api(
     if let Some(code) = v8::String::new(scope, http_bootstrap_script) {
         if let Some(script) = v8::Script::compile(scope, code, None) {
             let _ = script.run(scope);
+        }
+    }
+
+    // Attach native end callback to http.ServerResponse.prototype
+    let sr_key = v8::String::new(scope, "ServerResponse").unwrap();
+    if let Some(sr_val) = http_obj.get(scope, sr_key.into()) {
+        if let Ok(sr_fn) = v8::Local::<v8::Function>::try_from(sr_val) {
+            let proto_key = v8::String::new(scope, "prototype").unwrap();
+            if let Some(proto_val) = sr_fn.get(scope, proto_key.into()) {
+                if let Ok(proto_obj) = v8::Local::<v8::Object>::try_from(proto_val) {
+                    let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
+                    if let Some(end_instance) = end_fn.get_function(scope) {
+                        let end_key = v8::String::new(scope, "end").unwrap();
+                        proto_obj.set(scope, end_key.into(), end_instance.into());
+                    }
+                }
+            }
         }
     }
 
@@ -2332,39 +2431,31 @@ impl HttpServerState {
 pub fn parse_http_request(data: &[u8]) -> Option<HttpServerRequest> {
     let request_str = std::str::from_utf8(data).ok()?;
 
-    // 分割 headers 和 body
-    let parts: Vec<&str> = request_str.split("\r\n\r\n").collect();
-    let header_section = parts.get(0)?;
-    let body = parts.get(1).unwrap_or(&"");
+    // 分割 headers 和 body (零拷贝切片)
+    let (header_section, body) = match request_str.split_once("\r\n\r\n") {
+        Some((h, b)) => (h, b),
+        None => (request_str, ""),
+    };
 
-    let lines: Vec<&str> = header_section.split("\r\n").collect();
-    if lines.is_empty() {
-        return None;
-    }
-
-    // 解析请求行: "METHOD PATH HTTP/VERSION"
-    let request_line = lines.get(0)?;
-    let request_parts: Vec<&str> = request_line.split(' ').collect();
-    if request_parts.len() < 3 {
-        return None;
-    }
-
-    let method = request_parts.get(0)?.to_string();
-    let url = request_parts.get(1)?.to_string();
-    let http_version = request_parts.get(2)?.to_string();
+    let mut lines = header_section.split("\r\n");
+    let request_line = lines.next()?;
+    let mut request_parts = request_line.splitn(3, ' ');
+    let method = request_parts.next()?.to_string();
+    let url = request_parts.next()?.to_string();
+    let http_version = request_parts.next()?.to_string();
 
     // 提取 path（去掉 query string）
     let path: String = url.split('?').next().unwrap_or(&url).to_string();
 
-    // 解析 headers
+    // 解析 headers（直接使用 lowercase 键，避免后续遍历反复小写化）
     let mut headers = HashMap::new();
-    for line in lines.iter().skip(1) {
+    for line in lines {
         if line.is_empty() {
             continue;
         }
-        if let Some(pos) = line.find(':') {
-            let key = line[..pos].trim().to_string();
-            let value = line[pos + 1..].trim().to_string();
+        if let Some((k, v)) = line.split_once(':') {
+            let key = k.trim().to_ascii_lowercase();
+            let value = v.trim().to_string();
             headers.insert(key, value);
         }
     }
@@ -2416,24 +2507,34 @@ fn http_reason_phrase(status_code: u16) -> &'static str {
 }
 
 /// 生成 HTTP 响应（从 HttpResponseMessage）
-/// v0.3.89: 添加跨线程消息传递支持
-/// v0.3.95: 移除重复的 Content-Length 添加（ headers 中已包含）
-pub fn generate_http_response_v2(response: &HttpResponseMessage) -> Vec<u8> {
-    let mut result = Vec::new();
+/// 优化为单次内存预分配并直接写入 bytes，支持在头部生成阶段注入 Connection 属性避免后续切片拷贝
+pub fn generate_http_response_v2(
+    response: &HttpResponseMessage,
+    default_connection: Option<&str>,
+) -> Vec<u8> {
+    use std::io::Write;
+    let mut result = Vec::with_capacity(128 + response.headers.len() * 32 + response.body.len());
 
     // Status line
-    result.extend_from_slice(
-        format!(
-            "HTTP/1.1 {} {}\r\n",
-            response.status_code,
-            http_reason_phrase(response.status_code)
-        )
-        .as_bytes(),
+    let _ = write!(
+        result,
+        "HTTP/1.1 {} {}\r\n",
+        response.status_code,
+        http_reason_phrase(response.status_code)
     );
 
-    // Headers - Content-Length 已在 send_http_response 中从 JS 对象提取
+    let mut has_connection = false;
     for (name, value) in &response.headers {
-        result.extend_from_slice(format!("{}: {}\r\n", name, value).as_bytes());
+        if name.eq_ignore_ascii_case("connection") {
+            has_connection = true;
+        }
+        let _ = write!(result, "{}: {}\r\n", name, value);
+    }
+
+    if !has_connection {
+        if let Some(conn) = default_connection {
+            let _ = write!(result, "Connection: {}\r\n", conn);
+        }
     }
 
     // End of headers
@@ -2704,9 +2805,11 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
     };
     const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(30);
 
+    let mut buffer = [0u8; 8192];
+    let mut request_data = Vec::with_capacity(2048);
+
     loop {
-        let mut buffer = [0u8; 8192];
-        let mut request_data = Vec::new();
+        request_data.clear();
         let mut connection_close = false;
         let mut _is_keep_alive = false;
 
@@ -2774,12 +2877,12 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
 
         let connection_id = allocate_http_connection_id();
         let request_msg = HttpRequestMessage {
-            method: parsed_request.method.clone(),
-            url: parsed_request.url.clone(),
-            path: parsed_request.path.clone(),
-            http_version: parsed_request.http_version.clone(),
-            headers: parsed_request.headers.clone(),
-            body: parsed_request.body.clone(),
+            method: parsed_request.method,
+            url: parsed_request.url,
+            path: parsed_request.path,
+            http_version: parsed_request.http_version,
+            headers: parsed_request.headers,
+            body: parsed_request.body,
             connection_id,
         };
 
@@ -2828,19 +2931,7 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
                     "close"
                 };
 
-                let mut response_data = generate_http_response_v2(&response);
-
-                if !response.headers.contains_key("Connection") {
-                    if let Some(separator_pos) =
-                        response_data.windows(4).rposition(|w| w == b"\r\n\r\n")
-                    {
-                        let insert_pos = separator_pos + 2;
-                        let connection_header_bytes =
-                            format!("Connection: {}\r\n", connection_header).into_bytes();
-                        response_data.splice(insert_pos..insert_pos, connection_header_bytes);
-                    }
-                }
-
+                let response_data = generate_http_response_v2(&response, Some(connection_header));
                 let _ = stream.write_all(&response_data);
 
                 if !_is_keep_alive {
@@ -2910,7 +3001,7 @@ fn http_res_remove_header_callback(
 pub fn process_http_request_in_v8(
     request: &HttpRequestMessage,
     scope: &mut v8::HandleScope,
-    _context: &v8::Local<v8::Context>,
+    context: &v8::Local<v8::Context>,
     request_handler: Option<v8::Global<v8::Function>>,
 ) -> HttpDispatchResult {
     let Some(handler) = request_handler else {
@@ -2918,8 +3009,40 @@ pub fn process_http_request_in_v8(
     };
     let handler_fn = v8::Local::new(scope, &handler);
 
+    // 获取全局 http 模块原型
+    let global = context.global(scope);
+    let http_key = v8::String::new(scope, "http").unwrap();
+    let http_obj_val = global.get(scope, http_key.into());
+
+    let (im_proto, sr_proto) = if let Some(http_val) = http_obj_val {
+        if let Ok(http_obj) = v8::Local::<v8::Object>::try_from(http_val) {
+            let im_key = v8::String::new(scope, "IncomingMessage").unwrap();
+            let sr_key = v8::String::new(scope, "ServerResponse").unwrap();
+            let proto_key = v8::String::new(scope, "prototype").unwrap();
+
+            let im_p = http_obj.get(scope, im_key.into()).and_then(|c| {
+                v8::Local::<v8::Function>::try_from(c)
+                    .ok()?
+                    .get(scope, proto_key.into())
+            });
+            let sr_p = http_obj.get(scope, sr_key.into()).and_then(|c| {
+                v8::Local::<v8::Function>::try_from(c)
+                    .ok()?
+                    .get(scope, proto_key.into())
+            });
+            (im_p, sr_proto_from_p(sr_p))
+        } else {
+            (None, None)
+        }
+    } else {
+        (None, None)
+    };
+
     // 创建请求对象 (IncomingMessage)
     let req_obj = v8::Object::new(scope);
+    if let Some(p) = im_proto {
+        req_obj.set_prototype(scope, p);
+    }
 
     // 设置请求属性
     let method_key = v8::String::new(scope, "method").unwrap();
@@ -2938,13 +3061,10 @@ pub fn process_http_request_in_v8(
     let http_version_val = v8::String::new(scope, &request.http_version).unwrap();
     req_obj.set(scope, http_version_key.into(), http_version_val.into());
 
-    // 设置 headers 对象（使用 lowercase 键名以匹配 Node.js 惯例）
-    // v0.3.95: 修复 header 键名大小写问题
+    // 设置 headers 对象
     let headers_obj = v8::Object::new(scope);
     for (name, value) in &request.headers {
-        // 使用 lowercase 键名，HTTP header 查找是大小写敏感的
-        let name_lower = name.to_lowercase();
-        let name_key = v8::String::new(scope, &name_lower).unwrap();
+        let name_key = v8::String::new(scope, name).unwrap();
         let value_val = v8::String::new(scope, value).unwrap();
         headers_obj.set(scope, name_key.into(), value_val.into());
     }
@@ -2963,30 +3083,25 @@ pub fn process_http_request_in_v8(
     let req_end_listeners_key = v8::String::new(scope, "_endListeners").unwrap();
     req_obj.set(scope, data_key.into(), data_listeners.into());
     req_obj.set(scope, req_end_listeners_key.into(), end_listeners.into());
-    let req_on_fn = v8::FunctionTemplate::new(scope, http_req_on_callback);
-    let req_on_instance = req_on_fn.get_function(scope).unwrap();
-    let req_on_key = v8::String::new(scope, "on").unwrap();
-    req_obj.set(scope, req_on_key.into(), req_on_instance.into());
 
     // 创建响应对象 (ServerResponse)
     let res_obj = v8::Object::new(scope);
+    if let Some(p) = sr_proto {
+        res_obj.set_prototype(scope, p);
+    }
 
-    // 初始化 headers 对象
     let res_headers_obj = v8::Object::new(scope);
     let res_headers_key = v8::String::new(scope, "headers").unwrap();
     res_obj.set(scope, res_headers_key.into(), res_headers_obj.into());
 
-    // 初始化 statusCode
     let status_code_key = v8::String::new(scope, "statusCode").unwrap();
     let status_code_val = v8::Integer::new(scope, 200);
     res_obj.set(scope, status_code_key.into(), status_code_val.into());
 
-    // 初始化 statusMessage
     let status_msg_key = v8::String::new(scope, "statusMessage").unwrap();
     let status_msg_val = v8::String::new(scope, "OK").unwrap();
     res_obj.set(scope, status_msg_key.into(), status_msg_val.into());
 
-    // 初始化 _body 用于存储响应体
     let body_key = v8::String::new(scope, "_body").unwrap();
     let empty_body = v8::String::new(scope, "").unwrap();
     res_obj.set(scope, body_key.into(), empty_body.into());
@@ -3003,52 +3118,6 @@ pub fn process_http_request_in_v8(
     let conn_key = v8::String::new(scope, "_connectionId").unwrap();
     let conn_val = v8::Number::new(scope, request.connection_id as f64);
     res_obj.set(scope, conn_key.into(), conn_val.into());
-
-    // 设置 end 方法
-    let end_fn = v8::FunctionTemplate::new(scope, http_res_end_callback);
-    let end_instance = end_fn.get_function(scope).unwrap();
-    let end_key = v8::String::new(scope, "end").unwrap();
-    res_obj.set(scope, end_key.into(), end_instance.into());
-
-    // 设置 writeHead 方法
-    let write_head_fn = v8::FunctionTemplate::new(scope, http_res_write_head_callback);
-    let write_head_instance = write_head_fn.get_function(scope).unwrap();
-    let write_head_key = v8::String::new(scope, "writeHead").unwrap();
-    res_obj.set(scope, write_head_key.into(), write_head_instance.into());
-
-    // 设置 setHeader 方法
-    let set_header_fn = v8::FunctionTemplate::new(scope, http_res_set_header_callback);
-    let set_header_instance = set_header_fn.get_function(scope).unwrap();
-    let set_header_key = v8::String::new(scope, "setHeader").unwrap();
-    res_obj.set(scope, set_header_key.into(), set_header_instance.into());
-
-    // 设置 getHeader 方法
-    let get_header_fn = v8::FunctionTemplate::new(scope, http_res_get_header_callback);
-    let get_header_instance = get_header_fn.get_function(scope).unwrap();
-    let get_header_key = v8::String::new(scope, "getHeader").unwrap();
-    res_obj.set(scope, get_header_key.into(), get_header_instance.into());
-
-    // 设置 removeHeader 方法
-    let remove_header_fn = v8::FunctionTemplate::new(scope, http_res_remove_header_callback);
-    let remove_header_instance = remove_header_fn.get_function(scope).unwrap();
-    let remove_header_key = v8::String::new(scope, "removeHeader").unwrap();
-    res_obj.set(
-        scope,
-        remove_header_key.into(),
-        remove_header_instance.into(),
-    );
-
-    // 设置 hasHeader 方法
-    let has_header_fn = v8::FunctionTemplate::new(scope, http_res_has_header_callback);
-    let has_header_instance = has_header_fn.get_function(scope).unwrap();
-    let has_header_key = v8::String::new(scope, "hasHeader").unwrap();
-    res_obj.set(scope, has_header_key.into(), has_header_instance.into());
-
-    // 设置 write 方法
-    let write_fn = v8::FunctionTemplate::new(scope, http_res_write_callback);
-    let write_instance = write_fn.get_function(scope).unwrap();
-    let write_key = v8::String::new(scope, "write").unwrap();
-    res_obj.set(scope, write_key.into(), write_instance.into());
 
     // 调用 request handler: handler(req, res)
     let this_val = v8::undefined(scope).into();
@@ -3075,87 +3144,29 @@ pub fn process_http_request_in_v8(
 
     emit_incoming_request_body_events(scope, req_obj, &body_text);
 
-    let ended_key = v8::String::new(scope, "_ended").unwrap();
     let ended = res_obj
         .get(scope, ended_key.into())
         .map(|value| value.boolean_value(scope))
         .unwrap_or(false);
     if !ended {
-        let async_key = v8::String::new(scope, "_asyncPending").unwrap();
         let true_val = v8::Boolean::new(scope, true);
         res_obj.set(scope, async_key.into(), true_val.into());
         PENDING_ASYNC_HTTP_RESPONSES.fetch_add(1, Ordering::SeqCst);
         return HttpDispatchResult::Pending;
     }
 
-    // 从响应对象提取数据
-    let status_code_key = v8::String::new(scope, "statusCode").unwrap();
-    let status_code_val = res_obj
-        .get(scope, status_code_key.into())
-        .unwrap_or(v8::Integer::new(scope, 200).into());
-    let status_code = status_code_val
-        .to_int32(scope)
-        .map(|i| i.value() as u16)
-        .unwrap_or(200);
-
-    // 提取 body
-    let body_key = v8::String::new(scope, "_body").unwrap();
-    let body_val = res_obj
-        .get(scope, body_key.into())
-        .unwrap_or(v8::String::new(scope, "").unwrap().into());
-    let body_str = body_val
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
-    let body_bytes = body_str.into_bytes();
-
-    // 提取 headers - 使用 GetPropertyNames 获取所有属性
-    // v0.3.95: 修复 header 枚举问题，使用更可靠的方法
-    let mut response_headers = HashMap::new();
-    let res_headers_key = v8::String::new(scope, "headers").unwrap();
-    if let Some(headers_val) = res_obj.get(scope, res_headers_key.into()) {
-        if let Ok(headers_obj) = v8::Local::<v8::Object>::try_from(headers_val) {
-            // 使用 GetPropertyNames 获取所有属性
-            let props = headers_obj
-                .get_property_names(scope)
-                .unwrap_or(v8::Array::new(scope, 0));
-            for i in 0..props.length() {
-                if let Some(key_val) = props.get_index(scope, i) {
-                    if let Some(key_str) = key_val.to_string(scope) {
-                        let key = key_str.to_rust_string_lossy(scope);
-                        if let Some(value_val) = headers_obj.get(scope, key_val) {
-                            if let Some(value_str) = value_val.to_string(scope) {
-                                let value = value_str.to_rust_string_lossy(scope);
-                                response_headers.insert(key, value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // 设置默认 headers（如果还没有设置的话）
-    if !response_headers.contains_key("Content-Type") {
-        response_headers.insert(
-            "Content-Type".to_string(),
-            "text/plain; charset=utf-8".to_string(),
-        );
-    }
-
-    eprintln!(
-        "[Debug] Response headers before HttpResponseMessage: {:?}",
-        response_headers
-    );
-
-    HttpDispatchResult::Response(HttpResponseMessage {
-        connection_id: request.connection_id,
-        status_code,
-        headers: response_headers,
-        body: body_bytes,
-    })
+    HttpDispatchResult::Response(extract_http_response_from_res(
+        scope,
+        res_obj,
+        request.connection_id,
+    ))
 }
 
+fn sr_proto_from_p<'a>(p: Option<v8::Local<'a, v8::Value>>) -> Option<v8::Local<'a, v8::Value>> {
+    p
+}
+
+#[allow(dead_code)]
 fn http_req_on_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,

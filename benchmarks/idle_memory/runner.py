@@ -27,7 +27,9 @@ import subprocess
 import sys
 import threading
 import time
+import http.client
 import urllib.request
+import urllib.parse
 from pathlib import Path
 
 
@@ -72,16 +74,25 @@ class MemorySampler(threading.Thread):
         self.running = False
 
 
+for k in ["http_proxy", "https_proxy", "all_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
+    if k in os.environ:
+        del os.environ[k]
+os.environ["NO_PROXY"] = "*"
+os.environ["no_proxy"] = "*"
+
+
 def wait_for_server(url: str, timeout_sec: float = 10.0) -> bool:
+    parsed = urllib.parse.urlparse(url)
     start = time.time()
-    proxy_handler = urllib.request.ProxyHandler({})
-    opener = urllib.request.build_opener(proxy_handler)
     while time.time() - start < timeout_sec:
         try:
-            req = urllib.request.Request(url)
-            with opener.open(req, timeout=1.0) as resp:
-                if resp.status == 200:
-                    return True
+            conn = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=1.0)
+            conn.request("GET", parsed.path or "/")
+            resp = conn.getresponse()
+            if resp.status in (200, 404):
+                conn.close()
+                return True
+            conn.close()
         except Exception:
             pass
         time.sleep(0.1)
@@ -98,9 +109,10 @@ def run_autocannon(url: str, connections: int, duration_sec: int, autocannon_bin
         url,
     ]
     env = os.environ.copy()
-    env["http_proxy"] = ""
-    env["https_proxy"] = ""
-    env["all_proxy"] = ""
+    for k in ["http_proxy", "https_proxy", "all_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"]:
+        env.pop(k, None)
+    env["NO_PROXY"] = "*"
+    env["no_proxy"] = "*"
 
     try:
         res = subprocess.run(
