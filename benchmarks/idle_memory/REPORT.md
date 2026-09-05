@@ -2,22 +2,29 @@
 
 > **Benchmark Methodology Alignment**: Direct reproduction of Bun's published benchmark (*"Resident memory 3 minutes after 60 seconds of sustained load, lower is better"*).
 
-- **Sustained Load Duration**: `5s`
-- **Idle Cooldown Duration**: `3s`
-- **Concurrent Connections**: `128`
+- **Sustained Load Duration**: `10s`
+- **Idle Cooldown Duration**: `15s`
+- **Concurrent Connections**: `64`
 - **Sampling Frequency**: `Every 100 ms via OS Process RSS`
 
 ## 📊 1. Core Comparison: Settled Idle Memory (Lower is Better)
 
 | Framework | Bun v1.4.1 (RSS) | Node.js v22 (RSS) | Beejs v0.4.0 (RSS) | Lowest Idle RSS Winner |
 |---|---|---|---|---|
-| **Http** | N/A | N/A | 42.4 MB | 🏆 **Beejs** |
+| **Express** | N/A | 60.4 MB | 424.0 MB | 🏆 **Node.js** |
+| **Fastify** | N/A | 92.9 MB | 31.0 MB | 🏆 **Beejs** |
+| **Http** | N/A | 68.6 MB | 26.2 MB | 🏆 **Beejs** |
 
 ## 📈 2. Detailed Lifecycle Metrics (Baseline -> Peak -> Settled)
 
 | Runtime | Framework | Baseline RSS | Peak Under Load | Settled Idle RSS | Net Memory Retained | Recovery Ratio | Throughput |
 |---|---|---|---|---|---|---|---|
-| `bee` | **http** | 38.0 MB | 47.3 MB | **42.4 MB** | +4.4 MB | 52.9% | 56304 req/s |
+| `bee` | **http** | 21.5 MB | 30.1 MB | **26.2 MB** | +4.7 MB | 45.3% | 54207 req/s |
+| `node` | **http** | 43.7 MB | 68.5 MB | **68.6 MB** | +24.9 MB | 0.0% | 58832 req/s |
+| `bee` | **express** | 26.5 MB | 589.8 MB | **424.0 MB** | +397.5 MB | 29.4% | 28267 req/s |
+| `node` | **express** | 57.6 MB | 126.0 MB | **60.4 MB** | +2.7 MB | 96.0% | 17778 req/s |
+| `bee` | **fastify** | 26.2 MB | 40.9 MB | **31.0 MB** | +4.8 MB | 67.5% | 54146 req/s |
+| `node` | **fastify** | 62.0 MB | 92.8 MB | **92.9 MB** | +30.9 MB | 0.0% | 72061 req/s |
 
 ## 🔬 3. Key Observations & Architecture Analysis
 - **Idle Memory Reclamation**: Measuring memory 3 minutes (or cooldown) after sustained traffic exposes whether runtimes release heap pages to the OS or retain slab allocators.

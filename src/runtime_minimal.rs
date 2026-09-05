@@ -8133,10 +8133,13 @@ impl MinimalRuntime {
         crate::nodejs_core::assert::setup_assert_api(scope, context)?;
         crate::nodejs_core::zlib::setup_zlib_api(scope, context)?;
         crate::nodejs_core::https::setup_https_api(scope, context)?;
+        crate::nodejs_core::http2::setup_http2_api(scope, context)?;
         crate::nodejs_core::tls::setup_tls_api(scope, context)?;
         crate::nodejs_core::vm::setup_vm_api(scope, context)?;
         crate::nodejs_core::worker_threads::setup_worker_threads_api(scope, context)?;
         crate::nodejs_core::tty::setup_tty_api(scope, context)?;
+        crate::nodejs_core::diagnostics_channel::setup_diagnostics_channel_api(scope, context)?;
+        crate::nodejs_core::async_hooks::setup_async_hooks_api(scope, context)?;
         // Alias perf_hooks -> performance for Node module name compatibility.
         {
             let global = context.global(scope);
@@ -20258,10 +20261,11 @@ impl MinimalRuntime {
                     }
                     // v0.3.194: Fixed to return actual global objects instead of fallback messages
                     // v0.3.281: Added readline to the list of builtin modules
-                    "os" | "crypto" | "events" | "net" | "http" | "https" | "tls" | "util"
+                    "os" | "crypto" | "events" | "net" | "http" | "http2" | "https" | "tls" | "util"
                     | "url" | "querystring" | "dns" | "child_process" | "tcp_async" | "stream"
                     | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
-                    | "zlib" | "vm" | "worker_threads" | "module" | "tty" => {
+                    | "zlib" | "vm" | "worker_threads" | "module" | "tty"
+                    | "diagnostics_channel" | "async_hooks" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
@@ -24678,6 +24682,180 @@ require.resolve = function(specifier) {{
             if (globalThis.stream) {
                 Object.assign(Stream, globalThis.stream);
             }
+
+            function finished(stream, options, callback) {
+                if (typeof options === 'function') {
+                    callback = options;
+                    options = undefined;
+                }
+                if (!callback) {
+                    return new Promise((resolve, reject) => {
+                        finished(stream, options, (err) => {
+                            if (err) reject(err);
+                            else resolve();
+                        });
+                    });
+                }
+                let isDone = false;
+                function done(err) {
+                    if (isDone) return;
+                    isDone = true;
+                    cleanup();
+                    callback(err);
+                }
+                function onFinish() { done(); }
+                function onEnd() { done(); }
+                function onClose() { done(); }
+                function onError(err) { done(err); }
+                function cleanup() {
+                    if (stream && typeof stream.removeListener === 'function') {
+                        stream.removeListener('finish', onFinish);
+                        stream.removeListener('end', onEnd);
+                        stream.removeListener('close', onClose);
+                        stream.removeListener('error', onError);
+                    }
+                }
+                if (stream && typeof stream.on === 'function') {
+                    stream.on('finish', onFinish);
+                    stream.on('end', onEnd);
+                    stream.on('close', onClose);
+                    stream.on('error', onError);
+                }
+                return cleanup;
+            }
+
+            function addAbortSignal(signal, stream) {
+                if (!signal || !stream) return stream;
+                if (signal.aborted) {
+                    if (typeof stream.destroy === 'function') {
+                        stream.destroy(new Error('This operation was aborted'));
+                    }
+                    return stream;
+                }
+                function onAbort() {
+                    if (typeof stream.destroy === 'function') {
+                        stream.destroy(new Error('This operation was aborted'));
+                    }
+                }
+                if (typeof signal.addEventListener === 'function') {
+                    signal.addEventListener('abort', onAbort, { once: true });
+                }
+                return stream;
+            }
+
+            if (Stream.Readable) {
+                Stream.Readable.from = function(iterable, options) {
+                    let iter;
+                    if (iterable && typeof iterable[Symbol.asyncIterator] === 'function') {
+                        iter = iterable[Symbol.asyncIterator]();
+                    } else if (iterable && typeof iterable[Symbol.iterator] === 'function') {
+                        iter = iterable[Symbol.iterator]();
+                    }
+                    const r = new Stream.Readable({
+                        ...options,
+                        async read() {
+                            if (!iter) {
+                                this.push(null);
+                                return;
+                            }
+                            try {
+                                const res = await iter.next();
+                                if (res.done) {
+                                    this.push(null);
+                                } else {
+                                    this.push(res.value);
+                                }
+                            } catch (err) {
+                                if (typeof this.destroy === 'function') this.destroy(err);
+                                else this.push(null);
+                            }
+                        }
+                    });
+                    return r;
+                };
+
+                if (Stream.Readable.prototype && !Stream.Readable.prototype[Symbol.asyncIterator]) {
+                    Stream.Readable.prototype[Symbol.asyncIterator] = function() {
+                        const stream = this;
+                        const queue = [];
+                        let ended = false;
+                        let err = null;
+                        let notify = null;
+
+                        function onData(chunk) {
+                            queue.push(chunk);
+                            if (notify) {
+                                const n = notify;
+                                notify = null;
+                                n();
+                            }
+                        }
+                        function onEnd() {
+                            ended = true;
+                            if (notify) {
+                                const n = notify;
+                                notify = null;
+                                n();
+                            }
+                        }
+                        function onError(e) {
+                            err = e;
+                            ended = true;
+                            if (notify) {
+                                const n = notify;
+                                notify = null;
+                                n();
+                            }
+                        }
+
+                        if (stream._readableState) {
+                            stream._readableState.flowing = true;
+                        }
+                        if (typeof stream.on === 'function') {
+                            stream.on('data', onData);
+                            stream.on('end', onEnd);
+                            stream.on('error', onError);
+                        }
+                        if (typeof stream.read === 'function') {
+                            stream.read();
+                        }
+
+                        return {
+                            next() {
+                                return new Promise((resolve, reject) => {
+                                    function check() {
+                                        if (err) {
+                                            return reject(err);
+                                        }
+                                        if (queue.length > 0) {
+                                            return resolve({ value: queue.shift(), done: false });
+                                        }
+                                        if (ended) {
+                                            return resolve({ value: undefined, done: true });
+                                        }
+                                        notify = check;
+                                        if (typeof stream.read === 'function') {
+                                            stream.read();
+                                        }
+                                    }
+                                    check();
+                                });
+                            },
+                            return() {
+                                if (typeof stream.destroy === 'function') stream.destroy();
+                                return Promise.resolve({ value: undefined, done: true });
+                            }
+                        };
+                    };
+                }
+            }
+
+            Stream.finished = finished;
+            Stream.addAbortSignal = addAbortSignal;
+            Stream.promises = {
+                finished,
+                pipeline: Stream.pipeline
+            };
             Stream.Stream = Stream;
             globalThis.stream = Stream;
         })();
@@ -25055,6 +25233,12 @@ require.resolve = function(specifier) {{
                 globalThis.util = {};
             }
             const util = globalThis.util;
+
+            util.debuglog = function(section, callback) {
+                function logger(...args) {}
+                logger.enabled = false;
+                return logger;
+            };
 
             util.deprecate = function(fn, msg, code) {
                 if (typeof fn !== 'function') {
@@ -26074,6 +26258,47 @@ require.resolve = function(specifier) {{
 
             EventEmitter.listenerCount = function(emitter, type) {
                 return typeof emitter.listenerCount === 'function' ? emitter.listenerCount(type) : 0;
+            };
+
+            EventEmitter.once = function(emitter, type, options) {
+                const signal = options && options.signal;
+                return new Promise((resolve, reject) => {
+                    if (signal && signal.aborted) {
+                        return reject(new Error('This operation was aborted'));
+                    }
+                    function onEvent(...args) {
+                        cleanup();
+                        resolve(args);
+                    }
+                    function onError(err) {
+                        cleanup();
+                        reject(err);
+                    }
+                    function onAbort() {
+                        cleanup();
+                        reject(new Error('This operation was aborted'));
+                    }
+                    function cleanup() {
+                        if (emitter && typeof emitter.removeListener === 'function') {
+                            emitter.removeListener(type, onEvent);
+                            if (type !== 'error') {
+                                emitter.removeListener('error', onError);
+                            }
+                        }
+                        if (signal && typeof signal.removeEventListener === 'function') {
+                            signal.removeEventListener('abort', onAbort);
+                        }
+                    }
+                    if (emitter && typeof emitter.once === 'function') {
+                        emitter.once(type, onEvent);
+                        if (type !== 'error') {
+                            emitter.once('error', onError);
+                        }
+                    }
+                    if (signal && typeof signal.addEventListener === 'function') {
+                        signal.addEventListener('abort', onAbort, { once: true });
+                    }
+                });
             };
 
             EventEmitter.EventEmitter = EventEmitter;

@@ -1,10 +1,11 @@
 # Beejs Node conformance scorecard
 
-Generated: 2026-09-04T15:44Z
+Generated: 2026-09-05T04:23Z
 
 | Fixture | Result | Notes |
 |---------|--------|-------|
 | assert_basics.js | PASS |
+| async_hooks.js | PASS |
 | buffer_basics.js | PASS |
 | child_process_exec_denied.js | PASS |
 | child_process_exec_sync.js | PASS |
@@ -12,15 +13,20 @@ Generated: 2026-09-04T15:44Z
 | crypto_hash.js | PASS |
 | crypto_hmac_uuid.js | PASS |
 | crypto_random.js | PASS |
+| diagnostics_channel.js | PASS |
 | dns_lookup.js | PASS |
 | env_denied.js | PASS |
 | events_basics.js | PASS |
+| events_once_promise.js | PASS |
+| fastify_smoke.js | PASS |
 | fetch_allowlist.js | PASS |
 | fs_basics.js | PASS |
 | fs_jail_allows_prefix.js | PASS |
 | fs_promises.js | PASS |
 | fs_read_denied.js | PASS |
+| http2_basics.js | PASS |
 | http_listen.js | PASS |
+| http_listen_options.js | PASS |
 | http_post_body.js | PASS |
 | net_listen_denied.js | PASS |
 | os_basics.js | PASS |
@@ -29,10 +35,14 @@ Generated: 2026-09-04T15:44Z
 | process_nexttick.js | PASS |
 | querystring_basics.js | PASS |
 | run_denied.js | PASS |
+| stream_async_iterator.js | PASS |
+| stream_finished.js | PASS |
 | stream_pipe.js | PASS |
+| stream_readable_from.js | PASS |
 | stream_transform.js | PASS |
 | timers_order.js | PASS |
 | timers_setimmediate.js | PASS |
+| tty_methods.js | PASS |
 | url_basics.js | PASS |
 | util_basics.js | PASS |
 | wasm_instantiate.js | PASS |
@@ -40,4 +50,4 @@ Generated: 2026-09-04T15:44Z
 | worker_threads_basics.js | PASS |
 | zlib_sync.js | PASS |
 
-**Pass rate: 35/35 (100%)**
+**Pass rate: 45/45 (100%)**

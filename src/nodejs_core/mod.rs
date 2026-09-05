@@ -1,9 +1,11 @@
 // Stage 43.0: 完整Node.js核心API兼容层
 pub mod assert;
+pub mod async_hooks;
 pub mod buffer;
 pub mod child_process;
 pub mod commonjs_resolver;
 pub mod crypto;
+pub mod diagnostics_channel;
 pub mod dns; // v0.3.67: DNS lookup and resolve API
 pub mod events;
 pub mod fast_path;
@@ -12,6 +14,7 @@ pub mod fast_path;
 /// 不要在此处或注释中宣称全面兼容。
 pub mod fs;
 pub mod http;
+pub mod http2;
 pub mod https;
 pub mod net;
 pub mod os;
@@ -47,6 +50,7 @@ pub fn setup_nodejs_core_apis(
     events::setup_events_api(scope, context)?;
     net::setup_net_api(scope, context)?;
     http::setup_http_api(scope, context)?;
+    http2::setup_http2_api(scope, context)?;
     https::setup_https_api(scope, context)?;
     tls::setup_tls_api(scope, context)?;
     dns::setup_dns_api(scope, context)?; // v0.3.67: DNS support
@@ -66,6 +70,8 @@ pub fn setup_nodejs_core_apis(
     vm::setup_vm_api(scope, context)?;
     tty::setup_tty_api(scope, context)?;
     worker_threads::setup_worker_threads_api(scope, context)?;
+    diagnostics_channel::setup_diagnostics_channel_api(scope, context)?;
+    async_hooks::setup_async_hooks_api(scope, context)?;
     // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
     Ok(())

@@ -359,7 +359,7 @@ def main():
     supported_matrix = {
         "bun": ["hono", "http", "express", "fastify"],
         "node": ["hono", "http", "express", "fastify"],
-        "bee": ["hono", "http", "express"],
+        "bee": ["hono", "http", "express", "fastify"],
     }
 
     selected_runtimes = [r.strip() for r in args.runtimes.split(",") if r.strip() in runtimes_config]

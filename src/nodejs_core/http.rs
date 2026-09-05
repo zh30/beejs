@@ -840,6 +840,15 @@ pub fn setup_http_api(
             }
             return this;
         };
+        ServerResponse.prototype.getHeaderNames = function() {
+            return this.headers ? Object.keys(this.headers) : [];
+        };
+        ServerResponse.prototype.getHeaders = function() {
+            return this.headers ? Object.assign(Object.create(null), this.headers) : Object.create(null);
+        };
+        ServerResponse.prototype.flushHeaders = function() {
+            this.headersSent = true;
+        };
         ServerResponse.prototype.write = function(chunk) {
             if (chunk !== undefined && chunk !== null) {
                 this._body = (this._body || '') + String(chunk);
@@ -847,6 +856,23 @@ pub fn setup_http_api(
             return true;
         };
         http.ServerResponse = ServerResponse;
+
+        function Socket() {
+            if (typeof EE === 'function') EE.call(this);
+            this.remoteAddress = '127.0.0.1';
+            this.remotePort = 12345;
+            this.encrypted = false;
+        }
+        Socket.prototype = Object.create(proto);
+        Socket.prototype.constructor = Socket;
+        Socket.prototype.destroy = function() { return this; };
+        Socket.prototype.ref = function() { return this; };
+        Socket.prototype.unref = function() { return this; };
+        Socket.prototype.setTimeout = function(msecs, callback) {
+            if (typeof callback === 'function') callback();
+            return this;
+        };
+        http.Socket = Socket;
 
         function Server(options, requestListener) {
             if (typeof EE === 'function') EE.call(this);
@@ -862,6 +888,21 @@ pub fn setup_http_api(
         }
         Server.prototype = Object.create(proto);
         Server.prototype.constructor = Server;
+        Server.prototype.setTimeout = function(msecs, callback) {
+            if (typeof callback === 'function') this.on('timeout', callback);
+            return this;
+        };
+        Server.prototype.ref = function() { return this; };
+        Server.prototype.unref = function() { return this; };
+        Server.prototype.closeAllConnections = function() { return this; };
+        Server.prototype.closeIdleConnections = function() { return this; };
+        Server.prototype.address = function() {
+            return {
+                port: this._serverPort || 0,
+                family: (this._serverHost && this._serverHost.includes(':') && !this._serverHost.includes('.')) ? 'IPv6' : 'IPv4',
+                address: this._serverHost || '0.0.0.0'
+            };
+        };
         Server.prototype.on = function(event, listener) {
             if (event === 'request' && typeof listener === 'function') {
                 this._requestHandler = listener;
@@ -1495,30 +1536,52 @@ fn http_server_listen_callback(
     // - listen(port)
     // - listen(port, callback)
     // - listen(port, host, callback)
-    let port = args
-        .get(0)
-        .to_integer(scope)
-        .map(|i| i.value() as u16)
-        .unwrap_or(3000);
-
-    // 检查第二个参数是 host 还是 callback
-    let arg1 = args.get(1);
-    let (host, callback) = if arg1.is_undefined() || arg1.is_null() {
-        // 没有第二个参数
-        ("0.0.0.0".to_string(), args.get(2))
-    } else if arg1.is_function() {
-        // 第二个参数是回调函数: listen(port, callback)
-        ("0.0.0.0".to_string(), arg1)
-    } else if arg1.is_string() {
-        // 第二个参数是 host
-        let host_str = arg1
-            .to_string(scope)
-            .map(|s| s.to_rust_string_lossy(scope))
-            .unwrap_or_else(|| "0.0.0.0".to_string());
-        (host_str, args.get(2))
-    } else {
-        // 默认值
-        ("0.0.0.0".to_string(), args.get(2))
+    // - listen(options, callback)
+    let (port, host, callback) = {
+        let arg0 = args.get(0);
+        if arg0.is_object() && !arg0.is_function() {
+            let opts = arg0.to_object(scope).unwrap();
+            let port_key = v8::String::new(scope, "port").unwrap();
+            let host_key = v8::String::new(scope, "host").unwrap();
+            let p = opts
+                .get(scope, port_key.into())
+                .and_then(|v| v.to_integer(scope))
+                .map(|i| i.value() as u16)
+                .unwrap_or(3000);
+            let h = opts
+                .get(scope, host_key.into())
+                .and_then(|v| v.to_string(scope))
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_else(|| "0.0.0.0".to_string());
+            let cb = if args.get(1).is_function() {
+                args.get(1)
+            } else {
+                let cb_key = v8::String::new(scope, "cb").unwrap();
+                opts.get(scope, cb_key.into())
+                    .unwrap_or_else(|| v8::undefined(scope).into())
+            };
+            (p, h, cb)
+        } else {
+            let p = arg0
+                .to_integer(scope)
+                .map(|i| i.value() as u16)
+                .unwrap_or(3000);
+            let arg1 = args.get(1);
+            let (h, cb) = if arg1.is_undefined() || arg1.is_null() {
+                ("0.0.0.0".to_string(), args.get(2))
+            } else if arg1.is_function() {
+                ("0.0.0.0".to_string(), arg1)
+            } else if arg1.is_string() {
+                let host_str = arg1
+                    .to_string(scope)
+                    .map(|s| s.to_rust_string_lossy(scope))
+                    .unwrap_or_else(|| "0.0.0.0".to_string());
+                (host_str, args.get(2))
+            } else {
+                ("0.0.0.0".to_string(), args.get(2))
+            };
+            (p, h, cb)
+        }
     };
 
     if let Err(error) = check_http_network_listen_permission(&host, port) {
@@ -1580,10 +1643,14 @@ fn http_server_listen_callback(
     let server_host_val = v8::String::new(scope, &host).unwrap();
     this.set(scope, server_host_key.into(), server_host_val.into());
 
-    // 调用回调函数（如果提供）
+    // 如果提供了回调函数，挂载为 'listening' 的一次性监听器
     if callback.is_function() {
-        if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
-            let _ = cb_func.call(scope, this.into(), &[]);
+        let once_key = v8::String::new(scope, "once").unwrap();
+        if let Some(once_val) = this.get(scope, once_key.into()) {
+            if let Ok(once_func) = v8::Local::<v8::Function>::try_from(once_val) {
+                let listening_event = v8::String::new(scope, "listening").unwrap();
+                let _ = once_func.call(scope, this.into(), &[listening_event.into(), callback]);
+            }
         }
     }
 
@@ -3078,12 +3145,13 @@ pub fn process_http_request_in_v8(
     let http_key = v8::String::new(scope, "http").unwrap();
     let http_obj_val = global.get(scope, http_key.into());
 
-    let (im_proto, sr_proto) = if let Some(http_val) = http_obj_val {
+    let (im_proto, sr_proto, sock_proto) = if let Some(http_val) = http_obj_val {
         if let Ok(http_obj) = v8::Local::<v8::Object>::try_from(http_val) {
             let im_key = v8::String::new(scope, "IncomingMessage").unwrap();
             let sr_key = v8::String::new(scope, "ServerResponse").unwrap();
             let proto_key = v8::String::new(scope, "prototype").unwrap();
 
+            let sock_key = v8::String::new(scope, "Socket").unwrap();
             let im_p = http_obj.get(scope, im_key.into()).and_then(|c| {
                 v8::Local::<v8::Function>::try_from(c)
                     .ok()?
@@ -3094,12 +3162,17 @@ pub fn process_http_request_in_v8(
                     .ok()?
                     .get(scope, proto_key.into())
             });
-            (im_p, sr_proto_from_p(sr_p))
+            let sock_p = http_obj.get(scope, sock_key.into()).and_then(|c| {
+                v8::Local::<v8::Function>::try_from(c)
+                    .ok()?
+                    .get(scope, proto_key.into())
+            });
+            (im_p, sr_proto_from_p(sr_p), sock_p)
         } else {
-            (None, None)
+            (None, None, None)
         }
     } else {
-        (None, None)
+        (None, None, None)
     };
 
     // 创建请求对象 (IncomingMessage)
@@ -3153,6 +3226,30 @@ pub fn process_http_request_in_v8(
     if let Some(p) = sr_proto {
         res_obj.set_prototype(scope, p);
     }
+
+    // 创建并挂载 Socket 对象
+    let socket_obj = v8::Object::new(scope);
+    if let Some(p) = sock_proto {
+        socket_obj.set_prototype(scope, p);
+    }
+    let remote_addr_key = v8::String::new(scope, "remoteAddress").unwrap();
+    let remote_addr_val = v8::String::new(scope, "127.0.0.1").unwrap();
+    socket_obj.set(scope, remote_addr_key.into(), remote_addr_val.into());
+    let remote_port_key = v8::String::new(scope, "remotePort").unwrap();
+    let remote_port_val = v8::Integer::new(scope, 12345);
+    socket_obj.set(scope, remote_port_key.into(), remote_port_val.into());
+    let enc_key = v8::String::new(scope, "encrypted").unwrap();
+    let enc_val = v8::Boolean::new(scope, false);
+    socket_obj.set(scope, enc_key.into(), enc_val.into());
+
+    let socket_prop_key = v8::String::new(scope, "socket").unwrap();
+    let conn_prop_key = v8::String::new(scope, "connection").unwrap();
+    req_obj.set(scope, socket_prop_key.into(), socket_obj.into());
+    req_obj.set(scope, conn_prop_key.into(), socket_obj.into());
+    res_obj.set(scope, socket_prop_key.into(), socket_obj.into());
+    res_obj.set(scope, conn_prop_key.into(), socket_obj.into());
+    let req_ref_key = v8::String::new(scope, "req").unwrap();
+    res_obj.set(scope, req_ref_key.into(), req_obj.into());
 
     let res_headers_obj = v8::Object::new(scope);
     let res_headers_key = v8::String::new(scope, "headers").unwrap();
