@@ -77,6 +77,14 @@ pub struct HttpServerMessageChannel {
     pub next_connection_id: Arc<AtomicU64>,
 }
 
+impl std::fmt::Debug for HttpServerMessageChannel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HttpServerMessageChannel")
+            .field("enabled", &self.enabled)
+            .finish()
+    }
+}
+
 impl HttpServerMessageChannel {
     /// 创建新的消息通道
     #[allow(clippy::redundant_closure)]
@@ -1521,9 +1529,8 @@ fn http_server_listen_callback(
         return;
     }
 
-    // v0.3.87: 创建服务器状态并启动真实 TCP 服务器
-    // v0.3.89: 检查是否启用了消息通道模式
-    let use_message_channel = get_http_server_channel().is_some();
+    let channel = get_http_server_channel();
+    let use_message_channel = channel.is_some();
     let tls_config = tls_config_from_server_object(scope, this);
     let server_state = Arc::new(HttpServerState {
         listening: Arc::new(AtomicBool::new(true)),
@@ -1532,6 +1539,7 @@ fn http_server_listen_callback(
         use_message_channel,
         bound_port: Arc::new(AtomicU64::new(port as u64)),
         tls_config,
+        channel,
     });
     register_http_server_state(server_state.clone());
 
@@ -2412,6 +2420,7 @@ pub struct HttpServerState {
     pub use_message_channel: bool,
     pub bound_port: Arc<AtomicU64>,
     pub tls_config: Option<Arc<rustls::ServerConfig>>,
+    pub channel: Option<Arc<Mutex<Option<HttpServerMessageChannel>>>>,
 }
 
 impl HttpServerState {
@@ -2423,6 +2432,7 @@ impl HttpServerState {
             use_message_channel: false,
             bound_port: Arc::new(AtomicU64::new(3000)),
             tls_config: None,
+            channel: None,
         }
     }
 }
@@ -2546,6 +2556,87 @@ pub fn generate_http_response_v2(
     result
 }
 
+fn create_reuse_port_listener(addr_str: &str) -> std::io::Result<TcpListener> {
+    #[cfg(unix)]
+    {
+        use std::net::ToSocketAddrs;
+        use std::os::unix::io::FromRawFd;
+
+        let socket_addr = addr_str.to_socket_addrs()?.next().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid address")
+        })?;
+
+        let (domain, sockaddr_storage, sockaddr_len) = match socket_addr {
+            std::net::SocketAddr::V4(v4) => {
+                let mut storage: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+                let sin = &mut storage as *mut libc::sockaddr_storage as *mut libc::sockaddr_in;
+                unsafe {
+                    (*sin).sin_family = libc::AF_INET as libc::sa_family_t;
+                    (*sin).sin_port = v4.port().to_be();
+                    (*sin).sin_addr = libc::in_addr {
+                        s_addr: u32::from_ne_bytes(v4.ip().octets()),
+                    };
+                }
+                (
+                    libc::AF_INET,
+                    storage,
+                    std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
+                )
+            }
+            std::net::SocketAddr::V6(v6) => {
+                let mut storage: libc::sockaddr_storage = unsafe { std::mem::zeroed() };
+                let sin6 = &mut storage as *mut libc::sockaddr_storage as *mut libc::sockaddr_in6;
+                unsafe {
+                    (*sin6).sin6_family = libc::AF_INET6 as libc::sa_family_t;
+                    (*sin6).sin6_port = v6.port().to_be();
+                    (*sin6).sin6_addr = libc::in6_addr {
+                        s6_addr: v6.ip().octets(),
+                    };
+                }
+                (
+                    libc::AF_INET6,
+                    storage,
+                    std::mem::size_of::<libc::sockaddr_in6>() as libc::socklen_t,
+                )
+            }
+        };
+
+        let fd = unsafe { libc::socket(domain, libc::SOCK_STREAM, 0) };
+        if fd < 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+
+        let val: libc::c_int = 1;
+        let val_ptr = &val as *const libc::c_int as *const libc::c_void;
+        let val_len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+
+        unsafe {
+            libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len);
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "freebsd"))]
+            libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len);
+
+            let ptr = &sockaddr_storage as *const libc::sockaddr_storage as *const libc::sockaddr;
+            if libc::bind(fd, ptr, sockaddr_len) != 0 {
+                let err = std::io::Error::last_os_error();
+                libc::close(fd);
+                return Err(err);
+            }
+
+            if libc::listen(fd, 4096) != 0 {
+                let err = std::io::Error::last_os_error();
+                libc::close(fd);
+                return Err(err);
+            }
+
+            Ok(TcpListener::from_raw_fd(fd))
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        TcpListener::bind(addr_str)
+    }
+}
+
 /// HTTP 服务器运行函数（在独立线程中运行）
 fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
     let addr = format!("{}:{}", server_state.host, server_state.port);
@@ -2554,8 +2645,8 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
         return;
     }
 
-    // 创建 TCP 监听器
-    let listener = match TcpListener::bind(&addr) {
+    // 创建 TCP 监听器（支持多 Worker SO_REUSEPORT 端口重用）
+    let listener = match create_reuse_port_listener(&addr).or_else(|_| TcpListener::bind(&addr)) {
         Ok(l) => {
             if let Ok(local) = l.local_addr() {
                 server_state
@@ -2570,37 +2661,6 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
             return;
         }
     };
-
-    // v0.3.97: 设置 SO_REUSEADDR 和 SO_REUSEPORT 以允许端口重用
-    #[cfg(unix)]
-    {
-        use std::os::unix::io::AsRawFd;
-        let fd = listener.as_raw_fd();
-        let val: libc::c_int = 1;
-        let val_ptr = &val as *const libc::c_int as *const libc::c_void;
-        let val_len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
-        if unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEADDR, val_ptr, val_len) }
-            != 0
-        {
-            eprintln!(
-                "[Beejs] Failed to set SO_REUSEADDR: {}",
-                std::io::Error::last_os_error()
-            );
-        }
-        // macOS 需要 SO_REUSEPORT 来完全解决端口重用问题
-        #[cfg(target_os = "macos")]
-        {
-            if unsafe {
-                libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_REUSEPORT, val_ptr, val_len)
-            } != 0
-            {
-                eprintln!(
-                    "[Beejs] Failed to set SO_REUSEPORT: {}",
-                    std::io::Error::last_os_error()
-                );
-            }
-        }
-    }
 
     // 设置为非阻塞模式
     listener.set_nonblocking(true).ok();
@@ -2870,7 +2930,11 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
         // 判断是否 Keep-Alive
         _is_keep_alive = should_keep_alive(&parsed_request.headers, &parsed_request.http_version);
 
-        let channel = get_http_server_channel();
+        let channel = server_state
+            .channel
+            .as_ref()
+            .cloned()
+            .or_else(get_http_server_channel);
         let use_message_channel = server_state.use_message_channel && channel.is_some();
 
         let mut message_channel_used = false;

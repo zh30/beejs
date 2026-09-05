@@ -4,22 +4,20 @@
 
 - **Sustained Load Duration**: `5s`
 - **Idle Cooldown Duration**: `3s`
-- **Concurrent Connections**: `64`
+- **Concurrent Connections**: `128`
 - **Sampling Frequency**: `Every 100 ms via OS Process RSS`
 
 ## 📊 1. Core Comparison: Settled Idle Memory (Lower is Better)
 
 | Framework | Bun v1.4.1 (RSS) | Node.js v22 (RSS) | Beejs v0.4.0 (RSS) | Lowest Idle RSS Winner |
 |---|---|---|---|---|
-| **Express** | N/A | N/A | 201.7 MB | 🏆 **Beejs** |
-| **Http** | N/A | N/A | 25.6 MB | 🏆 **Beejs** |
+| **Http** | N/A | N/A | 42.4 MB | 🏆 **Beejs** |
 
 ## 📈 2. Detailed Lifecycle Metrics (Baseline -> Peak -> Settled)
 
 | Runtime | Framework | Baseline RSS | Peak Under Load | Settled Idle RSS | Net Memory Retained | Recovery Ratio | Throughput |
 |---|---|---|---|---|---|---|---|
-| `bee` | **http** | 21.7 MB | 28.6 MB | **25.6 MB** | +3.9 MB | 42.9% | 51357 req/s |
-| `bee` | **express** | 26.8 MB | 285.7 MB | **201.7 MB** | +174.8 MB | 32.5% | 26610 req/s |
+| `bee` | **http** | 38.0 MB | 47.3 MB | **42.4 MB** | +4.4 MB | 52.9% | 56304 req/s |
 
 ## 🔬 3. Key Observations & Architecture Analysis
 - **Idle Memory Reclamation**: Measuring memory 3 minutes (or cooldown) after sustained traffic exposes whether runtimes release heap pages to the OS or retain slab allocators.
