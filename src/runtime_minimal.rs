@@ -102,6 +102,20 @@ thread_local! {
     static MAX_LISTENERS: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
 }
 
+thread_local! {
+    static CACHED_BUFFER_PROTOTYPE: RefCell<Option<v8::Global<v8::Object>>> = const { RefCell::new(None) };
+}
+
+#[inline]
+pub fn set_buffer_prototype_fast(scope: &mut v8::HandleScope, u8_array: v8::Local<v8::Uint8Array>) {
+    CACHED_BUFFER_PROTOTYPE.with(|p| {
+        if let Some(proto) = p.borrow().as_ref() {
+            let proto_local = v8::Local::new(scope, proto);
+            u8_array.set_prototype(scope, proto_local.into());
+        }
+    });
+}
+
 /// Timer tracking structure for unref/ref functionality (v0.3.18)
 #[allow(dead_code)]
 struct TimerInfo {
@@ -1875,25 +1889,65 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
          mut retval: v8::ReturnValue| {
             if args.length() >= 1 {
                 let first = args.get(0);
-                if first.is_number() {
-                    let size = first.to_integer(scope).unwrap().value().max(0) as usize;
-                    let buffer = v8::ArrayBuffer::new(scope, size);
-                    if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, size) {
-                        let global = scope.get_current_context().global(scope);
-                        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                        if let Some(buffer_val) = global.get(scope, buffer_str) {
-                            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                                if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                    u8_array.set_prototype(scope, proto_val);
+                if first.is_array_buffer() {
+                    if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(first) {
+                        let total_len = ab.byte_length();
+                        let offset = if args.length() >= 2 && args.get(1).is_number() {
+                            (args.get(1).to_integer(scope).unwrap().value().max(0) as usize)
+                                .min(total_len)
+                        } else {
+                            0
+                        };
+                        let len = if args.length() >= 3 && args.get(2).is_number() {
+                            (args.get(2).to_integer(scope).unwrap().value().max(0) as usize)
+                                .min(total_len.saturating_sub(offset))
+                        } else {
+                            total_len.saturating_sub(offset)
+                        };
+                        if let Some(u8_array) = v8::Uint8Array::new(scope, ab, offset, len) {
+                            set_buffer_prototype_fast(scope, u8_array);
+                            retval.set(u8_array.into());
+                            return;
+                        }
+                    }
+                } else if first.is_array_buffer_view() || first.is_typed_array() {
+                    if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(first) {
+                        let len = view.byte_length();
+                        let buffer = v8::ArrayBuffer::new(scope, len);
+                        if len > 0 {
+                            if let Some(src_ab) = view.buffer(scope) {
+                                let src_store = src_ab.get_backing_store();
+                                let src_ptr = src_store.as_ref().as_ptr() as *const u8;
+                                let dst_store = buffer.get_backing_store();
+                                let dst_ptr = dst_store.as_ref().as_ptr() as *mut u8;
+                                if !src_ptr.is_null() && !dst_ptr.is_null() {
+                                    let src_slice = unsafe {
+                                        std::slice::from_raw_parts(
+                                            src_ptr.add(view.byte_offset()),
+                                            len,
+                                        )
+                                    };
+                                    let dst_slice =
+                                        unsafe { std::slice::from_raw_parts_mut(dst_ptr, len) };
+                                    dst_slice.copy_from_slice(src_slice);
                                 }
                             }
                         }
+                        if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, len) {
+                            set_buffer_prototype_fast(scope, u8_array);
+                            retval.set(u8_array.into());
+                            return;
+                        }
+                    }
+                } else if first.is_number() {
+                    let size = first.to_integer(scope).unwrap().value().max(0) as usize;
+                    let buffer = v8::ArrayBuffer::new(scope, size);
+                    if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, size) {
+                        set_buffer_prototype_fast(scope, u8_array);
                         retval.set(u8_array.into());
                         return;
                     }
                 } else if let Some(str_val) = first.to_string(scope) {
-                    let rust_string = str_val.to_rust_string_lossy(scope);
                     let encoding = if args.length() >= 2 {
                         args.get(1)
                             .to_string(scope)
@@ -1902,34 +1956,52 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                     } else {
                         "utf8".to_string()
                     };
-                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
-                    let buffer = v8::ArrayBuffer::new(scope, bytes.len());
-                    if !bytes.is_empty() {
-                        let store = buffer.get_backing_store();
-                        let ptr = store.as_ref().as_ptr() as *mut u8;
-                        if !ptr.is_null() {
-                            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, bytes.len()) };
-                            slice.copy_from_slice(&bytes);
-                        }
-                    }
-                    if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, bytes.len()) {
-                        let global = scope.get_current_context().global(scope);
-                        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                        if let Some(buffer_val) = global.get(scope, buffer_str) {
-                            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                                if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                    u8_array.set_prototype(scope, proto_val);
-                                }
+                    let enc_lower = encoding.to_ascii_lowercase();
+                    if enc_lower == "utf8" || enc_lower == "utf-8" {
+                        let len = str_val.utf8_length(scope);
+                        let buffer = v8::ArrayBuffer::new(scope, len);
+                        if len > 0 {
+                            let store = buffer.get_backing_store();
+                            let ptr = store.as_ref().as_ptr() as *mut u8;
+                            if !ptr.is_null() {
+                                let slice = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
+                                str_val.write_utf8(
+                                    scope,
+                                    slice,
+                                    None,
+                                    v8::WriteOptions::NO_NULL_TERMINATION,
+                                );
                             }
                         }
-                        retval.set(u8_array.into());
-                        return;
+                        if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, len) {
+                            set_buffer_prototype_fast(scope, u8_array);
+                            retval.set(u8_array.into());
+                            return;
+                        }
+                    } else {
+                        let rust_string = str_val.to_rust_string_lossy(scope);
+                        let bytes = encode_string_to_bytes(&rust_string, &encoding);
+                        let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+                        if !bytes.is_empty() {
+                            let store = buffer.get_backing_store();
+                            let ptr = store.as_ref().as_ptr() as *mut u8;
+                            if !ptr.is_null() {
+                                let slice =
+                                    unsafe { std::slice::from_raw_parts_mut(ptr, bytes.len()) };
+                                slice.copy_from_slice(&bytes);
+                            }
+                        }
+                        if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, bytes.len()) {
+                            set_buffer_prototype_fast(scope, u8_array);
+                            retval.set(u8_array.into());
+                            return;
+                        }
                     }
                 }
             }
             let buffer = v8::ArrayBuffer::new(scope, 0);
             if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, 0) {
+                set_buffer_prototype_fast(scope, u8_array);
                 retval.set(u8_array.into());
             }
         },
@@ -2120,16 +2192,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                 source_offset + clamped_start,
                 new_length,
             ) {
-                let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                let global = scope.get_current_context().global(scope);
-                if let Some(buffer_val) = global.get(scope, buffer_str) {
-                    if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                        let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                        if let Some(proto_val) = ctor.get(scope, proto_key) {
-                            sliced_u8.set_prototype(scope, proto_val);
-                        }
-                    }
-                }
+                set_buffer_prototype_fast(scope, sliced_u8);
                 retval.set(sliced_u8.into());
             }
         },
@@ -2206,7 +2269,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
             let bytes_to_write =
                 std::cmp::min(bytes.len(), std::cmp::min(max_len, target_len - offset));
             let store = target_buffer.get_backing_store();
-            let ptr = store.as_ref().as_ptr() as *mut u8;
+            let ptr = store.data() as *mut u8;
             if ptr.is_null() {
                 retval.set(v8::Integer::new(scope, 0).into());
                 return;
@@ -2242,7 +2305,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                     let offset = view.byte_offset();
                     if let Some(buf) = view.buffer(scope) {
                         let store = buf.get_backing_store();
-                        let ptr = store.as_ref().as_ptr() as *const u8;
+                        let ptr = store.data() as *const u8;
                         if ptr.is_null() {
                             (std::ptr::null(), 0)
                         } else {
@@ -2261,7 +2324,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                     if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
                         let len = ab.byte_length();
                         let store = ab.get_backing_store();
-                        let ptr = store.as_ref().as_ptr() as *const u8;
+                        let ptr = store.data() as *const u8;
                         (ptr, len)
                     } else {
                         (std::ptr::null(), 0)
@@ -2283,7 +2346,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                         let offset = view.byte_offset();
                         if let Some(buf) = view.buffer(scope) {
                             let store = buf.get_backing_store();
-                            let ptr = store.as_ref().as_ptr() as *mut u8;
+                            let ptr = store.data() as *mut u8;
                             if ptr.is_null() {
                                 (std::ptr::null_mut(), 0)
                             } else {
@@ -2302,7 +2365,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                             if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(buf) {
                                 let len = ab.byte_length();
                                 let store = ab.get_backing_store();
-                                let ptr = store.as_ref().as_ptr() as *mut u8;
+                                let ptr = store.data() as *mut u8;
                                 (ptr, len)
                             } else {
                                 (std::ptr::null_mut(), 0)
@@ -2607,10 +2670,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
             }
             let first = args.get(0);
             if first.is_string() {
-                let rust_string = first
-                    .to_string(scope)
-                    .map(|s| s.to_rust_string_lossy(scope))
-                    .unwrap_or_default();
+                let str_val = first.to_string(scope).unwrap();
                 let encoding = if args.length() >= 2 {
                     args.get(1)
                         .to_string(scope)
@@ -2619,30 +2679,46 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                 } else {
                     "utf8".to_string()
                 };
-                let bytes = encode_string_to_bytes(&rust_string, &encoding);
-                let buffer = v8::ArrayBuffer::new(scope, bytes.len());
-                if !bytes.is_empty() {
-                    let store = buffer.get_backing_store();
-                    let ptr = store.as_ref().as_ptr() as *mut u8;
-                    if !ptr.is_null() {
-                        let slice = unsafe { std::slice::from_raw_parts_mut(ptr, bytes.len()) };
-                        slice.copy_from_slice(&bytes);
-                    }
-                }
-                if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, bytes.len()) {
-                    let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                    let global = scope.get_current_context().global(scope);
-                    if let Some(buffer_val) = global.get(scope, buffer_str) {
-                        if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                            let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                            if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                u8_array.set_prototype(scope, proto_val);
-                            }
+                let enc_lower = encoding.to_ascii_lowercase();
+                if enc_lower == "utf8" || enc_lower == "utf-8" {
+                    let len = str_val.utf8_length(scope);
+                    let buffer = v8::ArrayBuffer::new(scope, len);
+                    if len > 0 {
+                        let store = buffer.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *mut u8;
+                        if !ptr.is_null() {
+                            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
+                            str_val.write_utf8(
+                                scope,
+                                slice,
+                                None,
+                                v8::WriteOptions::NO_NULL_TERMINATION,
+                            );
                         }
                     }
-                    retval.set(u8_array.into());
+                    if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, len) {
+                        set_buffer_prototype_fast(scope, u8_array);
+                        retval.set(u8_array.into());
+                    }
+                    return;
+                } else {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    let bytes = encode_string_to_bytes(&rust_string, &encoding);
+                    let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+                    if !bytes.is_empty() {
+                        let store = buffer.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *mut u8;
+                        if !ptr.is_null() {
+                            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, bytes.len()) };
+                            slice.copy_from_slice(&bytes);
+                        }
+                    }
+                    if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, bytes.len()) {
+                        set_buffer_prototype_fast(scope, u8_array);
+                        retval.set(u8_array.into());
+                    }
+                    return;
                 }
-                return;
             } else if first.is_array_buffer() {
                 if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(first) {
                     let total_len = ab.byte_length();
@@ -2659,16 +2735,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                         total_len - offset
                     };
                     if let Some(u8_array) = v8::Uint8Array::new(scope, ab, offset, len) {
-                        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                        let global = scope.get_current_context().global(scope);
-                        if let Some(buffer_val) = global.get(scope, buffer_str) {
-                            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                                if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                    u8_array.set_prototype(scope, proto_val);
-                                }
-                            }
-                        }
+                        set_buffer_prototype_fast(scope, u8_array);
                         retval.set(u8_array.into());
                         return;
                     }
@@ -2694,16 +2761,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                         }
                     }
                     if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, len) {
-                        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                        let global = scope.get_current_context().global(scope);
-                        if let Some(buffer_val) = global.get(scope, buffer_str) {
-                            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                                if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                    u8_array.set_prototype(scope, proto_val);
-                                }
-                            }
-                        }
+                        set_buffer_prototype_fast(scope, u8_array);
                         retval.set(u8_array.into());
                         return;
                     }
@@ -2728,16 +2786,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                         }
                     }
                     if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, len) {
-                        let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                        let global = scope.get_current_context().global(scope);
-                        if let Some(buffer_val) = global.get(scope, buffer_str) {
-                            if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                                let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                                if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                    u8_array.set_prototype(scope, proto_val);
-                                }
-                            }
-                        }
+                        set_buffer_prototype_fast(scope, u8_array);
                         retval.set(u8_array.into());
                         return;
                     }
@@ -2746,22 +2795,14 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                 let size = first.to_integer(scope).unwrap().value().max(0) as usize;
                 let buffer = v8::ArrayBuffer::new(scope, size);
                 if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, size) {
-                    let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                    let global = scope.get_current_context().global(scope);
-                    if let Some(buffer_val) = global.get(scope, buffer_str) {
-                        if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                            let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                            if let Some(proto_val) = ctor.get(scope, proto_key) {
-                                u8_array.set_prototype(scope, proto_val);
-                            }
-                        }
-                    }
+                    set_buffer_prototype_fast(scope, u8_array);
                     retval.set(u8_array.into());
                     return;
                 }
             }
             let buffer = v8::ArrayBuffer::new(scope, 0);
             if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, 0) {
+                set_buffer_prototype_fast(scope, u8_array);
                 retval.set(u8_array.into());
             }
         },
@@ -2826,16 +2867,7 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                 }
             }
             if let Some(u8_array) = v8::Uint8Array::new(scope, buffer, 0, size) {
-                let buffer_str = v8::String::new(scope, "Buffer").unwrap().into();
-                let global = scope.get_current_context().global(scope);
-                if let Some(buffer_val) = global.get(scope, buffer_str) {
-                    if let Ok(ctor) = v8::Local::<v8::Function>::try_from(buffer_val) {
-                        let proto_key = v8::String::new(scope, "prototype").unwrap().into();
-                        if let Some(proto_val) = ctor.get(scope, proto_key) {
-                            u8_array.set_prototype(scope, proto_val);
-                        }
-                    }
-                }
+                set_buffer_prototype_fast(scope, u8_array);
                 retval.set(u8_array.into());
             }
         },
@@ -2902,7 +2934,11 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
 
                     let buffer = v8::ArrayBuffer::new(scope, calculated_length);
                     let store = buffer.get_backing_store();
-                    let dst_ptr = store.as_ref().as_ptr() as *mut u8;
+                    let dst_ptr = if calculated_length > 0 {
+                        store.data() as *mut u8
+                    } else {
+                        std::ptr::null_mut()
+                    };
 
                     if !dst_ptr.is_null() && calculated_length > 0 {
                         let mut offset = 0;
@@ -2921,7 +2957,11 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                                         let off = view.byte_offset();
                                         if let Some(b) = view.buffer(scope) {
                                             let st = b.get_backing_store();
-                                            let p = st.as_ref().as_ptr() as *const u8;
+                                            let p = if l > 0 {
+                                                st.data() as *const u8
+                                            } else {
+                                                std::ptr::null()
+                                            };
                                             if p.is_null() {
                                                 (std::ptr::null(), 0)
                                             } else {
@@ -2943,7 +2983,11 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                                             {
                                                 let l = ab.byte_length();
                                                 let st = ab.get_backing_store();
-                                                let p = st.as_ref().as_ptr() as *const u8;
+                                                let p = if l > 0 {
+                                                    st.data() as *const u8
+                                                } else {
+                                                    std::ptr::null()
+                                                };
                                                 (p, l)
                                             } else {
                                                 (std::ptr::null(), 0)
@@ -2958,7 +3002,11 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
                                     if let Ok(ab) = v8::Local::<v8::ArrayBuffer>::try_from(item) {
                                         let l = ab.byte_length();
                                         let st = ab.get_backing_store();
-                                        let p = st.as_ref().as_ptr() as *const u8;
+                                        let p = if l > 0 {
+                                            st.data() as *const u8
+                                        } else {
+                                            std::ptr::null()
+                                        };
                                         (p, l)
                                     } else {
                                         (std::ptr::null(), 0)
@@ -3158,17 +3206,119 @@ fn setup_buffer_module(scope: &mut v8::HandleScope) {
     let byte_offset_key = v8::String::new(scope, "byteOffset").unwrap().into();
     let zero = v8::Integer::new(scope, 0).into();
     prototype_obj.set(scope, byte_offset_key, zero);
+
+    // Cache Buffer prototype globally for fast zero-overhead allocation
+    let proto_global = v8::Global::new(scope, prototype_obj);
+    CACHED_BUFFER_PROTOTYPE.with(|p| {
+        *p.borrow_mut() = Some(proto_global);
+    });
+
+    // High-performance Buffer operations (v0.4.3):
+    // 1. Buffer[Symbol.hasInstance] delegates to Buffer.isBuffer (spec compliance)
+    // 2. Buffer.prototype.fill delegates numeric fill to Uint8Array.prototype.fill (SIMD)
+    // 3. Buffer.prototype.subarray & slice construct typed views directly with Buffer.prototype
+    let buffer_opt_code = v8::String::new(
+        scope,
+        r#"
+(function() {
+    try {
+        Object.defineProperty(Buffer, Symbol.hasInstance, {
+            value: function hasInstance(instance) {
+                return Buffer.isBuffer(instance);
+            },
+            configurable: true
+        });
+    } catch (_) {}
+
+    const _u8Fill = Uint8Array.prototype.fill;
+    const _origFill = Buffer.prototype.fill;
+    Buffer.prototype.fill = function fill(val, start, end, enc) {
+        if (typeof val === 'number') {
+            return _u8Fill.call(this, val, start, end);
+        }
+        return _origFill.call(this, val, start, end, enc);
+    };
+
+    const _bufProto = Buffer.prototype;
+    Buffer.prototype.subarray = function subarray(start, end) {
+        const len = this.length;
+        let s = start | 0;
+        let e = end === undefined ? len : (end | 0);
+        if (s < 0) { s += len; if (s < 0) s = 0; }
+        if (e < 0) { e += len; if (e < 0) e = 0; }
+        if (e > len) e = len;
+        if (s > e) s = e;
+        const res = new Uint8Array(this.buffer, this.byteOffset + s, e - s);
+        Object.setPrototypeOf(res, _bufProto);
+        return res;
+    };
+    Buffer.prototype.slice = Buffer.prototype.subarray;
+
+    const _origAllocUnsafe = Buffer.allocUnsafe;
+    let poolSize = 8192;
+    let poolOffset = 0;
+    let allocPool = null;
+
+    function createPool() {
+        allocPool = new ArrayBuffer(poolSize);
+        poolOffset = 0;
+    }
+    createPool();
+
+    Buffer.allocUnsafe = function allocUnsafe(size) {
+        size = size | 0;
+        if (size <= 0) {
+            const b = new Uint8Array(0);
+            Object.setPrototypeOf(b, _bufProto);
+            return b;
+        }
+        if (size < (Buffer.poolSize >>> 1)) {
+            if (size > (poolSize - poolOffset)) {
+                createPool();
+            }
+            const b = new Uint8Array(allocPool, poolOffset, size);
+            Object.setPrototypeOf(b, _bufProto);
+            poolOffset += size;
+            poolOffset = (poolOffset + 7) & ~7;
+            return b;
+        }
+        return _origAllocUnsafe(size);
+    };
+    Buffer.allocUnsafeSlow = function allocUnsafeSlow(size) {
+        return _origAllocUnsafe(size);
+    };
+    Buffer.poolSize = 8192;
+})();
+"#,
+    )
+    .unwrap();
+    if let Some(script) = v8::Script::compile(scope, buffer_opt_code, None) {
+        script.run(scope);
+    }
 }
 
 /// Helper function to decode bytes to a string with the specified encoding
 fn decode_bytes_to_string(bytes: &[u8], encoding: &str) -> String {
     let engine = base64::engine::general_purpose::STANDARD;
     match encoding.to_lowercase().as_str() {
-        "utf8" | "utf-8" | "utf8mb4" => String::from_utf8_lossy(bytes).to_string(),
+        "utf8" | "utf-8" | "utf8mb4" => {
+            if let Ok(s) = std::str::from_utf8(bytes) {
+                s.to_string()
+            } else {
+                String::from_utf8_lossy(bytes).to_string()
+            }
+        }
         "hex" => hex::encode(bytes),
         "base64" => engine.encode(bytes),
         "base64url" => base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes),
-        "latin1" | "ascii" | "binary" => bytes.iter().map(|&b| b as char).collect(),
+        "latin1" | "ascii" | "binary" => {
+            if bytes.is_ascii() {
+                // SIMD-accelerated ASCII validation in Rust
+                unsafe { std::str::from_utf8_unchecked(bytes).to_string() }
+            } else {
+                bytes.iter().map(|&b| b as char).collect()
+            }
+        }
         _ => String::from_utf8_lossy(bytes).to_string(),
     }
 }
@@ -4574,10 +4724,24 @@ impl MinimalRuntime {
         // 16MB initial / 2GB max — same initial as `new_fast`, full production max.
         let create_params = Self::isolate_create_params(16 * 1024 * 1024, 2048 * 1024 * 1024);
 
+        let profile_startup = std::env::var_os("BEEJS_PROFILE_STARTUP").is_some();
+        let t_iso = if profile_startup {
+            Some(std::time::Instant::now())
+        } else {
+            None
+        };
+
         // Create a new isolate with optimized parameters
         let mut isolate = v8::Isolate::new(create_params);
 
         Self::configure_isolate(&mut isolate);
+
+        if let Some(t) = t_iso {
+            eprintln!(
+                "[STARTUP PROFILE] Isolate::new: {:.2}ms",
+                t.elapsed().as_secs_f64() * 1000.0
+            );
+        }
 
         // v0.3.93: Context 将在第一次调用 get_context() 时创建
         Ok(Self {
@@ -8493,7 +8657,19 @@ impl MinimalRuntime {
 
         let scope = &mut v8::ContextScope::new(scope, context);
 
+        let profile_startup = std::env::var_os("BEEJS_PROFILE_STARTUP").is_some();
+        let _t_start = if profile_startup {
+            Some(std::time::Instant::now())
+        } else {
+            None
+        };
+
         if needs_core_setup {
+            let t_core = if profile_startup {
+                Some(std::time::Instant::now())
+            } else {
+                None
+            };
             Self::install_core_apis(
                 scope,
                 &context,
@@ -8501,11 +8677,28 @@ impl MinimalRuntime {
                 &self.main_module_filename,
             )?;
             self.apis_initialized = true;
+            if let Some(t) = t_core {
+                eprintln!(
+                    "[STARTUP PROFILE] install_core_apis: {:.2}ms",
+                    t.elapsed().as_secs_f64() * 1000.0
+                );
+            }
         }
 
         if needs_extended_setup {
+            let t_ext = if profile_startup {
+                Some(std::time::Instant::now())
+            } else {
+                None
+            };
             Self::install_extended_apis(scope, &context)?;
             self.extended_apis_initialized = true;
+            if let Some(t) = t_ext {
+                eprintln!(
+                    "[STARTUP PROFILE] install_extended_apis: {:.2}ms",
+                    t.elapsed().as_secs_f64() * 1000.0
+                );
+            }
         }
 
         Self::apply_process_argv(scope, &context, &self.process_argv)?;
@@ -8828,13 +9021,13 @@ impl MinimalRuntime {
                 }
 
                 if has_drainable_timers {
-                    std::thread::sleep(std::time::Duration::from_millis(25));
+                    std::thread::sleep(std::time::Duration::from_millis(1));
                     iterations_without_progress += 1;
                     continue;
                 }
 
                 if has_wait_until_timers || has_wait_until {
-                    std::thread::sleep(std::time::Duration::from_millis(25));
+                    std::thread::sleep(std::time::Duration::from_millis(1));
                     iterations_without_progress += 1;
                     continue;
                 }
@@ -8844,17 +9037,20 @@ impl MinimalRuntime {
                     break;
                 }
 
-                std::thread::sleep(std::time::Duration::from_millis(25));
+                std::thread::sleep(std::time::Duration::from_millis(1));
                 iterations_without_progress += 1;
             }
 
-            // v0.3.339: If no work was found after waiting, we still need to check if
-            // microtasks scheduled any timers. Continue processing to handle those.
-            // The break below was moved to after processing.
-
-            // v0.3.261: Additional wait to ensure worker thread has processed any pending timers
-            // This handles the case where a timer was just scheduled and hasn't fired yet
-            std::thread::sleep(std::time::Duration::from_millis(5));
+            // v0.3.261: Only yield if no immediate work has arrived, avoiding unnecessary 5ms delay
+            let has_immediate_work = {
+                let timer_manager = crate::event_loop::get_async_timer_manager();
+                timer_manager.has_fired_timers()
+                    || has_pending_next_ticks()
+                    || has_pending_immediates()
+            };
+            if !has_immediate_work {
+                std::thread::yield_now();
+            }
 
             // v0.3.261: Execute nextTick callbacks FIRST (before timers and microtasks)
             // This ensures nextTick has highest priority after sync code completes
@@ -26287,26 +26483,36 @@ require.resolve = function(specifier) {{
             };
 
             EventEmitter.prototype.emit = function(type, ...args) {
-                if (!this._events) {
-                    this._events = Object.create(null);
-                    this._eventsCount = 0;
+                const events = this._events;
+                if (events === undefined) return false;
+                const handler = events[type];
+                if (handler === undefined) {
+                    if (type === 'error') {
+                        const er = args[0];
+                        if (er instanceof Error) throw er;
+                        const err = new Error('Unhandled error.' + (er ? ' (' + er + ')' : ''));
+                        err.context = er;
+                        throw err;
+                    }
+                    return false;
                 }
-                if (type === 'error' && !this._events.error) {
-                    const er = args[0];
-                    if (er instanceof Error) throw er;
-                    const err = new Error('Unhandled error.' + (er ? ' (' + er + ')' : ''));
-                    err.context = er;
-                    throw err;
-                }
-                const handler = this._events[type];
-                if (!handler) return false;
                 if (typeof handler === 'function') {
-                    Reflect.apply(handler, this, args);
+                    const len = args.length;
+                    if (len === 1) handler.call(this, args[0]);
+                    else if (len === 0) handler.call(this);
+                    else if (len === 2) handler.call(this, args[0], args[1]);
+                    else handler.apply(this, args);
                     return true;
                 }
                 const listeners = handler.slice();
-                for (let i = 0; i < listeners.length; ++i) {
-                    Reflect.apply(listeners[i], this, args);
+                const lCount = listeners.length;
+                const len = args.length;
+                if (len === 1) {
+                    for (let i = 0; i < lCount; ++i) listeners[i].call(this, args[0]);
+                } else if (len === 0) {
+                    for (let i = 0; i < lCount; ++i) listeners[i].call(this);
+                } else {
+                    for (let i = 0; i < lCount; ++i) listeners[i].apply(this, args);
                 }
                 return true;
             };

@@ -293,19 +293,82 @@ fn create_fs_promises<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::
     promises_obj
 }
 
+#[inline]
+fn get_path_fast<'a>(
+    scope: &mut v8::HandleScope,
+    val: v8::Local<v8::Value>,
+    buf: &'a mut [u8; 512],
+) -> (std::borrow::Cow<'a, str>, Option<*const libc::c_char>) {
+    if let Some(s) = val.to_string(scope) {
+        let len = s.utf8_length(scope);
+        if len > 0 && len < 511 {
+            s.write_utf8(
+                scope,
+                &mut buf[..len],
+                None,
+                v8::WriteOptions::NO_NULL_TERMINATION,
+            );
+            buf[len] = 0;
+            if let Ok(valid_str) = std::str::from_utf8(&buf[..len]) {
+                return (
+                    std::borrow::Cow::Borrowed(valid_str),
+                    Some(buf.as_ptr() as *const libc::c_char),
+                );
+            }
+        }
+        let owned = s.to_rust_string_lossy(scope);
+        (std::borrow::Cow::Owned(owned), None)
+    } else {
+        (std::borrow::Cow::Borrowed(""), None)
+    }
+}
+
+#[inline]
+fn direct_write_sync(
+    c_path: Option<*const libc::c_char>,
+    path_str: &str,
+    data: &[u8],
+) -> std::io::Result<()> {
+    #[cfg(unix)]
+    if let Some(ptr) = c_path {
+        let fd = unsafe { libc::open(ptr, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o666) };
+        if fd >= 0 {
+            let mut written = 0;
+            let len = data.len();
+            let mut ok = true;
+            while written < len {
+                let n = unsafe {
+                    libc::write(
+                        fd,
+                        data.as_ptr().add(written) as *const libc::c_void,
+                        len - written,
+                    )
+                };
+                if n <= 0 {
+                    ok = false;
+                    break;
+                }
+                written += n as usize;
+            }
+            unsafe { libc::close(fd) };
+            if ok {
+                return Ok(());
+            }
+        }
+    }
+    std::fs::write(path_str, data)
+}
+
 /// fs.readFileSync(path, encoding) - 读取文件
 fn fs_read_file_sync_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args
-        .get(0)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
+    let mut path_buf = [0u8; 512];
+    let (path, c_path) = get_path_fast(scope, args.get(0), &mut path_buf);
 
-    if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+    if !ensure_fs_permission(scope, PermissionAction::Read, path.as_ref()) {
         return;
     }
 
@@ -327,9 +390,62 @@ fn fs_read_file_sync_callback(
         None
     };
 
-    match std::fs::read(&path) {
-        Ok(bytes) => {
+    #[cfg(unix)]
+    if encoding.is_none() {
+        if let Some(ptr) = c_path {
+            let fd = unsafe { libc::open(ptr, libc::O_RDONLY) };
+            if fd >= 0 {
+                let mut st: libc::stat = unsafe { std::mem::zeroed() };
+                if unsafe { libc::fstat(fd, &mut st) } == 0 {
+                    let len = st.st_size as usize;
+                    let ab = v8::ArrayBuffer::new(scope, len);
+                    if len > 0 {
+                        let store = ab.get_backing_store();
+                        let dst_ptr = store.as_ref().as_ptr() as *mut u8;
+                        if !dst_ptr.is_null() {
+                            let mut read_bytes = 0;
+                            while read_bytes < len {
+                                let n = unsafe {
+                                    libc::read(
+                                        fd,
+                                        dst_ptr.add(read_bytes) as *mut libc::c_void,
+                                        len - read_bytes,
+                                    )
+                                };
+                                if n <= 0 {
+                                    break;
+                                }
+                                read_bytes += n as usize;
+                            }
+                        }
+                    }
+                    unsafe { libc::close(fd) };
+                    if let Some(u8_arr) = v8::Uint8Array::new(scope, ab, 0, len) {
+                        crate::runtime_minimal::set_buffer_prototype_fast(scope, u8_arr);
+                        retval.set(u8_arr.into());
+                        return;
+                    }
+                } else {
+                    unsafe { libc::close(fd) };
+                }
+            }
+        }
+    }
+
+    let file_res = std::fs::File::open(path.as_ref());
+    match file_res {
+        Ok(mut file) => {
+            let len = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
             if let Some(enc) = encoding {
+                let mut bytes = Vec::with_capacity(len);
+                use std::io::Read;
+                if let Err(e) = file.read_to_end(&mut bytes) {
+                    let error_msg = format!("Error reading file: {}", e);
+                    let error = v8::String::new(scope, &error_msg).unwrap();
+                    let exc = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(exc);
+                    return;
+                }
                 let s = match enc.to_ascii_lowercase().as_str() {
                     "utf8" | "utf-8" => String::from_utf8_lossy(&bytes).into_owned(),
                     "hex" => hex::encode(&bytes),
@@ -343,33 +459,27 @@ fn fs_read_file_sync_callback(
                     retval.set(v8_str.into());
                 }
             } else {
-                let len = bytes.len();
                 let ab = v8::ArrayBuffer::new(scope, len);
                 if len > 0 {
                     let store = ab.get_backing_store();
                     let ptr = store.as_ref().as_ptr() as *mut u8;
                     if !ptr.is_null() {
-                        unsafe {
-                            std::slice::from_raw_parts_mut(ptr, len).copy_from_slice(&bytes);
+                        use std::io::Read;
+                        let slice = unsafe { std::slice::from_raw_parts_mut(ptr, len) };
+                        if let Err(e) = file.read_exact(slice) {
+                            let error_msg = format!("Error reading file: {}", e);
+                            let error = v8::String::new(scope, &error_msg).unwrap();
+                            let exc = v8::Exception::type_error(scope, error);
+                            scope.throw_exception(exc);
+                            return;
                         }
                     }
                 }
                 if let Some(u8_arr) = v8::Uint8Array::new(scope, ab, 0, len) {
-                    let global = scope.get_current_context().global(scope);
-                    let buf_str = v8::String::new(scope, "Buffer").unwrap();
-                    if let Some(b_val) = global.get(scope, buf_str.into()) {
-                        if let Ok(b_fn) = v8::Local::<v8::Function>::try_from(b_val) {
-                            let proto_key = v8::String::new(scope, "prototype").unwrap();
-                            if let Some(proto) = b_fn.get(scope, proto_key.into()) {
-                                u8_arr.set_prototype(scope, proto);
-                            }
-                        }
-                    }
+                    crate::runtime_minimal::set_buffer_prototype_fast(scope, u8_arr);
                     retval.set(u8_arr.into());
-                } else if let Some(v8_str) =
-                    v8::String::new(scope, &String::from_utf8_lossy(&bytes))
-                {
-                    retval.set(v8_str.into());
+                } else {
+                    retval.set(v8::undefined(scope).into());
                 }
             }
         }
@@ -382,29 +492,42 @@ fn fs_read_file_sync_callback(
     }
 }
 
+thread_local! {
+    static TLS_FS_WRITE_BUFFER: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
 /// fs.writeFileSync(path, data, encoding) - 写入文件
 fn fs_write_file_sync_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let path: String = args
-        .get(0)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
+    let mut path_buf = [0u8; 512];
+    let (path, c_path) = get_path_fast(scope, args.get(0), &mut path_buf);
 
-    if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+    if !ensure_fs_permission(scope, PermissionAction::Write, path.as_ref()) {
         return;
     }
 
     let val = args.get(1);
     let res = if val.is_string() {
         if let Some(s) = val.to_string(scope) {
-            let rust_s = s.to_rust_string_lossy(scope);
-            std::fs::write(&path, rust_s.as_bytes())
+            let len = s.utf8_length(scope);
+            TLS_FS_WRITE_BUFFER.with(|cell| {
+                let mut buf = cell.borrow_mut();
+                if buf.len() < len {
+                    buf.resize(len, 0);
+                }
+                s.write_utf8(
+                    scope,
+                    &mut buf[..len],
+                    None,
+                    v8::WriteOptions::NO_NULL_TERMINATION,
+                );
+                direct_write_sync(c_path, path.as_ref(), &buf[..len])
+            })
         } else {
-            std::fs::write(&path, b"")
+            direct_write_sync(c_path, path.as_ref(), b"")
         }
     } else if val.is_array_buffer_view() || val.is_typed_array() {
         if let Ok(view) = v8::Local::<v8::ArrayBufferView>::try_from(val) {
@@ -415,15 +538,15 @@ fn fs_write_file_sync_callback(
                 let ptr = store.as_ref().as_ptr() as *const u8;
                 if !ptr.is_null() {
                     let slice = unsafe { std::slice::from_raw_parts(ptr.add(offset), len) };
-                    std::fs::write(&path, slice)
+                    direct_write_sync(c_path, path.as_ref(), slice)
                 } else {
-                    std::fs::write(&path, b"")
+                    direct_write_sync(c_path, path.as_ref(), b"")
                 }
             } else {
-                std::fs::write(&path, b"")
+                direct_write_sync(c_path, path.as_ref(), b"")
             }
         } else {
-            std::fs::write(&path, b"")
+            direct_write_sync(c_path, path.as_ref(), b"")
         }
     } else if val.is_object() {
         if let Ok(obj) = v8::Local::<v8::Object>::try_from(val) {
@@ -440,37 +563,37 @@ fn fs_write_file_sync_callback(
                     let ptr = store.as_ref().as_ptr() as *const u8;
                     if !ptr.is_null() {
                         let slice = unsafe { std::slice::from_raw_parts(ptr, len) };
-                        std::fs::write(&path, slice)
+                        direct_write_sync(c_path, path.as_ref(), slice)
                     } else {
-                        std::fs::write(&path, b"")
+                        direct_write_sync(c_path, path.as_ref(), b"")
                     }
                 } else {
                     let rust_s = val
                         .to_string(scope)
                         .map(|s| s.to_rust_string_lossy(scope))
                         .unwrap_or_default();
-                    std::fs::write(&path, rust_s.as_bytes())
+                    direct_write_sync(c_path, path.as_ref(), rust_s.as_bytes())
                 }
             } else {
                 let rust_s = val
                     .to_string(scope)
                     .map(|s| s.to_rust_string_lossy(scope))
                     .unwrap_or_default();
-                std::fs::write(&path, rust_s.as_bytes())
+                direct_write_sync(c_path, path.as_ref(), rust_s.as_bytes())
             }
         } else {
             let rust_s = val
                 .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
-            std::fs::write(&path, rust_s.as_bytes())
+            direct_write_sync(c_path, path.as_ref(), rust_s.as_bytes())
         }
     } else {
         let rust_s = val
             .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default();
-        std::fs::write(&path, rust_s.as_bytes())
+        direct_write_sync(c_path, path.as_ref(), rust_s.as_bytes())
     };
 
     match res {

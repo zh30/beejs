@@ -1093,15 +1093,26 @@ fn tls_config_from_server_object(
     scope: &mut v8::HandleScope,
     server_obj: v8::Local<v8::Object>,
 ) -> Option<Arc<rustls::ServerConfig>> {
+    let tls_flag_key = v8::String::new(scope, "_beeUsesTls").unwrap();
+    let uses_tls = server_obj
+        .get(scope, tls_flag_key.into())
+        .map(|val| val.is_true())
+        .unwrap_or(false);
+    if !uses_tls {
+        return None;
+    }
+
     let cert_key = v8::String::new(scope, "_tlsCert").unwrap();
     let key_key = v8::String::new(scope, "_tlsKey").unwrap();
     let cert = server_obj
         .get(scope, cert_key.into())
+        .filter(|value| !value.is_undefined() && !value.is_null())
         .and_then(|value| value.to_string(scope))
         .map(|value| value.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let key = server_obj
         .get(scope, key_key.into())
+        .filter(|value| !value.is_undefined() && !value.is_null())
         .and_then(|value| value.to_string(scope))
         .map(|value| value.to_rust_string_lossy(scope))
         .unwrap_or_default();
@@ -2738,6 +2749,24 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
 
     eprintln!("[Beejs] HTTP Server listening on {}", addr);
 
+    // 创建工作线程池（根据硬件核心数复用线程，消除每次连接 thread::spawn 的高昂开销）
+    let num_workers = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4)
+        .max(4)
+        * 2;
+    let (conn_tx, conn_rx) =
+        crossbeam::channel::bounded::<(TcpStream, Arc<HttpServerState>, String)>(2048);
+
+    for _ in 0..num_workers {
+        let rx = conn_rx.clone();
+        thread::spawn(move || {
+            while let Ok((stream, state, code)) = rx.recv() {
+                handle_connection(stream, &state, &code);
+            }
+        });
+    }
+
     loop {
         // 检查是否应该停止
         if !server_state.listening.load(Ordering::SeqCst) {
@@ -2750,9 +2779,14 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
                     let state = server_state.clone();
                     let code = handler_code.clone();
 
-                    thread::spawn(move || {
-                        handle_connection(stream, &state, &code);
-                    });
+                    if let Err(crossbeam::channel::TrySendError::Full((s, st, cd))) =
+                        conn_tx.try_send((stream, state, code))
+                    {
+                        // 队列极端饱满时动态溢出处理，避免丢弃连接
+                        thread::spawn(move || {
+                            handle_connection(s, &st, &cd);
+                        });
+                    }
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     break;
@@ -2768,6 +2802,8 @@ fn run_http_server(server_state: Arc<HttpServerState>, handler_code: String) {
         }
         thread::sleep(Duration::from_millis(1));
     }
+
+    drop(conn_tx);
 
     eprintln!("[Beejs] HTTP Server stopped");
 }
@@ -2845,19 +2881,19 @@ fn handle_same_port_websocket_upgrade<S: Read + Write>(stream: S, request_data: 
 }
 
 fn should_keep_alive(headers: &HashMap<String, String>, http_version: &str) -> bool {
+    let conn = header_value_ignore_case(headers, "connection").map(|s| s.to_ascii_lowercase());
     // HTTP/1.1 默认 Keep-Alive，HTTP/1.0 默认 Close
     if http_version == "HTTP/1.1" {
         // HTTP/1.1 默认 Keep-Alive，除非明确指定 Connection: close
-        match headers.get("Connection").map(|s| s.to_lowercase()) {
-            Some(conn) if conn == "close" => false,
-            Some(conn) if conn == "keep-alive" => true,
-            None => true, // 没有 Connection 头，默认 Keep-Alive
+        match conn.as_deref() {
+            Some("close") => false,
+            Some("keep-alive") => true,
             _ => true,
         }
     } else {
         // HTTP/1.0 默认 Close，除非明确指定 Connection: keep-alive
-        match headers.get("Connection").map(|s| s.to_lowercase()) {
-            Some(conn) if conn == "keep-alive" => true,
+        match conn.as_deref() {
+            Some("keep-alive") => true,
             _ => false,
         }
     }
@@ -2938,7 +2974,6 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
     loop {
         request_data.clear();
         let mut connection_close = false;
-        let mut _is_keep_alive = false;
 
         // 读取请求数据
         loop {
@@ -2977,7 +3012,7 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
             }
         }
 
-        if connection_close || request_data.is_empty() {
+        if request_data.is_empty() {
             break;
         }
 
@@ -2995,7 +3030,8 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
         }
 
         // 判断是否 Keep-Alive
-        _is_keep_alive = should_keep_alive(&parsed_request.headers, &parsed_request.http_version);
+        let is_keep_alive = !connection_close
+            && should_keep_alive(&parsed_request.headers, &parsed_request.http_version);
 
         let channel = server_state
             .channel
@@ -3056,16 +3092,17 @@ fn handle_connection(stream: TcpStream, server_state: &HttpServerState, _handler
 
         match resp_rx.recv_timeout(KEEP_ALIVE_TIMEOUT) {
             Ok(response) => {
-                let connection_header = if _is_keep_alive {
-                    "keep-alive"
-                } else {
-                    "close"
-                };
+                let response_has_close = response.headers.iter().any(|(k, v)| {
+                    k.eq_ignore_ascii_case("connection") && v.trim().eq_ignore_ascii_case("close")
+                });
+                let keep_alive = is_keep_alive && !response_has_close;
+
+                let connection_header = if keep_alive { "keep-alive" } else { "close" };
 
                 let response_data = generate_http_response_v2(&response, Some(connection_header));
                 let _ = stream.write_all(&response_data);
 
-                if !_is_keep_alive {
+                if !keep_alive {
                     let _ = stream.shutdown_write();
                     break;
                 }
