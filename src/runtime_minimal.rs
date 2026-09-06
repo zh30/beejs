@@ -8494,9 +8494,10 @@ impl MinimalRuntime {
         crate::nodejs_core::querystring::setup_querystring_api(scope, context)?;
         Self::setup_dns_api(scope, context)?;
         setup_net_api(scope, context)?;
-        Self::setup_string_decoder_api(scope, context)?;
+        crate::nodejs_core::string_decoder::setup_string_decoder_api(scope, context)?;
         Self::setup_legacy_web_apis(scope, context, true)?;
         setup_crypto_api(scope, context)?;
+        crate::nodejs_core::ai::setup_ai_api(scope, context)?;
         Self::setup_module_system(scope, context, main_module_dir, main_module_filename)?;
         setup_timers_api(scope, context)?;
         setup_performance_api(scope, context)?;
@@ -18760,6 +18761,11 @@ impl MinimalRuntime {
                     |scope: &mut v8::HandleScope,
                      args: v8::FunctionCallbackArguments,
                      mut retval: v8::ReturnValue| {
+                        if args.length() == 0 {
+                            let empty = v8::String::new(scope, "").unwrap();
+                            retval.set(empty.into());
+                            return;
+                        }
                         if args.length() >= 1 {
                             let input = args.get(0);
                             let this_obj = args.this();
@@ -19906,6 +19912,20 @@ impl MinimalRuntime {
                         scope.throw_exception(error_obj.into());
                         return;
                     }
+                } else if let Some(bee_name) =
+                    requested_module_id_str.strip_prefix("bee:")
+                {
+                    if crate::nodejs_core::commonjs_resolver::is_builtin_module(&requested_module_id_str)
+                        || crate::nodejs_core::commonjs_resolver::is_builtin_module(bee_name)
+                    {
+                        bee_name.to_string()
+                    } else {
+                        let error_msg = format!("Cannot find module '{}'", requested_module_id_str);
+                        let error_str = v8::String::new(scope, &error_msg).unwrap();
+                        let error_obj = v8::Exception::error(scope, error_str);
+                        scope.throw_exception(error_obj.into());
+                        return;
+                    }
                 } else {
                     requested_module_id_str
                 };
@@ -20728,6 +20748,26 @@ impl MinimalRuntime {
                             }
                         }
 
+                        if module_id_str == "ai" {
+                            let ai_key = v8::String::new(scope, "__bee_ai").unwrap();
+                            if let Some(ai_val) = global_obj.get(scope, ai_key.into()) {
+                                if !ai_val.is_undefined() {
+                                    retval.set(ai_val);
+                                    return;
+                                }
+                            }
+                        }
+
+                        if module_id_str == "string_decoder" {
+                            let sd_key = v8::String::new(scope, "__string_decoder").unwrap();
+                            if let Some(sd_val) = global_obj.get(scope, sd_key.into()) {
+                                if !sd_val.is_undefined() {
+                                    retval.set(sd_val);
+                                    return;
+                                }
+                            }
+                        }
+
                         if module_id_str == "url" {
                             let url_module = v8::Object::new(scope);
                             let url_key = v8::String::new(scope, "URL").unwrap();
@@ -20844,6 +20884,20 @@ impl MinimalRuntime {
                         ) {
                             Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::File(path)) => path,
                             Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::Builtin(name)) => {
+                                let lookup_key = v8::String::new(scope, &name).unwrap();
+                                if let Some(val) = global.get(scope, lookup_key.into()) {
+                                    if !val.is_undefined() && !val.is_null() {
+                                        retval.set(val);
+                                        return;
+                                    }
+                                }
+                                let bee_key = v8::String::new(scope, &format!("__{}", name)).unwrap();
+                                if let Some(val) = global.get(scope, bee_key.into()) {
+                                    if !val.is_undefined() && !val.is_null() {
+                                        retval.set(val);
+                                        return;
+                                    }
+                                }
                                 let error_msg = format!("Cannot load builtin module '{}' from file resolver", name);
                                 let error_str = v8::String::new(scope, &error_msg).unwrap();
                                 let error_obj = v8::Exception::error(scope, error_str);
@@ -27105,7 +27159,7 @@ require.resolve = function(specifier) {{
     }
 
     /// Set up the string_decoder module (v0.3.48)
-    /// Provides StringDecoder for handling multi-byte characters in streams
+    #[allow(dead_code)]
     fn setup_string_decoder_api(
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Local<v8::Context>,

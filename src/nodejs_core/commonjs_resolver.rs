@@ -36,9 +36,12 @@ const JS_EXTENSIONS: &[&str] = &["js", "json", "ts", "mjs", "cjs", "tsx"];
 const COMMONJS_EXPORT_CONDITIONS: &[&str] = &["require", "node", "default"];
 const ESM_EXPORT_CONDITIONS: &[&str] = &["import", "node", "default"];
 const BUILTIN_MODULES: &[&str] = &[
+    "ai",
     "assert",
     "assert/strict",
     "async_hooks",
+    "bee:ai",
+    "bee:test",
     "buffer",
     "child_process",
     "crypto",
@@ -326,12 +329,18 @@ pub fn classify_commonjs_file(path: &Path) -> Result<CommonJsModuleFormat, Commo
 }
 
 fn normalize_builtin_specifier(specifier: &str) -> Option<&str> {
-    let builtin_name = specifier.strip_prefix("node:").unwrap_or(specifier);
-    if BUILTIN_MODULES.contains(&builtin_name) {
-        Some(builtin_name)
-    } else {
-        None
+    if BUILTIN_MODULES.contains(&specifier) {
+        return Some(specifier);
     }
+    let without_node = specifier.strip_prefix("node:").unwrap_or(specifier);
+    if BUILTIN_MODULES.contains(&without_node) {
+        return Some(without_node);
+    }
+    let without_bee = specifier.strip_prefix("bee:").unwrap_or(specifier);
+    if BUILTIN_MODULES.contains(&without_bee) {
+        return Some(without_bee);
+    }
+    None
 }
 
 fn nearest_package_type(path: &Path) -> Result<Option<String>, CommonJsResolveError> {

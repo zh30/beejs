@@ -146,7 +146,7 @@ export default function HomeComponent() {
           </a>
 
           <Link
-            to="/blog/v0.4.3-performance-breakthrough"
+            to="/blog/v1.0.0-official-release"
             className="w-full sm:w-auto px-6 py-4 rounded-full glass-card hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-200 font-medium text-sm transition-all flex items-center justify-center gap-2 border border-zinc-300/80 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
           >
             <Sparkles className="w-4 h-4 text-amber-400" />
@@ -362,7 +362,7 @@ export default function HomeComponent() {
                     <div>
                       <div className="flex items-center justify-between text-xs font-mono mb-1.5">
                         <span className="text-amber-600 dark:text-amber-300 font-bold flex items-center gap-1.5">
-                          <span>Beejs v0.4.3 (Rust)</span>
+                          <span>Beejs v1.0.0 (Rust)</span>
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
                             #1
                           </span>
@@ -516,7 +516,7 @@ export default function HomeComponent() {
                 <div className="pl-4">
                   res.<span className="text-blue-400">end</span>(JSON.<span className="text-blue-400">stringify</span>(&#123;{' '}
                   <span className="text-amber-300">runtime</span>: <span className="text-emerald-400">'beejs'</span>,{' '}
-                  <span className="text-amber-300">version</span>: <span className="text-emerald-400">'0.4.3'</span>,{' '}
+                  <span className="text-amber-300">version</span>: <span className="text-emerald-400">'1.0.0'</span>,{' '}
                   <span className="text-amber-300">workers</span>: <span className="text-orange-400">8</span> &#125;));
                 </div>
                 <div>&#125;);</div>
@@ -690,7 +690,7 @@ export default function HomeComponent() {
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              to="/blog/v0.4.3-performance-breakthrough"
+              to="/blog/v1.0.0-official-release"
               className="w-full sm:w-auto px-8 py-3.5 rounded-full glass-card hover:bg-zinc-800/60 text-zinc-800 dark:text-zinc-300 font-semibold text-sm transition-all"
             >
               <span>{home.ctaNotesButton}</span>

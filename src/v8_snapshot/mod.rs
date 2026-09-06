@@ -156,12 +156,14 @@ pub fn cached_startup_blob() -> Option<&'static [u8]> {
 
 fn load_or_create_startup_blob() -> Option<Vec<u8>> {
     let path = startup_blob_path();
-    if let Ok(bytes) = std::fs::read(&path) {
-        if let Some(valid_blob) = unwrap_snapshot_payload(&bytes) {
-            return Some(valid_blob);
-        } else {
-            // Invalid or outdated snapshot detected: remove it so it heals cleanly
-            let _ = std::fs::remove_file(&path);
+    if let Ok(file) = std::fs::File::open(&path) {
+        if let Ok(mmap) = unsafe { memmap2::Mmap::map(&file) } {
+            if let Some(valid_blob) = unwrap_snapshot_payload(&mmap) {
+                return Some(valid_blob);
+            } else {
+                // Invalid or outdated snapshot detected: remove it so it heals cleanly
+                let _ = std::fs::remove_file(&path);
+            }
         }
     }
 
