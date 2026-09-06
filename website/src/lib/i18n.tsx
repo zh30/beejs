@@ -22,6 +22,12 @@ const copy = {
       en: 'EN',
       zh: '中文',
     },
+    theme: {
+      system: 'System',
+      light: 'Light',
+      dark: 'Dark',
+      toggle: 'Switch Theme (System / Light / Dark)',
+    },
     footer: {
       statusLabel: 'System Status',
       statusValue: 'Operational',
@@ -415,6 +421,12 @@ const copy = {
       label: '语言',
       en: 'EN',
       zh: '中文',
+    },
+    theme: {
+      system: '跟随系统',
+      light: '浅色模式',
+      dark: '深色模式',
+      toggle: '切换主题（跟随系统 / 浅色 / 深色）',
     },
     footer: {
       statusLabel: '系统状态',

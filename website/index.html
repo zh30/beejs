@@ -5,6 +5,23 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <script>
+    (function() {
+      try {
+        var stored = localStorage.getItem('beejs-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = stored === 'dark' || (!stored && prefersDark) || (stored === 'system' && prefersDark);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      } catch (e) {}
+    })();
+  </script>
   <title>Beejs - High-Performance JavaScript & TypeScript Runtime in Rust & V8</title>
   
   <meta name="description" content="Beejs is an ultra-fast, high-performance JavaScript and TypeScript runtime built with Rust and V8. Features lock-free worker pool concurrency, 4.6M ops/s module resolution, SIMD buffers, sub-18ms cold starts, and full Node/Web API compatibility." />
