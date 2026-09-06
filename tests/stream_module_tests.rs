@@ -9,8 +9,8 @@ use serial_test::serial;
 fn test_stream_module_exists() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let result = runtime.execute_code("typeof stream");
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap().trim(), "object");
+    // The stream module is the Stream class itself, as in Node.
+    assert_eq!(result.unwrap().trim(), "function");
 }
 
 #[test]

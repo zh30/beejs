@@ -125,7 +125,7 @@ enum Command {
         #[arg(long = "export-tools")]
         export_tools: bool,
         /// Number of parallel multi-isolate worker threads for parallel HTTP execution (default: 1, or via BEE_WORKERS)
-        #[arg(short = 'w', long = "workers", default_value = "1")]
+        #[arg(short = 'W', long = "workers", default_value = "1")]
         workers: usize,
     },
     /// JSON-RPC session over stdin/stdout for Agent hosts
@@ -4722,6 +4722,7 @@ fn main() -> Result<()> {
             }
 
             // Create a minimal runtime with Web API support
+            beejs::v8_snapshot::enable_startup_snapshot_for_cli();
             let mut runtime =
                 beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
             let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));

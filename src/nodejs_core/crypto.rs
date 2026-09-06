@@ -100,13 +100,16 @@ fn array_buffer_bytes(
 }
 
 fn encode_digest_bytes(bytes: &[u8], encoding: &str) -> String {
-    let encoding = encoding.to_ascii_lowercase();
-    match encoding.as_str() {
-        "hex" => hex::encode(bytes),
-        "base64" => BASE64_STANDARD.encode(bytes),
-        "base64url" => BASE64_URL_SAFE_NO_PAD.encode(bytes),
-        "latin1" | "binary" => bytes_to_latin1_string(bytes),
-        _ => hex::encode(bytes),
+    if encoding.eq_ignore_ascii_case("hex") {
+        hex::encode(bytes)
+    } else if encoding.eq_ignore_ascii_case("base64") {
+        BASE64_STANDARD.encode(bytes)
+    } else if encoding.eq_ignore_ascii_case("base64url") {
+        BASE64_URL_SAFE_NO_PAD.encode(bytes)
+    } else if encoding.eq_ignore_ascii_case("latin1") || encoding.eq_ignore_ascii_case("binary") {
+        bytes_to_latin1_string(bytes)
+    } else {
+        hex::encode(bytes)
     }
 }
 
@@ -140,7 +143,37 @@ fn digest_encoding_arg(
     scope: &mut v8::HandleScope,
     args: &v8::FunctionCallbackArguments,
 ) -> Option<String> {
-    optional_string_arg(scope, args, 0)
+    let value = args.get(0);
+    if args.length() <= 0 || value.is_undefined() || value.is_null() {
+        return None;
+    }
+    if let Some(s) = value.to_string(scope) {
+        let mut buf = [0u8; 16];
+        let len = s.utf8_length(scope);
+        if len > 0 && len <= 16 {
+            s.write_utf8(
+                scope,
+                &mut buf,
+                None,
+                v8::WriteOptions::NO_NULL_TERMINATION | v8::WriteOptions::REPLACE_INVALID_UTF8,
+            );
+            let slice = &buf[..len];
+            if slice.eq_ignore_ascii_case(b"hex") {
+                return Some("hex".to_string());
+            }
+            if slice.eq_ignore_ascii_case(b"base64") {
+                return Some("base64".to_string());
+            }
+            if slice.eq_ignore_ascii_case(b"base64url") {
+                return Some("base64url".to_string());
+            }
+            if slice.eq_ignore_ascii_case(b"latin1") || slice.eq_ignore_ascii_case(b"binary") {
+                return Some("latin1".to_string());
+            }
+        }
+        return Some(s.to_rust_string_lossy(scope));
+    }
+    None
 }
 
 fn hmac_key_encoding_arg(
@@ -203,6 +236,35 @@ impl StreamingHasher {
         }
     }
 
+    #[inline]
+    fn finalize_into(self, out: &mut [u8; 64]) -> usize {
+        match self {
+            StreamingHasher::Ring(ctx) => {
+                let digest = ctx.finish();
+                let bytes = digest.as_ref();
+                let len = bytes.len().min(64);
+                out[..len].copy_from_slice(&bytes[..len]);
+                len
+            }
+            StreamingHasher::Sha1(hasher) => {
+                let res = hasher.finalize();
+                out[..20].copy_from_slice(&res);
+                20
+            }
+            StreamingHasher::Md5(ctx) => {
+                let res = ctx.finalize();
+                out[..16].copy_from_slice(&res.0);
+                16
+            }
+            StreamingHasher::Blake3(hasher) => {
+                let res = hasher.finalize();
+                out[..32].copy_from_slice(res.as_bytes());
+                32
+            }
+        }
+    }
+
+    #[allow(dead_code)]
     fn finalize(self) -> Vec<u8> {
         match self {
             StreamingHasher::Ring(ctx) => ctx.finish().as_ref().to_vec(),
@@ -271,10 +333,81 @@ impl StreamingHmac {
     }
 }
 
+#[derive(Default)]
+struct FastU32Hasher(u64);
+impl std::hash::Hasher for FastU32Hasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = self
+                .0
+                .wrapping_mul(0x517cc1b727220a95)
+                .wrapping_add(b as u64);
+        }
+    }
+    #[inline]
+    fn write_u32(&mut self, i: u32) {
+        self.0 = (i as u64).wrapping_mul(0x517cc1b727220a95);
+    }
+}
+type FastU32HashMap<V> =
+    std::collections::HashMap<u32, V, std::hash::BuildHasherDefault<FastU32Hasher>>;
+
 thread_local! {
-    static ACTIVE_HASHERS: std::cell::RefCell<std::collections::HashMap<u32, StreamingHasher>> = std::cell::RefCell::new(std::collections::HashMap::new());
-    static ACTIVE_HMACS: std::cell::RefCell<std::collections::HashMap<u32, StreamingHmac>> = std::cell::RefCell::new(std::collections::HashMap::new());
+    static ACTIVE_HASHERS: std::cell::RefCell<FastU32HashMap<StreamingHasher>> = std::cell::RefCell::new(FastU32HashMap::default());
+    static ACTIVE_HMACS: std::cell::RefCell<FastU32HashMap<StreamingHmac>> = std::cell::RefCell::new(FastU32HashMap::default());
     static NEXT_CRYPTO_ID: std::cell::Cell<u32> = std::cell::Cell::new(1);
+    static CACHED_HASH_PROTO: std::cell::RefCell<Option<v8::Global<v8::Object>>> = const { std::cell::RefCell::new(None) };
+    static CACHED_HMAC_PROTO: std::cell::RefCell<Option<v8::Global<v8::Object>>> = const { std::cell::RefCell::new(None) };
+}
+
+fn parse_hash_algorithm(
+    scope: &mut v8::HandleScope,
+    val: v8::Local<v8::Value>,
+) -> Result<String, String> {
+    let Some(s) = val.to_string(scope) else {
+        return Err(String::new());
+    };
+    let mut buf = [0u8; 32];
+    let len = s.utf8_length(scope);
+    if len > 0 && len <= 32 {
+        s.write_utf8(
+            scope,
+            &mut buf,
+            None,
+            v8::WriteOptions::NO_NULL_TERMINATION | v8::WriteOptions::REPLACE_INVALID_UTF8,
+        );
+        let slice = &buf[..len];
+        if slice.eq_ignore_ascii_case(b"sha256") || slice.eq_ignore_ascii_case(b"sha-256") {
+            return Ok("sha256".to_string());
+        }
+        if slice.eq_ignore_ascii_case(b"sha512") || slice.eq_ignore_ascii_case(b"sha-512") {
+            return Ok("sha512".to_string());
+        }
+        if slice.eq_ignore_ascii_case(b"md5") {
+            return Ok("md5".to_string());
+        }
+        if slice.eq_ignore_ascii_case(b"sha1") || slice.eq_ignore_ascii_case(b"sha-1") {
+            return Ok("sha1".to_string());
+        }
+        if slice.eq_ignore_ascii_case(b"sha384") || slice.eq_ignore_ascii_case(b"sha-384") {
+            return Ok("sha384".to_string());
+        }
+        if slice.eq_ignore_ascii_case(b"blake3") {
+            return Ok("blake3".to_string());
+        }
+    }
+    let lossy = s.to_rust_string_lossy(scope);
+    let norm = normalize_hash_algorithm(&lossy);
+    if is_supported_hash_algorithm(&norm) {
+        Ok(norm)
+    } else {
+        Err(lossy)
+    }
 }
 
 fn next_crypto_id() -> u32 {
@@ -292,6 +425,36 @@ fn with_bytes_from_update_value<R>(
     f: impl FnOnce(&[u8]) -> R,
 ) -> Result<R, String> {
     if value.is_string() {
+        let is_utf8 = match string_encoding {
+            None => true,
+            Some(enc) => enc.eq_ignore_ascii_case("utf8") || enc.eq_ignore_ascii_case("utf-8"),
+        };
+        if is_utf8 {
+            if let Some(s) = value.to_string(scope) {
+                let utf8_len = s.utf8_length(scope);
+                if utf8_len <= 4096 {
+                    let mut buf = [0u8; 4096];
+                    s.write_utf8(
+                        scope,
+                        &mut buf,
+                        None,
+                        v8::WriteOptions::NO_NULL_TERMINATION
+                            | v8::WriteOptions::REPLACE_INVALID_UTF8,
+                    );
+                    return Ok(f(&buf[..utf8_len]));
+                } else {
+                    let mut buf = vec![0u8; utf8_len];
+                    s.write_utf8(
+                        scope,
+                        &mut buf,
+                        None,
+                        v8::WriteOptions::NO_NULL_TERMINATION
+                            | v8::WriteOptions::REPLACE_INVALID_UTF8,
+                    );
+                    return Ok(f(&buf));
+                }
+            }
+        }
         let text = value
             .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope))
@@ -656,6 +819,7 @@ pub fn setup_crypto_api(
 
     let hash_proto_key = v8::String::new(scope, "_HashPrototype").unwrap();
     crypto_obj.set(scope, hash_proto_key.into(), hash_proto.into());
+    CACHED_HASH_PROTO.with(|p| *p.borrow_mut() = Some(v8::Global::new(scope, hash_proto)));
 
     // Create shared Hmac prototype
     let hmac_proto = v8::Object::new(scope);
@@ -669,6 +833,7 @@ pub fn setup_crypto_api(
 
     let hmac_proto_key = v8::String::new(scope, "_HmacPrototype").unwrap();
     crypto_obj.set(scope, hmac_proto_key.into(), hmac_proto.into());
+    CACHED_HMAC_PROTO.with(|p| *p.borrow_mut() = Some(v8::Global::new(scope, hmac_proto)));
 
     // 设置crypto对象到全局
     global.set(scope, crypto_key.into(), crypto_obj.into());
@@ -715,34 +880,22 @@ fn create_hash_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let algorithm: _ = args
-        .get(0)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
-    let algorithm = normalize_hash_algorithm(&algorithm);
-    if !is_supported_hash_algorithm(&algorithm) {
-        let error_msg =
-            v8::String::new(scope, &format!("Unsupported hash algorithm: {}", algorithm)).unwrap();
-        let error = v8::Exception::type_error(scope, error_msg);
-        scope.throw_exception(error);
-        return;
-    }
+    let algorithm = match parse_hash_algorithm(scope, args.get(0)) {
+        Ok(algo) => algo,
+        Err(raw) => {
+            let error_msg =
+                v8::String::new(scope, &format!("Unsupported hash algorithm: {}", raw)).unwrap();
+            let error = v8::Exception::type_error(scope, error_msg);
+            scope.throw_exception(error);
+            return;
+        }
+    };
 
     let hash_obj: _ = v8::Object::new(scope);
-    let global = scope.get_current_context().global(scope);
-    let crypto_key = v8::String::new(scope, "crypto").unwrap();
-    let mut prototype_set = false;
-    if let Some(c_val) = global.get(scope, crypto_key.into()) {
-        if let Ok(c_obj) = v8::Local::<v8::Object>::try_from(c_val) {
-            let hash_proto_key = v8::String::new(scope, "_HashPrototype").unwrap();
-            if let Some(p_val) = c_obj.get(scope, hash_proto_key.into()) {
-                hash_obj.set_prototype(scope, p_val);
-                prototype_set = true;
-            }
-        }
-    }
-    if !prototype_set {
+    let proto = CACHED_HASH_PROTO.with(|p| p.borrow().as_ref().map(|g| v8::Local::new(scope, g)));
+    if let Some(proto) = proto {
+        hash_obj.set_prototype(scope, proto.into());
+    } else {
         set_hash_methods(scope, hash_obj);
     }
 
@@ -871,22 +1024,43 @@ fn hash_digest_callback(
         .map(|i| i.value() as u32)
         .unwrap_or(0);
 
-    let digest_bytes = if hash_id != 0 {
+    let mut raw_bytes = [0u8; 64];
+    let (has_bytes, byte_len) = if hash_id != 0 {
         ACTIVE_HASHERS
-            .with(|m| m.borrow_mut().remove(&hash_id).map(|h| h.finalize()))
-            .unwrap_or_default()
+            .with(|m| {
+                m.borrow_mut()
+                    .remove(&hash_id)
+                    .map(|h| (true, h.finalize_into(&mut raw_bytes)))
+            })
+            .unwrap_or((false, 0))
     } else {
-        Vec::new()
+        (false, 0)
+    };
+    let digest_bytes = if has_bytes {
+        &raw_bytes[..byte_len]
+    } else {
+        &[]
     };
 
     set_object_bool_property(scope, this, "_digest_called", true);
 
     if let Some(encoding) = encoding {
-        let digest_result = encode_digest_bytes(&digest_bytes, &encoding);
+        if encoding.eq_ignore_ascii_case("hex") {
+            let hex_len = digest_bytes.len() * 2;
+            let mut hex_buf = [0u8; 128];
+            if hex_len <= 128 && hex::encode_to_slice(digest_bytes, &mut hex_buf[..hex_len]).is_ok()
+            {
+                let hex_str = unsafe { std::str::from_utf8_unchecked(&hex_buf[..hex_len]) };
+                let result_str = v8::String::new(scope, hex_str).unwrap();
+                retval.set(result_str.into());
+                return;
+            }
+        }
+        let digest_result = encode_digest_bytes(digest_bytes, &encoding);
         let result_str: _ = v8::String::new(scope, &digest_result).unwrap();
         retval.set(result_str.into());
     } else {
-        return_output(scope, &digest_bytes, "buffer", retval);
+        return_output(scope, digest_bytes, "buffer", retval);
     }
 }
 
@@ -895,12 +1069,16 @@ fn create_hmac_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let algorithm: _ = args
-        .get(0)
-        .to_string(scope)
-        .map(|s| s.to_rust_string_lossy(scope))
-        .unwrap_or_default();
-    let algorithm = normalize_hash_algorithm(&algorithm);
+    let algorithm = match parse_hash_algorithm(scope, args.get(0)) {
+        Ok(algo) => algo,
+        Err(raw) => {
+            let error_msg =
+                v8::String::new(scope, &format!("Unsupported HMAC algorithm: {}", raw)).unwrap();
+            let error = v8::Exception::type_error(scope, error_msg);
+            scope.throw_exception(error);
+            return;
+        }
+    };
     let key_encoding = hmac_key_encoding_arg(scope, &args);
     let key_bytes = if args.length() <= 1 || args.get(1).is_undefined() {
         Vec::new()
@@ -915,28 +1093,22 @@ fn create_hmac_callback(
             }
         }
     };
-    if !is_supported_hash_algorithm(&algorithm) {
-        let error_msg =
-            v8::String::new(scope, &format!("Unsupported HMAC algorithm: {}", algorithm)).unwrap();
-        let error = v8::Exception::type_error(scope, error_msg);
-        scope.throw_exception(error);
-        return;
-    }
+
     let hmac_obj: _ = v8::Object::new(scope);
-    let global = scope.get_current_context().global(scope);
-    let crypto_key = v8::String::new(scope, "crypto").unwrap();
-    if let Some(c_val) = global.get(scope, crypto_key.into()) {
-        if let Ok(c_obj) = v8::Local::<v8::Object>::try_from(c_val) {
-            let hmac_proto_key = v8::String::new(scope, "_HmacPrototype").unwrap();
-            if let Some(p_val) = c_obj.get(scope, hmac_proto_key.into()) {
-                hmac_obj.set_prototype(scope, p_val);
-            }
-        }
+    let proto = CACHED_HMAC_PROTO.with(|p| p.borrow().as_ref().map(|g| v8::Local::new(scope, g)));
+    if let Some(proto) = proto {
+        hmac_obj.set_prototype(scope, proto.into());
     }
 
     let algo_key: _ = v8::String::new(scope, "_algorithm").unwrap();
     let algo_val: _ = v8::String::new(scope, &algorithm).unwrap();
     hmac_obj.set(scope, algo_key.into(), algo_val.into());
+
+    let key_arg = args.get(1);
+    if !key_arg.is_undefined() {
+        let key_key = v8::String::new(scope, "_key").unwrap();
+        hmac_obj.set(scope, key_key.into(), key_arg);
+    }
 
     let hmac_instance = StreamingHmac::new(&algorithm, &key_bytes).unwrap();
     let hmac_id = next_crypto_id();
@@ -1030,6 +1202,18 @@ fn hmac_digest_callback(
     set_object_bool_property(scope, this, "_digest_called", true);
 
     if let Some(encoding) = encoding {
+        if encoding.eq_ignore_ascii_case("hex") {
+            let hex_len = digest_bytes.len() * 2;
+            let mut hex_buf = [0u8; 128];
+            if hex_len <= 128
+                && hex::encode_to_slice(&digest_bytes, &mut hex_buf[..hex_len]).is_ok()
+            {
+                let hex_str = unsafe { std::str::from_utf8_unchecked(&hex_buf[..hex_len]) };
+                let result_str = v8::String::new(scope, hex_str).unwrap();
+                retval.set(result_str.into());
+                return;
+            }
+        }
         let digest_result = encode_digest_bytes(&digest_bytes, &encoding);
         let result_str: _ = v8::String::new(scope, &digest_result).unwrap();
         retval.set(result_str.into());

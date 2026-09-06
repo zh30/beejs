@@ -461,12 +461,17 @@ fn test_prepend_listener_returns_emitter() {
 #[serial]
 fn test_prepend_listener_requires_function() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    // v0.3.257: prependListener returns null when callback is not a function (consistent with on)
+    // Node.js spec: prependListener throws TypeError when callback is not a function
     let result = runtime.execute_code(
         r#"
         const emitter = new events.EventEmitter();
-        const result = emitter.prependListener('test', 'not a function');
-        result === null
+        let threw = false;
+        try {
+            emitter.prependListener('test', 'not a function');
+        } catch (e) {
+            threw = e instanceof TypeError;
+        }
+        threw;
     "#,
     );
     assert!(result.is_ok());
@@ -628,12 +633,17 @@ fn test_prepend_once_listener_returns_emitter() {
 #[serial]
 fn test_prepend_once_listener_requires_function() {
     let mut runtime = MinimalRuntime::new().unwrap();
-    // v0.3.258: prependOnceListener returns null when callback is not a function
+    // Node.js spec: prependOnceListener throws TypeError when callback is not a function
     let result = runtime.execute_code(
         r#"
         const emitter = new events.EventEmitter();
-        const result = emitter.prependOnceListener('test', 'not a function');
-        result === null
+        let threw = false;
+        try {
+            emitter.prependOnceListener('test', 'not a function');
+        } catch (e) {
+            threw = e instanceof TypeError;
+        }
+        threw;
     "#,
     );
     assert!(result.is_ok());

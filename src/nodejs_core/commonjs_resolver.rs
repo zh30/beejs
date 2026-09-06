@@ -1,8 +1,36 @@
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::path::Component;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
+
+use once_cell::sync::Lazy;
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+struct ResolutionCacheKey {
+    parent_dir: PathBuf,
+    specifier: String,
+    is_esm: bool,
+}
+
+static MODULE_RESOLUTION_CACHE: Lazy<
+    RwLock<HashMap<ResolutionCacheKey, Result<ResolvedModule, CommonJsResolveError>>>,
+> = Lazy::new(|| RwLock::new(HashMap::new()));
+
+static PACKAGE_JSON_CACHE: Lazy<RwLock<HashMap<PathBuf, Option<serde_json::Value>>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
+
+/// 清空模块解析缓存（用于热重载或测试隔离）
+pub fn clear_module_resolution_cache() {
+    if let Ok(mut cache) = MODULE_RESOLUTION_CACHE.write() {
+        cache.clear();
+    }
+    if let Ok(mut cache) = PACKAGE_JSON_CACHE.write() {
+        cache.clear();
+    }
+}
 
 const JS_EXTENSIONS: &[&str] = &["js", "json", "ts", "mjs", "cjs", "tsx"];
 const COMMONJS_EXPORT_CONDITIONS: &[&str] = &["require", "node", "default"];
@@ -199,14 +227,42 @@ pub fn resolve_commonjs_module(
     specifier: &str,
     parent_dir: &Path,
 ) -> Result<ResolvedModule, CommonJsResolveError> {
-    resolve_module_with_conditions(specifier, parent_dir, COMMONJS_EXPORT_CONDITIONS)
+    let key = ResolutionCacheKey {
+        parent_dir: parent_dir.to_path_buf(),
+        specifier: specifier.to_string(),
+        is_esm: false,
+    };
+    if let Ok(cache) = MODULE_RESOLUTION_CACHE.read() {
+        if let Some(cached) = cache.get(&key) {
+            return cached.clone();
+        }
+    }
+    let res = resolve_module_with_conditions(specifier, parent_dir, COMMONJS_EXPORT_CONDITIONS);
+    if let Ok(mut cache) = MODULE_RESOLUTION_CACHE.write() {
+        cache.insert(key, res.clone());
+    }
+    res
 }
 
 pub fn resolve_esm_module(
     specifier: &str,
     parent_dir: &Path,
 ) -> Result<ResolvedModule, CommonJsResolveError> {
-    resolve_module_with_conditions(specifier, parent_dir, ESM_EXPORT_CONDITIONS)
+    let key = ResolutionCacheKey {
+        parent_dir: parent_dir.to_path_buf(),
+        specifier: specifier.to_string(),
+        is_esm: true,
+    };
+    if let Ok(cache) = MODULE_RESOLUTION_CACHE.read() {
+        if let Some(cached) = cache.get(&key) {
+            return cached.clone();
+        }
+    }
+    let res = resolve_module_with_conditions(specifier, parent_dir, ESM_EXPORT_CONDITIONS);
+    if let Ok(mut cache) = MODULE_RESOLUTION_CACHE.write() {
+        cache.insert(key, res.clone());
+    }
+    res
 }
 
 fn resolve_module_with_conditions(
@@ -712,8 +768,17 @@ fn resolve_package_subpath(
 fn read_package_json(
     package_root: &Path,
 ) -> Result<Option<serde_json::Value>, CommonJsResolveError> {
+    if let Ok(cache) = PACKAGE_JSON_CACHE.read() {
+        if let Some(cached) = cache.get(package_root) {
+            return Ok(cached.clone());
+        }
+    }
+
     let package_json_path = package_root.join("package.json");
     if !package_json_path.is_file() {
+        if let Ok(mut cache) = PACKAGE_JSON_CACHE.write() {
+            cache.insert(package_root.to_path_buf(), None);
+        }
         return Ok(None);
     }
 
@@ -739,6 +804,10 @@ fn read_package_json(
     let package_json: serde_json::Value = serde_json::from_str(&content).map_err(|error| {
         CommonJsResolveError::invalid_package_config(package_root, error.to_string())
     })?;
+
+    if let Ok(mut cache) = PACKAGE_JSON_CACHE.write() {
+        cache.insert(package_root.to_path_buf(), Some(package_json.clone()));
+    }
 
     Ok(Some(package_json))
 }
