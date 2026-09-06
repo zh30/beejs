@@ -1,12 +1,112 @@
+import { useState, useRef, useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { BeeLogo } from '../components/Logo'
 import '../global.css'
 import { LangProvider, useLang } from '../lib/i18n'
 import { ThemeProvider, useTheme } from '../lib/theme'
-import { Github, Globe, Monitor, Moon, Sparkles, Sun } from 'lucide-react'
+import { Check, ChevronDown, Github, Globe, Monitor, Moon, Sparkles, Sun } from 'lucide-react'
+
+function LanguageSelector() {
+  const { lang, setLang, copy, languages } = useLang()
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const currentOption = languages.find((l) => l.code === lang) || languages[0]
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/50 border border-transparent hover:border-zinc-300 dark:hover:border-zinc-700/50 transition-all cursor-pointer"
+        aria-label={copy.toggle.label}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <Globe className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />
+        <span className="text-[11px] font-medium hidden sm:inline">
+          {currentOption.nativeLabel}
+        </span>
+        <span className="text-[11px] font-medium sm:hidden">
+          {currentOption.code.toUpperCase()}
+        </span>
+        <ChevronDown
+          className={`w-3 h-3 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${
+            isOpen ? 'rotate-180 text-amber-500' : ''
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          role="listbox"
+          aria-label={copy.toggle.label}
+          className="absolute right-0 top-full mt-2 w-48 rounded-2xl p-1.5 shadow-2xl border border-zinc-200/80 dark:border-zinc-800/90 bg-white/95 dark:bg-[#0c0d12]/95 backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div className="px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 dark:text-zinc-500 border-b border-zinc-200/50 dark:border-zinc-800/50 mb-1">
+            {copy.toggle.label}
+          </div>
+          {languages.map((option) => {
+            const isSelected = option.code === lang
+            return (
+              <button
+                key={option.code}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  setLang(option.code)
+                  setIsOpen(false)
+                }}
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-sans transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'
+                    : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-950 dark:hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm leading-none">{option.flag}</span>
+                  <span className="font-medium">{option.nativeLabel}</span>
+                  <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
+                    ({option.label})
+                  </span>
+                </div>
+                {isSelected && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0 ml-2" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function RootLayoutInner() {
-  const { copy, lang, toggle } = useLang()
+  const { copy } = useLang()
   const { theme, toggleNext } = useTheme()
 
   return (
@@ -57,18 +157,8 @@ function RootLayoutInner() {
               </span>
             </button>
 
-            {/* Language Toggle */}
-            <button
-              type="button"
-              onClick={toggle}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/50 border border-transparent hover:border-zinc-300 dark:hover:border-zinc-700/50 transition-all cursor-pointer"
-              aria-label={copy.toggle.label}
-            >
-              <Globe className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-              <span className={lang === 'en' ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>{copy.toggle.en}</span>
-              <span className="text-zinc-400 dark:text-zinc-600">/</span>
-              <span className={lang === 'zh' ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>{copy.toggle.zh}</span>
-            </button>
+            {/* Modern Language Selector Dropdown */}
+            <LanguageSelector />
 
             <a
               href="https://github.com/zh30/beejs"
