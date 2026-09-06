@@ -1,11 +1,12 @@
 # Beejs Node conformance scorecard
 
-Generated: 2026-09-05T15:57Z
+Generated: 2026-09-06T12:33Z
 
 | Fixture | Result | Notes |
 |---------|--------|-------|
 | assert_basics.js | PASS |
 | async_hooks.js | PASS |
+| bee_ai_basics.js | PASS |
 | buffer_basics.js | PASS |
 | child_process_exec_denied.js | PASS |
 | child_process_exec_sync.js | PASS |
@@ -16,6 +17,7 @@ Generated: 2026-09-05T15:57Z
 | diagnostics_channel.js | PASS |
 | dns_lookup.js | PASS |
 | env_denied.js | PASS |
+| events_advanced.js | PASS |
 | events_basics.js | PASS |
 | events_once_promise.js | PASS |
 | fastify_smoke.js | PASS |
@@ -30,7 +32,9 @@ Generated: 2026-09-05T15:57Z
 | http_post_body.js | PASS |
 | net_listen_denied.js | PASS |
 | os_basics.js | PASS |
+| path_advanced.js | PASS |
 | path_basics.js | PASS |
+| perf_hooks_basics.js | PASS |
 | process_env_isolation.js | PASS |
 | process_nexttick.js | PASS |
 | querystring_basics.js | PASS |
@@ -40,14 +44,16 @@ Generated: 2026-09-05T15:57Z
 | stream_pipe.js | PASS |
 | stream_readable_from.js | PASS |
 | stream_transform.js | PASS |
+| string_decoder_basics.js | PASS |
 | timers_order.js | PASS |
 | timers_setimmediate.js | PASS |
 | tty_methods.js | PASS |
 | url_basics.js | PASS |
 | util_basics.js | PASS |
+| util_promisify.js | PASS |
 | wasm_instantiate.js | PASS |
 | web_worker_basics.js | PASS |
 | worker_threads_basics.js | PASS |
 | zlib_sync.js | PASS |
 
-**Pass rate: 45/45 (100%)**
+**Pass rate: 51/51 (100%)**

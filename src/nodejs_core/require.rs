@@ -64,6 +64,20 @@ pub fn setup_require_api(
                     scope.throw_exception(error_obj.into());
                     return;
                 }
+            } else if let Some(bee_name) =
+                requested_module_id_str.strip_prefix("bee:")
+            {
+                if crate::nodejs_core::commonjs_resolver::is_builtin_module(&requested_module_id_str)
+                    || crate::nodejs_core::commonjs_resolver::is_builtin_module(bee_name)
+                {
+                    bee_name.to_string()
+                } else {
+                    let error_msg = format!("Cannot find module '{}'", requested_module_id_str);
+                    let error_str = v8::String::new(scope, &error_msg).unwrap();
+                    let error_obj = v8::Exception::error(scope, error_str);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
             } else {
                 requested_module_id_str
             };
@@ -487,7 +501,8 @@ pub fn setup_require_api(
                 // These modules are set up as global objects in the runtime
                 "os" | "crypto" | "events" | "net" | "http" | "http2" | "https" | "util" | "url" |
                 "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
-                "readline" | "performance" | "diagnostics_channel" | "async_hooks" => {
+                "readline" | "performance" | "diagnostics_channel" | "async_hooks" |
+                "ai" | "string_decoder" | "perf_hooks" => {
                     // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);
                     let module_key = v8::String::new(scope, &module_id_str).unwrap().into();

@@ -1,4 +1,4 @@
-// Stage 43.0: 完整Node.js核心API兼容层
+pub mod ai;
 pub mod assert;
 pub mod async_hooks;
 pub mod buffer;
@@ -19,12 +19,14 @@ pub mod https;
 pub mod net;
 pub mod os;
 pub mod path;
+pub mod perf_hooks;
 pub mod performance; // v0.3.275: Performance API (performance.now, performance.mark, etc.)
 pub mod process; // v0.3.237: process 对象和未捕获异常处理器
 pub mod querystring;
 pub mod readline;
 pub mod require; // v0.3.54: CommonJS module loader extracted to独立模块
 pub mod stream;
+pub mod string_decoder;
 pub mod tcp_async; // v0.3.71: Async TCP connection module
 pub mod timers; // v0.3.244: Timer API (setTimeout, setInterval, setImmediate)
 pub mod tls;
@@ -72,6 +74,9 @@ pub fn setup_nodejs_core_apis(
     worker_threads::setup_worker_threads_api(scope, context)?;
     diagnostics_channel::setup_diagnostics_channel_api(scope, context)?;
     async_hooks::setup_async_hooks_api(scope, context)?;
+    string_decoder::setup_string_decoder_api(scope, context)?;
+    perf_hooks::setup_perf_hooks_api(scope, context)?;
+    ai::setup_ai_api(scope, context)?;
     // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
     Ok(())

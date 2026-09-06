@@ -124,7 +124,7 @@ function RootLayoutInner() {
               BEEJS
             </span>
             <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm shadow-amber-500/10">
-              <Sparkles className="w-2.5 h-2.5" /> v0.4.3
+              <Sparkles className="w-2.5 h-2.5" /> v1.0.0
             </span>
           </Link>
 
