@@ -1,4 +1,4 @@
-import { Calendar, User, Clock, ArrowRight, ChevronLeft } from 'lucide-react'
+import { Calendar, User, Clock, ArrowRight, ChevronLeft, Info } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
@@ -15,6 +15,7 @@ interface Post {
   readTime: string
   tag: string
   content: string
+  isFallback?: boolean
 }
 
 function parseFrontmatter(raw: string): { data: Record<string, string>; content: string } {
@@ -48,25 +49,48 @@ function getPosts(lang: Lang): Post[] {
   try {
     const postsMap = new Map<string, Post>()
 
+    // Pass 1: Look for posts matching the active language
     Object.entries(modules).forEach(([path, rawContent]) => {
       if (typeof rawContent !== 'string') return
       const filename = path.split('/').pop() || ''
-      const isZhFile = filename.endsWith('.zh.md')
-      const slug = filename.replace(/\.zh\.md$/, '').replace(/\.md$/, '')
+      const langSuffix = `.${lang}.md`
+      const isTargetLang =
+        lang === 'en'
+          ? !filename.includes('.zh.') &&
+            !filename.includes('.es.') &&
+            !filename.includes('.fr.') &&
+            !filename.includes('.hi.')
+          : filename.endsWith(langSuffix)
+      const slug = filename.replace(/\.[a-z]{2}\.md$/, '').replace(/\.md$/, '')
 
-      if (lang === 'zh' && isZhFile) {
+      if (isTargetLang) {
         const { data, content } = parseFrontmatter(rawContent)
         postsMap.set(slug, {
           slug,
-          title: data.title || '无标题',
+          title: data.title || 'Untitled',
           excerpt: data.excerpt || content.slice(0, 160).replace(/[#*`]/g, '') + '...',
-          date: data.date || '未知日期',
-          author: data.author || 'Beejs 团队',
-          readTime: data.readTime || '1 分钟阅读',
-          tag: data.tag || '日志',
+          date: data.date || 'Unknown Date',
+          author: data.author || (lang === 'zh' ? 'Beejs 团队' : 'Beejs Team'),
+          readTime: data.readTime || (lang === 'zh' ? '5 分钟阅读' : '5 min read'),
+          tag: data.tag || (lang === 'zh' ? '日志' : 'Blog'),
           content,
+          isFallback: false,
         })
-      } else if (lang === 'en' && !isZhFile) {
+      }
+    })
+
+    // Pass 2: Gracefully fallback missing posts from English default
+    Object.entries(modules).forEach(([path, rawContent]) => {
+      if (typeof rawContent !== 'string') return
+      const filename = path.split('/').pop() || ''
+      const isEnglishFile =
+        !filename.includes('.zh.') &&
+        !filename.includes('.es.') &&
+        !filename.includes('.fr.') &&
+        !filename.includes('.hi.')
+      const slug = filename.replace(/\.[a-z]{2}\.md$/, '').replace(/\.md$/, '')
+
+      if (isEnglishFile && !postsMap.has(slug)) {
         const { data, content } = parseFrontmatter(rawContent)
         postsMap.set(slug, {
           slug,
@@ -74,21 +98,10 @@ function getPosts(lang: Lang): Post[] {
           excerpt: data.excerpt || content.slice(0, 160).replace(/[#*`]/g, '') + '...',
           date: data.date || 'Unknown Date',
           author: data.author || 'Beejs Team',
-          readTime: data.readTime || '1 min read',
+          readTime: data.readTime || '5 min read',
           tag: data.tag || 'Blog',
           content,
-        })
-      } else if (lang === 'zh' && !isZhFile && !postsMap.has(slug)) {
-        const { data, content } = parseFrontmatter(rawContent)
-        postsMap.set(slug, {
-          slug,
-          title: data.title || 'Untitled',
-          excerpt: data.excerpt || content.slice(0, 160).replace(/[#*`]/g, '') + '...',
-          date: data.date || 'Unknown Date',
-          author: data.author || 'Beejs Team',
-          readTime: data.readTime || '1 min read',
-          tag: data.tag || 'Blog',
-          content,
+          isFallback: lang !== 'en',
         })
       }
     })
@@ -159,6 +172,11 @@ export default function BlogComponent() {
                   <Clock className="w-3.5 h-3.5" />
                   {post.readTime}
                 </span>
+                {post.isFallback && copy.blog.fallbackNote && (
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px]">
+                    English
+                  </span>
+                )}
               </div>
 
               <h2 className="text-2xl font-bold text-zinc-950 dark:text-white font-display tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
@@ -199,6 +217,13 @@ function BlogPostView({ post }: { post: Post }) {
         >
           <ChevronLeft className="w-4 h-4 mr-1" /> {copy.blog.back}
         </Link>
+
+        {post.isFallback && copy.blog.fallbackNote && (
+          <div className="mb-6 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2.5">
+            <Info className="w-4 h-4 shrink-0 text-amber-500" />
+            <span>{copy.blog.fallbackNote}</span>
+          </div>
+        )}
 
         <article className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-200/80 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-6">
