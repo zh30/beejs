@@ -121,10 +121,10 @@ export default function BlogComponent() {
             <BeeLogo className="w-4 h-4" />
             <span>{copy.blog.title}</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-display tracking-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-950 dark:text-white font-display tracking-tight">
             {copy.blog.title}
           </h1>
-          <p className="mt-4 text-base text-zinc-400 font-normal leading-relaxed">
+          <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 font-normal leading-relaxed">
             {copy.blog.subtitle}
           </p>
         </header>
@@ -136,11 +136,11 @@ export default function BlogComponent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.1 }}
-              className={`glass-card rounded-2xl p-8 border-zinc-800 hover:border-amber-500/30 transition-all group ${
+              className={`glass-card rounded-2xl p-8 border-zinc-200/80 dark:border-zinc-800 hover:border-amber-500/30 transition-all group ${
                 i === 0 ? 'border-amber-500/40 glow-amber' : ''
               }`}
             >
-              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-4">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 dark:text-zinc-400 mb-4">
                 {i === 0 && (
                   <span className="px-2.5 py-1 rounded-full bg-amber-500 text-zinc-950 font-bold">
                     Featured
@@ -161,13 +161,13 @@ export default function BlogComponent() {
                 </span>
               </div>
 
-              <h2 className="text-2xl font-bold text-white font-display tracking-tight group-hover:text-amber-300 transition-colors">
+              <h2 className="text-2xl font-bold text-zinc-950 dark:text-white font-display tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
                 <Link to={`/blog/${post.slug}`}>{post.title}</Link>
               </h2>
 
-              <p className="mt-3 text-sm text-zinc-400 leading-relaxed font-normal">{post.excerpt}</p>
+              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">{post.excerpt}</p>
 
-              <div className="mt-6 flex items-center justify-between pt-4 border-t border-zinc-800/60">
+              <div className="mt-6 flex items-center justify-between pt-4 border-t border-zinc-200/80 dark:border-zinc-800/60">
                 <span className="text-xs text-zinc-500 flex items-center gap-1 font-mono">
                   <User className="w-3.5 h-3.5" /> {post.author}
                 </span>
@@ -195,12 +195,12 @@ function BlogPostView({ post }: { post: Post }) {
       <div className="max-w-3xl mx-auto px-6 relative z-10">
         <Link
           to="/blog"
-          className="inline-flex items-center text-xs font-mono text-zinc-400 hover:text-amber-400 transition-colors mb-8"
+          className="inline-flex items-center text-xs font-mono text-zinc-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mb-8"
         >
           <ChevronLeft className="w-4 h-4 mr-1" /> {copy.blog.back}
         </Link>
 
-        <article className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-800">
+        <article className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-200/80 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-6">
             <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
               {post.tag}
@@ -217,16 +217,16 @@ function BlogPostView({ post }: { post: Post }) {
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white font-display tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-950 dark:text-white font-display tracking-tight leading-tight">
             {post.title}
           </h1>
 
-          <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono mt-4 pb-8 border-b border-zinc-800">
+          <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-4 pb-8 border-b border-zinc-200/80 dark:border-zinc-800">
             <User className="w-3.5 h-3.5 text-zinc-500" />
             <span>{copy.blog.by}{post.author}</span>
           </div>
 
-          <div className="prose prose-invert max-w-none mt-8 prose-headings:font-display prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-amber-400 prose-code:text-amber-300 prose-pre:bg-[#0a0b0e] prose-pre:border prose-pre:border-zinc-800">
+          <div className="prose dark:prose-invert max-w-none mt-8 prose-headings:font-display prose-headings:text-zinc-950 dark:prose-headings:text-white prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-amber-600 dark:prose-a:text-amber-400 prose-code:text-amber-700 dark:prose-code:text-amber-300 prose-pre:bg-[#0a0b0e] prose-pre:border prose-pre:border-zinc-800">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
           </div>
         </article>

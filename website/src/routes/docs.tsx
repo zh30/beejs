@@ -40,10 +40,10 @@ export default function DocsComponent() {
       <div className="max-w-6xl mx-auto px-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-10">
           {/* Sidebar */}
-          <aside className="glass-panel rounded-2xl p-6 h-fit sticky top-24 border-zinc-800">
+          <aside className="glass-panel rounded-2xl p-6 h-fit sticky top-24 border-zinc-200/80 dark:border-zinc-800">
             <Link
               to="/"
-              className="inline-flex items-center text-xs font-mono text-zinc-400 hover:text-amber-400 transition-colors mb-6"
+              className="inline-flex items-center text-xs font-mono text-zinc-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-600 dark:text-amber-400 transition-colors mb-6"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-2" /> {manual.backToHome}
             </Link>
@@ -60,11 +60,11 @@ export default function DocsComponent() {
                         to={`/docs/${item.id}`}
                         className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                           section === item.id
-                            ? 'text-white bg-amber-500/10 border border-amber-500/20 shadow-sm font-semibold'
-                            : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                            ? 'text-amber-600 dark:text-white bg-amber-500/10 border border-amber-500/25 shadow-sm font-semibold'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40'
                         }`}
                       >
-                        <span className={section === item.id ? 'text-amber-400' : 'text-zinc-500'}>
+                        <span className={section === item.id ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-500'}>
                           {iconMap[item.id]}
                         </span>
                         <span>{item.label}</span>
@@ -82,7 +82,7 @@ export default function DocsComponent() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-800"
+            className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-200/80 dark:border-zinc-800"
           >
             <ManualSection {...content} kicker={manual.title} />
           </motion.main>
@@ -109,26 +109,26 @@ function ManualSection({
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
+      <div className="flex items-center gap-2 text-xs font-mono text-amber-600 dark:text-amber-400">
         <span>{kicker}</span>
         <span className="text-zinc-600">/</span>
-        <span className="text-zinc-300 font-semibold">{title}</span>
+        <span className="text-zinc-800 dark:text-zinc-300 font-semibold">{title}</span>
       </div>
 
-      <h1 className="text-3xl md:text-4xl font-extrabold text-white font-display tracking-tight">
+      <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-950 dark:text-white font-display tracking-tight">
         {title}
       </h1>
 
-      <p className="text-base text-zinc-300 leading-relaxed font-normal">{subtitle}</p>
+      <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed font-normal">{subtitle}</p>
 
-      <div className="h-px w-full bg-zinc-800/80 my-6" />
+      <div className="h-px w-full bg-zinc-200/80 dark:bg-zinc-800/80 my-6" />
 
-      <p className="text-sm text-zinc-400 leading-relaxed">{body}</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{body}</p>
 
       {list && (
         <ul className="space-y-3 my-6">
           {list.map((item) => (
-            <li key={item} className="flex items-start gap-3 text-sm text-zinc-300">
+            <li key={item} className="flex items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-2 shrink-0" />
               <span>{item}</span>
             </li>
