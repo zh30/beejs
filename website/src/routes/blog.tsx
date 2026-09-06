@@ -136,9 +136,16 @@ export default function BlogComponent() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: i * 0.1 }}
-              className="glass-card rounded-2xl p-8 border-zinc-800 hover:border-amber-500/30 transition-all group"
+              className={`glass-card rounded-2xl p-8 border-zinc-800 hover:border-amber-500/30 transition-all group ${
+                i === 0 ? 'border-amber-500/40 glow-amber' : ''
+              }`}
             >
               <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-4">
+                {i === 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-amber-500 text-zinc-950 font-bold">
+                    Featured
+                  </span>
+                )}
                 <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
                   {post.tag}
                 </span>
