@@ -1,0 +1,129 @@
+---
+title: "安装与环境配置"
+subtitle: "快速在 macOS、Linux 上安装 Beejs，或从源码编译构建"
+group: "开始"
+id: "installation"
+---
+
+## 快速安装 (推荐)
+
+在 macOS 或 Linux 系统上，你可以直接在终端中运行以下一键安装脚本：
+
+```bash
+curl -fsSL https://bee.zhanghe.dev/install.sh | sh
+```
+
+### 安装脚本执行过程说明
+1. **自动识别硬件与系统**：自动检测你的系统（macOS / Linux）与 CPU 架构（Apple Silicon `arm64`、Intel `x86_64`）；
+2. **下载预编译产物**：从官方发布源下载经过 `-O3` 生产优化的二进制压缩包并校验完整性；
+3. **部署到用户主目录**：将可执行文件 `bee` 解压部署至 `~/.bee/bin/bee`；
+4. **自动配置环境变量**：自动检测当前 Shell（`~/.zshrc`、`~/.bashrc` 等），在文件末尾注入 `export PATH="$HOME/.bee/bin:$PATH"`。
+
+安装完成后，打开一个新的终端窗口或执行 `source ~/.zshrc`（或 `source ~/.bashrc`），即可直接使用 `bee` 命令。
+
+---
+
+## 验证安装
+
+运行以下命令，验证 Beejs 是否正确安装并就绪：
+
+```bash
+# 查看版本号
+bee --version
+
+# 快速运行 JavaScript 代码片段
+bee eval "console.log('🐝 Beejs is ready! Node compat: ' + process.version);"
+```
+
+如果看到类似以下输出，说明安装已大功告成：
+```text
+bee 1.0.0
+🐝 Beejs is ready! Node compat: v24.0.0
+```
+
+---
+
+## 支持平台与硬件要求
+
+| 操作系统 | CPU 架构 | 运行环境要求 | 预编译包支持 |
+| :--- | :---: | :---: | :---: |
+| **macOS (Apple Silicon)** | `arm64` (M1/M2/M3/M4) | macOS 12.0+ (Monterey 及以上) | ✅ 官方支持 |
+| **macOS (Intel)** | `x86_64` | macOS 12.0+ | ✅ 官方支持 |
+| **Linux** | `x86_64` | Linux Kernel 4.18+, glibc 2.28+ | ✅ 官方支持 |
+| **Linux (ARM64)** | `aarch64` | Linux Kernel 4.18+ | 源码编译支持 |
+| **Windows** | `x86_64` | WSL 2 (Ubuntu / Debian) | ✅ 推荐 WSL 2 |
+
+> [!NOTE]
+> Windows 用户目前推荐使用 **WSL 2** 环境运行一键安装脚本，享受原生 Linux 内核的完整性能与零拷贝 I/O 支持。
+
+---
+
+## 从源码编译构建
+
+如果你需要对 Beejs 进行定制化开发、本地调试或在未提供预编译产物的操作系统上运行，可以通过 Rust 工具链从源码编译。
+
+### 1. 安装编译依赖
+确保本地已安装：
+- **Rust** 1.80.0 及以上（推荐使用 [rustup.rs](https://rustup.rs) 安装）
+- **Clang / LLVM**（V8 编译与 C++ 绑定必需）
+- **Python 3**（构建辅助脚本）
+
+在 Ubuntu / Debian 上安装基础工具：
+```bash
+sudo apt update && sudo apt install -y build-essential clang llvm git curl cmake python3
+```
+
+在 macOS 上：
+```bash
+xcode-select --install
+```
+
+### 2. 克隆仓库并构建
+```bash
+git clone https://github.com/zh30/beejs.git
+cd beejs
+
+# 生产级优化编译 (耗时约 5~15 分钟，视机器性能而定)
+cargo build --release
+
+# 编译生成的可执行文件位于：
+./target/release/bee --version
+```
+
+### 3. 安装到全局 PATH
+```bash
+sudo cp ./target/release/bee /usr/local/bin/
+bee --version
+```
+
+---
+
+## 环境变量配置
+
+Beejs 支持通过环境变量调整全局运行时行为：
+
+| 环境变量 | 默认值 | 作用说明 |
+| :--- | :---: | :--- |
+| `BEE_WORKERS` | `1` | 设置 HTTP 服务或并发任务的默认 Worker 线程池并发数 |
+| `BEE_HOME` | `~/.bee` | 指定 Beejs 的缓存、下载与全局配置目录 |
+| `BEE_AUDIT_LOG` | 无 | 指定沙箱全局安全审计日志 JSONL 输出文件路径 |
+| `BEE_LOG` | `info` | 设置日志级别（`error`、`warn`、`info`、`debug`、`trace`） |
+
+示例：在 `~/.zshrc` 或生产环境 Dockerfile 中设置：
+```bash
+export BEE_WORKERS=8
+export BEE_LOG=warn
+```
+
+---
+
+## 卸载与清理
+
+如果需要卸载 Beejs，只需删除安装目录并移除 PATH 配置：
+
+```bash
+# 1. 移除二进制文件与缓存
+rm -rf ~/.bee
+
+# 2. 从 Shell 配置文件中移除 PATH (编辑 ~/.zshrc 或 ~/.bashrc 删除对应 export 行)
+```

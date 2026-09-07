@@ -254,28 +254,29 @@ export const en: TranslationSchema = {
     backToHome: 'Return Home',
     groups: [
       {
-        title: 'Start',
+        title: 'Getting Started',
         items: [
-          { id: 'introduction', label: 'Overview' },
-          { id: 'installation', label: 'Installation' },
-          { id: 'quick-start', label: 'Quick Start' },
+          { id: 'introduction', label: 'Overview & Philosophy' },
+          { id: 'installation', label: 'Installation & Setup' },
+          { id: 'quick-start', label: 'Quick Start Guide' },
         ],
       },
       {
-        title: 'Runtime',
+        title: 'Core Systems',
         items: [
-          { id: 'v8-isolate-pool', label: 'Runtime Core' },
-          { id: 'jit-optimization', label: 'TypeScript' },
-          { id: 'memory-management', label: 'Compatibility' },
-          { id: 'server-mode', label: 'Serve Mode' },
+          { id: 'v8-isolate-pool', label: 'Runtime & V8 Core' },
+          { id: 'jit-optimization', label: 'TypeScript & TSX' },
+          { id: 'ai-engine', label: 'Native AI Engine (bee:ai)' },
+          { id: 'server-mode', label: 'HTTP Serving & Concurrency' },
+          { id: 'memory-management', label: 'SIMD & Memory Model' },
         ],
       },
       {
-        title: 'Operations',
+        title: 'Developer Guide',
         items: [
-          { id: 'cli-usage', label: 'CLI Usage' },
-          { id: 'api-reference', label: 'API Surface' },
-          { id: 'modules', label: 'Modules' },
+          { id: 'cli-usage', label: 'CLI & Sandbox Security' },
+          { id: 'api-reference', label: 'API Compatibility Matrix' },
+          { id: 'modules', label: 'Modules, Packages & Testing' },
         ],
       },
     ],

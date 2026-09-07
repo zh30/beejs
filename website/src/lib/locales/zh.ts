@@ -253,28 +253,29 @@ export const zh: TranslationSchema = {
     backToHome: '返回首页',
     groups: [
       {
-        title: '开始',
+        title: '入门指南',
         items: [
-          { id: 'introduction', label: '概览' },
-          { id: 'installation', label: '安装' },
-          { id: 'quick-start', label: '快速开始' },
+          { id: 'introduction', label: '概览与设计理念' },
+          { id: 'installation', label: '安装与环境配置' },
+          { id: 'quick-start', label: '快速上手指南' },
         ],
       },
       {
-        title: '运行时',
+        title: '核心系统',
         items: [
-          { id: 'v8-isolate-pool', label: '运行时核心' },
-          { id: 'jit-optimization', label: 'TypeScript' },
-          { id: 'memory-management', label: '兼容层' },
-          { id: 'server-mode', label: 'Serve 模式' },
+          { id: 'v8-isolate-pool', label: '运行时与 V8 架构' },
+          { id: 'jit-optimization', label: 'TypeScript 与 TSX' },
+          { id: 'ai-engine', label: '原生 AI 引擎 (bee:ai)' },
+          { id: 'server-mode', label: 'HTTP 服务与并发' },
+          { id: 'memory-management', label: 'SIMD 与内存模型' },
         ],
       },
       {
-        title: '运行维护',
+        title: '开发者指南',
         items: [
-          { id: 'cli-usage', label: 'CLI 用法' },
-          { id: 'api-reference', label: 'API 表面' },
-          { id: 'modules', label: '模块' },
+          { id: 'cli-usage', label: 'CLI 命令与安全沙箱' },
+          { id: 'api-reference', label: 'Node & Web API 兼容' },
+          { id: 'modules', label: '模块解析与测试框架' },
         ],
       },
     ],

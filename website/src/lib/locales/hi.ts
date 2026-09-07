@@ -265,8 +265,9 @@ export const hi: TranslationSchema = {
         items: [
           { id: 'v8-isolate-pool', label: 'रनटाइम कोर' },
           { id: 'jit-optimization', label: 'TypeScript' },
-          { id: 'memory-management', label: 'अनुकूलता' },
-          { id: 'server-mode', label: 'सर्वर मोड' },
+          { id: 'ai-engine', label: 'मूल एआई इंजन (bee:ai)' },
+          { id: 'server-mode', label: 'HTTP सर्वर और समवर्ती' },
+          { id: 'memory-management', label: 'SIMD बफर और मेमोरी' },
         ],
       },
       {

@@ -158,6 +158,7 @@ export interface TranslationSchema {
       'cli-usage': DocSection
       'api-reference': DocSection
       modules: DocSection
+      'ai-engine'?: DocSection
     }
   }
   blog: {
