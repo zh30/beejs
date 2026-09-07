@@ -25,21 +25,21 @@ import { Link } from 'react-router-dom'
 import { useLang } from '../lib/i18n'
 
 const featureIcons = [
-  <Server key="server" className="w-6 h-6 text-amber-400" />,
-  <Zap key="zap" className="w-6 h-6 text-amber-400" />,
-  <FileCode2 key="filecode" className="w-6 h-6 text-amber-400" />,
-  <Lock key="lock" className="w-6 h-6 text-amber-400" />,
-  <Gauge key="gauge" className="w-6 h-6 text-amber-400" />,
-  <Layers key="layers" className="w-6 h-6 text-amber-400" />,
+  <Server key="server" className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+  <Zap key="zap" className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+  <FileCode2 key="filecode" className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+  <Lock key="lock" className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+  <Gauge key="gauge" className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+  <Layers key="layers" className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
 ]
 
 const subsystemIcons = [
-  <Cpu key="v8" className="w-5 h-5 text-amber-400" />,
-  <FileCode2 key="oxc" className="w-5 h-5 text-amber-400" />,
-  <Server key="pool" className="w-5 h-5 text-amber-400" />,
-  <Layers key="node" className="w-5 h-5 text-amber-400" />,
-  <Gauge key="web" className="w-5 h-5 text-amber-400" />,
-  <Package key="pkg" className="w-5 h-5 text-amber-400" />,
+  <Cpu key="v8" className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+  <FileCode2 key="oxc" className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+  <Server key="pool" className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+  <Layers key="node" className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+  <Gauge key="web" className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+  <Package key="pkg" className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
 ]
 
 type SandboxTab = 'http' | 'ts' | 'buffer'
@@ -83,17 +83,17 @@ export default function HomeComponent() {
         >
           <Link
             to={home.heroBannerLink}
-            className="group flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-card border border-amber-500/30 hover:border-amber-400/60 bg-amber-500/5 hover:bg-amber-500/10 text-xs font-mono text-amber-300 transition-all shadow-lg shadow-amber-500/10 hover:shadow-amber-500/20"
+            className="group flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-card border border-amber-500/30 hover:border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/15 text-xs font-mono transition-all shadow-md shadow-amber-500/10 hover:shadow-amber-500/20"
           >
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             </span>
-            <span className="font-semibold text-zinc-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-200 transition-colors">
+            <span className="font-semibold text-zinc-950 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors">
               {home.heroBadge}
             </span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-amber-600 dark:text-amber-300/90 group-hover:underline flex items-center gap-1">
+            <span className="text-zinc-400 dark:text-zinc-600">•</span>
+            <span className="text-amber-800 dark:text-amber-300/90 font-semibold group-hover:underline flex items-center gap-1">
               {home.heroBadgeSub}
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
@@ -117,7 +117,7 @@ export default function HomeComponent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-7 text-lg sm:text-xl md:text-2xl text-zinc-600 dark:text-zinc-800 dark:text-zinc-300 max-w-3xl mx-auto font-normal leading-relaxed text-balance"
+          className="mt-7 text-lg sm:text-xl md:text-2xl text-zinc-700 dark:text-zinc-300 max-w-3xl mx-auto font-normal leading-relaxed text-balance"
         >
           {home.heroSubtitle}
         </motion.p>
@@ -141,15 +141,15 @@ export default function HomeComponent() {
             href="#benchmarks"
             className="w-full sm:w-auto px-8 py-4 rounded-full glass-card hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 hover:text-zinc-950 dark:hover:text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 border border-zinc-300/80 dark:border-zinc-700/60 hover:border-amber-500/40"
           >
-            <BarChart3 className="w-4 h-4 text-amber-400" />
+            <BarChart3 className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             <span>{home.ctaSecondary}</span>
           </a>
 
           <Link
             to="/blog/v1.0.0-official-release"
-            className="w-full sm:w-auto px-6 py-4 rounded-full glass-card hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-200 font-medium text-sm transition-all flex items-center justify-center gap-2 border border-zinc-300/80 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
+            className="w-full sm:w-auto px-6 py-4 rounded-full glass-card hover:bg-zinc-200/60 dark:hover:bg-zinc-800/60 text-zinc-700 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-200 font-medium text-sm transition-all flex items-center justify-center gap-2 border border-zinc-300/80 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
           >
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             <span>{home.ctaNotes}</span>
           </Link>
         </motion.div>
@@ -161,24 +161,24 @@ export default function HomeComponent() {
           transition={{ duration: 0.5, delay: 0.4 }}
           className="mt-12 max-w-xl mx-auto"
         >
-          <div className="glass-panel rounded-2xl p-2.5 flex items-center justify-between gap-3 text-xs font-mono text-zinc-700 dark:text-zinc-800 dark:text-zinc-300 border-zinc-300/80 dark:border-zinc-800 hover:border-amber-500/40 transition-all shadow-lg dark:shadow-2xl">
+          <div className="glass-panel rounded-2xl p-2.5 flex items-center justify-between gap-3 text-xs font-mono text-zinc-800 dark:text-zinc-200 border-zinc-300/80 dark:border-zinc-800 hover:border-amber-500/40 transition-all shadow-lg dark:shadow-2xl">
             <div className="flex items-center gap-2.5 px-3 overflow-x-auto truncate">
-              <Terminal className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="select-all text-zinc-800 dark:text-zinc-200 font-medium">{installCommand}</span>
+              <Terminal className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
+              <span className="select-all text-zinc-900 dark:text-zinc-200 font-medium">{installCommand}</span>
             </div>
             <button
               onClick={handleCopy}
-              className="px-4 py-2 rounded-xl bg-zinc-200 hover:bg-amber-500 hover:text-zinc-950 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-amber-500 dark:hover:text-zinc-950 dark:text-zinc-200 transition-all shrink-0 flex items-center gap-1.5 text-xs font-sans font-semibold cursor-pointer shadow-sm"
+              className="px-4 py-2 rounded-xl bg-zinc-200 hover:bg-amber-500 hover:text-zinc-950 text-zinc-900 dark:bg-zinc-800 dark:hover:bg-amber-500 dark:hover:text-zinc-950 dark:text-zinc-200 transition-all shrink-0 flex items-center gap-1.5 text-xs font-sans font-semibold cursor-pointer shadow-sm"
               title="Copy to clipboard"
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 font-bold">{home.copiedBtn}</span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">{home.copiedBtn}</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-950" />
+                  <Copy className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-950" />
                   <span>{home.copyBtn}</span>
                 </>
               )}
@@ -200,10 +200,10 @@ export default function HomeComponent() {
               className="glass-card rounded-2xl p-6 border-zinc-200/80 dark:border-zinc-800/80 hover:border-amber-500/40 transition-all group"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-mono font-medium">
+                <span className="text-xs text-zinc-600 dark:text-zinc-400 uppercase tracking-wider font-mono font-medium">
                   {item.label}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-semibold border border-amber-500/30">
                   {item.delta}
                 </span>
               </div>
@@ -211,7 +211,7 @@ export default function HomeComponent() {
                 {item.value}
               </div>
               <div className="text-xs text-zinc-600 dark:text-zinc-400 font-mono mt-2 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                 {item.note}
               </div>
             </motion.div>
@@ -233,16 +233,16 @@ export default function HomeComponent() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
             <div className="max-w-2xl">
               <div className="flex flex-wrap items-center gap-2.5 mb-3 text-xs font-mono">
-                <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold flex items-center gap-1.5">
-                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-semibold flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   {home.latestArticle.badge}
                 </span>
-                <span className="text-zinc-500 flex items-center gap-1">
+                <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
                   {home.latestArticle.date}
                 </span>
-                <span className="text-zinc-500">•</span>
-                <span className="text-zinc-500 flex items-center gap-1">
+                <span className="text-zinc-400 dark:text-zinc-600">•</span>
+                <span className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   {home.latestArticle.readTime}
                 </span>
@@ -252,7 +252,7 @@ export default function HomeComponent() {
                 {home.latestArticle.title}
               </h2>
 
-              <p className="mt-2.5 text-sm sm:text-base text-zinc-600 dark:text-zinc-800 dark:text-zinc-300 leading-relaxed font-normal">
+              <p className="mt-2.5 text-sm sm:text-base text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal">
                 {home.latestArticle.desc}
               </p>
             </div>
@@ -271,8 +271,8 @@ export default function HomeComponent() {
       {/* Interactive Benchmark Showdown Section */}
       <section id="benchmarks" className="max-w-6xl mx-auto px-6 pb-28 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border-amber-500/20 text-xs font-mono text-amber-300 mb-4">
-            <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border-amber-500/30 text-xs font-mono text-amber-800 dark:text-amber-300 font-semibold mb-4">
+            <TrendingUp className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span>100,000 Operations / Suite</span>
           </div>
 
@@ -280,11 +280,11 @@ export default function HomeComponent() {
             {home.benchmarksHeader}
           </h2>
 
-          <p className="mt-4 text-base sm:text-lg text-zinc-600 dark:text-zinc-800 dark:text-zinc-300 font-normal leading-relaxed">
+          <p className="mt-4 text-base sm:text-lg text-zinc-700 dark:text-zinc-300 font-normal leading-relaxed">
             {home.benchmarksSub}
           </p>
 
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+          <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 font-mono">
             {home.benchmarksNote}
           </p>
 
@@ -295,7 +295,7 @@ export default function HomeComponent() {
               className={`px-5 py-2 rounded-full text-xs font-semibold font-mono transition-all cursor-pointer ${
                 benchmarkFilter === 'all'
                   ? 'bg-amber-500 text-zinc-950 shadow-md font-bold'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                  : 'text-zinc-700 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               {home.benchmarksFilterAll}
@@ -305,7 +305,7 @@ export default function HomeComponent() {
               className={`px-5 py-2 rounded-full text-xs font-semibold font-mono transition-all cursor-pointer ${
                 benchmarkFilter === 'core'
                   ? 'bg-amber-500 text-zinc-950 shadow-md font-bold'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                  : 'text-zinc-700 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               {home.benchmarksFilterCore}
@@ -315,7 +315,7 @@ export default function HomeComponent() {
               className={`px-5 py-2 rounded-full text-xs font-semibold font-mono transition-all cursor-pointer ${
                 benchmarkFilter === 'io'
                   ? 'bg-amber-500 text-zinc-950 shadow-md font-bold'
-                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                  : 'text-zinc-700 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
               }`}
             >
               {home.benchmarksFilterIo}
@@ -342,17 +342,17 @@ export default function HomeComponent() {
                       <h3 className="text-lg sm:text-xl font-bold text-zinc-950 dark:text-white font-display">
                         {bench.title}
                       </h3>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{bench.desc}</p>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">{bench.desc}</p>
                     </div>
 
-                    <span className="shrink-0 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold">
+                    <span className="shrink-0 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-mono font-bold">
                       {bench.isBeeWinner ? home.benchmarksFastest : home.benchmarksParity}
                     </span>
                   </div>
 
                   {/* Multiplier Callout */}
-                  <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono font-semibold">
-                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  <div className="mb-6 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-mono font-semibold">
+                    <Zap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>{bench.multiplier}</span>
                   </div>
 
@@ -361,14 +361,14 @@ export default function HomeComponent() {
                     {/* Beejs Bar */}
                     <div>
                       <div className="flex items-center justify-between text-xs font-mono mb-1.5">
-                        <span className="text-amber-600 dark:text-amber-300 font-bold flex items-center gap-1.5">
+                        <span className="text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5">
                           <span>Beejs v1.0.0 (Rust)</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold">
                             #1
                           </span>
                         </span>
                         <span className="text-zinc-950 dark:text-white font-bold">
-                          {bench.beeValue} <span className="text-zinc-500 font-normal">({bench.beeOps})</span>
+                          {bench.beeValue} <span className="text-zinc-600 dark:text-zinc-400 font-normal">({bench.beeOps})</span>
                         </span>
                       </div>
                       <div className="h-3.5 w-full bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-amber-500/20">
@@ -384,10 +384,10 @@ export default function HomeComponent() {
 
                     {/* Bun Bar */}
                     <div>
-                      <div className="flex items-center justify-between text-xs font-mono mb-1.5 text-zinc-600 dark:text-zinc-400">
+                      <div className="flex items-center justify-between text-xs font-mono mb-1.5 text-zinc-700 dark:text-zinc-400">
                         <span>Bun v1.4 (Zig)</span>
-                        <span className="text-zinc-800 dark:text-zinc-300">
-                          {bench.bunValue} <span className="text-zinc-600">({bench.bunOps})</span>
+                        <span className="text-zinc-900 dark:text-zinc-300">
+                          {bench.bunValue} <span className="text-zinc-600 dark:text-zinc-400">({bench.bunOps})</span>
                         </span>
                       </div>
                       <div className="h-3 w-full bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-300/80 dark:border-zinc-800">
@@ -403,10 +403,10 @@ export default function HomeComponent() {
 
                     {/* Node Bar */}
                     <div>
-                      <div className="flex items-center justify-between text-xs font-mono mb-1.5 text-zinc-600 dark:text-zinc-400">
+                      <div className="flex items-center justify-between text-xs font-mono mb-1.5 text-zinc-700 dark:text-zinc-400">
                         <span>Node.js v24 (C++)</span>
-                        <span className="text-zinc-800 dark:text-zinc-300">
-                          {bench.nodeValue} <span className="text-zinc-600">({bench.nodeOps})</span>
+                        <span className="text-zinc-900 dark:text-zinc-300">
+                          {bench.nodeValue} <span className="text-zinc-600 dark:text-zinc-400">({bench.nodeOps})</span>
                         </span>
                       </div>
                       <div className="h-3 w-full bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-300/80 dark:border-zinc-800">
@@ -430,10 +430,10 @@ export default function HomeComponent() {
       {/* Terminal Code Sandbox Preview with Tabs */}
       <section className="max-w-4xl mx-auto px-6 pb-28 relative z-10">
         <div className="text-center max-w-xl mx-auto mb-8">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-display">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-white font-display">
             Built for Modern Workloads
           </h2>
-          <p className="mt-2 text-sm text-zinc-400">
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             Zero-config TypeScript 6.0, worker concurrency, and zero-overhead memory.
           </p>
         </div>
@@ -463,7 +463,7 @@ export default function HomeComponent() {
                 className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
                   activeTab === 'http'
                     ? 'bg-amber-500 text-zinc-950 font-bold'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Multi-Worker HTTP
@@ -473,7 +473,7 @@ export default function HomeComponent() {
                 className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
                   activeTab === 'ts'
                     ? 'bg-amber-500 text-zinc-950 font-bold'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 TypeScript 6.0
@@ -483,7 +483,7 @@ export default function HomeComponent() {
                 className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
                   activeTab === 'buffer'
                     ? 'bg-amber-500 text-zinc-950 font-bold'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white'
+                    : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 SIMD Buffer
@@ -608,10 +608,10 @@ export default function HomeComponent() {
       {/* Core Capabilities / Architectural Highlights */}
       <section className="max-w-6xl mx-auto px-6 pb-28 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-950 dark:text-white font-display">
             {home.featuresTitle}
           </h2>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400 text-base">
+          <p className="mt-3 text-zinc-700 dark:text-zinc-400 text-base">
             {home.featuresSubtitle}
           </p>
         </div>
@@ -631,13 +631,13 @@ export default function HomeComponent() {
       {/* Runtime Subsystems Grid */}
       <section className="max-w-6xl mx-auto px-6 pb-28 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-mono uppercase tracking-widest text-amber-400">
+          <span className="text-xs font-mono uppercase tracking-widest text-amber-700 dark:text-amber-400 font-semibold">
             {home.systemsMeta}
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display mt-2">
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-950 dark:text-white font-display mt-2">
             {home.systemsTitle}
           </h2>
-          <p className="mt-3 text-zinc-600 dark:text-zinc-400 text-base">
+          <p className="mt-3 text-zinc-700 dark:text-zinc-400 text-base">
             {home.systemsSubtitle}
           </p>
         </div>
@@ -654,7 +654,7 @@ export default function HomeComponent() {
               <h3 className="text-base font-bold text-zinc-950 dark:text-white font-display group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
                 {sub.title}
               </h3>
-              <p className="mt-2 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">
+              <p className="mt-2 text-xs sm:text-sm text-zinc-700 dark:text-zinc-400 leading-relaxed font-normal">
                 {sub.desc}
               </p>
             </div>
@@ -677,7 +677,7 @@ export default function HomeComponent() {
             {home.ctaTitle}
           </h2>
 
-          <p className="mt-4 text-base sm:text-lg text-zinc-800 dark:text-zinc-300 max-w-xl mx-auto relative z-10 font-normal">
+          <p className="mt-4 text-base sm:text-lg text-zinc-700 dark:text-zinc-300 max-w-xl mx-auto relative z-10 font-normal">
             {home.ctaSubtitle}
           </p>
 
@@ -691,7 +691,7 @@ export default function HomeComponent() {
             </Link>
             <Link
               to="/blog/v1.0.0-official-release"
-              className="w-full sm:w-auto px-8 py-3.5 rounded-full glass-card hover:bg-zinc-800/60 text-zinc-800 dark:text-zinc-300 font-semibold text-sm transition-all"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-full glass-card hover:bg-zinc-200/80 dark:hover:bg-zinc-800/60 text-zinc-800 dark:text-zinc-200 font-semibold text-sm transition-all border border-zinc-300/80 dark:border-zinc-700/60"
             >
               <span>{home.ctaNotesButton}</span>
             </Link>
@@ -711,7 +711,7 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: stri
       <h3 className="text-lg font-bold text-zinc-950 dark:text-white font-display group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
         {title}
       </h3>
-      <p className="mt-2.5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">{desc}</p>
+      <p className="mt-2.5 text-sm text-zinc-700 dark:text-zinc-400 leading-relaxed font-normal">{desc}</p>
     </div>
   )
 }

@@ -8,18 +8,18 @@
 :root {
   --bg-page: #f8fafc;
   --text-primary: #09090b;
-  --text-secondary: #52525b;
-  --text-muted: #71717a;
+  --text-secondary: #3f3f46;
+  --text-muted: #52525b;
   
-  --glass-panel-bg: rgba(255, 255, 255, 0.85);
-  --glass-panel-border: rgba(0, 0, 0, 0.08);
-  --glass-panel-border-hover: rgba(245, 158, 11, 0.4);
+  --glass-panel-bg: rgba(255, 255, 255, 0.88);
+  --glass-panel-border: rgba(0, 0, 0, 0.1);
+  --glass-panel-border-hover: rgba(217, 119, 6, 0.5);
   --glass-panel-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.08);
 
-  --glass-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(244, 246, 250, 0.85) 100%);
-  --glass-card-border: rgba(0, 0, 0, 0.07);
-  --glass-card-hover-border: rgba(245, 158, 11, 0.4);
-  --glass-card-shadow-hover: 0 12px 28px -6px rgba(245, 158, 11, 0.15);
+  --glass-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.92) 100%);
+  --glass-card-border: rgba(0, 0, 0, 0.09);
+  --glass-card-hover-border: rgba(217, 119, 6, 0.5);
+  --glass-card-shadow-hover: 0 12px 28px -6px rgba(217, 119, 6, 0.15);
 
   --grid-line-color: rgba(0, 0, 0, 0.04);
   --glow-amber: rgba(245, 158, 11, 0.08);
@@ -84,6 +84,11 @@
 
   ::selection {
     background: rgba(245, 158, 11, 0.25);
+    color: #451a03;
+  }
+
+  .dark ::selection {
+    background: rgba(245, 158, 11, 0.35);
     color: #ffffff;
   }
 }
@@ -128,7 +133,7 @@
 }
 
 .gradient-amber {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #b45309 100%);
+  background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #92400e 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

@@ -110,7 +110,7 @@ function RootLayoutInner() {
   const { theme, toggleNext } = useTheme()
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-page)] text-[var(--text-primary)] font-sans selection:bg-amber-500/20 selection:text-amber-500 dark:selection:text-amber-200 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-page)] text-[var(--text-primary)] font-sans selection:bg-amber-500/25 selection:text-amber-950 dark:selection:text-amber-200 transition-colors duration-200">
       {/* Background Ambient Lights */}
       <div className="ambient-glow top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-amber-500/10 dark:bg-amber-500/15" />
       <div className="ambient-glow top-[400px] right-[-150px] w-[500px] h-[400px] bg-indigo-500/5 dark:bg-indigo-500/10" />
@@ -178,33 +178,33 @@ function RootLayoutInner() {
       </main>
 
       {/* Sleek Minimalist Footer */}
-      <footer className="relative z-10 border-t border-zinc-200/80 dark:border-zinc-800/50 bg-white/70 dark:bg-[#07080a]/80 backdrop-blur-md mt-20">
-        <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-zinc-600 dark:text-zinc-500">
+      <footer className="relative z-10 border-t border-zinc-200/80 dark:border-zinc-800/50 bg-white/80 dark:bg-[#07080a]/80 backdrop-blur-md mt-20">
+        <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-zinc-600 dark:text-zinc-400">
           <div className="flex items-center gap-3">
-            <BeeLogo className="w-5 h-5 opacity-80" />
-            <span className="text-zinc-800 dark:text-zinc-300 font-medium font-display">Beejs Runtime</span>
-            <span className="text-zinc-400 dark:text-zinc-700">•</span>
+            <BeeLogo className="w-5 h-5 opacity-90" />
+            <span className="text-zinc-900 dark:text-zinc-200 font-semibold font-display">Beejs Runtime</span>
+            <span className="text-zinc-400 dark:text-zinc-600">•</span>
             <span>{copy.footer.builtWith}</span>
           </div>
 
-          <div className="flex items-center gap-6">
-            <Link to="/docs" className="hover:text-zinc-950 dark:hover:text-zinc-300 transition-colors">
+          <div className="flex items-center gap-6 font-medium">
+            <Link to="/docs" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
               {copy.footer.docs}
             </Link>
-            <Link to="/blog" className="hover:text-zinc-950 dark:hover:text-zinc-300 transition-colors">
+            <Link to="/blog" className="hover:text-zinc-950 dark:hover:text-white transition-colors">
               {copy.footer.blog}
             </Link>
             <a
               href="https://github.com/zh30/beejs"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-zinc-950 dark:hover:text-zinc-300 transition-colors"
+              className="hover:text-zinc-950 dark:hover:text-white transition-colors"
             >
               {copy.footer.githubRepo}
             </a>
           </div>
 
-          <div className="text-zinc-500 dark:text-zinc-600">
+          <div className="text-zinc-500 dark:text-zinc-500">
             {copy.footer.copyright}
           </div>
         </div>

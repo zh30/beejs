@@ -122,7 +122,7 @@ export default function BlogComponent() {
 
   if (slug) {
     const post = posts.find((p) => p.slug === slug)
-    if (!post) return <div className="text-zinc-300 text-center py-24">{copy.blog.notFound}</div>
+    if (!post) return <div className="text-zinc-600 dark:text-zinc-400 text-center py-24">{copy.blog.notFound}</div>
     return <BlogPostView post={post} />
   }
 
@@ -130,14 +130,14 @@ export default function BlogComponent() {
     <div className="relative min-h-screen pt-10 pb-24">
       <div className="max-w-5xl mx-auto px-6 relative z-10">
         <header className="mb-14 text-center max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border-amber-500/20 text-xs font-mono text-amber-400 mb-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full glass-card border-amber-500/30 text-xs font-mono text-amber-700 dark:text-amber-400 mb-6 font-semibold">
             <BeeLogo className="w-4 h-4" />
             <span>{copy.blog.title}</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-950 dark:text-white font-display tracking-tight">
             {copy.blog.title}
           </h1>
-          <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 font-normal leading-relaxed">
+          <p className="mt-4 text-base text-zinc-700 dark:text-zinc-400 font-normal leading-relaxed">
             {copy.blog.subtitle}
           </p>
         </header>
@@ -153,13 +153,13 @@ export default function BlogComponent() {
                 i === 0 ? 'border-amber-500/40 glow-amber' : ''
               }`}
             >
-              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 dark:text-zinc-400 mb-4">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-600 dark:text-zinc-400 mb-4">
                 {i === 0 && (
                   <span className="px-2.5 py-1 rounded-full bg-amber-500 text-zinc-950 font-bold">
                     Featured
                   </span>
                 )}
-                <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
+                <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-semibold">
                   {post.tag}
                 </span>
                 <span>•</span>
@@ -173,7 +173,7 @@ export default function BlogComponent() {
                   {post.readTime}
                 </span>
                 {post.isFallback && copy.blog.fallbackNote && (
-                  <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[10px] font-medium">
                     English
                   </span>
                 )}
@@ -183,15 +183,15 @@ export default function BlogComponent() {
                 <Link to={`/blog/${post.slug}`}>{post.title}</Link>
               </h2>
 
-              <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">{post.excerpt}</p>
+              <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-400 leading-relaxed font-normal">{post.excerpt}</p>
 
               <div className="mt-6 flex items-center justify-between pt-4 border-t border-zinc-200/80 dark:border-zinc-800/60">
-                <span className="text-xs text-zinc-500 flex items-center gap-1 font-mono">
+                <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1 font-mono">
                   <User className="w-3.5 h-3.5" /> {post.author}
                 </span>
                 <Link
                   to={`/blog/${post.slug}`}
-                  className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 font-sans group/link"
+                  className="text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1 font-sans group/link"
                 >
                   <span>{copy.blog.readMore}</span>
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
@@ -213,21 +213,21 @@ function BlogPostView({ post }: { post: Post }) {
       <div className="max-w-3xl mx-auto px-6 relative z-10">
         <Link
           to="/blog"
-          className="inline-flex items-center text-xs font-mono text-zinc-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mb-8"
+          className="inline-flex items-center text-xs font-mono text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mb-8"
         >
           <ChevronLeft className="w-4 h-4 mr-1" /> {copy.blog.back}
         </Link>
 
         {post.isFallback && copy.blog.fallbackNote && (
-          <div className="mb-6 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2.5">
-            <Info className="w-4 h-4 shrink-0 text-amber-500" />
+          <div className="mb-6 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-medium flex items-center gap-2.5">
+            <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span>{copy.blog.fallbackNote}</span>
           </div>
         )}
 
         <article className="glass-panel rounded-2xl p-8 md:p-12 border-zinc-200/80 dark:border-zinc-800">
-          <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-500 mb-6">
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
+          <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-600 dark:text-zinc-400 mb-6">
+            <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-semibold">
               {post.tag}
             </span>
             <span>•</span>
@@ -246,12 +246,12 @@ function BlogPostView({ post }: { post: Post }) {
             {post.title}
           </h1>
 
-          <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-4 pb-8 border-b border-zinc-200/80 dark:border-zinc-800">
+          <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 font-mono mt-4 pb-8 border-b border-zinc-200/80 dark:border-zinc-800">
             <User className="w-3.5 h-3.5 text-zinc-500" />
             <span>{copy.blog.by}{post.author}</span>
           </div>
 
-          <div className="prose dark:prose-invert max-w-none mt-8 prose-headings:font-display prose-headings:text-zinc-950 dark:prose-headings:text-white prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-amber-600 dark:prose-a:text-amber-400 prose-code:text-amber-700 dark:prose-code:text-amber-300 prose-pre:bg-[#0a0b0e] prose-pre:border prose-pre:border-zinc-800">
+          <div className="prose dark:prose-invert max-w-none mt-8 prose-headings:font-display prose-headings:text-zinc-950 dark:prose-headings:text-white prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-amber-600 dark:prose-a:text-amber-400 prose-strong:text-zinc-950 dark:prose-strong:text-white prose-code:text-amber-800 dark:prose-code:text-amber-300 prose-code:bg-amber-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-th:text-zinc-950 dark:prose-th:text-white prose-td:text-zinc-700 dark:prose-td:text-zinc-300 prose-tr:border-zinc-200 dark:prose-tr:border-zinc-800 prose-pre:bg-[#0a0b0e] prose-pre:border prose-pre:border-zinc-800">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
           </div>
         </article>

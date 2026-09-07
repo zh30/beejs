@@ -43,14 +43,14 @@ export default function DocsComponent() {
           <aside className="glass-panel rounded-2xl p-6 h-fit sticky top-24 border-zinc-200/80 dark:border-zinc-800">
             <Link
               to="/"
-              className="inline-flex items-center text-xs font-mono text-zinc-500 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-600 dark:text-amber-400 transition-colors mb-6"
+              className="inline-flex items-center text-xs font-mono text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mb-6"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-2" /> {manual.backToHome}
             </Link>
             <div>
               {manual.groups.map((group) => (
                 <div key={group.title} className="mb-6">
-                  <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-3 font-semibold">
+                  <h4 className="text-[11px] font-mono uppercase tracking-wider text-zinc-600 dark:text-zinc-400 mb-3 font-semibold">
                     {group.title}
                   </h4>
                   <div className="space-y-1">
@@ -60,11 +60,11 @@ export default function DocsComponent() {
                         to={`/docs/${item.id}`}
                         className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                           section === item.id
-                            ? 'text-amber-600 dark:text-white bg-amber-500/10 border border-amber-500/25 shadow-sm font-semibold'
-                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40'
+                            ? 'text-amber-700 dark:text-white bg-amber-500/10 border border-amber-500/30 shadow-sm font-semibold'
+                            : 'text-zinc-700 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-200 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40'
                         }`}
                       >
-                        <span className={section === item.id ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-500'}>
+                        <span className={section === item.id ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-500 dark:text-zinc-500'}>
                           {iconMap[item.id]}
                         </span>
                         <span>{item.label}</span>
@@ -109,27 +109,27 @@ function ManualSection({
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-xs font-mono text-amber-600 dark:text-amber-400">
+      <div className="flex items-center gap-2 text-xs font-mono text-amber-700 dark:text-amber-400">
         <span>{kicker}</span>
-        <span className="text-zinc-600">/</span>
-        <span className="text-zinc-800 dark:text-zinc-300 font-semibold">{title}</span>
+        <span className="text-zinc-400 dark:text-zinc-600">/</span>
+        <span className="text-zinc-900 dark:text-zinc-200 font-semibold">{title}</span>
       </div>
 
       <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-950 dark:text-white font-display tracking-tight">
         {title}
       </h1>
 
-      <p className="text-base text-zinc-600 dark:text-zinc-300 leading-relaxed font-normal">{subtitle}</p>
+      <p className="text-base text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal">{subtitle}</p>
 
       <div className="h-px w-full bg-zinc-200/80 dark:bg-zinc-800/80 my-6" />
 
-      <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{body}</p>
+      <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">{body}</p>
 
       {list && (
         <ul className="space-y-3 my-6">
           {list.map((item) => (
-            <li key={item} className="flex items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-2 shrink-0" />
+            <li key={item} className="flex items-start gap-3 text-sm text-zinc-800 dark:text-zinc-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 mt-2 shrink-0" />
               <span>{item}</span>
             </li>
           ))}
