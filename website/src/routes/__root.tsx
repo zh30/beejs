@@ -110,10 +110,12 @@ function RootLayoutInner() {
   const { theme, toggleNext } = useTheme()
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-page)] text-[var(--text-primary)] font-sans selection:bg-amber-500/25 selection:text-amber-950 dark:selection:text-amber-200 transition-colors duration-200">
-      {/* Background Ambient Lights */}
-      <div className="ambient-glow top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-amber-500/10 dark:bg-amber-500/15" />
-      <div className="ambient-glow top-[400px] right-[-150px] w-[500px] h-[400px] bg-indigo-500/5 dark:bg-indigo-500/10" />
+    <div className="min-h-screen flex flex-col relative overflow-x-clip bg-[var(--bg-page)] text-[var(--text-primary)] font-sans selection:bg-amber-500/25 selection:text-amber-950 dark:selection:text-amber-200 transition-colors duration-200">
+      {/* Background Ambient Lights Container */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="ambient-glow top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-amber-500/10 dark:bg-amber-500/15" />
+        <div className="ambient-glow top-[400px] right-[-150px] w-[500px] h-[400px] bg-indigo-500/5 dark:bg-indigo-500/10" />
+      </div>
 
       {/* Floating Header */}
       <header className="sticky top-4 z-50 max-w-6xl mx-auto w-[calc(100%-2rem)] my-2">

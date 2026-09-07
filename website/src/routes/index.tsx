@@ -67,16 +67,20 @@ export default function HomeComponent() {
   return (
     <div className="relative overflow-hidden pt-6 pb-24">
       {/* Background Cyber Matrix Grid & Glows */}
-      <div className="cyber-grid radial-mask absolute inset-0 pointer-events-none opacity-40 z-0 h-[1200px]" />
-      <div className="ambient-glow top-[-80px] left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-amber-500/15 animate-pulse-slow z-0" />
-      <div className="ambient-glow top-[650px] right-[-100px] w-[550px] h-[550px] bg-cyan-500/10 z-0" />
-      <div className="ambient-glow top-[1400px] left-[-150px] w-[600px] h-[600px] bg-amber-600/10 z-0" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="cyber-grid radial-mask absolute inset-0 opacity-40 h-[1200px]" />
+        <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[700px] h-[400px] flex items-center justify-center">
+          <div className="ambient-glow w-full h-full bg-amber-500/15 animate-pulse-slow" />
+        </div>
+        <div className="ambient-glow top-[650px] right-[-100px] w-[550px] h-[550px] bg-cyan-500/10" />
+        <div className="ambient-glow top-[1400px] left-[-150px] w-[600px] h-[600px] bg-amber-600/10" />
+      </div>
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 pt-10 pb-16 text-center relative z-10">
         {/* Floating Release Announcement Pill */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="inline-flex mb-8"
