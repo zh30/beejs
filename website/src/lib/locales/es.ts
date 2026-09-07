@@ -265,8 +265,9 @@ export const es: TranslationSchema = {
         items: [
           { id: 'v8-isolate-pool', label: 'Núcleo del Runtime' },
           { id: 'jit-optimization', label: 'TypeScript' },
-          { id: 'memory-management', label: 'Compatibilidad' },
-          { id: 'server-mode', label: 'Modo Servidor' },
+          { id: 'ai-engine', label: 'Motor de IA (bee:ai)' },
+          { id: 'server-mode', label: 'Servidor HTTP y Concurrencia' },
+          { id: 'memory-management', label: 'Buffer SIMD y Memoria' },
         ],
       },
       {
