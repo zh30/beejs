@@ -496,29 +496,29 @@ export default function HomeComponent() {
           </div>
 
           {/* Code Viewer Panel */}
-          <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto text-zinc-800 dark:text-zinc-300 bg-[#0a0b0e]">
+          <div className="p-6 font-mono text-sm leading-relaxed overflow-x-auto text-zinc-100 bg-[#0a0b0e] select-text">
             {activeTab === 'http' && (
               <div>
-                <div className="text-zinc-500">{home.sandboxComment}</div>
+                <div className="text-zinc-400 italic">{home.sandboxComment}</div>
                 <div>
-                  <span className="text-purple-400">import</span> &#123; createServer &#125;{' '}
+                  <span className="text-purple-400">import</span> &#123; <span className="text-blue-300 font-medium">createServer</span> &#125;{' '}
                   <span className="text-purple-400">from</span>{' '}
                   <span className="text-emerald-400">'node:http'</span>;
                 </div>
                 <br />
                 <div>
-                  <span className="text-zinc-500">// Connections dispatched across lock-free worker threads</span>
+                  <span className="text-zinc-400 italic">// Connections dispatched across lock-free worker threads</span>
                 </div>
                 <div>
                   <span className="text-blue-400">const</span> <span className="text-amber-300">server</span> ={' '}
-                  <span className="text-blue-400">createServer</span>((req, res) =&gt; &#123;
+                  <span className="text-blue-400">createServer</span>((<span className="text-amber-200">req</span>, <span className="text-amber-200">res</span>) =&gt; &#123;
                 </div>
                 <div className="pl-4">
-                  res.<span className="text-blue-400">writeHead</span>(<span className="text-orange-400">200</span>, &#123;{' '}
+                  <span className="text-amber-200">res</span>.<span className="text-blue-400">writeHead</span>(<span className="text-orange-400">200</span>, &#123;{' '}
                   <span className="text-emerald-400">'Content-Type'</span>: <span className="text-emerald-400">'application/json'</span> &#125;);
                 </div>
                 <div className="pl-4">
-                  res.<span className="text-blue-400">end</span>(JSON.<span className="text-blue-400">stringify</span>(&#123;{' '}
+                  <span className="text-amber-200">res</span>.<span className="text-blue-400">end</span>(<span className="text-purple-300">JSON</span>.<span className="text-blue-400">stringify</span>(&#123;{' '}
                   <span className="text-amber-300">runtime</span>: <span className="text-emerald-400">'beejs'</span>,{' '}
                   <span className="text-amber-300">version</span>: <span className="text-emerald-400">'1.0.0'</span>,{' '}
                   <span className="text-amber-300">workers</span>: <span className="text-orange-400">8</span> &#125;));
@@ -526,10 +526,10 @@ export default function HomeComponent() {
                 <div>&#125;);</div>
                 <br />
                 <div>
-                  server.<span className="text-blue-400">listen</span>(<span className="text-orange-400">3000</span>, () =&gt; &#123;
+                  <span className="text-amber-300">server</span>.<span className="text-blue-400">listen</span>(<span className="text-orange-400">3000</span>, () =&gt; &#123;
                 </div>
                 <div className="pl-4 text-emerald-400">
-                  console.<span className="text-blue-400">log</span>(<span className="text-emerald-400">'{home.sandboxLog}'</span>);
+                  <span className="text-purple-300">console</span>.<span className="text-blue-400">log</span>(<span className="text-emerald-400">'{home.sandboxLog}'</span>);
                 </div>
                 <div>&#125;);</div>
               </div>
@@ -537,19 +537,19 @@ export default function HomeComponent() {
 
             {activeTab === 'ts' && (
               <div>
-                <div className="text-zinc-500">// Native oxc transpilation: Stage 3 Decorators, TSX & Explicit Resource Management</div>
+                <div className="text-zinc-400 italic">// Native oxc transpilation: Stage 3 Decorators, TSX & Explicit Resource Management</div>
                 <div>
-                  <span className="text-purple-400">import</span> React <span className="text-purple-400">from</span> <span className="text-emerald-400">'react'</span>;
+                  <span className="text-purple-400">import</span> <span className="text-amber-200">React</span> <span className="text-purple-400">from</span> <span className="text-emerald-400">'react'</span>;
                 </div>
                 <br />
                 <div>
                   <span className="text-blue-400">interface</span> <span className="text-cyan-400">BenchmarkResult</span> &#123;
                 </div>
                 <div className="pl-4">
-                  suite: <span className="text-purple-400">string</span>;
+                  <span className="text-amber-200">suite</span>: <span className="text-purple-400">string</span>;
                 </div>
                 <div className="pl-4">
-                  throughput: <span className="text-purple-400">number</span>;
+                  <span className="text-amber-200">throughput</span>: <span className="text-purple-400">number</span>;
                 </div>
                 <div>&#125;</div>
                 <br />
@@ -557,53 +557,53 @@ export default function HomeComponent() {
                   <span className="text-blue-400">const</span> <span className="text-amber-300">result</span>: <span className="text-cyan-400">BenchmarkResult</span> = &#123;
                 </div>
                 <div className="pl-4">
-                  suite: <span className="text-emerald-400">'require(module)'</span>,
+                  <span className="text-amber-200">suite</span>: <span className="text-emerald-400">'require(module)'</span>,
                 </div>
                 <div className="pl-4">
-                  throughput: <span className="text-orange-400">4_601_226</span>,
+                  <span className="text-amber-200">throughput</span>: <span className="text-orange-400">4_601_226</span>,
                 </div>
                 <div>&#125;;</div>
                 <br />
                 <div className="text-emerald-400">
-                  console.<span className="text-blue-400">log</span>(`🚀 $&#123;result.suite&#125; -&gt; $&#123;result.throughput&#125; ops/s`);
+                  <span className="text-purple-300">console</span>.<span className="text-blue-400">log</span>(`🚀 $&#123;result.suite&#125; -&gt; $&#123;result.throughput&#125; ops/s`);
                 </div>
               </div>
             )}
 
             {activeTab === 'buffer' && (
               <div>
-                <div className="text-zinc-500">// Zero-copy Rust SIMD buffer operations</div>
+                <div className="text-zinc-400 italic">// Zero-copy Rust SIMD buffer operations</div>
                 <div>
-                  <span className="text-purple-400">import</span> &#123; Buffer &#125; <span className="text-purple-400">from</span> <span className="text-emerald-400">'node:buffer'</span>;
+                  <span className="text-purple-400">import</span> &#123; <span className="text-purple-300">Buffer</span> &#125; <span className="text-purple-400">from</span> <span className="text-emerald-400">'node:buffer'</span>;
                 </div>
                 <br />
                 <div>
                   <span className="text-blue-400">const</span> <span className="text-amber-300">size</span> = <span className="text-orange-400">64</span> * <span className="text-orange-400">1024</span>;
                 </div>
                 <div>
-                  <span className="text-blue-400">const</span> <span className="text-amber-300">buf</span> = Buffer.<span className="text-blue-400">allocUnsafe</span>(size);
+                  <span className="text-blue-400">const</span> <span className="text-amber-300">buf</span> = <span className="text-purple-300">Buffer</span>.<span className="text-blue-400">allocUnsafe</span>(<span className="text-amber-300">size</span>);
                 </div>
                 <br />
                 <div>
-                  buf.<span className="text-blue-400">fill</span>(<span className="text-orange-400">0xaa</span>);
+                  <span className="text-amber-300">buf</span>.<span className="text-blue-400">fill</span>(<span className="text-orange-400">0xaa</span>);
                 </div>
                 <div>
-                  <span className="text-blue-400">const</span> <span className="text-amber-300">slice</span> = buf.<span className="text-blue-400">subarray</span>(<span className="text-orange-400">0</span>, <span className="text-orange-400">1024</span>);
+                  <span className="text-blue-400">const</span> <span className="text-amber-300">slice</span> = <span className="text-amber-300">buf</span>.<span className="text-blue-400">subarray</span>(<span className="text-orange-400">0</span>, <span className="text-orange-400">1024</span>);
                 </div>
                 <br />
                 <div className="text-emerald-400">
-                  console.<span className="text-blue-400">log</span>(`⚡ 100,000 SIMD buffer ops in 2.09ms (47,846 ops/s)`);
+                  <span className="text-purple-300">console</span>.<span className="text-blue-400">log</span>(`⚡ 100,000 SIMD buffer ops in 2.09ms (47,846 ops/s)`);
                 </div>
               </div>
             )}
 
             {/* Execution Result Bar */}
-            <div className="mt-6 pt-4 border-t border-zinc-800/60 text-xs text-emerald-400 flex items-center justify-between">
+            <div className="mt-6 pt-4 border-t border-zinc-800/80 text-xs text-emerald-400 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>$ bee run {activeTab === 'http' ? 'server.ts' : activeTab === 'ts' ? 'app.tsx' : 'simd_buffer.ts'}</span>
               </div>
-              <span className="text-zinc-400 font-mono text-[11px]">{home.sandboxBoot}</span>
+              <span className="text-zinc-300 font-mono text-[11px]">{home.sandboxBoot}</span>
             </div>
           </div>
         </motion.div>

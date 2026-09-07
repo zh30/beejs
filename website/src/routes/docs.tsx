@@ -104,7 +104,7 @@ function ManualSection({
   subtitle: string
   body: string
   list?: string[]
-  code?: string
+  code?: string | string[]
   kicker: string
 }) {
   return (
@@ -137,8 +137,8 @@ function ManualSection({
       )}
 
       {code && (
-        <div className="rounded-xl overflow-hidden bg-[#0a0b0e] border border-zinc-800/80 p-5 font-mono text-xs text-zinc-300 overflow-x-auto leading-relaxed shadow-inner">
-          <pre>{code}</pre>
+        <div className="rounded-xl overflow-hidden bg-[#0a0b0e] border border-zinc-800/80 p-5 font-mono text-xs text-zinc-100 overflow-x-auto leading-relaxed shadow-inner select-text">
+          <pre>{Array.isArray(code) ? code.join('\n') : code}</pre>
         </div>
       )}
     </div>
