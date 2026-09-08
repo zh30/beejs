@@ -86,10 +86,12 @@ pub mod platform;
 #[cfg(feature = "cloudnative")]
 pub mod cloud_native;
 
+pub mod database; // Embedded SQLite and Vector similarity database
 pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
 pub mod memory; // Memory management
 pub mod repl; // Enhanced interactive REPL
+pub mod std_lib; // Modern standard library (dotenv, cli, fs, crypto, assert)
 pub mod task_runner; // Task runner for package.json scripts
 pub mod testing; // Testing framework support
 pub mod tooling; // Developer tooling (formatter, linter, benchmark, compiler, coverage, profiler)

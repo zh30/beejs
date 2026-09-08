@@ -152,6 +152,62 @@ export class BeejsCommands {
         return this.config.getRuntimePath();
     }
 
+    public async formatDocument(): Promise<void> {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor');
+            return;
+        }
+
+        const filePath = editor.document.uri.fsPath;
+        try {
+            await execAsync(`${this.config.getRuntimePath()} fmt "${filePath}"`);
+            vscode.window.showInformationMessage(`✨ Formatted with OXC: ${path.basename(filePath)}`);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Format failed: ${error.message}`);
+        }
+    }
+
+    public async exportTypes(): Promise<void> {
+        const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        const typesDir = path.join(rootPath, 'types');
+        const typesPath = path.join(typesDir, 'beejs.d.ts');
+
+        try {
+            await execAsync(`${this.config.getRuntimePath()} types -o "${typesPath}"`);
+            vscode.window.showInformationMessage(`📘 TypeScript types exported to: ${typesPath}`);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Export types failed: ${error.message}`);
+        }
+    }
+
+    public async deploy(): Promise<void> {
+        const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        const target = await vscode.window.showQuickPick(
+            [
+                { label: 'docker', description: 'Production multi-stage Dockerfile & docker-compose.yml' },
+                { label: 'standalone', description: 'Self-contained executable binary (bee compile)' },
+                { label: 'k8s', description: 'Kubernetes deployment, service & HPA manifests' }
+            ],
+            { placeHolder: 'Select deployment target' }
+        );
+
+        if (!target) return;
+
+        try {
+            const { stdout } = await execAsync(
+                `${this.config.getRuntimePath()} deploy --target ${target.label}`,
+                { cwd: rootPath }
+            );
+            vscode.window.showInformationMessage(`🚀 Deployment generated for: ${target.label}`);
+            this.outputChannel.clear();
+            this.outputChannel.appendLine(stdout);
+            this.outputChannel.show();
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Deployment scaffolding failed: ${error.message}`);
+        }
+    }
+
     public dispose(): void {
         this.outputChannel.dispose();
     }

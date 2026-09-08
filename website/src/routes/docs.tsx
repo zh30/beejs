@@ -30,6 +30,8 @@ import {
   AlertCircle,
   AlertTriangle,
   ListTree,
+  Database,
+  Rocket,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -44,6 +46,11 @@ const iconMap: Record<string, ReactNode> = {
   'ai-engine': <Sparkles className="w-4 h-4" />,
   'server-mode': <Server className="w-4 h-4" />,
   'memory-management': <Layers className="w-4 h-4" />,
+  'embedded-db': <Database className="w-4 h-4" />,
+  'standard-library': <Sparkles className="w-4 h-4" />,
+  'package-manager-dlx': <Binary className="w-4 h-4" />,
+  'deployment-docker': <Rocket className="w-4 h-4" />,
+  'ide-extension': <FileCode className="w-4 h-4" />,
   'task-runner': <Workflow className="w-4 h-4" />,
   'code-quality': <CheckCircle2 className="w-4 h-4" />,
   'bundling-compilation': <Box className="w-4 h-4" />,

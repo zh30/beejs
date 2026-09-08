@@ -271,6 +271,16 @@ export const hi: TranslationSchema = {
         ],
       },
       {
+        title: 'पारिस्थितिकी तंत्र और उपकरण',
+        items: [
+          { id: 'embedded-db', label: 'डेटाबेस और वैक्टर (bee:db & bee:vector)', badge: 'DB' },
+          { id: 'standard-library', label: 'मानक लाइब्रेरी (bee:std)', badge: 'Std' },
+          { id: 'package-manager-dlx', label: 'पैकेज रनर (bee x / dlx)', badge: 'CLI' },
+          { id: 'deployment-docker', label: 'तैनाती और कंटेनर (bee deploy)', badge: 'Deploy' },
+          { id: 'ide-extension', label: 'VS Code एक्सटेंशन', badge: 'IDE' },
+        ],
+      },
+      {
         title: 'संचालन',
         items: [
           { id: 'cli-usage', label: 'CLI उपयोग' },

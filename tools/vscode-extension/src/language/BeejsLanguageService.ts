@@ -24,19 +24,15 @@ export class BeejsLanguageService {
     }
 
     public initialize(): LanguageClient {
-        const serverModule = this.context.asAbsolutePath('./out/language/server.js');
-        const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
+        const beePath = this.config.getRuntimePath() || 'bee';
+        const serverExecutable = {
+            command: beePath,
+            args: ['lsp'],
+        };
 
         const serverOptions: ServerOptions = {
-            run: {
-                module: serverModule,
-                transport: TransportKind.ipc,
-            },
-            debug: {
-                module: serverModule,
-                transport: TransportKind.ipc,
-                options: debugOptions,
-            },
+            run: serverExecutable,
+            debug: serverExecutable,
         };
 
         const clientOptions: LanguageClientOptions = {

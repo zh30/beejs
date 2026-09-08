@@ -12,6 +12,8 @@ pub mod benchmark;
 pub mod bundler;
 pub mod compiler;
 pub mod coverage;
+pub mod deploy;
+pub mod dlx;
 pub mod formatter;
 pub mod import_map;
 pub mod inspector;

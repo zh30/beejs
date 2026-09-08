@@ -8526,6 +8526,8 @@ impl MinimalRuntime {
         Self::setup_legacy_web_apis(scope, context, true)?;
         setup_crypto_api(scope, context)?;
         crate::nodejs_core::ai::setup_ai_api(scope, context)?;
+        crate::database::setup_db_api(scope, context)?;
+        crate::std_lib::setup_std_api(scope, context)?;
         Self::setup_module_system(scope, context, main_module_dir, main_module_filename)?;
         setup_timers_api(scope, context)?;
         setup_performance_api(scope, context)?;
