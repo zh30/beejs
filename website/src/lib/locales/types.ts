@@ -143,23 +143,15 @@ export interface TranslationSchema {
     title: string
     subtitle: string
     backToHome: string
+    searchPlaceholder?: string
+    onThisPage?: string
+    previousPage?: string
+    nextPage?: string
     groups: readonly {
       title: string
-      items: readonly { id: string; label: string }[]
+      items: readonly { id: string; label: string; badge?: string }[]
     }[]
-    sections: {
-      introduction: DocSection
-      installation: DocSection
-      'quick-start': DocSection
-      'v8-isolate-pool': DocSection
-      'jit-optimization': DocSection
-      'memory-management': DocSection
-      'server-mode': DocSection
-      'cli-usage': DocSection
-      'api-reference': DocSection
-      modules: DocSection
-      'ai-engine'?: DocSection
-    }
+    sections: Record<string, DocSection | undefined>
   }
   blog: {
     title: string

@@ -652,6 +652,107 @@ pub struct RequestData {
     pub keepalive: bool,
 }
 
+fn request_text_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this_obj = args.this();
+    let body_key = v8::String::new(scope, "body").unwrap().into();
+    let body_val = this_obj
+        .get(scope, body_key)
+        .unwrap_or_else(|| v8::null(scope).into());
+    let body_str = if body_val.is_null_or_undefined() {
+        String::new()
+    } else {
+        body_val
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default()
+    };
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    let res_str = v8::String::new(scope, &body_str).unwrap();
+    resolver.resolve(scope, res_str.into());
+    retval.set(resolver.get_promise(scope).into());
+}
+
+fn request_json_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this_obj = args.this();
+    let body_key = v8::String::new(scope, "body").unwrap().into();
+    let body_val = this_obj
+        .get(scope, body_key)
+        .unwrap_or_else(|| v8::null(scope).into());
+    let body_str = if body_val.is_null_or_undefined() {
+        String::new()
+    } else {
+        body_val
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default()
+    };
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    if let Some(s) = v8::String::new(scope, &body_str) {
+        if let Some(parsed) = v8::json::parse(scope, s) {
+            resolver.resolve(scope, parsed);
+            retval.set(resolver.get_promise(scope).into());
+            return;
+        }
+    }
+    let err = v8::String::new(scope, "SyntaxError: Unexpected end of JSON input").unwrap();
+    let err_obj = v8::Exception::syntax_error(scope, err);
+    resolver.reject(scope, err_obj);
+    retval.set(resolver.get_promise(scope).into());
+}
+
+fn request_array_buffer_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let this_obj = args.this();
+    let body_key = v8::String::new(scope, "body").unwrap().into();
+    let body_val = this_obj
+        .get(scope, body_key)
+        .unwrap_or_else(|| v8::null(scope).into());
+    let body_bytes = if body_val.is_null_or_undefined() {
+        Vec::new()
+    } else {
+        body_val
+            .to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope).into_bytes())
+            .unwrap_or_default()
+    };
+    let resolver = v8::PromiseResolver::new(scope).unwrap();
+    let ab = v8::ArrayBuffer::new(scope, body_bytes.len());
+    let store = ab.get_backing_store();
+    let ptr = store.as_ref().as_ptr() as *mut u8;
+    if !ptr.is_null() && !body_bytes.is_empty() {
+        unsafe {
+            std::ptr::copy_nonoverlapping(body_bytes.as_ptr(), ptr, body_bytes.len());
+        }
+    }
+    resolver.resolve(scope, ab.into());
+    retval.set(resolver.get_promise(scope).into());
+}
+
+fn attach_request_body_methods(scope: &mut v8::HandleScope, request_obj: v8::Local<v8::Object>) {
+    let text_fn = v8::Function::new(scope, request_text_callback).unwrap();
+    let text_key = v8::String::new(scope, "text").unwrap().into();
+    request_obj.set(scope, text_key, text_fn.into());
+
+    let json_fn = v8::Function::new(scope, request_json_callback).unwrap();
+    let json_key = v8::String::new(scope, "json").unwrap().into();
+    request_obj.set(scope, json_key, json_fn.into());
+
+    let array_buffer_fn = v8::Function::new(scope, request_array_buffer_callback).unwrap();
+    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap().into();
+    request_obj.set(scope, array_buffer_key, array_buffer_fn.into());
+}
+
 /// Request constructor callback
 fn request_constructor_callback(
     scope: &mut v8::HandleScope,
@@ -1012,12 +1113,16 @@ fn request_constructor_callback(
             let clone_key = v8::String::new(scope, "clone").unwrap().into();
             new_request.set(scope, clone_key, new_clone_fn.into());
 
+            attach_request_body_methods(scope, new_request);
+
             rv.set(new_request.into());
         },
     );
     let clone_func = clone_template.get_function(scope).unwrap();
     let clone_key = v8::String::new(scope, "clone").unwrap().into();
     request_obj.set(scope, clone_key, clone_func.into());
+
+    attach_request_body_methods(scope, request_obj);
 
     retval.set(request_obj.into());
 }

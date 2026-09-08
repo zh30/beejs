@@ -223,24 +223,24 @@ export const en: TranslationSchema = {
         desc: 'Direct V8 C++ bindings providing native execution speed, minimal heap footprint, and WASM JIT support.',
       },
       {
-        title: 'oxc TypeScript Engine',
-        desc: 'Ultra-fast Rust AST parser stripping types and transpiling modern TS syntax into ES2022 in sub-millisecond time.',
+        title: 'oxc Transpilation & Code Quality',
+        desc: 'Ultra-fast Rust AST engine stripping types in sub-milliseconds, powering built-in formatting (bee fmt) and linting (bee lint).',
       },
       {
-        title: 'Multi-Worker Concurrency',
-        desc: 'Lock-free job distribution pool handling thousands of concurrent HTTP connections with zero thread spawning penalty.',
+        title: 'Modern Web Serving & Concurrency',
+        desc: 'Standard Fetch API web serving (bee serve) and lockless multi-Worker thread pool concurrency model.',
       },
       {
-        title: 'Node.js Compatibility Layer',
-        desc: 'Comprehensive implementations of fs, path, crypto, buffer, events, http, process, timers, and CommonJS require.',
+        title: 'Deterministic Agent Sandbox & Quotas',
+        desc: 'CPU watchdog hard interrupts, physical heap caps, Mulberry32 deterministic PRNG replay, and frozen timestamps.',
       },
       {
-        title: 'Web Standards Layer',
-        desc: 'W3C compliant fetch, URL, Streams, Blob, Web Crypto, BroadcastChannel, and ServiceWorker implementations.',
+        title: 'Packaging & Standalone SEA Compiler',
+        desc: 'Production Bundler 2.0 module graph packaging and zero-dependency standalone executable compiler (bee compile).',
       },
       {
-        title: 'Zero-Config Test Framework',
-        desc: 'Jest-compatible test runner with built-in assertions, discovery, parallel execution, and code coverage.',
+        title: 'Developer Experience & Debugging (CDP & LSP)',
+        desc: 'Featuring upgraded interactive REPL (bee repl), Chrome DevTools remote debugging, and Language Server Protocol (bee lsp).',
       },
     ],
     ctaTitle: 'Ready for Next-Gen Performance?',
@@ -250,8 +250,12 @@ export const en: TranslationSchema = {
   },
   docs: {
     title: 'Runtime Manual',
-    subtitle: 'Operator documentation for Beejs v1.0.0.',
+    subtitle: 'Developer, Tooling Ecosystem & Agent Native Guide for Beejs v1.0.0.',
     backToHome: 'Return Home',
+    searchPlaceholder: 'Search docs, CLI commands & APIs...',
+    onThisPage: 'On this page',
+    previousPage: 'Previous',
+    nextPage: 'Next',
     groups: [
       {
         title: 'Getting Started',
@@ -265,18 +269,36 @@ export const en: TranslationSchema = {
         title: 'Core Systems',
         items: [
           { id: 'v8-isolate-pool', label: 'Runtime & V8 Core' },
-          { id: 'jit-optimization', label: 'TypeScript & TSX' },
-          { id: 'ai-engine', label: 'Native AI Engine (bee:ai)' },
-          { id: 'server-mode', label: 'HTTP Serving & Concurrency' },
+          { id: 'jit-optimization', label: 'TypeScript 6.0 & TSX' },
+          { id: 'ai-engine', label: 'Native AI Engine (bee:ai)', badge: 'AI' },
+          { id: 'server-mode', label: 'Modern Web Server & Fetch', badge: 'v1.0' },
           { id: 'memory-management', label: 'SIMD & Memory Model' },
         ],
       },
       {
-        title: 'Developer Guide',
+        title: 'Developer Tooling',
         items: [
-          { id: 'cli-usage', label: 'CLI & Sandbox Security' },
-          { id: 'api-reference', label: 'API Compatibility Matrix' },
-          { id: 'modules', label: 'Modules, Packages & Testing' },
+          { id: 'task-runner', label: 'Task Runner & Script Exec', badge: 'NEW' },
+          { id: 'code-quality', label: 'Code Formatter & Linter', badge: 'NEW' },
+          { id: 'bundling-compilation', label: 'Bundler 2.0 & SEA Compiler', badge: 'NEW' },
+          { id: 'testing-benchmarking', label: 'Testing, Coverage & Benchmarks', badge: 'NEW' },
+          { id: 'debugging-lsp', label: 'REPL, CDP Debugger & LSP', badge: 'NEW' },
+        ],
+      },
+      {
+        title: 'Agent & Advanced',
+        items: [
+          { id: 'agent-sandbox', label: 'Deterministic Sandbox & Quotas', badge: 'Agent' },
+          { id: 'import-maps-native', label: 'WICG Import Maps & Addons', badge: 'v1.0' },
+          { id: 'types-lsp', label: 'TypeScript Type Declarations', badge: 'Types' },
+        ],
+      },
+      {
+        title: 'Reference & Specs',
+        items: [
+          { id: 'cli-usage', label: 'Complete CLI Command Reference' },
+          { id: 'api-reference', label: 'Node & Web API Compatibility' },
+          { id: 'modules', label: 'Module Resolution & Architecture' },
         ],
       },
     ],

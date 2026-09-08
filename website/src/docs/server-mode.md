@@ -1,158 +1,180 @@
 ---
-title: "HTTP Serving & Multi-Worker Concurrency"
-subtitle: "Harnessing lockless cross-thread dispatching and V8 Isolate thread pools for high-throughput I/O"
+title: "Modern Web Serving & Concurrency"
+subtitle: "Standard Web Fetch API (bee serve), node:http, and Lockless Multi-Isolate Thread Pools"
 group: "Core Systems"
 id: "server-mode"
 ---
 
-## 1. Writing Modern HTTP Microservices
+Beejs offers two high-performance paradigms for building web services:
+1. **Modern Standard Web Serving (`bee serve [file]`)**: Built on W3C / WinterCG standard `Request` / `Response` and `export default { fetch(req) }` model;
+2. **Node.js Compatible Serving (`bee run server.ts`)**: Built on `node:http` backed by a lockless multi-Worker thread pool in Rust Tokio.
 
-Beejs natively implements the full specification contract of `node:http`. Whether you are constructing high-throughput REST APIs, streaming large files, or serving long-lived connections, you can build on standard Node.js patterns:
+---
+
+## 1. Modern Web Application Serving (`bee serve`)
+
+`bee serve` is the recommended, zero-overhead entrypoint for modern web applications, aligned with Cloudflare Workers, Deno, and Bun, featuring native TypeScript and JSX execution.
+
+### 1.1 Writing Your First Web Service
+
+Simply export an object with a `fetch` handler, or export the function directly:
 
 ```typescript
-// server.ts - Production HTTP API service example
+// app.ts
+export default {
+  async fetch(req: Request): Promise<Response> {
+    const url = new URL(req.url);
+
+    // Route matching
+    if (url.pathname === "/") {
+      return new Response("🚀 Welcome to Beejs Web Server!");
+    }
+
+    if (url.pathname === "/api/echo" && req.method === "POST") {
+      const data = await req.json();
+      return new Response(JSON.stringify({ received: data, time: Date.now() }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (url.pathname === "/api/info") {
+      return new Response(JSON.stringify({
+        runtime: "beejs",
+        version: "v1.0.0",
+        arch: process.arch,
+        platform: process.platform
+      }), {
+        headers: { "Content-Type": "application/json", "X-Powered-By": "beejs" }
+      });
+    }
+
+    return new Response("Not Found", { status: 404 });
+  }
+};
+```
+
+### 1.2 Starting the Server
+
+```bash
+# Automatically detects and runs app.ts, app.js, server.ts, index.ts, etc.
+$ bee serve
+
+# Or specify a custom file, port, and host
+$ bee serve app.ts --port 8080 --host 0.0.0.0
+```
+
+Console output:
+```text
+🚀 Starting Beejs Web Server on http://0.0.0.0:8080
+📄 Serving application: app.ts
+✅ Listening on http://0.0.0.0:8080 (Ctrl+C to stop)
+```
+
+### 1.3 Key Highlights
+- **Zero Glue Overhead**: Directly bridges incoming HTTP packets to standard `Request` instances without unnecessary wrapper streams;
+- **Async & Promise Support**: Supports asynchronous handlers and drains microtasks automatically in the event loop;
+- **Full Body Mixin**: `Request` and `Response` fully implement `req.text()`, `req.json()`, and `req.arrayBuffer()`;
+- **Sandbox Integration**: Compatible with `--max-memory <MB>` and `--sandbox` permissions to bound untrusted execution.
+
+---
+
+## 2. Classic Node.js Compatible Serving (`node:http`)
+
+For legacy services or Express-style architectures, `node:http` works out of the box:
+
+```typescript
+// server.ts - Classic Node.js style
 import http from 'node:http';
-
-interface User {
-  id: string;
-  name: string;
-  role: string;
-}
-
-const users: Map<string, User> = new Map([
-  ['1', { id: '1', name: 'Alice', role: 'admin' }],
-  ['2', { id: '2', name: 'Bob', role: 'engineer' }],
-]);
 
 const server = http.createServer(async (req, res) => {
   const { method, url } = req;
   const parsedUrl = new URL(url || '/', `http://${req.headers.host}`);
 
-  // Global headers (CORS and JSON content type)
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  try {
-    // Route dispatch
-    if (method === 'GET' && parsedUrl.pathname === '/api/users') {
-      res.writeHead(200);
-      res.end(JSON.stringify({ code: 0, data: Array.from(users.values()) }));
-      return;
-    }
-
-    if (method === 'POST' && parsedUrl.pathname === '/api/users') {
-      // Stream request body chunks
-      const chunks: Buffer[] = [];
-      for await (const chunk of req) {
-        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-      }
-      const body = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-      
-      const newUser: User = {
-        id: String(users.size + 1),
-        name: body.name || 'Anonymous',
-        role: body.role || 'user',
-      };
-      users.set(newUser.id, newUser);
-
-      res.writeHead(201);
-      res.end(JSON.stringify({ code: 0, data: newUser }));
-      return;
-    }
-
-    // 404 fallback
-    res.writeHead(404);
-    res.end(JSON.stringify({ code: 404, message: 'Not Found' }));
-  } catch (err: any) {
-    res.writeHead(500);
-    res.end(JSON.stringify({ code: 500, error: err.message }));
+  if (method === 'GET' && parsedUrl.pathname === '/api/users') {
+    res.writeHead(200);
+    res.end(JSON.stringify({ code: 0, data: ['Alice', 'Bob'] }));
+    return;
   }
+
+  res.writeHead(404);
+  res.end(JSON.stringify({ error: 'Not Found' }));
 });
 
-const PORT = 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 HTTP server ready at http://localhost:${PORT}`);
+server.listen(3000, () => {
+  console.log('🚀 HTTP Server running: http://localhost:3000');
 });
+```
+
+Run command:
+```bash
+bee run server.ts
 ```
 
 ---
 
-## 2. Multi-Worker Thread Pool Architecture (`--workers`)
+## 3. Multi-Worker Thread Pool Architecture (`--workers`)
 
 ### The Single-Thread Bottleneck
-In single-threaded event loop models, heavy operations such as JSON serialization, cryptography, or compression monopolize the event loop, causing queuing delays for all concurrent requests.
+In conventional single-threaded runtimes, when a request triggers heavy JSON serialization, cryptography, or tensor inference, the event loop stalls and stalls all incoming requests.
 
-### Beejs Lockless Multi-Isolate Architecture
-Beejs implements a **pre-warmed multi-worker thread pool model**:
+### Beejs Lockless Multi-Isolate Model
+Beejs features a built-in **multi-Worker thread pool** in Rust:
 
 ```text
-                        Incoming TCP Connections
-                                    │
-                                    ▼
-                 +─────────────────────────────────────+
-                 │      Main Dispatcher (Tokio I/O)    │
-                 │   - TCP Listener / SO_REUSEPORT      │
-                 │   - Lockless Channel Distribution   │
-                 +─────────────────────────────────────+
-                        │           │           │
-           ┌────────────┘           │           └────────────┐
-           ▼                        ▼                        ▼
-+─────────────────────+  +─────────────────────+  +─────────────────────+
-| Worker 1 (Isolate)  |  | Worker 2 (Isolate)  |  | Worker N (Isolate)  |
-| - Dedicated Heap    |  | - Dedicated Heap    |  | - Dedicated Heap    |
-| - Independent GC    |  | - Independent GC    |  | - Independent GC    |
-| - Serves Req 1, 4, 7|  | - Serves Req 2, 5, 8|  | - Serves Req 3, 6, 9|
-+─────────────────────+  +─────────────────────+  +─────────────────────+
+                        Concurrent TCP Traffic
+                                  │
+                                  ▼
+                 +──────────────────────────────────+
+                 │      Main Dispatch Thread (Tokio)│
+                 │   - TCP Listener & SO_REUSEPORT  │
+                 │   - Lockless Cross-Thread Queue  │
+                 +──────────────────────────────────+
+                        │         │         │
+            ┌───────────┘         │         └───────────┐
+            ▼                     ▼                     ▼
++───────────────────+ +───────────────────+ +───────────────────+
+| Worker 1 (Isolate)| | Worker 2 (Isolate)| | Worker N (Isolate)|
+| - Dedicated Heap  | | - Dedicated Heap  | | - Dedicated Heap  |
+| - Independent GC  | | - Independent GC  | | - Independent GC  |
++───────────────────+ +───────────────────+ +───────────────────+
 ```
 
-### Enabling Multi-Worker Execution
-Pass `-W` or `--workers` when running your script:
+### Launching Workers
+Specify the number of worker isolates with `-W` or `--workers`:
 
 ```bash
-# Launch with 8 worker threads in parallel
-bee run --workers 8 server.ts
+$ bee run --workers 8 server.ts
 ```
 
-Or configure via environment variables:
+Or via environment variable:
 ```bash
 export BEE_WORKERS=8
 bee run server.ts
 ```
 
-**Key Advantages**:
-- **True Multi-Core Parallelism**: Each worker runs on an isolated V8 Isolate. CPU-heavy handlers execute completely in parallel without blocking sibling cores.
-- **Zero Per-Request Spawning Costs**: Workers are pre-warmed during boot. Incoming requests are scheduled via lockless memory queues, eliminating thread creation storm overhead.
+**Benefits**:
+- **True Multi-Core Parallelism**: Isolates execute independently in parallel on separate OS threads without blocking one another;
+- **Zero Startup Penalty**: Workers are pre-warmed at boot time, eliminating thread creation overhead per request.
 
 ---
 
-## 3. Understanding `bee serve`
+## 4. Production Benchmarks & Best Practices
 
-You may encounter the `bee serve` subcommand in the CLI:
-
-```bash
-bee serve --port 3000 --host 0.0.0.0
-```
-
-> [!IMPORTANT]
-> **Please Note**: `bee serve` is an ultra-lightweight Rust health-check stub intended for **Kubernetes cluster LivenessProbe and ReadinessProbe** checks, returning a fixed `{"ok": true}` payload.
-> 
-> To serve your own JavaScript or TypeScript application code, always use **`bee run server.ts`** with `http.createServer`.
-
----
-
-## 4. Benchmarking & Tuning
-
-Benchmark the HTTP service using `autocannon`:
+Benchmark with tools like `autocannon` or `wrk`:
 
 ```bash
-# Run with 8 worker threads
+# Launch with 8 workers
 bee run --workers 8 server.ts
 
-# Benchmark with 100 concurrent connections for 10 seconds
+# Benchmark 100 concurrent connections for 10 seconds
 npx autocannon -c 100 -d 10 http://localhost:3000/api/users
 ```
 
-### Production Tuning Tips
-1. **Connection Reuse (Keep-Alive)**: Keep-Alive is enabled by default to minimize TCP/TLS handshake round-trips.
-2. **Buffer Streaming**: Prefer `Buffer.concat()` and stream piping over string concatenation for binary payloads to take advantage of Beejs SIMD optimizations.
-3. **Worker Count Tuning**: For I/O-heavy workloads, set workers to `1x` to `2x` the physical CPU core count. For compute-heavy services, align strictly with physical cores to avoid context switching.
+### Optimization Tips
+1. **Prefer `bee serve` for Microservices**: The Fetch API model avoids EventEmitter and streaming buffer wrapper overhead, yielding higher RPS;
+2. **Calibrate Workers**: For I/O services, set workers to `cores` ~ `2 * cores`; for CPU/tensor-heavy workloads, match the physical core count;
+3. **Enforce Resource Quotas**: For public-facing endpoints, combine with `--sandbox` and `--max-memory 512` to prevent memory leaks and unauthorized disk access.

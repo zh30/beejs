@@ -1,132 +1,121 @@
 ---
-title: "CLI 命令行完整指南与安全沙箱"
-subtitle: "全面的子命令、参数参考与细粒度确定性安全权限系统"
-group: "开发者指南"
+title: "CLI 命令行完整参考手册与安全沙箱"
+subtitle: "涵盖全套子命令、工程工具链指令与细粒度 Agent 确定性沙箱参数"
+group: "参考与规范"
 id: "cli-usage"
+---
+
+Beejs 提供了全功能一体化开发者工具箱（CLI），集执行、服务、测试、代码质量、工程打包与 Agent 沙箱于一身。
+
 ---
 
 ## 1. 核心子命令全景速查
 
-Beejs 提供了现代化的一体化开发者命令行工具（CLI）：
-
-| 命令 | 用途 | 常用选项示例 |
+| 子命令 | 功能描述 | 典型用法示例 |
 | :--- | :--- | :--- |
-| **`bee run <file>`** | 执行 JS / TS / TSX 脚本文件 | `--watch`, `--workers 4`, `--sandbox` |
-| **`bee eval <code>`** | 快速求值单行 JavaScript 代码片段 | `bee eval "console.log(process.arch)"` |
-| **`bee repl`** | 进入交互式控制台环境 | 支持多行编辑、Top-level await 与自动补全 |
-| **`bee test [path]`** | 运行 Jest / Vitest 兼容的测试套件 | `-t "auth"`, `--bail`, `--parallel`, `-w` |
-| **`bee bundle <entry>`** | 打包静态模块依赖 (实验性) | `-o dist/bundle.js`, `--minify` |
-| **`bee serve`** | 启动轻量健康检查 HTTP 服务 | `--port 3000`, `--host 0.0.0.0` |
-| **`bee session <file>`** | 为 Agent 宿主开启基于 stdio 的 JSON-RPC | `--isolate-per-call` |
-| **`bee mcp <file>`** | 启动标准 Model Context Protocol (MCP) 服务 | `--isolate-per-call` |
-| **`bee init [name]`** | 在当前目录初始化新项目与 package.json | `bee init my-app` |
-| **`bee add <pkg>`** | 添加并安装 npm 依赖包 | `bee add lodash@4.17.21`, `--dev` |
-| **`bee install`** | 根据 package.json 安装项目依赖 | `--frozen-lockfile` (CI 推荐) |
-| **`bee remove <pkg>`** | 移除依赖包 | `bee remove lodash` |
+| **`bee run <file>`** | 执行 JS / TS / TSX 脚本文件 | `bee run app.ts --watch` |
+| **`bee serve [file]`** | 启动现代化 Web 应用服务 | `bee serve --port 8080` |
+| **`bee eval <code>`** | 快速执行单行 JavaScript 表达式 | `bee eval "1 + 1"` |
+| **`bee repl`** | 现代交互式终端（多行语法检测、历史持久化） | `bee repl` |
+| **`bee task [name]`** | 极速任务调度器（无 npm 依赖执行 scripts） | `bee task build`, `bee run dev` |
+| **`bee fmt [files]`** | 基于 OXC 的超高速代码格式化 | `bee fmt src/ --check` |
+| **`bee lint [files]`** | 基于 OXC 的超高速静态语法检查与诊断 | `bee lint src/` |
+| **`bee bundle <entry>`**| 生产级模块打包器 2.0 (压缩、Sourcemap) | `bee bundle src/index.ts -o dist/bundle.js --minify` |
+| **`bee compile <file>`**| 单二进制独立可执行文件编译器 (SEA) | `bee compile app.ts -o myapp` |
+| **`bee test [file]`** | Jest / Vitest 兼容测试框架与覆盖率分析 | `bee test --coverage` |
+| **`bee bench [file]`** | 语言级微基准性能测试套件 | `bee bench benchmarks/` |
+| **`bee profile <file>`**| 生成 Chrome DevTools 火焰图性能分析文件 | `bee profile app.ts -o app.cpuprofile` |
+| **`bee debug [file]`** | 启动并挂起脚本以等待 Chrome CDP 调试器连接 | `bee debug app.ts` |
+| **`bee lsp`** | 启动语言服务器 (LSP 3.17, 供 VS Code / 现代 IDE) | `bee lsp` |
+| **`bee types`** | 导出包含原生 AI 与 Web API 的 TypeScript 类型 | `bee types -o beejs.d.ts` |
+| **`bee session <file>`**| 为 Agent 宿主开启基于 stdio 的 JSON-RPC 工具调用 | `bee session agent.ts` |
+| **`bee mcp <file>`** | 启动标准 Model Context Protocol (MCP) 服务 | `bee mcp tools.ts` |
+| **`bee init [name]`** | 初始化项目模板与 package.json | `bee init my-project` |
+| **`bee install`** | 安装 package.json 声明的依赖包 | `bee install` |
 
 ---
 
-## 2. `bee run` 详细参数参考
+## 2. 核心子命令详细参数
 
-`bee run` 是日常开发与生产部署最常用的核心命令：
+### 2.1 `bee run` 执行脚本
 
 ```bash
-bee run [OPTIONS] <FILE> [-- SCRIPT_ARGS...]
+bee run [OPTIONS] <FILE> [-- ARGS...]
 ```
 
-### 运行时控制参数
-- **`-w, --watch`**：开启文件热重载。当脚本或被引入的本地模块被修改时，自动重新执行；
-- **`--debounce <MS>`**：热重载防抖延迟（默认: `100` 毫秒）；
-- **`-p, --websocket-port <PORT>`**：用于热重载客户端状态通知的 WebSocket 端口（默认: `9999`）；
-- **`-r, --preload, --require <MODULE>`**：在主入口执行前预先加载并执行指定模块（可重复传入多次，用于注入全局补丁或监控打点）；
-- **`-W, --workers <NUM>`**：配置并行执行的 V8 Isolate Worker 线程数（默认: `1`，亦可通过 `BEE_WORKERS` 设置）；
-- **`--export-tools`**：解析并以 JSON 格式输出脚本中导出的工具函数 Schema，随后退出（用于 Agent 工具集成）；
-- **`-v, --verbose`**：输出详细的内部调试与加载日志。
+- **`-w, --watch`**：开启文件热重载，监控入口及引用模块变更并瞬时重跑；
+- **`--debounce <MS>`**：热重载防抖延迟（默认: `100`ms）；
+- **`-r, --preload <MODULE>`**：主入口执行前预先加载并执行指定模块；
+- **`-W, --workers <NUM>`**：配置并行执行的 V8 Isolate Worker 线程数（默认: `1`）；
+- **`--timeout <MS>`**：CPU 超时 Watchdog 强行中断限制（毫秒），杜绝死循环；
+- **`--max-memory <MB>`**：物理堆内存配额上限（兆字节）；
+- **`--seed <U64>`**：设定伪随机数种子，实现 `Math.random()` 行为 100% 确定性回放；
+- **`--freeze-time <TIMESTAMP>`**：冻结全局系统时间（毫秒或 ISO8601 字符串）；
+- **`--import-map <PATH>`**：指定 WICG Import Maps 映射表文件；
+- **`--inspect [ADDR]`**：开启 Chrome DevTools Protocol 调试端点（默认: `127.0.0.1:9229`）；
+- **`--inspect-brk [ADDR]`**：开启 CDP 调试并在第一行代码前挂起等待断点。
+
+### 2.2 `bee serve` 现代 Web 服务
+
+```bash
+bee serve [OPTIONS] [FILE]
+```
+
+- **`FILE`**：Web 应用程序入口，默认自动探测 `app.ts`, `app.js`, `server.ts`, `server.js`, `index.ts`, `index.js`；
+- **`-p, --port <PORT>`**：绑定 HTTP 端口（默认: `3000`）；
+- **`-H, --host <HOST>`**：绑定主机地址（默认: `localhost`）；
+- **`--max-memory <MB>`**：限制 Web 服务的堆内存消耗。
+
+### 2.3 `bee bundle` 模块打包器 2.0
+
+```bash
+bee bundle [OPTIONS] <ENTRY>
+```
+
+- **`-o, --outfile <FILE>`**：打包产物输出路径（默认: `dist/bundle.js`）；
+- **`-m, --minify`**：启用基于 OXC 压缩器的死代码消除与变量名缩减；
+- **`-s, --sourcemap`**：生成对应的 V3 SourceMap 源码映射文件；
+- **`--target <ES>`**：目标 ECMAScript 版本（如 `es2022`, `esnext`）；
+- **`--import-map <PATH>`**：解析并应用裸模块与别名导入映射。
+
+### 2.4 `bee compile` 独立单二进制编译器
+
+```bash
+bee compile [OPTIONS] <FILE>
+```
+
+- **`-o, --outfile <PATH>`**：生成的可执行文件路径（默认与脚本同名无后缀）；
+- **`--minify`**：压缩打包后再内嵌编译；
+- **`--include-assets <DIR>`**：附加打包静态资源目录。
 
 ---
 
-## 3. 细粒度安全沙箱与权限控制
+## 3. Agent 确定性沙箱与细粒度权限系统
 
-在云端托管不可信代码或执行自主 AI Agent 生成的代码时，传统的无限制文件和网络访问存在极高的安全隐患。Beejs 内置了企业级**细粒度权限控制系统 (ResourceBroker)**：
-
-### 1. 默认闭合安全沙箱 (`--sandbox`)
-添加 `--sandbox` 后，运行时将**默认拒绝所有的文件系统读写、网络发起/监听、环境变量读取与外部子进程执行**：
+在托管不可信代码或自主执行 AI Agent 生成的脚本时，细粒度隔离至关重要：
 
 ```bash
-# 默认禁止所有越权 I/O
-bee run --sandbox untrusted_agent_code.ts
+# 全面启用默认闭合沙箱与资源硬配额
+$ bee run --sandbox \
+    --timeout 5000 \
+    --max-memory 256 \
+    --seed 42 \
+    --allow-read ./data \
+    agent_workflow.ts
 ```
 
-### 2. 显式白名单授权机制
-通过 `--allow-*` 选项精准按需放行指定资源：
+### 3.1 资源硬配额参数
+- **`--timeout <ms>`**：后台独立线程 Watchdog 监听，超限时触发 `v8::IsolateHandle::terminate_execution()`，强行脱离 `while(true)` 无限死循环；
+- **`--max-memory <MB>`**：在 V8 层面设置 `ResourceConstraints.max_old_generation_size_in_bytes`，超出配额立刻阻断内存溢出；
+- **`--seed <u64>`**：接管 Mulberry32 伪随机数算法，保证同一种子下随机序列完全恒定；
+- **`--freeze-time <time>`**：锁定时间戳，让模拟执行与基准评估脱离真实系统时间干扰。
 
-```bash
-bee run --sandbox \
-  --allow-read ./data \
-  --allow-read /etc/hosts \
-  --allow-write ./output.json \
-  --allow-net api.openai.com:443 \
-  --allow-listen 0.0.0.0:3000 \
-  --allow-env NODE_ENV,API_KEY \
-  app.ts
-```
-
-| 权限标志 | 作用说明 | 示例 |
-| :--- | :--- | :--- |
-| **`--allow-read <PATH>`** | 允许读取指定文件或目录 (可重复) | `--allow-read ./public` |
-| **`--allow-write <PATH>`** | 允许写入指定文件或目录 (可重复) | `--allow-write /tmp/logs` |
-| **`--allow-net <HOST>`** | 允许连接指定远程主机或完整 URL | `--allow-net api.github.com` |
-| **`--allow-listen <HOST>`** | 允许在指定地址/端口创建监听服务 | `--allow-listen localhost:8080` |
-| **`--allow-env <NAME>`** | 允许读取指定的环境变量名称 | `--allow-env PORT,DATABASE_URL` |
-| **`--allow-run <CMD>`** | 允许执行指定的外部系统命令 | `--allow-run git` |
-
-### 3. 基于 JSON 策略文件的权限配置
-对于微服务或多租户云环境，可以将权限策略固化到 JSON 配置文件中：
-
-```json
-// policy.json
-{
-  "permissions": {
-    "deny_fs": false,
-    "deny_net": false,
-    "allow_read": ["./src", "./public"],
-    "allow_write": ["/tmp"],
-    "allow_net": ["127.0.0.1", "cdn.example.com"]
-  }
-}
-```
-
-通过 `--policy` 快速加载：
-```bash
-bee run --policy policy.json app.ts
-```
-
-### 4. 运行期安全审计日志 (`--audit-log`)
-安全合规团队可以开启审计日志，记录运行时做出的每一次放行与拦截决策：
-
-```bash
-bee run --sandbox --allow-read ./data --audit-log /var/log/bee_audit.jsonl app.ts
-```
-
-生成的 JSONL 日志结构清晰：
-```json
-{"timestamp":1788756000000,"kind":"fs","action":"read","resource":"/etc/passwd","decision":"deny"}
-{"timestamp":1788756000050,"kind":"fs","action":"read","resource":"./data/config.json","decision":"allow"}
-```
-
----
-
-## 4. 确定性沙箱回放 (`--seed` 与 `--freeze-time`)
-
-对于金融合规计算、加密算法验证以及 AI 评估流水线，Beejs 允许彻底消除随机性：
-
-```bash
-# 锁定 PRNG 随机种子与虚拟系统时间戳
-bee run \
-  --seed 12345678 \
-  --freeze-time "2026-09-07T12:00:00.000Z" \
-  audit_report.ts
-```
-
-- **`Math.random()` 与 `crypto.getRandomValues()`** 将按照固定伪随机序列产出数值；
-- **`Date.now()`、`new Date()` 与 `performance.now()`** 将冻结在指定时间，确保无论在何时何地执行，输出的报表与加密哈希 100% 严密对齐。
+### 3.2 细粒度 I/O 白名单选项
+- **`--sandbox`**：默认闭合模式，禁止所有未授权的文件、网络、环境变量与子进程；
+- **`--allow-read <PATHS>`**：放行指定目录或文件的读权限（支持逗号分隔）；
+- **`--allow-write <PATHS>`**：放行指定目录或文件的写权限；
+- **`--allow-net <HOSTS>`**：放行允许连接的网络地址与域名；
+- **`--allow-listen <ADDRS>`**：放行允许本地监听绑定的端口网络；
+- **`--allow-env <VARS>`**：放行允许读取的环境变量名白名单；
+- **`--allow-run <BINS>`**：放行允许创建子进程的可执行文件路径；
+- **`--audit-log <PATH>`**：将运行期间产生的所有权限请求记录为 JSONL 审计流水。

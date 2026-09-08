@@ -89,11 +89,14 @@ pub mod cloud_native;
 pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
 pub mod memory; // Memory management
+pub mod repl; // Enhanced interactive REPL
+pub mod task_runner; // Task runner for package.json scripts
 pub mod testing; // Testing framework support
+pub mod tooling; // Developer tooling (formatter, linter, benchmark, compiler, coverage, profiler)
+pub mod types_export; // TypeScript types exporter
 pub mod typescript; // TypeScript transpilation support
 
-// Temporarily disabled re-exports:
-// pub use repl::{Repl, ReplConfig};
+pub use repl::{Repl, ReplConfig};
 // pub use wasm_integration::{initialize_wasm, check_wasm_support};
 // pub use io::{DmaEngine, DmaBuffer, DmaDirection, MemoryMapper, MappedFile, MapOptions, MemoryAdvice};
 

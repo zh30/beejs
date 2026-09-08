@@ -230,9 +230,13 @@ pub fn resolve_commonjs_module(
     specifier: &str,
     parent_dir: &Path,
 ) -> Result<ResolvedModule, CommonJsResolveError> {
+    let remapped =
+        crate::tooling::import_map::resolve_from_global_import_map(specifier, Some(parent_dir));
+    let effective_specifier = remapped.as_deref().unwrap_or(specifier);
+
     let key = ResolutionCacheKey {
         parent_dir: parent_dir.to_path_buf(),
-        specifier: specifier.to_string(),
+        specifier: effective_specifier.to_string(),
         is_esm: false,
     };
     if let Ok(cache) = MODULE_RESOLUTION_CACHE.read() {
@@ -240,7 +244,8 @@ pub fn resolve_commonjs_module(
             return cached.clone();
         }
     }
-    let res = resolve_module_with_conditions(specifier, parent_dir, COMMONJS_EXPORT_CONDITIONS);
+    let res =
+        resolve_module_with_conditions(effective_specifier, parent_dir, COMMONJS_EXPORT_CONDITIONS);
     if let Ok(mut cache) = MODULE_RESOLUTION_CACHE.write() {
         cache.insert(key, res.clone());
     }
@@ -251,9 +256,13 @@ pub fn resolve_esm_module(
     specifier: &str,
     parent_dir: &Path,
 ) -> Result<ResolvedModule, CommonJsResolveError> {
+    let remapped =
+        crate::tooling::import_map::resolve_from_global_import_map(specifier, Some(parent_dir));
+    let effective_specifier = remapped.as_deref().unwrap_or(specifier);
+
     let key = ResolutionCacheKey {
         parent_dir: parent_dir.to_path_buf(),
-        specifier: specifier.to_string(),
+        specifier: effective_specifier.to_string(),
         is_esm: true,
     };
     if let Ok(cache) = MODULE_RESOLUTION_CACHE.read() {
@@ -261,7 +270,8 @@ pub fn resolve_esm_module(
             return cached.clone();
         }
     }
-    let res = resolve_module_with_conditions(specifier, parent_dir, ESM_EXPORT_CONDITIONS);
+    let res =
+        resolve_module_with_conditions(effective_specifier, parent_dir, ESM_EXPORT_CONDITIONS);
     if let Ok(mut cache) = MODULE_RESOLUTION_CACHE.write() {
         cache.insert(key, res.clone());
     }
