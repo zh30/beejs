@@ -222,24 +222,24 @@ export const zh: TranslationSchema = {
         desc: '深度集成 Google V8 C++ 绑定，带来原生级执行性能、轻量堆内存占用与 WASM JIT 支持。',
       },
       {
-        title: 'oxc TypeScript 转译引擎',
-        desc: '采用超高速 Rust AST 解析器，以亚毫秒级速度擦除类型并将现代 TS 语法降级为 ES2022。',
+        title: 'oxc 转译与代码质量引擎',
+        desc: '采用超高速 Rust AST 引擎，以亚毫秒级速度擦除类型，并提供内置极速格式化 (bee fmt) 与静态检查 (bee lint)。',
       },
       {
-        title: '多 Worker 线程池并发系统',
-        desc: '无锁任务调度线程池，零线程创建成本轻松支撑每秒数万并发 HTTP 连接。',
+        title: '现代 Web 服务与并发架构',
+        desc: '原生支持标准 Fetch API 应用服务 (bee serve)，并具备无锁多 Worker 线程池并发模型。',
       },
       {
-        title: 'Node.js 兼容层',
-        desc: '深度实现 fs、path、crypto、buffer、events、http、process、timers 及 CommonJS require。',
+        title: 'Agent 确定性沙箱与资源配额',
+        desc: 'CPU 超时 Watchdog 强行中断死循环，物理堆上限隔离，Mulberry32 随机重放与时间戳冻结。',
       },
       {
-        title: 'Web 标准 API 层',
-        desc: '符合 W3C 标准的 fetch、URL、Streams、Blob、Web Crypto、BroadcastChannel 与 ServiceWorker 实现。',
+        title: '工程打包与 SEA 独立可执行编译',
+        desc: '生产级 Bundler 2.0 模块打包与无需依赖的单二进制应用编译器 (bee compile)。',
       },
       {
-        title: '免配置内置测试框架',
-        desc: 'Jest 兼容的测试套件，内置断言、用例发现、并行执行与覆盖率分析。',
+        title: '开发者体验与调试协议 (CDP & LSP)',
+        desc: '包含升级版交互终端 (bee repl)、Chrome DevTools 远程调试以及语言服务器 (bee lsp)。',
       },
     ],
     ctaTitle: '准备好体验极致性能了吗？',
@@ -249,8 +249,12 @@ export const zh: TranslationSchema = {
   },
   docs: {
     title: '运行时手册',
-    subtitle: 'Beejs v1.0.0 开发者与运维手册。',
+    subtitle: 'Beejs v1.0.0 开发者、周边工具链与 Agent 原生手册。',
     backToHome: '返回首页',
+    searchPlaceholder: '搜索文档、命令与 API...',
+    onThisPage: '本页大纲',
+    previousPage: '上一篇',
+    nextPage: '下一篇',
     groups: [
       {
         title: '入门指南',
@@ -264,18 +268,36 @@ export const zh: TranslationSchema = {
         title: '核心系统',
         items: [
           { id: 'v8-isolate-pool', label: '运行时与 V8 架构' },
-          { id: 'jit-optimization', label: 'TypeScript 与 TSX' },
-          { id: 'ai-engine', label: '原生 AI 引擎 (bee:ai)' },
-          { id: 'server-mode', label: 'HTTP 服务与并发' },
+          { id: 'jit-optimization', label: 'TypeScript 6.0 与 TSX' },
+          { id: 'ai-engine', label: '原生 AI 引擎 (bee:ai)', badge: 'AI' },
+          { id: 'server-mode', label: '现代 Web 服务与并发', badge: 'v1.0' },
           { id: 'memory-management', label: 'SIMD 与内存模型' },
         ],
       },
       {
-        title: '开发者指南',
+        title: '工程工具链',
         items: [
-          { id: 'cli-usage', label: 'CLI 命令与安全沙箱' },
+          { id: 'task-runner', label: '任务调度与脚本执行', badge: 'NEW' },
+          { id: 'code-quality', label: '代码格式化与规范检查', badge: 'NEW' },
+          { id: 'bundling-compilation', label: '打包器 2.0 与 SEA 独立二进制', badge: 'NEW' },
+          { id: 'testing-benchmarking', label: '测试覆盖率与微基准套件', badge: 'NEW' },
+          { id: 'debugging-lsp', label: '交互终端、CDP 调试与 LSP', badge: 'NEW' },
+        ],
+      },
+      {
+        title: 'Agent 与高级特性',
+        items: [
+          { id: 'agent-sandbox', label: '确定性沙箱与资源硬配额', badge: 'Agent' },
+          { id: 'import-maps-native', label: 'WICG 导入映射与原生插件', badge: 'v1.0' },
+          { id: 'types-lsp', label: '官方 TypeScript 类型定义', badge: 'Types' },
+        ],
+      },
+      {
+        title: '参考与规范',
+        items: [
+          { id: 'cli-usage', label: 'CLI 命令行完整参考手册' },
           { id: 'api-reference', label: 'Node & Web API 兼容' },
-          { id: 'modules', label: '模块解析与测试框架' },
+          { id: 'modules', label: '模块解析与工程边界' },
         ],
       },
     ],

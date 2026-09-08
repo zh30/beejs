@@ -1,105 +1,144 @@
 ---
-title: "高性能 HTTP 服务与多 Worker 架构"
-subtitle: "利用无锁跨线程任务分发与 V8 Isolate 线程池，承载每秒数万高并发连接"
+title: "现代 Web 服务与高并发架构"
+subtitle: "支持标准 Web Fetch API (bee serve)、node:http 以及无锁多 Isolate 线程池"
 group: "核心系统"
 id: "server-mode"
 ---
 
-## 1. 编写现代 HTTP 微服务
+Beejs 提供了双重现代 Web 服务构建范式：
+1. **现代化 Web 标准服务 (`bee serve [file]`)**：基于符合 W3C / WinterCG 规范的 `Request` / `Response` 与 `fetch(req)` 导出模型；
+2. **Node.js 兼容服务 (`bee run server.ts`)**：基于 `node:http` 与底层 Rust Tokio 无锁多 Worker 线程池模型。
 
-Beejs 原生实现了完整的 `node:http` 模块标准契约。无论是构建极速 RESTful API、处理大文件流式上传，还是提供长连接服务，都可以直接采用熟悉的 Node.js 编程模式：
+---
+
+## 1. 现代化 Web 应用服务 (`bee serve`)
+
+`bee serve` 是 Beejs 官方推荐的现代轻量 Web 服务入口，体验对齐 Cloudflare Workers、Deno 与 Bun，原生支持 TypeScript 与 JSX。
+
+### 1.1 编写首个 Web 服务脚本
+
+只需在脚本中导出一个包含 `fetch` 处理函数的对象，或直接导出处理函数：
 
 ```typescript
-// server.ts - 生产级 HTTP 微服务示例
+// app.ts
+export default {
+  async fetch(req: Request): Promise<Response> {
+    const url = new URL(req.url);
+
+    // 路由匹配
+    if (url.pathname === "/") {
+      return new Response("🚀 Welcome to Beejs Web Server!");
+    }
+
+    if (url.pathname === "/api/echo" && req.method === "POST") {
+      const data = await req.json();
+      return new Response(JSON.stringify({ received: data, time: Date.now() }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    if (url.pathname === "/api/info") {
+      return new Response(JSON.stringify({
+        runtime: "beejs",
+        version: "v1.0.0",
+        arch: process.arch,
+        platform: process.platform
+      }), {
+        headers: { "Content-Type": "application/json", "X-Powered-By": "beejs" }
+      });
+    }
+
+    return new Response("Not Found", { status: 404 });
+  }
+};
+```
+
+### 1.2 启动服务
+
+```bash
+# 自动探测并运行 app.ts, app.js, server.ts, index.ts 等
+$ bee serve
+
+# 或显式指定文件与端口/主机
+$ bee serve app.ts --port 8080 --host 0.0.0.0
+```
+
+终端输出：
+```text
+🚀 Starting Beejs Web Server on http://0.0.0.0:8080
+📄 Serving application: app.ts
+✅ Listening on http://0.0.0.0:8080 (Ctrl+C to stop)
+```
+
+### 1.3 核心技术亮点
+- **零胶水代码**：运行时直接将底层 TCP HTTP 报文解构映射为标准的 `Request` 实例，Headers 与 Body 均无缝桥接；
+- **原生异步微任务支持**：支持 `async` 函数与 Promise，在事件循环中自适应执行微任务检查点；
+- **完整的 Body Mixin**：`Request` 与 `Response` 均完整实现 `req.text()`, `req.json()`, `req.arrayBuffer()`；
+- **资源沙箱集成**：可搭配 `--max-memory <MB>` 与 `--sandbox` 一同使用，限制 Web 应用的资源消耗。
+
+---
+
+## 2. 传统 Node.js 兼容服务 (`node:http`)
+
+如果你正在迁移基于 Node.js 生态构建的微服务或 Express 风格代码，可以使用熟悉的 `node:http`：
+
+```typescript
+// server.ts - 经典 Node.js 风格服务
 import http from 'node:http';
-
-interface User {
-  id: string;
-  name: string;
-  role: string;
-}
-
-const users: Map<string, User> = new Map([
-  ['1', { id: '1', name: 'Alice', role: 'admin' }],
-  ['2', { id: '2', name: 'Bob', role: 'engineer' }],
-]);
 
 const server = http.createServer(async (req, res) => {
   const { method, url } = req;
   const parsedUrl = new URL(url || '/', `http://${req.headers.host}`);
 
-  // 全局响应头 (CORS 与 JSON)
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  try {
-    // 路由分发
-    if (method === 'GET' && parsedUrl.pathname === '/api/users') {
-      res.writeHead(200);
-      res.end(JSON.stringify({ code: 0, data: Array.from(users.values()) }));
-      return;
-    }
-
-    if (method === 'POST' && parsedUrl.pathname === '/api/users') {
-      // 流式读取 Request Body
-      const chunks: Buffer[] = [];
-      for await (const chunk of req) {
-        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-      }
-      const body = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-      
-      const newUser: User = {
-        id: String(users.size + 1),
-        name: body.name || 'Anonymous',
-        role: body.role || 'user',
-      };
-      users.set(newUser.id, newUser);
-
-      res.writeHead(201);
-      res.end(JSON.stringify({ code: 0, data: newUser }));
-      return;
-    }
-
-    // 404 兜底
-    res.writeHead(404);
-    res.end(JSON.stringify({ code: 404, message: 'Not Found' }));
-  } catch (err: any) {
-    res.writeHead(500);
-    res.end(JSON.stringify({ code: 500, error: err.message }));
+  if (method === 'GET' && parsedUrl.pathname === '/api/users') {
+    res.writeHead(200);
+    res.end(JSON.stringify({ code: 0, data: ['Alice', 'Bob'] }));
+    return;
   }
+
+  res.writeHead(404);
+  res.end(JSON.stringify({ error: 'Not Found' }));
 });
 
-const PORT = 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 HTTP 服务就绪: http://localhost:${PORT}`);
+server.listen(3000, () => {
+  console.log('🚀 HTTP 服务就绪: http://localhost:3000');
 });
+```
+
+启动命令：
+```bash
+bee run server.ts
 ```
 
 ---
 
-## 2. 多 Worker 线程池并发架构 (`--workers`)
+## 3. 多 Worker 线程池并发架构 (`--workers`)
 
 ### 传统单线程事件循环的局限
-在单线程事件循环运行时（如未做集群配置的 Node.js）中，一旦某个请求触发了密集的 JSON 序列化、密码学哈希计算或解压缩，整个主线程事件循环便会被阻塞，导致其他所有正在排队的请求延迟激增。
+在传统单线程事件循环（如单进程 Node.js）中，一旦某个请求执行密集的 JSON 序列化、密码学哈希或张量推理，事件循环便会发生卡顿，导致正在排队的所有并发请求延迟剧增。
 
 ### Beejs 的无锁多 Isolate 线程池
-Beejs 在底层设计了**多 Worker 线程池并发模型**：
+Beejs 在底层支持**多 Worker 线程池并发模型**：
 
 ```text
-                        客户端并发请求 (TCP Traffic)
-                                    │
-                                    ▼
+                        客户端高并发请求 (TCP Traffic)
+                                     │
+                                     ▼
                  +─────────────────────────────────────+
                  │      主分发线程 (Rust Tokio I/O)    │
                  │   - TCP 连接监听与 SO_REUSEPORT      │
-                 │   - 无锁 Channel 快速轮询分发       │
+                 │   - 无锁 Channel 极速跨线程分发     │
                  +─────────────────────────────────────+
                         │           │           │
-           ┌────────────┘           │           └────────────┐
-           ▼                        ▼                        ▼
+            ┌────────────┘           │           └────────────┐
+            ▼                        ▼                        ▼
 +─────────────────────+  +─────────────────────+  +─────────────────────+
 | Worker 1 (Isolate)  |  | Worker 2 (Isolate)  |  | Worker N (Isolate)  |
-| - 专属 V8 执行堆    |  | - 专属 V8 执行堆    |  | - 专属 V8 执行堆    |
+| - 独立 V8 执行堆    |  | - 独立 V8 执行堆    |  | - 独立 V8 执行堆    |
 | - 独立 GC 垃圾回收  |  | - 独立 GC 垃圾回收  |  | - 独立 GC 垃圾回收  |
 | - 处理请求 1, 4, 7  |  | - 处理请求 2, 5, 8  |  | - 处理请求 3, 6, 9  |
 +─────────────────────+  +─────────────────────+  +─────────────────────+
@@ -110,7 +149,7 @@ Beejs 在底层设计了**多 Worker 线程池并发模型**：
 
 ```bash
 # 启用 8 个并行 Worker 线程
-bee run --workers 8 server.ts
+$ bee run --workers 8 server.ts
 ```
 
 或者在生产环境中设置环境变量：
@@ -119,30 +158,15 @@ export BEE_WORKERS=8
 bee run server.ts
 ```
 
-**优势所在**：
-- **真正的多核并行**：各个 Worker 运行在独立且互不干扰的 V8 Isolate 中，CPU 密集型任务完全并行，不会阻塞其他核心；
-- **零请求创建成本**：所有 Worker 在进程启动时预热完成，请求到达时仅通过内存中的无锁队列唤醒，消除了每次请求重新创建线程的系统调用风暴。
+**核心优势**：
+- **真多核并行**：各个 Worker 运行在独立且互不干扰的 V8 Isolate 中，CPU 密集型任务完全并行，不抢占主事件循环；
+- **零请求创建开销**：所有 Worker 在进程启动时预热完成，请求到达时仅通过内存中的无锁队列唤醒，消除了反复创建销毁线程的系统开销。
 
 ---
 
-## 3. `bee serve` 诊断与健康检查模式
+## 4. 生产压测与最佳实践
 
-在 CLI 子命令中，你可能会发现 `bee serve`：
-
-```bash
-bee serve --port 3000 --host 0.0.0.0
-```
-
-> [!IMPORTANT]
-> **请注意**：`bee serve` 是一个由 Rust 直接驱动的超轻量健康检查 Stub，专门用于 **Kubernetes 集群的 LivenessProbe / ReadinessProbe** 以及负载均衡器的存活探测，返回固定的 `{"ok": true}`。
-> 
-> 如果你要运行自己的 JavaScript / TypeScript 业务服务，请始终使用 **`bee run server.ts`**（搭配 `http.createServer`）。
-
----
-
-## 4. 性能压测与优化建议
-
-在相同硬件环境下使用 `autocannon` 对上述 HTTP 示例进行压测：
+可以使用 `autocannon` 或 `wrk` 对服务进行高并发压测：
 
 ```bash
 # 启动 8 核心工作线程
@@ -153,6 +177,6 @@ npx autocannon -c 100 -d 10 http://localhost:3000/api/users
 ```
 
 ### 生产优化技巧
-1. **复用连接 (Keep-Alive)**：默认保持开启，大幅减少每次请求重新建立 TCP 三次握手与 TLS 握手的网络开销；
-2. **避免大字符串拼接**：处理二进制或大载荷时，优先使用 `Buffer.concat()` 或流式 Piping，配合 Beejs 的 Rust SIMD 向量化加速；
-3. **设置合理的 Worker 数量**：在纯 I/O 服务中，Worker 数量建议设为 `CPU核心数` 至 `CPU核心数 * 2`；在重度密集计算时，建议严格等于物理核心数以避免频繁上下文切换。
+1. **轻量服务优先选择 `bee serve`**：Fetch API 模型没有传统 Event Emitter 流包装开销，在微服务与边缘计算场景拥有更高的每秒请求处理量（RPS）；
+2. **合理规划 Worker 数量**：在纯 I/O 服务中，Worker 数量建议设为 `CPU核心数` 至 `CPU核心数 * 2`；在重度密集计算时，建议严格等于物理核心数；
+3. **搭配安全沙箱**：生产对外暴露的不可信脚本建议添加 `--sandbox` 和 `--max-memory 512`，有效抵御内存泄漏与越权文件访问。

@@ -299,13 +299,23 @@ pub fn call_onerror_handler(
     colno: u32,
     error: Option<v8::Local<v8::Value>>,
 ) -> bool {
+    if scope.is_execution_terminating() {
+        return false;
+    }
+
     // Get the context and global object
     let context = scope.get_current_context();
     let global = context.global(scope);
 
     // Get window.onerror from JavaScript
-    let onerror_key = v8::String::new(scope, "onerror").unwrap();
-    let onerror_val = global.get(scope, onerror_key.into()).unwrap();
+    let onerror_key = match v8::String::new(scope, "onerror") {
+        Some(k) => k,
+        None => return false,
+    };
+    let onerror_val = match global.get(scope, onerror_key.into()) {
+        Some(v) => v,
+        None => return false,
+    };
 
     // Check if onerror is a function
     if !onerror_val.is_function() {
@@ -316,8 +326,14 @@ pub fn call_onerror_handler(
 
     // Prepare arguments for onerror callback:
     // (message, filename, lineno, colno, error)
-    let message_str = v8::String::new(scope, message).unwrap();
-    let filename_str = v8::String::new(scope, filename).unwrap();
+    let message_str = match v8::String::new(scope, message) {
+        Some(s) => s,
+        None => return false,
+    };
+    let filename_str = match v8::String::new(scope, filename) {
+        Some(s) => s,
+        None => return false,
+    };
     let lineno_val = v8::Integer::new(scope, lineno as i32);
     let colno_val = v8::Integer::new(scope, colno as i32);
     let error_val = error.unwrap_or_else(|| v8::null(scope).into());

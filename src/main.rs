@@ -4,7 +4,6 @@
 use anyhow::{anyhow, Result};
 use clap::{Args, Parser, Subcommand};
 use serde::Deserialize;
-use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -73,6 +72,15 @@ struct PermissionCliOptions {
     /// Freeze virtual clock time to fixed timestamp or ISO8601 string (Date.now & performance.now)
     #[arg(long = "freeze-time", value_name = "TIMESTAMP_OR_ISO")]
     freeze_time: Option<String>,
+    /// Maximum script execution time in milliseconds before watchdog termination
+    #[arg(long = "timeout", value_name = "MILLISECONDS")]
+    timeout: Option<u64>,
+    /// Maximum isolate heap memory in megabytes
+    #[arg(long = "max-memory", value_name = "MB")]
+    max_memory: Option<usize>,
+    /// Path to an import map JSON file for bare specifier remapping
+    #[arg(long = "import-map", value_name = "PATH")]
+    import_map: Option<PathBuf>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -127,6 +135,15 @@ enum Command {
         /// Number of parallel multi-isolate worker threads for parallel HTTP execution (default: 1, or via BEE_WORKERS)
         #[arg(short = 'W', long = "workers", default_value = "1")]
         workers: usize,
+        /// Enable V8 Inspector agent for Chrome DevTools / VS Code debugging
+        #[arg(long)]
+        inspect: bool,
+        /// Enable V8 Inspector agent and break at beginning of user script
+        #[arg(long = "inspect-brk")]
+        inspect_brk: bool,
+        /// Port for V8 Inspector agent (default: 9229)
+        #[arg(long = "inspect-port", default_value = "9229")]
+        inspect_port: u16,
     },
     /// JSON-RPC session over stdin/stdout for Agent hosts
     Session {
@@ -190,6 +207,9 @@ enum Command {
         /// Watch files for changes and re-run tests
         #[arg(short = 'w', long = "watch")]
         watch: bool,
+        /// Collect code coverage and output lcov report
+        #[arg(long)]
+        coverage: bool,
     },
     /// Bundle code (experimental: concatenates local static imports, not a bundler)
     Bundle {
@@ -227,11 +247,13 @@ enum Command {
         #[command(subcommand)]
         action: SnapshotAction,
     },
-    /// Start HTTP/HTTPS server (experimental: serves a fixed health response,
-    /// not user scripts yet)
+    /// Start HTTP/HTTPS server for a web app or script (e.g. app.ts / server.js)
     Serve {
         #[command(flatten)]
         permissions: PermissionCliOptions,
+        /// Optional script file to serve (exports fetch handler or default app)
+        #[arg(value_name = "FILE")]
+        file: Option<PathBuf>,
         /// Port number
         #[arg(short, long, default_value = "3000")]
         port: u16,
@@ -314,6 +336,58 @@ enum Command {
         /// Package to upgrade (all if not specified)
         package: Option<String>,
     },
+    /// Format JavaScript and TypeScript source files
+    Fmt {
+        /// Files or directories to format
+        #[arg(default_value = ".")]
+        files: Vec<PathBuf>,
+        /// Check if files are formatted without writing
+        #[arg(long)]
+        check: bool,
+    },
+    /// Lint JavaScript and TypeScript source files
+    Lint {
+        /// Files or directories to lint
+        #[arg(default_value = ".")]
+        files: Vec<PathBuf>,
+    },
+    /// Run microbenchmarks
+    Bench {
+        /// Files or directories containing benchmarks
+        #[arg(default_value = ".")]
+        files: Vec<PathBuf>,
+    },
+    /// Compile a script into a standalone self-executing binary
+    Compile {
+        /// Entry script (JS/TS) to compile
+        entry: PathBuf,
+        /// Output binary path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+    /// Export TypeScript type definitions for Beejs built-in APIs
+    Types {
+        /// Output file path (defaults to stdout)
+        #[arg(short, long)]
+        outfile: Option<PathBuf>,
+    },
+    /// Run a script task defined in package.json
+    Task {
+        /// Task name to run (lists all tasks if omitted)
+        name: Option<String>,
+        /// Arguments to pass to the task
+        args: Vec<String>,
+    },
+    /// Profile a script and export a Chrome DevTools compatible CPU profile
+    Profile {
+        /// Script file to profile
+        file: PathBuf,
+        /// Output .cpuprofile file path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+    /// Start Language Server Protocol (LSP) server for editor integration
+    Lsp,
 }
 
 #[derive(Subcommand, Debug)]
@@ -390,755 +464,6 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
     }
 }
 
-fn bundle_local_static_imports(entry: &Path) -> Result<String> {
-    let mut seen = HashSet::new();
-    bundle_local_static_imports_inner(entry, &mut seen)
-}
-
-fn bundle_local_static_imports_inner(file: &Path, seen: &mut HashSet<PathBuf>) -> Result<String> {
-    let module_key = normalize_module_path(file)?;
-    if !seen.insert(module_key) {
-        return Ok(String::new());
-    }
-
-    let code = read_and_compile_source(file)?;
-    let mut dependencies = Vec::new();
-    let mut body = String::new();
-
-    for line in static_module_statements(&code) {
-        if let Some(specifier) = static_import_specifier(&line) {
-            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
-                let dependency_bundle = bundle_local_static_imports_inner(&dependency_path, seen)?;
-                if !dependency_bundle.trim().is_empty() {
-                    dependencies.push(dependency_bundle);
-                }
-                body.push_str(&static_import_binding_rewrites(&line, &dependency_path)?);
-                continue;
-            }
-        }
-
-        if let Some(specifier) = static_export_from_specifier(&line) {
-            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
-                let dependency_bundle = bundle_local_static_imports_inner(&dependency_path, seen)?;
-                if !dependency_bundle.trim().is_empty() {
-                    dependencies.push(dependency_bundle);
-                }
-                continue;
-            }
-        }
-
-        body.push_str(&line);
-        body.push('\n');
-    }
-
-    let mut bundled = String::new();
-    for dependency in dependencies {
-        bundled.push_str(&dependency);
-        if !dependency.ends_with('\n') {
-            bundled.push('\n');
-        }
-    }
-
-    bundled.push_str(&format!("// module: {}\n", file.display()));
-    bundled.push_str(&rewrite_esm_exports_for_bundle(file, &body)?);
-    Ok(bundled)
-}
-
-fn static_import_specifier(line: &str) -> Option<String> {
-    let trimmed = line.trim();
-    if !trimmed.starts_with("import ") || trimmed.starts_with("import(") {
-        return None;
-    }
-
-    if let Some(from_pos) = trimmed.rfind(" from ") {
-        return parse_quoted_module_specifier(&trimmed[from_pos + " from ".len()..]);
-    }
-
-    parse_quoted_module_specifier(trimmed.strip_prefix("import")?.trim_start())
-}
-
-fn static_export_from_specifier(line: &str) -> Option<String> {
-    let trimmed = line.trim();
-    if !trimmed.starts_with("export ") {
-        return None;
-    }
-
-    let from_pos = trimmed.rfind(" from ")?;
-    parse_quoted_module_specifier(&trimmed[from_pos + " from ".len()..])
-}
-
-fn parse_quoted_module_specifier(input: &str) -> Option<String> {
-    let trimmed = input.trim_start();
-    let quote = trimmed.chars().next()?;
-    if quote != '\'' && quote != '"' {
-        return None;
-    }
-
-    let rest = &trimmed[quote.len_utf8()..];
-    let end = rest.find(quote)?;
-    Some(rest[..end].to_string())
-}
-
-fn static_module_statements(code: &str) -> Vec<String> {
-    let mut statements = Vec::new();
-    let mut pending_static = None::<String>;
-
-    for line in code.lines() {
-        for segment in static_module_line_segments(line) {
-            let mut active_segment = Some(segment);
-            while let Some(segment) = active_segment.take() {
-                let trimmed = segment.trim();
-
-                if let Some(mut current) = pending_static.take() {
-                    if static_closed_export_list_waiting_for_optional_from(&current)
-                        && !trimmed.is_empty()
-                        && !trimmed.starts_with("from ")
-                    {
-                        statements.push(current);
-                        active_segment = Some(segment);
-                        continue;
-                    }
-
-                    if !trimmed.is_empty() {
-                        if !current.is_empty() {
-                            current.push(' ');
-                        }
-                        current.push_str(trimmed);
-                    }
-
-                    if static_multiline_statement_complete(&current) {
-                        statements.push(current);
-                    } else {
-                        pending_static = Some(current);
-                    }
-                    continue;
-                }
-
-                if starts_multiline_static_statement(trimmed)
-                    && !static_multiline_statement_complete(trimmed)
-                {
-                    pending_static = Some(trimmed.to_string());
-                } else {
-                    statements.push(segment.to_string());
-                }
-            }
-        }
-    }
-
-    if let Some(statement) = pending_static {
-        statements.push(statement);
-    }
-
-    statements
-}
-
-fn static_module_line_segments(line: &str) -> Vec<&str> {
-    let mut segments = Vec::new();
-    if line.is_empty() {
-        segments.push(line);
-        return segments;
-    }
-
-    let mut start = 0;
-    let mut quote = None;
-    let mut escaped = false;
-    let mut chars = line.char_indices().peekable();
-
-    while let Some((index, character)) = chars.next() {
-        if let Some(quote_character) = quote {
-            if escaped {
-                escaped = false;
-                continue;
-            }
-            if character == '\\' {
-                escaped = true;
-                continue;
-            }
-            if character == quote_character {
-                quote = None;
-            }
-            continue;
-        }
-
-        if character == '\'' || character == '"' || character == '`' {
-            quote = Some(character);
-            continue;
-        }
-
-        if character == '/' && matches!(chars.peek(), Some((_, '/'))) {
-            break;
-        }
-
-        if character != ';' {
-            continue;
-        }
-
-        let statement_end = index + character.len_utf8();
-        let rest = &line[statement_end..];
-        let whitespace_len = rest.len() - rest.trim_start().len();
-        let next_start = statement_end + whitespace_len;
-        let next = &line[next_start..];
-        let current = line[start..statement_end].trim_start();
-        if current.starts_with("import ")
-            || current.starts_with("export ")
-            || next.starts_with("import ")
-            || next.starts_with("export ")
-        {
-            segments.push(&line[start..statement_end]);
-            start = next_start;
-        }
-    }
-
-    if start < line.len() {
-        segments.push(&line[start..]);
-    }
-
-    segments
-}
-
-fn starts_multiline_static_statement(trimmed: &str) -> bool {
-    trimmed.starts_with("import ")
-        || trimmed.starts_with("export {")
-        || trimmed.starts_with("export *")
-}
-
-fn static_multiline_statement_complete(statement: &str) -> bool {
-    let trimmed = statement.trim();
-    trimmed.ends_with(';')
-        || static_import_specifier(trimmed).is_some()
-        || static_export_from_specifier(trimmed).is_some()
-}
-
-fn static_closed_export_list_waiting_for_optional_from(statement: &str) -> bool {
-    let trimmed = statement.trim();
-    let Some(rest) = trimmed.strip_prefix("export ") else {
-        return false;
-    };
-    let rest = rest.trim_start();
-    rest.starts_with('{')
-        && export_list_bindings(rest).is_some()
-        && !trimmed.ends_with(';')
-        && static_export_from_specifier(trimmed).is_none()
-}
-
-fn static_import_binding_rewrites(line: &str, dependency_path: &Path) -> Result<String> {
-    let mut rewrites = String::new();
-    let export_map = local_static_export_map(dependency_path)?;
-
-    if let Some(default_binding) = static_import_default_binding(line) {
-        let source = export_map
-            .iter()
-            .find_map(|(exported, source)| {
-                if exported == "default" {
-                    Some(source.as_str())
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                anyhow!(
-                    "Local module {} does not export default",
-                    dependency_path.display()
-                )
-            })?;
-        rewrites.push_str(&format!("const {} = {};\n", default_binding, source));
-    }
-
-    if let Some(named_imports) = static_import_named_clause(line) {
-        for item in named_imports.split(',') {
-            if let Some((imported, local)) = parse_named_import_binding(item) {
-                let source = export_map
-                    .iter()
-                    .find_map(|(exported, source)| {
-                        if exported == imported {
-                            Some(source.as_str())
-                        } else {
-                            None
-                        }
-                    })
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "Local module {} does not export '{}'",
-                            dependency_path.display(),
-                            imported
-                        )
-                    })?;
-                if source != local {
-                    rewrites.push_str(&format!("const {} = {};\n", local, source));
-                }
-            }
-        }
-    }
-
-    if let Some(namespace_binding) = static_import_namespace_binding(line) {
-        let namespace_entries = export_map
-            .iter()
-            .map(|(exported, source)| format!("{exported}: {source}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        rewrites.push_str(&format!(
-            "const {} = {{ {} }};\n",
-            namespace_binding, namespace_entries
-        ));
-    }
-
-    Ok(rewrites)
-}
-
-fn parse_named_import_binding(item: &str) -> Option<(&str, &str)> {
-    let parts = item.split_whitespace().collect::<Vec<_>>();
-    match parts.as_slice() {
-        [imported] => Some((*imported, *imported)),
-        [imported, "as", local] => Some((*imported, *local)),
-        _ => None,
-    }
-}
-
-fn static_import_namespace_binding(line: &str) -> Option<&str> {
-    let trimmed = line.trim();
-    let from_pos = trimmed.rfind(" from ")?;
-    let import_clause = trimmed
-        .strip_prefix("import ")?
-        .get(..from_pos - "import ".len())?
-        .trim();
-    let namespace_start = import_clause.find("* as ")?;
-    let namespace_binding = import_clause[namespace_start + "* as ".len()..]
-        .split(',')
-        .next()?
-        .trim();
-    if namespace_binding.is_empty() {
-        return None;
-    }
-    Some(namespace_binding)
-}
-
-fn static_import_default_binding(line: &str) -> Option<&str> {
-    let trimmed = line.trim();
-    let from_pos = trimmed.rfind(" from ")?;
-    let import_clause = trimmed
-        .strip_prefix("import ")?
-        .get(..from_pos - "import ".len())?
-        .trim();
-    if import_clause.is_empty() || import_clause.starts_with('{') || import_clause.starts_with('*')
-    {
-        return None;
-    }
-
-    Some(import_clause.split(',').next()?.trim())
-}
-
-fn static_import_named_clause(line: &str) -> Option<&str> {
-    let trimmed = line.trim();
-    let from_pos = trimmed.rfind(" from ")?;
-    let import_clause = trimmed
-        .strip_prefix("import ")?
-        .get(..from_pos - "import ".len())?;
-    let named_start = import_clause.find('{')?;
-    let named_end = import_clause.rfind('}')?;
-    if named_end <= named_start {
-        return None;
-    }
-    Some(&import_clause[named_start + 1..named_end])
-}
-
-fn local_static_export_map(file: &Path) -> Result<Vec<(String, String)>> {
-    local_static_export_map_inner(file, &mut HashSet::new())
-}
-
-fn local_static_export_map_inner(
-    file: &Path,
-    seen: &mut HashSet<PathBuf>,
-) -> Result<Vec<(String, String)>> {
-    let module_key = normalize_module_path(file)?;
-    if !seen.insert(module_key) {
-        return Ok(Vec::new());
-    }
-
-    let code = read_and_compile_source(file)?;
-    let default_binding = default_export_binding_name(file)?;
-    let mut export_map = extract_static_export_map(file, &code, &default_binding)?;
-
-    for line in static_module_statements(&code) {
-        if let Some((specifier, re_exports)) = static_re_export_list_bindings(&line) {
-            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
-                let dependency_export_map = local_static_export_map_inner(&dependency_path, seen)?;
-                for (exported, imported) in re_exports {
-                    let source = dependency_export_map
-                        .iter()
-                        .find_map(|(dependency_exported, dependency_source)| {
-                            if dependency_exported == &imported {
-                                Some(dependency_source.clone())
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or_else(|| {
-                            anyhow!(
-                                "Local module {} does not export '{}' for re-export",
-                                dependency_path.display(),
-                                imported
-                            )
-                        })?;
-                    export_map.push((exported, source));
-                }
-            }
-        }
-
-        if let Some(specifier) = static_export_star_from_specifier(&line) {
-            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
-                export_map.extend(
-                    local_static_export_map_inner(&dependency_path, seen)?
-                        .into_iter()
-                        .filter(|(exported, _)| exported != "default"),
-                );
-            }
-        }
-    }
-
-    Ok(export_map)
-}
-
-fn extract_static_export_map(
-    file: &Path,
-    code: &str,
-    default_binding: &str,
-) -> Result<Vec<(String, String)>> {
-    let mut exports = Vec::new();
-    for line in static_module_statements(code) {
-        let Some(rest) = line.trim_start().strip_prefix("export ") else {
-            continue;
-        };
-        let rest = rest.trim_start();
-
-        if rest.starts_with("default ") {
-            exports.push(("default".to_string(), default_binding.to_string()));
-            continue;
-        }
-
-        if rest.starts_with('{') && rest.contains(" from ") {
-            continue;
-        }
-
-        if let Some(list_exports) = export_list_bindings(rest) {
-            for (exported, _) in list_exports {
-                let source = if exported == "default" {
-                    default_binding.to_string()
-                } else {
-                    exported_binding_name(file, &exported)?
-                };
-                exports.push((exported, source));
-            }
-            continue;
-        }
-
-        for keyword in ["const ", "let ", "var ", "function ", "class "] {
-            if let Some(name) = exported_declaration_name(rest, keyword) {
-                exports.push((name.clone(), exported_binding_name(file, &name)?));
-                break;
-            }
-        }
-    }
-    Ok(exports)
-}
-
-fn static_re_export_list_bindings(line: &str) -> Option<(String, Vec<(String, String)>)> {
-    let trimmed = line.trim();
-    let rest = trimmed.strip_prefix("export ")?.trim_start();
-    if !rest.starts_with('{') {
-        return None;
-    }
-
-    let specifier = static_export_from_specifier(line)?;
-    let bindings = export_list_bindings(rest)?;
-    Some((specifier, bindings))
-}
-
-fn static_export_star_from_specifier(line: &str) -> Option<String> {
-    let trimmed = line.trim();
-    let rest = trimmed.strip_prefix("export ")?.trim_start();
-    if !rest.starts_with("* from ") {
-        return None;
-    }
-
-    parse_quoted_module_specifier(rest.strip_prefix("* from ")?.trim_start())
-}
-
-fn export_list_bindings(rest: &str) -> Option<Vec<(String, String)>> {
-    let export_list = rest.strip_prefix('{')?;
-    let end = export_list.find('}')?;
-    let export_list = &export_list[..end];
-    let mut exports = Vec::new();
-
-    for item in export_list.split(',') {
-        let item = item.trim();
-        if item.is_empty() {
-            continue;
-        }
-
-        let parts = item.split_whitespace().collect::<Vec<_>>();
-        match parts.as_slice() {
-            [local] => exports.push(((*local).to_string(), (*local).to_string())),
-            [local, "as", exported] => {
-                exports.push(((*exported).to_string(), (*local).to_string()))
-            }
-            _ => {}
-        }
-    }
-
-    Some(exports)
-}
-
-fn exported_declaration_name(rest: &str, keyword: &str) -> Option<String> {
-    let declaration = rest.strip_prefix(keyword)?.trim_start();
-    let end = declaration
-        .char_indices()
-        .find_map(|(index, character)| {
-            if is_js_identifier_part(character) {
-                None
-            } else {
-                Some(index)
-            }
-        })
-        .unwrap_or(declaration.len());
-    if end == 0 {
-        return None;
-    }
-    Some(declaration[..end].to_string())
-}
-
-fn is_js_identifier_part(character: char) -> bool {
-    character == '_' || character == '$' || character.is_ascii_alphanumeric()
-}
-
-fn resolve_local_static_import(importer: &Path, specifier: &str) -> Result<Option<PathBuf>> {
-    if !specifier.starts_with("./") && !specifier.starts_with("../") {
-        return Ok(None);
-    }
-
-    let base_dir = importer.parent().unwrap_or_else(|| Path::new("."));
-    let candidate = base_dir.join(specifier);
-    for path in local_module_candidates(&candidate) {
-        if path.is_file() {
-            return Ok(Some(path));
-        }
-    }
-
-    Err(anyhow!(
-        "Failed to resolve local import '{}' from {}",
-        specifier,
-        importer.display()
-    ))
-}
-
-fn local_module_candidates(candidate: &Path) -> Vec<PathBuf> {
-    if candidate.extension().is_some() {
-        return vec![candidate.to_path_buf()];
-    }
-
-    vec![
-        candidate.to_path_buf(),
-        candidate.with_extension("js"),
-        candidate.with_extension("mjs"),
-        candidate.with_extension("ts"),
-        candidate.with_extension("tsx"),
-        candidate.join("index.js"),
-        candidate.join("index.ts"),
-    ]
-}
-
-fn normalize_module_path(path: &Path) -> Result<PathBuf> {
-    let absolute = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        std::env::current_dir()?.join(path)
-    };
-
-    let mut normalized = PathBuf::new();
-    for component in absolute.components() {
-        match component {
-            std::path::Component::CurDir => {}
-            std::path::Component::ParentDir => {
-                normalized.pop();
-            }
-            other => normalized.push(other.as_os_str()),
-        }
-    }
-    Ok(normalized)
-}
-
-fn module_binding_hash(file: &Path) -> Result<String> {
-    let normalized = normalize_module_path(file)?;
-    let normalized = normalized.to_string_lossy();
-    let digest = blake3::hash(normalized.as_bytes());
-    let hex = digest.to_hex();
-    Ok(hex.as_str()[..16].to_string())
-}
-
-fn default_export_binding_name(file: &Path) -> Result<String> {
-    Ok(format!(
-        "__beejs_default_export_{}",
-        module_binding_hash(file)?
-    ))
-}
-
-fn exported_binding_name(file: &Path, exported: &str) -> Result<String> {
-    if exported == "default" {
-        return default_export_binding_name(file);
-    }
-
-    Ok(format!(
-        "__beejs_export_{}_{}",
-        module_binding_hash(file)?,
-        sanitized_js_identifier_fragment(exported)
-    ))
-}
-
-fn sanitized_js_identifier_fragment(value: &str) -> String {
-    let mut sanitized = String::new();
-    for character in value.chars() {
-        if character == '_' || character == '$' || character.is_ascii_alphanumeric() {
-            sanitized.push(character);
-        } else {
-            sanitized.push('_');
-        }
-    }
-
-    if sanitized.is_empty() {
-        return "export".to_string();
-    }
-
-    if sanitized
-        .chars()
-        .next()
-        .is_some_and(|character| character.is_ascii_digit())
-    {
-        sanitized.insert(0, '_');
-    }
-
-    sanitized
-}
-
-fn static_default_export_declaration_exists(code: &str) -> bool {
-    static_module_statements(code).into_iter().any(|line| {
-        line.trim_start()
-            .strip_prefix("export ")
-            .is_some_and(|rest| rest.trim_start().starts_with("default "))
-    })
-}
-
-fn local_export_bindings(file: &Path, code: &str) -> Result<Vec<(String, String)>> {
-    let mut bindings = Vec::new();
-    for line in static_module_statements(code) {
-        let Some(rest) = line.trim_start().strip_prefix("export ") else {
-            continue;
-        };
-        let rest = rest.trim_start();
-
-        if rest.starts_with("default ") || rest.starts_with('{') && rest.contains(" from ") {
-            continue;
-        }
-
-        if let Some(list_exports) = export_list_bindings(rest) {
-            for (exported, local) in list_exports {
-                bindings.push((exported_binding_name(file, &exported)?, local));
-            }
-            continue;
-        }
-
-        for keyword in ["const ", "let ", "var ", "function ", "class "] {
-            if let Some(name) = exported_declaration_name(rest, keyword) {
-                bindings.push((exported_binding_name(file, &name)?, name));
-                break;
-            }
-        }
-    }
-
-    Ok(bindings)
-}
-
-fn rewrite_esm_exports_for_bundle(file: &Path, code: &str) -> Result<String> {
-    let mut output = String::new();
-    let default_binding = default_export_binding_name(file)?;
-    let export_bindings = local_export_bindings(file, code)?;
-    let mut declared_bindings = Vec::new();
-    let mut seen_bindings = HashSet::new();
-
-    if static_default_export_declaration_exists(code)
-        && seen_bindings.insert(default_binding.clone())
-    {
-        declared_bindings.push(default_binding.clone());
-    }
-
-    for (binding, _) in &export_bindings {
-        if seen_bindings.insert(binding.clone()) {
-            declared_bindings.push(binding.clone());
-        }
-    }
-
-    for binding in &declared_bindings {
-        output.push_str("let ");
-        output.push_str(binding);
-        output.push_str(";\n");
-    }
-    output.push_str("{\n");
-
-    for line in static_module_statements(code) {
-        let indent_len = line.len() - line.trim_start().len();
-        let indent = &line[..indent_len];
-        let trimmed = line.trim_start();
-
-        if let Some(rest) = trimmed.strip_prefix("export ") {
-            let rest = rest.trim_start();
-            if rest.starts_with('{') {
-                continue;
-            }
-
-            if let Some(default_rest) = rest.strip_prefix("default ") {
-                output.push_str(indent);
-                output.push_str(&default_binding);
-                output.push_str(" = ");
-                output.push_str(default_rest);
-                output.push('\n');
-                continue;
-            }
-
-            if starts_with_exportable_declaration(rest) {
-                output.push_str(indent);
-                output.push_str(rest);
-                output.push('\n');
-                continue;
-            }
-        }
-
-        output.push_str(&line);
-        output.push('\n');
-    }
-
-    for (binding, local) in export_bindings {
-        output.push_str(&binding);
-        output.push_str(" = ");
-        output.push_str(&local);
-        output.push_str(";\n");
-    }
-    output.push_str("}\n");
-
-    Ok(output)
-}
-
-fn starts_with_exportable_declaration(input: &str) -> bool {
-    ["const ", "let ", "var ", "function ", "class "]
-        .iter()
-        .any(|prefix| input.starts_with(prefix))
-}
-
-fn minify_bundle_source(code: &str) -> String {
-    code.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with("//"))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 fn normalize_create_args(name: String, template: String) -> (String, String) {
     match (name.as_str(), template.as_str()) {
         ("js" | "ts", actual_name) if actual_name != "js" && actual_name != "ts" => {
@@ -1190,6 +515,12 @@ fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
     if let Some(freeze_time_str) = &options.freeze_time {
         let ts = beejs::permissions::parse_time_spec(freeze_time_str).map_err(|e| anyhow!(e))?;
         beejs::permissions::set_frozen_time_ms(Some(ts));
+    }
+    if let Some(map_path) = &options.import_map {
+        let map = beejs::tooling::import_map::ImportMap::load(map_path)?;
+        beejs::tooling::import_map::set_global_import_map(Some(map));
+    } else {
+        beejs::tooling::import_map::set_global_import_map(None);
     }
 
     if options.sandbox {
@@ -4382,62 +3713,24 @@ __beejsRunTests();
 
 #[allow(clippy::needless_return)]
 fn main() -> Result<()> {
+    // 0. Standalone binary self-execution check (compiled via `bee compile`)
+    if let Ok(Some(standalone_script)) = beejs::tooling::compiler::detect_standalone_payload() {
+        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+            .map_err(|e| anyhow!("Failed to initialize standalone runtime: {}", e))?;
+        if let Err(e) = runtime.execute_code(&standalone_script) {
+            eprintln!("Error executing standalone binary: {}", e);
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
     let cli = Cli::parse();
     let verbose = cli.verbose;
 
     // Handle subcommands
     match cli.command {
         Some(Command::Repl) => {
-            // Run REPL mode using MinimalRuntime directly
-            println!("🐝 Beejs REPL - High-performance JavaScript runtime");
-            println!("Type JavaScript code and press Enter to execute.");
-            println!("Type '.exit' or Ctrl+C to quit.");
-            println!();
-
-            let mut runtime =
-                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
-            let mut buffer = String::new();
-
-            loop {
-                // Print prompt
-                print!("> ");
-                io::stdout().flush()?;
-
-                // Read input
-                buffer.clear();
-                match io::stdin().read_line(&mut buffer) {
-                    Ok(_) => {
-                        let input = buffer.trim();
-
-                        // Check for exit commands
-                        if input == ".exit" || input == ".quit" {
-                            println!("Goodbye! 👋");
-                            break;
-                        }
-
-                        // Skip empty lines
-                        if input.is_empty() {
-                            continue;
-                        }
-
-                        // Execute the code
-                        match runtime.execute_code(input) {
-                            Ok(result) => {
-                                if !result.trim().is_empty() {
-                                    println!("{}", result);
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("Error: {}", e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error reading input: {}", e);
-                        break;
-                    }
-                }
-            }
+            beejs::repl::run_interactive_repl(verbose)?;
             return Ok(());
         }
         Some(Command::Run {
@@ -4451,7 +3744,42 @@ fn main() -> Result<()> {
             require,
             export_tools,
             workers,
+            inspect,
+            inspect_brk,
+            inspect_port,
         }) => {
+            if inspect || inspect_brk {
+                let inspector = beejs::tooling::inspector::InspectorServer::new(
+                    "127.0.0.1",
+                    inspect_port,
+                    &file.to_string_lossy(),
+                );
+                inspector.start()?;
+                if inspect_brk {
+                    inspector.wait_for_debugger();
+                }
+            }
+            // Check if target is a package.json script name (e.g., `bee run build`)
+            if !file.exists() {
+                if let Some(script_name) = file.to_str() {
+                    if let Some(pkg_path) = beejs::task_runner::find_package_json(Path::new(".")) {
+                        if let Ok(scripts) = beejs::task_runner::load_scripts(&pkg_path) {
+                            if scripts.contains_key(script_name) {
+                                let status = beejs::task_runner::run_script(
+                                    Path::new("."),
+                                    script_name,
+                                    &args,
+                                )?;
+                                if !status.success() {
+                                    std::process::exit(status.code().unwrap_or(1));
+                                }
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
+
             apply_permission_cli_options(&permissions)?;
             allow_sandbox_entry_file(permissions.sandbox, &file)?;
             if export_tools {
@@ -4681,8 +4009,12 @@ fn main() -> Result<()> {
 
                 // Default single-isolate execution
                 beejs::v8_snapshot::enable_startup_snapshot_for_cli();
-                let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-                    .expect("Failed to create runtime");
+                let mut runtime = if let Some(mem_mb) = permissions.max_memory {
+                    beejs::runtime_minimal::MinimalRuntime::with_memory_limit(mem_mb)
+                        .expect("Failed to create runtime with memory limit")
+                } else {
+                    beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime")
+                };
                 runtime.set_process_argv(build_process_argv(&file, &args));
                 runtime.set_main_module_path(&file);
                 runtime.set_http_server_keep_alive(true);
@@ -4699,7 +4031,36 @@ fn main() -> Result<()> {
                     }
                 }
 
-                match runtime.execute_code(&code) {
+                let timeout_ms = permissions.timeout;
+                let watchdog = if let Some(ms) = timeout_ms {
+                    let isolate_handle = runtime.isolate_handle();
+                    let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+                    let cancel_clone = cancel.clone();
+                    let thread = std::thread::spawn(move || {
+                        let start = std::time::Instant::now();
+                        while start.elapsed().as_millis() < ms as u128 {
+                            if cancel_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                                return;
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(5));
+                        }
+                        if !cancel_clone.load(std::sync::atomic::Ordering::Relaxed) {
+                            isolate_handle.terminate_execution();
+                        }
+                    });
+                    Some((cancel, thread))
+                } else {
+                    None
+                };
+
+                let exec_result = runtime.execute_code(&code);
+
+                if let Some((cancel, thread)) = watchdog {
+                    cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+                    let _ = thread.join();
+                }
+
+                match exec_result {
                     Ok(result) => {
                         let trimmed = result.trim();
                         if !trimmed.is_empty() && trimmed != "undefined" {
@@ -4707,7 +4068,14 @@ fn main() -> Result<()> {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error: {}", e);
+                        let err_str = e.to_string();
+                        if let Some(ms) = timeout_ms {
+                            if err_str.contains("execution terminated") || err_str.is_empty() {
+                                eprintln!("Error: Execution timed out after {}ms", ms);
+                                std::process::exit(1);
+                            }
+                        }
+                        eprintln!("Error: {}", err_str);
                         std::process::exit(1);
                     }
                 }
@@ -4808,6 +4176,7 @@ fn main() -> Result<()> {
             update_snapshots,
             verbose,
             watch,
+            coverage,
         }) => {
             apply_permission_cli_options(&permissions)?;
 
@@ -4888,9 +4257,9 @@ fn main() -> Result<()> {
 
                     let mut passed_files = 0;
                     let mut failed_files = 0;
-                    for discovered in discovery.test_files {
+                    for discovered in &discovery.test_files {
                         println!("Running test file: {}", discovered.display());
-                        match execute_test_file(&discovered, &test_file_options) {
+                        match execute_test_file(discovered, &test_file_options) {
                             Ok(result) => {
                                 println!("Test result: {}", result);
                                 passed_files += 1;
@@ -4910,6 +4279,16 @@ fn main() -> Result<()> {
                         std::process::exit(1);
                     }
                     println!("✅ {passed_files} test file(s) passed");
+                    if coverage {
+                        let mut report = beejs::tooling::coverage::CoverageReport::new();
+                        for discovered in &discovery.test_files {
+                            if let Ok(content) = std::fs::read_to_string(discovered) {
+                                report.record_file(discovered, &content);
+                            }
+                        }
+                        report.print_summary();
+                        let _ = report.write_lcov(Path::new("coverage"));
+                    }
                     return Ok(());
                 }
 
@@ -4931,6 +4310,14 @@ fn main() -> Result<()> {
                     Ok(result) => {
                         println!("Test result: {}", result);
                         println!("✅ Tests passed!");
+                        if coverage {
+                            let mut report = beejs::tooling::coverage::CoverageReport::new();
+                            if let Ok(content) = std::fs::read_to_string(&test_file) {
+                                report.record_file(&test_file, &content);
+                            }
+                            report.print_summary();
+                            let _ = report.write_lcov(Path::new("coverage"));
+                        }
                     }
                     Err(e) => {
                         eprintln!("❌ Test failed: {}", e);
@@ -5063,6 +4450,16 @@ fn main() -> Result<()> {
                             }
                         }
                     }
+                    if coverage {
+                        let mut report = beejs::tooling::coverage::CoverageReport::new();
+                        for test_file in &discovery.test_files {
+                            if let Ok(content) = std::fs::read_to_string(test_file) {
+                                report.record_file(test_file, &content);
+                            }
+                        }
+                        report.print_summary();
+                        let _ = report.write_lcov(Path::new("coverage"));
+                    }
                     if failed_files > 0 {
                         std::process::exit(1);
                     }
@@ -5167,13 +4564,12 @@ fn main() -> Result<()> {
             minify,
             sourcemap,
             target,
-            tree_shake,
+            tree_shake: _,
         }) => {
             apply_permission_cli_options(&permissions)?;
-            println!("🐝 Bundling JavaScript/TypeScript...");
+            println!("🐝 Bundling JavaScript/TypeScript (Bundler 2.0)...");
 
             check_file_read_permission(&entry)?;
-            let code = bundle_local_static_imports(&entry)?;
             let output_path = outfile.unwrap_or_else(|| {
                 let mut path = entry.clone();
                 path.set_extension("bundle.js");
@@ -5181,58 +4577,38 @@ fn main() -> Result<()> {
             });
             check_file_write_permission(&output_path)?;
 
-            let mut bundle = if minify {
-                minify_bundle_source(&code)
-            } else {
-                format!(
-                    "// Bundled by Beejs\n// target: {}\n// tree-shake: {}\n{}",
-                    target, tree_shake, code
-                )
+            let opts = beejs::tooling::bundler::BundleOptions {
+                entry: entry.clone(),
+                outfile: Some(output_path.clone()),
+                minify,
+                sourcemap,
+                target,
+                import_map: permissions.import_map.clone(),
             };
 
-            if sourcemap {
-                let map_name = output_path
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .map(|name| format!("{}.map", name))
-                    .unwrap_or_else(|| "bundle.js.map".to_string());
-                bundle.push_str(&format!("\n//# sourceMappingURL={}", map_name));
-                let map_path = output_path.with_file_name(&map_name);
-                let source = entry
-                    .to_string_lossy()
-                    .replace('\\', "\\\\")
-                    .replace('"', "\\\"");
-                let map = format!(
-                    r#"{{"version":3,"sources":["{}"],"names":[],"mappings":""}}"#,
-                    source
-                );
-                check_file_write_permission(&map_path)?;
-                std::fs::write(&map_path, map)
-                    .map_err(|e| anyhow::anyhow!("Failed to write source map: {}", e))?;
-            }
-
-            std::fs::write(&output_path, bundle)
-                .map_err(|e| anyhow::anyhow!("Failed to write bundle: {}", e))?;
-
+            let out = beejs::tooling::bundler::bundle_project(&opts)?;
             println!("✅ Bundle created: {}", output_path.display());
             println!(
-                "📦 Bundle size: {} bytes",
-                std::fs::metadata(&output_path).unwrap().len()
+                "📦 Bundle size: {} bytes across {} module(s)",
+                out.total_bytes, out.module_count
             );
             return Ok(());
         }
         Some(Command::Debug { permissions, file }) => {
             apply_permission_cli_options(&permissions)?;
             println!("🐝 Debugging script: {}", file.display());
-            println!("🔍 Debug mode enabled");
 
             // Read and display the file content
             check_file_read_permission(&file)?;
             let code = std::fs::read_to_string(&file)
                 .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
 
-            println!("\n📄 File content:");
-            println!("{}", code);
+            let inspector = beejs::tooling::inspector::InspectorServer::new(
+                "127.0.0.1",
+                9229,
+                &file.to_string_lossy(),
+            );
+            let _ = inspector.start();
 
             // Create runtime with debug mode
             let mut runtime =
@@ -5248,10 +4624,6 @@ fn main() -> Result<()> {
                 }
                 Err(e) => {
                     eprintln!("\n❌ Execution failed: {}", e);
-                    eprintln!("\n🔧 Debug information:");
-                    eprintln!("- Check syntax errors");
-                    eprintln!("- Verify variable definitions");
-                    eprintln!("- Ensure all imports are available");
                     std::process::exit(1);
                 }
             }
@@ -5259,6 +4631,7 @@ fn main() -> Result<()> {
         }
         Some(Command::Serve {
             permissions,
+            file,
             port,
             host,
             https,
@@ -5280,23 +4653,175 @@ fn main() -> Result<()> {
                 return Ok(());
             }
 
+            let effective_file = if let Some(f) = file {
+                Some(f)
+            } else {
+                [
+                    "app.ts",
+                    "app.js",
+                    "server.ts",
+                    "server.js",
+                    "index.ts",
+                    "index.js",
+                ]
+                .iter()
+                .map(PathBuf::from)
+                .find(|p| p.exists() && p.is_file())
+            };
+
             let addr = format!("{}:{}", host, port);
-            println!("🚀 Starting HTTP Server on http://{}", addr);
-            println!("⚠️  bee serve is experimental: it returns a fixed health response and does not execute user scripts yet");
-            let server = tiny_http::Server::http(&addr)
-                .map_err(|e| anyhow::anyhow!("failed to bind {}: {}", addr, e))?;
-            println!("✅ Listening (Ctrl+C to stop)");
-            for request in server.incoming_requests() {
-                let response =
-                    tiny_http::Response::from_string("{\"runtime\":\"beejs\",\"ok\":true}\n")
-                        .with_header(
-                            tiny_http::Header::from_bytes(
-                                &b"Content-Type"[..],
-                                &b"application/json"[..],
-                            )
-                            .unwrap(),
-                        );
-                let _ = request.respond(response);
+            println!("🚀 Starting Beejs Web Server on http://{}", addr);
+
+            if let Some(ref file_path) = effective_file {
+                println!("📄 Serving application: {}", file_path.display());
+                check_file_read_permission(file_path)?;
+
+                let code = read_and_compile_source(file_path)?;
+                let mut runtime = if let Some(mem_mb) = permissions.max_memory {
+                    beejs::runtime_minimal::MinimalRuntime::with_memory_limit(mem_mb)?
+                } else {
+                    beejs::runtime_minimal::MinimalRuntime::new()?
+                };
+                runtime.set_main_module_path(file_path);
+
+                let bridge_init = r#"
+globalThis.__beejs_app__ = undefined;
+globalThis.__beejs_handle_http__ = async function(method, url, headersJson, bodyStr) {
+    try {
+        const headers = JSON.parse(headersJson);
+        const reqInit = { method, headers };
+        if (method !== "GET" && method !== "HEAD" && bodyStr && bodyStr.length > 0) {
+            reqInit.body = bodyStr;
+        }
+        const req = new Request(url, reqInit);
+        let handler = globalThis.__beejs_app__;
+        if (handler && typeof handler.default === 'object' && typeof handler.default.fetch === 'function') {
+            handler = handler.default.fetch.bind(handler.default);
+        } else if (handler && typeof handler.default === 'function') {
+            handler = handler.default;
+        } else if (handler && typeof handler.fetch === 'function') {
+            handler = handler.fetch;
+        } else if (typeof globalThis.fetchHandler === 'function') {
+            handler = globalThis.fetchHandler;
+        }
+        if (typeof handler !== 'function') {
+            return JSON.stringify({ status: 404, headers: { "content-type": "text/plain" }, body: "Not Found: No fetch handler exported" });
+        }
+        const res = await handler(req);
+        const status = (res && res.status) ? res.status : 200;
+        const resHeaders = {};
+        if (res && res.headers && typeof res.headers.forEach === 'function') {
+            res.headers.forEach((v, k) => { resHeaders[k] = v; });
+        }
+        let bodyText = "";
+        if (res) {
+            if (typeof res._bodyText === 'string') {
+                bodyText = res._bodyText;
+            } else if (typeof res.text === 'function') {
+                try {
+                    bodyText = await res.text();
+                } catch (_) {
+                    bodyText = res.body ? String(res.body) : "";
+                }
+            } else {
+                bodyText = res.body ? String(res.body) : "";
+            }
+        }
+        return JSON.stringify({ status, headers: resHeaders, body: bodyText });
+    } catch (e) {
+        return JSON.stringify({ status: 500, headers: { "content-type": "text/plain" }, body: "Internal Server Error: " + (e ? e.message : e) });
+    }
+};
+"#;
+                runtime.execute_code(bridge_init)?;
+
+                // Execute user code and capture export
+                let wrapped_user_code = format!(
+                    r#"
+                    (function() {{
+                        const module = {{ exports: {{}} }};
+                        const exports = module.exports;
+                        {}
+                        globalThis.__beejs_app__ = (module.exports && (module.exports.default || module.exports.fetch)) ? module.exports : (typeof fetch !== 'undefined' ? {{ fetch }} : module.exports);
+                    }})();
+                    "#,
+                    code
+                );
+                let _ = runtime.execute_code(&wrapped_user_code);
+
+                let server = tiny_http::Server::http(&addr)
+                    .map_err(|e| anyhow::anyhow!("failed to bind {}: {}", addr, e))?;
+                println!("✅ Listening on http://{} (Ctrl+C to stop)", addr);
+
+                for mut request in server.incoming_requests() {
+                    let method = request.method().as_str().to_string();
+                    let url = format!("http://{}{}", addr, request.url());
+                    let mut headers_map = std::collections::HashMap::new();
+                    for h in request.headers() {
+                        headers_map
+                            .insert(h.field.as_str().to_string(), h.value.as_str().to_string());
+                    }
+                    let headers_json =
+                        serde_json::to_string(&headers_map).unwrap_or_else(|_| "{}".to_string());
+                    let mut body_str = String::new();
+                    let _ = request.as_reader().read_to_string(&mut body_str);
+
+                    let dispatch_script = format!(
+                        r#"globalThis.__beejs_handle_http__({}, {}, {}, {});"#,
+                        serde_json::to_string(&method).unwrap(),
+                        serde_json::to_string(&url).unwrap(),
+                        serde_json::to_string(&headers_json).unwrap(),
+                        serde_json::to_string(&body_str).unwrap(),
+                    );
+
+                    let resp_json = match runtime.execute_code(&dispatch_script) {
+                        Ok(raw_json) => raw_json,
+                        Err(e) => format!(
+                            r#"{{"status":500,"headers":{{"content-type":"text/plain"}},"body":"Handler error: {}"}}"#,
+                            e
+                        ),
+                    };
+
+                    let val: serde_json::Value =
+                        serde_json::from_str(resp_json.trim()).unwrap_or_default();
+                    let status_code =
+                        val.get("status").and_then(|s| s.as_u64()).unwrap_or(200) as u16;
+                    let body_text = val.get("body").and_then(|b| b.as_str()).unwrap_or("");
+                    let mut resp = tiny_http::Response::from_string(body_text.to_string())
+                        .with_status_code(status_code);
+
+                    if let Some(headers_obj) = val.get("headers").and_then(|h| h.as_object()) {
+                        for (k, v) in headers_obj {
+                            if let Some(v_str) = v.as_str() {
+                                if let Ok(header) =
+                                    tiny_http::Header::from_bytes(k.as_bytes(), v_str.as_bytes())
+                                {
+                                    resp = resp.with_header(header);
+                                }
+                            }
+                        }
+                    }
+                    let _ = request.respond(resp);
+                }
+            } else {
+                println!("💡 No script specified, serving default health status");
+                println!("💡 Tip: Pass a script file `bee serve app.ts` to serve a custom web app");
+                let server = tiny_http::Server::http(&addr)
+                    .map_err(|e| anyhow::anyhow!("failed to bind {}: {}", addr, e))?;
+                println!("✅ Listening on http://{} (Ctrl+C to stop)", addr);
+                for request in server.incoming_requests() {
+                    let response = tiny_http::Response::from_string(
+                        "{\"runtime\":\"beejs\",\"ok\":true,\"version\":\"1.0.0\"}\n",
+                    )
+                    .with_header(
+                        tiny_http::Header::from_bytes(
+                            &b"Content-Type"[..],
+                            &b"application/json"[..],
+                        )
+                        .unwrap(),
+                    );
+                    let _ = request.respond(response);
+                }
             }
             return Ok(());
         }
@@ -5977,6 +5502,110 @@ fn main() -> Result<()> {
             beejs::agent::run_mcp_server(file, isolate_per_call, io::stdin(), io::stdout())?;
             return Ok(());
         }
+        Some(Command::Fmt { files, check }) => {
+            let summary = beejs::tooling::formatter::format_paths(&files, check)?;
+            if check {
+                if !summary.unformatted_files.is_empty() {
+                    eprintln!(
+                        "❌ {} file(s) would be formatted",
+                        summary.unformatted_files.len()
+                    );
+                    std::process::exit(1);
+                } else {
+                    println!(
+                        "✅ All {} scanned file(s) are properly formatted",
+                        summary.total_scanned
+                    );
+                }
+            } else {
+                println!(
+                    "✅ Formatted {} of {} scanned file(s)",
+                    summary.formatted, summary.total_scanned
+                );
+            }
+            return Ok(());
+        }
+        Some(Command::Lint { files }) => {
+            let summary = beejs::tooling::linter::lint_paths(&files)?;
+            if summary.total_problems > 0 {
+                eprintln!(
+                    "\n❌ Found {} problem(s) ({} error(s), {} warning(s)) across {} file(s)",
+                    summary.total_problems, summary.errors, summary.warnings, summary.total_scanned
+                );
+                if summary.errors > 0 {
+                    std::process::exit(1);
+                }
+            } else {
+                println!(
+                    "✅ No lint problems found in {} file(s)",
+                    summary.total_scanned
+                );
+            }
+            return Ok(());
+        }
+        Some(Command::Bench { files }) => {
+            let bench_files = beejs::tooling::benchmark::discover_benchmark_files(&files);
+            if bench_files.is_empty() {
+                println!("ℹ️  No benchmark files (*.bench.js, *.bench.ts) found");
+                return Ok(());
+            }
+            for bf in bench_files {
+                let results = beejs::tooling::benchmark::run_benchmark_file(&bf)?;
+                beejs::tooling::benchmark::print_benchmark_table(&bf.to_string_lossy(), &results);
+            }
+            return Ok(());
+        }
+        Some(Command::Compile { entry, output }) => {
+            let out = output.unwrap_or_else(|| {
+                let stem = entry
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("output");
+                #[cfg(windows)]
+                let name = format!("{}.exe", stem);
+                #[cfg(not(windows))]
+                let name = stem.to_string();
+                PathBuf::from(name)
+            });
+            beejs::tooling::compiler::compile_binary(&entry, &out)?;
+            return Ok(());
+        }
+        Some(Command::Types { outfile }) => {
+            beejs::types_export::export_types(outfile.as_deref())?;
+            return Ok(());
+        }
+        Some(Command::Task { name, args }) => {
+            match name {
+                Some(task_name) => {
+                    let status = beejs::task_runner::run_script(Path::new("."), &task_name, &args)?;
+                    if !status.success() {
+                        std::process::exit(status.code().unwrap_or(1));
+                    }
+                }
+                None => {
+                    let pkg_path = beejs::task_runner::find_package_json(Path::new("."))
+                        .ok_or_else(|| {
+                            anyhow!("No package.json found in current or parent directories")
+                        })?;
+                    let scripts = beejs::task_runner::load_scripts(&pkg_path)?;
+                    println!("📋 Available scripts in {}:", pkg_path.display());
+                    println!("{:-<60}", "");
+                    for (k, v) in scripts {
+                        println!("  {:<20} {}", k, v);
+                    }
+                    println!("{:-<60}", "");
+                }
+            }
+            return Ok(());
+        }
+        Some(Command::Profile { file, output }) => {
+            let _ = beejs::tooling::profiler::profile_script(&file, output.as_deref())?;
+            return Ok(());
+        }
+        Some(Command::Lsp) => {
+            beejs::tooling::lsp::run_lsp_server(std::io::stdin(), std::io::stdout())?;
+            return Ok(());
+        }
         None => {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
@@ -5985,6 +5614,15 @@ fn main() -> Result<()> {
             println!();
             println!("Commands:");
             println!("  run <file>       Run a JavaScript/TypeScript file");
+            println!("  task [name]      Run a script task defined in package.json");
+            println!("  fmt [files]      Format JavaScript/TypeScript files");
+            println!("  lint [files]     Lint JavaScript/TypeScript files");
+            println!("  lsp              Start Language Server Protocol (LSP) server");
+            println!("  test [file]      Run tests (with --coverage support)");
+            println!("  bench [files]    Run microbenchmarks");
+            println!("  compile <entry>  Compile into standalone single binary");
+            println!("  types [-o file]  Export TypeScript type definitions");
+            println!("  profile <file>   Profile execution and export .cpuprofile");
             println!("  session <file>   JSON-RPC tool session over stdin");
             println!("  mcp <file>       MCP stdio server for the tool file");
             println!("  snapshot <act>   Manage V8 startup snapshot (build, status, clean)");

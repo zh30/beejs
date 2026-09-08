@@ -524,6 +524,37 @@ pub fn setup_require_api(
 
                     // Try to resolve as file path
                     if module_path.exists() && module_path.is_file() {
+                        // Native .node addon support via process.dlopen
+                        if module_path.extension().map_or(false, |e| e == "node") {
+                            let module_obj = v8::Object::new(scope);
+                            let exports_obj = v8::Object::new(scope);
+                            let module_exports_key = v8::String::new(scope, "exports").unwrap().into();
+                            module_obj.set(scope, module_exports_key, exports_obj.clone().into());
+                            let filename_val = v8::String::new(scope, &module_path.to_string_lossy()).unwrap().into();
+
+                            let global = scope.get_current_context().global(scope);
+                            let process_key = v8::String::new(scope, "process").unwrap().into();
+                            if let Some(process_val) = global.get(scope, process_key) {
+                                if let Ok(process_obj) = v8::Local::<v8::Object>::try_from(process_val) {
+                                    let dlopen_key = v8::String::new(scope, "dlopen").unwrap().into();
+                                    if let Some(dlopen_val) = process_obj.get(scope, dlopen_key) {
+                                        if let Ok(dlopen_fn) = v8::Local::<v8::Function>::try_from(dlopen_val) {
+                                            let undefined = v8::undefined(scope);
+                                            if dlopen_fn.call(scope, undefined.into(), &[module_obj.clone().into(), filename_val]).is_none() {
+                                                return;
+                                            }
+                                            if let Some(exp) = module_obj.get(scope, module_exports_key) {
+                                                retval.set(exp);
+                                            } else {
+                                                retval.set(exports_obj.into());
+                                            }
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Read and execute the module file
                         match std::fs::read_to_string(module_path) {
                             Ok(code) => {

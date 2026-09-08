@@ -366,7 +366,7 @@ export default function HomeComponent() {
                     <div>
                       <div className="flex items-center justify-between text-xs font-mono mb-1.5">
                         <span className="text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5">
-                          <span>Beejs v1.0.0 (Rust)</span>
+                          <span>Beejs v1.1.0 (Rust)</span>
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold">
                             #1
                           </span>
@@ -520,7 +520,7 @@ export default function HomeComponent() {
                 <div className="pl-4">
                   <span className="text-amber-200">res</span>.<span className="text-blue-400">end</span>(<span className="text-purple-300">JSON</span>.<span className="text-blue-400">stringify</span>(&#123;{' '}
                   <span className="text-amber-300">runtime</span>: <span className="text-emerald-400">'beejs'</span>,{' '}
-                  <span className="text-amber-300">version</span>: <span className="text-emerald-400">'1.0.0'</span>,{' '}
+                  <span className="text-amber-300">version</span>: <span className="text-emerald-400">'1.1.0'</span>,{' '}
                   <span className="text-amber-300">workers</span>: <span className="text-orange-400">8</span> &#125;));
                 </div>
                 <div>&#125;);</div>

@@ -224,6 +224,12 @@ pub fn setup_process_api(
         get_max_listeners_instance.into(),
     );
 
+    // process.dlopen() - 加载原生 C/C++ .node 扩展模块
+    let dlopen_func = v8::FunctionTemplate::new(scope, process_dlopen_callback);
+    let dlopen_instance = dlopen_func.get_function(scope).unwrap();
+    let dlopen_key = v8::String::new(scope, "dlopen").unwrap();
+    process_obj.set(scope, dlopen_key.into(), dlopen_instance.into());
+
     // process.pid - 进程 ID
     let pid_key = v8::String::new(scope, "pid").unwrap();
     let pid_val = v8::Integer::new(scope, std::process::id() as i32);
@@ -336,6 +342,109 @@ fn process_cwd_callback(
         .unwrap_or_else(|_| "/".to_string());
     let cwd_str = v8::String::new(scope, &cwd).unwrap();
     retval.set(cwd_str.into());
+}
+
+/// process.dlopen(module, filename, [flags]) - 原生扩展模块动态链接加载
+pub fn process_dlopen_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    if args.length() < 2 {
+        let msg = v8::String::new(
+            scope,
+            "process.dlopen requires at least module and filename arguments",
+        )
+        .unwrap();
+        let err = v8::Exception::type_error(scope, msg);
+        scope.throw_exception(err);
+        return;
+    }
+
+    let module_val = args.get(0);
+    let filename_val = args.get(1);
+
+    if !module_val.is_object() || !filename_val.is_string() {
+        let msg = v8::String::new(scope, "Invalid arguments to process.dlopen").unwrap();
+        let err = v8::Exception::type_error(scope, msg);
+        scope.throw_exception(err);
+        return;
+    }
+
+    let filename = filename_val.to_rust_string_lossy(scope);
+    let path = std::path::Path::new(&filename);
+
+    if !path.exists() {
+        let msg = v8::String::new(
+            scope,
+            &format!("Cannot find native addon module '{}'", filename),
+        )
+        .unwrap();
+        let err = v8::Exception::error(scope, msg);
+        scope.throw_exception(err);
+        return;
+    }
+
+    #[cfg(unix)]
+    unsafe {
+        use std::ffi::CString;
+        if let Ok(c_path) = CString::new(filename.as_str()) {
+            let handle = libc::dlopen(c_path.as_ptr(), libc::RTLD_LAZY | libc::RTLD_GLOBAL);
+            if handle.is_null() {
+                let err_ptr = libc::dlerror();
+                let err_msg = if !err_ptr.is_null() {
+                    std::ffi::CStr::from_ptr(err_ptr)
+                        .to_string_lossy()
+                        .to_string()
+                } else {
+                    "unknown dlopen error".to_string()
+                };
+                let msg = v8::String::new(
+                    scope,
+                    &format!("Failed to load native module '{}': {}", filename, err_msg),
+                )
+                .unwrap();
+                let err = v8::Exception::error(scope, msg);
+                scope.throw_exception(err);
+                return;
+            }
+
+            let napi_sym = CString::new("napi_register_module_v1").unwrap();
+            let node_sym = CString::new("node_module_register").unwrap();
+
+            let has_napi = !libc::dlsym(handle, napi_sym.as_ptr()).is_null();
+            let has_node = !libc::dlsym(handle, node_sym.as_ptr()).is_null();
+
+            if !has_napi && !has_node {
+                libc::dlclose(handle);
+                let msg = v8::String::new(
+                    scope,
+                    &format!(
+                        "Native module '{}' does not export napi_register_module_v1 or node_module_register",
+                        filename
+                    ),
+                )
+                .unwrap();
+                let err = v8::Exception::error(scope, msg);
+                scope.throw_exception(err);
+                return;
+            }
+
+            retval.set(v8::undefined(scope).into());
+            return;
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let msg = v8::String::new(
+            scope,
+            "process.dlopen is only supported on Unix-like operating systems currently",
+        )
+        .unwrap();
+        let err = v8::Exception::error(scope, msg);
+        scope.throw_exception(err);
+    }
 }
 
 /// v0.3.239: process.nextTick() 回调

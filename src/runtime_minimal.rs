@@ -4759,6 +4759,34 @@ impl MinimalRuntime {
         })
     }
 
+    /// Create runtime with custom max heap memory limit in megabytes
+    pub fn with_memory_limit(max_memory_mb: usize) -> Result<Self> {
+        crate::initialize_v8()?;
+        let initial = (16 * 1024 * 1024).min(max_memory_mb * 1024 * 1024);
+        let maximum = max_memory_mb * 1024 * 1024;
+        let create_params = Self::isolate_create_params(initial, maximum);
+        let mut isolate = v8::Isolate::new(create_params);
+        Self::configure_isolate(&mut isolate);
+        Ok(Self {
+            isolate,
+            context: None,
+            apis_initialized: false,
+            extended_apis_initialized: false,
+            process_argv: Self::default_process_argv(),
+            main_module_dir: Self::default_main_module_dir(),
+            main_module_filename: Self::default_main_module_filename(),
+            esm_module_cache: HashMap::new(),
+            esm_module_cache_fingerprints: HashMap::new(),
+            timer_drain_limit_ms: Self::DEFAULT_TIMER_DRAIN_LIMIT_MS,
+            http_server_keep_alive: false,
+        })
+    }
+
+    /// Get a thread-safe IsolateHandle for execution termination (watchdog timer)
+    pub fn isolate_handle(&mut self) -> v8::IsolateHandle {
+        self.isolate.thread_safe_handle()
+    }
+
     /// v0.3.231: 快速启动模式 - 使用最小堆配置
     /// 适用于短生命周期脚本，减少内存分配开销
     /// v0.3.270: 设置显式微任务策略，确保 nextTick 在 Promise 之前执行
@@ -8840,6 +8868,11 @@ impl MinimalRuntime {
                     result
                 }
                 None => {
+                    if scope.is_execution_terminating() {
+                        return Err(anyhow::anyhow!(
+                            "Script execution terminated (timeout or memory limit reached)"
+                        ));
+                    }
                     if scope.has_caught() {
                         // Get the exception from TryCatch
                         let exception = scope.exception().unwrap_or_else(|| {
@@ -22368,6 +22401,13 @@ require.resolve = function(specifier) {{
         )
         .unwrap();
         process_obj.set(scope, kill_key.into(), kill_fn.into());
+
+        // process.dlopen(module, filename, [flags]) - 原生扩展模块加载
+        let dlopen_key = v8::String::new(scope, "dlopen").unwrap();
+        let dlopen_fn =
+            v8::FunctionTemplate::new(scope, crate::nodejs_core::process::process_dlopen_callback);
+        let dlopen_func = dlopen_fn.get_function(scope).unwrap();
+        process_obj.set(scope, dlopen_key.into(), dlopen_func.into());
 
         // Set process as global
         global.set(scope, process_key.into(), process_obj.into());
