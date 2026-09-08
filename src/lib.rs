@@ -53,6 +53,7 @@ pub mod monitor;
 
 pub mod agent; // Tool export, JSON-RPC session, MCP stdio
 pub mod event_loop;
+pub mod mcp; // Official Model Context Protocol (MCP) Server & Client
 pub mod nodejs_core; // Core Node.js compatible modules (fs, path, crypto, http, net, timers)
 pub mod package_manager; // Package manager
 pub mod permissions;
@@ -86,11 +87,13 @@ pub mod platform;
 #[cfg(feature = "cloudnative")]
 pub mod cloud_native;
 
+pub mod ai_engine; // Native text embeddings and semantic vector engine
 pub mod database; // Embedded SQLite and Vector similarity database
 pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
 pub mod memory; // Memory management
 pub mod repl; // Enhanced interactive REPL
+pub mod sandbox; // In-memory deterministic Virtual Filesystem (VFS) sandbox
 pub mod std_lib; // Modern standard library (dotenv, cli, fs, crypto, assert)
 pub mod task_runner; // Task runner for package.json scripts
 pub mod testing; // Testing framework support

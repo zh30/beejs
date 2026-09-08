@@ -118,6 +118,48 @@ fn create_stats_object<'a>(
     stat_obj
 }
 
+fn create_vfs_stats_object<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    meta: &crate::sandbox::virtual_fs::VfsMetadata,
+) -> v8::Local<'a, v8::Object> {
+    let stat_obj = v8::Object::new(scope);
+
+    let is_file_state_key = v8::String::new(scope, "__isFile").unwrap();
+    let is_file_state = v8::Boolean::new(scope, meta.is_file);
+    stat_obj.set(scope, is_file_state_key.into(), is_file_state.into());
+
+    let is_dir_state_key = v8::String::new(scope, "__isDirectory").unwrap();
+    let is_dir_state = v8::Boolean::new(scope, meta.is_dir);
+    stat_obj.set(scope, is_dir_state_key.into(), is_dir_state.into());
+
+    let is_file_func = v8::FunctionTemplate::new(scope, stats_is_file_callback);
+    let is_file_instance = is_file_func.get_function(scope).unwrap();
+    let is_file_key = v8::String::new(scope, "isFile").unwrap();
+    stat_obj.set(scope, is_file_key.into(), is_file_instance.into());
+
+    let is_dir_func = v8::FunctionTemplate::new(scope, stats_is_directory_callback);
+    let is_dir_instance = is_dir_func.get_function(scope).unwrap();
+    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
+    stat_obj.set(scope, is_dir_key.into(), is_dir_instance.into());
+
+    let size_key = v8::String::new(scope, "size").unwrap();
+    let size_value = v8::Number::new(scope, meta.len as f64);
+    stat_obj.set(scope, size_key.into(), size_value.into());
+
+    let mode_key = v8::String::new(scope, "mode").unwrap();
+    let mode_value = v8::Number::new(scope, 420.0_f64);
+    stat_obj.set(scope, mode_key.into(), mode_value.into());
+
+    let mtime_key = v8::String::new(scope, "mtime").unwrap();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let mtime_value = v8::Number::new(scope, now.as_secs() as f64 * 1000.0);
+    stat_obj.set(scope, mtime_key.into(), mtime_value.into());
+
+    stat_obj
+}
+
 /// 设置fs API到全局作用域
 pub fn setup_fs_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -329,6 +371,9 @@ fn direct_write_sync(
     path_str: &str,
     data: &[u8],
 ) -> std::io::Result<()> {
+    if crate::sandbox::virtual_fs::is_enabled() {
+        return crate::sandbox::virtual_fs::vfs_write(std::path::Path::new(path_str), data);
+    }
     #[cfg(unix)]
     if let Some(ptr) = c_path {
         let fd = unsafe { libc::open(ptr, libc::O_WRONLY | libc::O_CREAT | libc::O_TRUNC, 0o666) };
@@ -389,6 +434,53 @@ fn fs_read_file_sync_callback(
     } else {
         None
     };
+
+    if crate::sandbox::virtual_fs::is_enabled() {
+        match crate::sandbox::virtual_fs::vfs_read(std::path::Path::new(path.as_ref())) {
+            Ok(bytes) => {
+                if let Some(enc) = encoding {
+                    let s = match enc.to_ascii_lowercase().as_str() {
+                        "utf8" | "utf-8" => String::from_utf8_lossy(&bytes).into_owned(),
+                        "hex" => hex::encode(&bytes),
+                        "base64" => {
+                            use base64::Engine;
+                            base64::engine::general_purpose::STANDARD.encode(&bytes)
+                        }
+                        _ => String::from_utf8_lossy(&bytes).into_owned(),
+                    };
+                    if let Some(v8_str) = v8::String::new(scope, &s) {
+                        retval.set(v8_str.into());
+                    }
+                } else {
+                    let len = bytes.len();
+                    let ab = v8::ArrayBuffer::new(scope, len);
+                    if len > 0 {
+                        let store = ab.get_backing_store();
+                        let ptr = store.as_ref().as_ptr() as *mut u8;
+                        if !ptr.is_null() {
+                            unsafe {
+                                std::ptr::copy_nonoverlapping(bytes.as_ptr(), ptr, len);
+                            }
+                        }
+                    }
+                    if let Some(u8_arr) = v8::Uint8Array::new(scope, ab, 0, len) {
+                        crate::runtime_minimal::set_buffer_prototype_fast(scope, u8_arr);
+                        retval.set(u8_arr.into());
+                    } else {
+                        retval.set(v8::undefined(scope).into());
+                    }
+                }
+                return;
+            }
+            Err(e) => {
+                let error_msg = format!("Error reading file: {}", e);
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let exc = v8::Exception::type_error(scope, error);
+                scope.throw_exception(exc);
+                return;
+            }
+        }
+    }
 
     #[cfg(unix)]
     if encoding.is_none() {
@@ -625,6 +717,12 @@ fn fs_exists_sync_callback(
         return;
     }
 
+    if crate::sandbox::virtual_fs::is_enabled() {
+        let exists = crate::sandbox::virtual_fs::vfs_exists(Path::new(&path));
+        retval.set(v8::Boolean::new(scope, exists).into());
+        return;
+    }
+
     let exists = Path::new(&path).exists();
     retval.set(v8::Boolean::new(scope, exists).into());
 }
@@ -642,6 +740,21 @@ fn fs_mkdir_sync_callback(
         .unwrap_or_default();
 
     if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    if crate::sandbox::virtual_fs::is_enabled() {
+        match crate::sandbox::virtual_fs::vfs_create_dir_all(Path::new(&path)) {
+            Ok(()) => {
+                retval.set(v8::undefined(scope).into());
+            }
+            Err(e) => {
+                let error_msg = format!("Error creating directory: {}", e);
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let exc = v8::Exception::type_error(scope, error);
+                scope.throw_exception(exc);
+            }
+        }
         return;
     }
 
@@ -671,6 +784,26 @@ fn fs_readdir_sync_callback(
         .unwrap_or_default();
 
     if !ensure_fs_permission(scope, PermissionAction::Read, &path) {
+        return;
+    }
+
+    if crate::sandbox::virtual_fs::is_enabled() {
+        match crate::sandbox::virtual_fs::vfs_read_dir(Path::new(&path)) {
+            Ok(names) => {
+                let array = v8::Array::new(scope, names.len() as i32);
+                for (i, name) in names.iter().enumerate() {
+                    let value = v8::String::new(scope, name).unwrap();
+                    array.set_index(scope, i as u32, value.into());
+                }
+                retval.set(array.into());
+            }
+            Err(e) => {
+                let error_msg = format!("Error reading directory: {}", e);
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let exc = v8::Exception::type_error(scope, error);
+                scope.throw_exception(exc);
+            }
+        }
         return;
     }
 
@@ -714,6 +847,22 @@ fn fs_stat_sync_callback(
         return;
     }
 
+    if crate::sandbox::virtual_fs::is_enabled() {
+        match crate::sandbox::virtual_fs::vfs_metadata(Path::new(&path)) {
+            Ok(meta) => {
+                let stat_obj = create_vfs_stats_object(scope, &meta);
+                retval.set(stat_obj.into());
+            }
+            Err(e) => {
+                let error_msg = format!("Error getting file metadata: {}", e);
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let exc = v8::Exception::type_error(scope, error);
+                scope.throw_exception(exc);
+            }
+        }
+        return;
+    }
+
     match std::fs::metadata(&path) {
         Ok(metadata) => {
             let stat_obj = create_stats_object(scope, &metadata);
@@ -741,6 +890,21 @@ fn fs_unlink_sync_callback(
         .unwrap_or_default();
 
     if !ensure_fs_permission(scope, PermissionAction::Write, &path) {
+        return;
+    }
+
+    if crate::sandbox::virtual_fs::is_enabled() {
+        match crate::sandbox::virtual_fs::vfs_remove_file(Path::new(&path)) {
+            Ok(()) => {
+                retval.set(v8::undefined(scope).into());
+            }
+            Err(e) => {
+                let error_msg = format!("Error deleting file: {}", e);
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let exc = v8::Exception::type_error(scope, error);
+                scope.throw_exception(exc);
+            }
+        }
         return;
     }
 
@@ -811,6 +975,21 @@ fn fs_rmdir_sync_callback(
         return;
     }
 
+    if crate::sandbox::virtual_fs::is_enabled() {
+        match crate::sandbox::virtual_fs::vfs_remove_dir_all(Path::new(&path)) {
+            Ok(()) => {
+                retval.set(v8::undefined(scope).into());
+            }
+            Err(e) => {
+                let error_msg = format!("Error removing directory: {}", e);
+                let error = v8::String::new(scope, &error_msg).unwrap();
+                let exc = v8::Exception::type_error(scope, error);
+                scope.throw_exception(exc);
+            }
+        }
+        return;
+    }
+
     match fs::remove_dir(&path) {
         Ok(()) => {
             retval.set(v8::undefined(scope).into());
@@ -852,7 +1031,13 @@ fn fs_read_file_callback(
         return;
     }
 
-    match std::fs::read_to_string(&path) {
+    let read_res = if crate::sandbox::virtual_fs::is_enabled() {
+        crate::sandbox::virtual_fs::vfs_read_to_string(Path::new(&path))
+    } else {
+        std::fs::read_to_string(&path)
+    };
+
+    match read_res {
         Ok(content) => {
             let content = v8::String::new(scope, &content).unwrap();
             let undefined = v8::undefined(scope);
@@ -904,7 +1089,13 @@ fn fs_write_file_callback(
         return;
     }
 
-    match std::fs::write(&path, data) {
+    let write_res = if crate::sandbox::virtual_fs::is_enabled() {
+        crate::sandbox::virtual_fs::vfs_write(Path::new(&path), data.as_bytes())
+    } else {
+        std::fs::write(&path, data)
+    };
+
+    match write_res {
         Ok(()) => {
             let undefined = v8::undefined(scope);
             let null: v8::Local<v8::Value> = v8::null(scope).into();
@@ -1104,69 +1295,56 @@ fn fs_promises_read_file_callback(
 
             // 根据编码类型读取文件 - v0.3.66
             let read_result: Result<String, String> = {
+                let read_bytes = if crate::sandbox::virtual_fs::is_enabled() {
+                    crate::sandbox::virtual_fs::vfs_read(Path::new(&path_str))
+                } else {
+                    std::fs::read(&path_str)
+                };
+
                 match encoding_str.as_str() {
-                    "utf-8" | "utf8" => {
-                        // UTF-8 文本读取
-                        match std::fs::read_to_string(&path_str) {
-                            Ok(content) => Ok(content),
-                            Err(e) => Err(format!("Error reading file: {}", e)),
+                    "utf-8" | "utf8" => match read_bytes {
+                        Ok(bytes) => Ok(String::from_utf8_lossy(&bytes).to_string()),
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    },
+                    "base64" => match read_bytes {
+                        Ok(bytes) => {
+                            use base64::{engine::general_purpose::STANDARD, Engine as _};
+                            Ok(STANDARD.encode(&bytes))
                         }
-                    }
-                    "base64" => {
-                        // Base64 编码读取
-                        match std::fs::read(&path_str) {
-                            Ok(bytes) => {
-                                use base64::{engine::general_purpose::STANDARD, Engine as _};
-                                Ok(STANDARD.encode(&bytes))
-                            }
-                            Err(e) => Err(format!("Error reading file: {}", e)),
-                        }
-                    }
-                    "hex" => {
-                        // Hex 编码读取
-                        match std::fs::read(&path_str) {
-                            Ok(bytes) => Ok(hex::encode(&bytes)),
-                            Err(e) => Err(format!("Error reading file: {}", e)),
-                        }
-                    }
-                    "buffer" | "raw" => {
-                        // 返回 Buffer 对象
-                        match std::fs::read(&path_str) {
-                            Ok(bytes) => {
-                                // 创建 Buffer 对象
-                                let buffer_val = create_buffer_from_bytes(scope, &bytes);
-                                let mut fulfillment = None;
-                                if on_fulfilled.is_function() {
-                                    if let Ok(func) =
-                                        v8::Local::<v8::Function>::try_from(on_fulfilled)
-                                    {
-                                        let undefined = v8::undefined(scope);
-                                        let result = func.call(
-                                            scope,
-                                            undefined.into(),
-                                            &[buffer_val.into()],
-                                        );
-                                        if let Some(r) = result {
-                                            let result_key =
-                                                v8::String::new(scope, "__result__").unwrap();
-                                            this.set(scope, result_key.into(), r);
-                                            fulfillment = Some(r);
-                                        }
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    },
+                    "hex" => match read_bytes {
+                        Ok(bytes) => Ok(hex::encode(&bytes)),
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    },
+                    "buffer" | "raw" => match read_bytes {
+                        Ok(bytes) => {
+                            // 创建 Buffer 对象
+                            let buffer_val = create_buffer_from_bytes(scope, &bytes);
+                            let mut fulfillment = None;
+                            if on_fulfilled.is_function() {
+                                if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled)
+                                {
+                                    let undefined = v8::undefined(scope);
+                                    let result =
+                                        func.call(scope, undefined.into(), &[buffer_val.into()]);
+                                    if let Some(r) = result {
+                                        let result_key =
+                                            v8::String::new(scope, "__result__").unwrap();
+                                        this.set(scope, result_key.into(), r);
+                                        fulfillment = Some(r);
                                     }
                                 }
-                                thenable_chain_return(scope, this, fulfillment, &mut retval);
-                                return;
                             }
-                            Err(e) => Err(format!("Error reading file: {}", e)),
+                            thenable_chain_return(scope, this, fulfillment, &mut retval);
+                            return;
                         }
-                    }
-                    _ => {
-                        // 默认 UTF-8
-                        match std::fs::read_to_string(&path_str) {
-                            Ok(content) => Ok(content),
-                            Err(e) => Err(format!("Error reading file: {}", e)),
-                        }
-                    }
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    },
+                    _ => match read_bytes {
+                        Ok(bytes) => Ok(String::from_utf8_lossy(&bytes).to_string()),
+                        Err(e) => Err(format!("Error reading file: {}", e)),
+                    },
                 }
             };
 
@@ -1319,7 +1497,12 @@ fn fs_promises_write_file_callback(
             }
 
             let mut fulfillment = None;
-            match std::fs::write(&path_str, &data_str) {
+            let write_res = if crate::sandbox::virtual_fs::is_enabled() {
+                crate::sandbox::virtual_fs::vfs_write(Path::new(&path_str), data_str.as_bytes())
+            } else {
+                std::fs::write(&path_str, &data_str)
+            };
+            match write_res {
                 Ok(()) => {
                     if on_fulfilled.is_function() {
                         if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {

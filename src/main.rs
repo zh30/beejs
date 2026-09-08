@@ -82,6 +82,12 @@ struct PermissionCliOptions {
     /// Path to an import map JSON file for bare specifier remapping
     #[arg(long = "import-map", value_name = "PATH")]
     import_map: Option<PathBuf>,
+    /// Enable in-memory virtual filesystem sandbox for safe agent execution
+    #[arg(long = "virtual-fs", visible_alias = "vfs")]
+    virtual_fs: bool,
+    /// Disable host disk Copy-on-Write fallback for virtual filesystem (pure isolated RAM)
+    #[arg(long = "virtual-fs-strict")]
+    virtual_fs_strict: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -156,15 +162,18 @@ enum Command {
         #[arg(long = "isolate-per-call")]
         isolate_per_call: bool,
     },
-    /// MCP stdio server (tools/list + tools/call)
+    /// Model Context Protocol (MCP) server execution and inspection
     Mcp {
         #[command(flatten)]
         permissions: PermissionCliOptions,
-        /// Tool module entry (JS/TS)
-        file: PathBuf,
+        /// Tool module entry (JS/TS, optional with --inspect)
+        file: Option<PathBuf>,
         /// New isolate + core APIs for every tools/call
         #[arg(long = "isolate-per-call")]
         isolate_per_call: bool,
+        /// Inspect exposed tools instead of starting stdio server
+        #[arg(short, long)]
+        inspect: bool,
     },
     /// Evaluate JavaScript code
     Eval {
@@ -196,9 +205,6 @@ enum Command {
         /// Run tests in parallel
         #[arg(long = "parallel")]
         parallel: bool,
-        /// Test timeout in seconds
-        #[arg(long = "timeout")]
-        timeout: Option<u64>,
         /// Update missing or mismatched file snapshots
         #[arg(long = "update-snapshots")]
         update_snapshots: bool,
@@ -1292,6 +1298,13 @@ fn apply_permission_cli_options(options: &PermissionCliOptions) -> Result<()> {
         beejs::tooling::import_map::set_global_import_map(None);
     }
 
+    if options.virtual_fs {
+        let cow = !options.virtual_fs_strict;
+        beejs::sandbox::virtual_fs::enable(cow);
+    } else {
+        beejs::sandbox::virtual_fs::disable();
+    }
+
     if options.sandbox {
         broker.deny_all();
     }
@@ -1556,6 +1569,15 @@ fn check_network_listen_permission(target: &str) -> Result<()> {
     beejs::permissions::check_global_permission(
         beejs::permissions::PermissionKind::Network,
         beejs::permissions::PermissionAction::Listen,
+        network_resource_from_cli_target(target),
+    )
+    .map_err(|e| anyhow!(e.to_string()))
+}
+
+fn check_network_connect_permission(target: &str) -> Result<()> {
+    beejs::permissions::check_global_permission(
+        beejs::permissions::PermissionKind::Network,
+        beejs::permissions::PermissionAction::Connect,
         network_resource_from_cli_target(target),
     )
     .map_err(|e| anyhow!(e.to_string()))
@@ -4941,13 +4963,13 @@ fn main() -> Result<()> {
             test_skip,
             bail,
             parallel,
-            timeout,
             update_snapshots,
             verbose,
             watch,
             coverage,
         }) => {
             apply_permission_cli_options(&permissions)?;
+            let timeout = permissions.timeout;
 
             println!("🐝 Running tests...");
 
@@ -6030,6 +6052,7 @@ globalThis.__beejs_handle_http__ = async function(method, url, headersJson, body
         }) => {
             apply_permission_cli_options(&permissions)?;
             check_process_execute_permission(&package)?;
+            check_network_connect_permission("https://registry.npmjs.org")?;
             let exit_code = beejs::tooling::dlx::run_dlx(&package, &args)?;
             std::process::exit(exit_code);
         }
@@ -6223,12 +6246,91 @@ globalThis.__beejs_handle_http__ = async function(method, url, headersJson, body
             permissions,
             file,
             isolate_per_call,
+            inspect,
         }) => {
             apply_permission_cli_options(&permissions)?;
-            allow_sandbox_entry_file(permissions.sandbox, &file)?;
-            check_file_read_permission(&file)?;
-            beejs::agent::run_mcp_server(file, isolate_per_call, io::stdin(), io::stdout())?;
-            return Ok(());
+
+            if let Some(target_file) = file {
+                allow_sandbox_entry_file(permissions.sandbox, &target_file)?;
+                check_file_read_permission(&target_file)?;
+
+                if inspect {
+                    println!("🔍 Inspecting MCP Tool Module: {}\n", target_file.display());
+                    let tools = beejs::agent::export_tools_from_entry(&target_file)?;
+                    println!("📡 Protocol Version: 2024-11-05");
+                    println!("🛠  Discovered {} tool(s):\n", tools.len());
+                    let headers = vec![
+                        "Tool Name".to_string(),
+                        "Description".to_string(),
+                        "Input Schema".to_string(),
+                    ];
+                    let mut rows = Vec::new();
+                    for t in tools {
+                        let schema_str = serde_json::to_string(&t.input_schema).unwrap_or_default();
+                        rows.push(vec![t.name, t.description, schema_str]);
+                    }
+                    println!("{}", beejs::std_lib::cli::format_table(&headers, &rows));
+                    return Ok(());
+                }
+
+                beejs::agent::run_mcp_server(
+                    target_file,
+                    isolate_per_call,
+                    io::stdin(),
+                    io::stdout(),
+                )?;
+                return Ok(());
+            } else if inspect {
+                println!("🔍 Inspecting MCP Built-in Tools\n");
+                let tools = vec![
+                    beejs::agent::ToolSchema {
+                        name: "execute_command".to_string(),
+                        description: "Execute a sandboxed shell command".to_string(),
+                        input_schema: serde_json::json!({
+                            "type": "object",
+                            "properties": { "cmd": { "type": "string" }, "args": { "type": "array" } },
+                            "required": ["cmd"]
+                        }),
+                    },
+                    beejs::agent::ToolSchema {
+                        name: "read_file".to_string(),
+                        description: "Read file contents from filesystem".to_string(),
+                        input_schema: serde_json::json!({
+                            "type": "object",
+                            "properties": { "path": { "type": "string" } },
+                            "required": ["path"]
+                        }),
+                    },
+                    beejs::agent::ToolSchema {
+                        name: "write_file".to_string(),
+                        description: "Write file contents to virtual or host filesystem"
+                            .to_string(),
+                        input_schema: serde_json::json!({
+                            "type": "object",
+                            "properties": { "path": { "type": "string" }, "data": { "type": "string" } },
+                            "required": ["path", "data"]
+                        }),
+                    },
+                ];
+                println!("📡 Protocol Version: 2024-11-05");
+                println!("🛠  Discovered {} tool(s):\n", tools.len());
+                let headers = vec![
+                    "Tool Name".to_string(),
+                    "Description".to_string(),
+                    "Input Schema".to_string(),
+                ];
+                let mut rows = Vec::new();
+                for t in tools {
+                    let schema_str = serde_json::to_string(&t.input_schema).unwrap_or_default();
+                    rows.push(vec![t.name, t.description, schema_str]);
+                }
+                println!("{}", beejs::std_lib::cli::format_table(&headers, &rows));
+                return Ok(());
+            } else {
+                return Err(anyhow!(
+                    "Please specify a tool module file or pass --inspect"
+                ));
+            }
         }
         Some(Command::Fmt { files, check }) => {
             let summary = beejs::tooling::formatter::format_paths(&files, check)?;

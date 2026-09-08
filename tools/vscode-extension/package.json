@@ -2,7 +2,7 @@
   "name": "beejs-tools",
   "displayName": "Beejs Developer Tools",
   "description": "Language Server, CDP Debugger, oxc Formatter & Deployment Toolkit for Beejs",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "beejs-team",
   "engines": {
     "vscode": "^1.74.0"

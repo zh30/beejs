@@ -266,6 +266,7 @@ export const fr: TranslationSchema = {
           { id: 'v8-isolate-pool', label: 'Cœur du Runtime' },
           { id: 'jit-optimization', label: 'TypeScript' },
           { id: 'ai-engine', label: 'Moteur IA (bee:ai)' },
+          { id: 'ai-embeddings', label: 'Embeddings natifs & Vecteurs', badge: 'v1.3' },
           { id: 'server-mode', label: 'Serveur HTTP & Concurrence' },
           { id: 'memory-management', label: 'Buffer SIMD et Mémoire' },
         ],
@@ -278,6 +279,14 @@ export const fr: TranslationSchema = {
           { id: 'package-manager-dlx', label: 'Exécuteur de paquets (bee x / dlx)', badge: 'CLI' },
           { id: 'deployment-docker', label: 'Déploiement & Conteneurs (bee deploy)', badge: 'Deploy' },
           { id: 'ide-extension', label: 'Extension VS Code officielle', badge: 'IDE' },
+        ],
+      },
+      {
+        title: 'Agent & Sécurité',
+        items: [
+          { id: 'agent-sandbox', label: 'Bac à sable & Quotas de ressources', badge: 'Agent' },
+          { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
+          { id: 'virtual-fs-sandbox', label: 'Système de fichiers virtuel en RAM', badge: 'v1.3' },
         ],
       },
       {
