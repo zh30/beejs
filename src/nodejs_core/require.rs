@@ -502,6 +502,70 @@ pub fn setup_require_api(
                 "os" | "crypto" | "events" | "net" | "http" | "http2" | "https" | "util" | "url" |
                 "querystring" | "dns" | "child_process" | "tcp_async" | "stream" |
                 "readline" | "performance" | "diagnostics_channel" | "async_hooks" |
+                "db" | "sqlite" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_db").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "vector" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_vector").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "std" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_std").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "std/dotenv" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_std_dotenv").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "std/cli" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_std_cli").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "std/fs" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_std_fs").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "std/crypto" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_std_crypto").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "std/assert" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_std_assert").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
                 "ai" | "string_decoder" | "perf_hooks" => {
                     // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);

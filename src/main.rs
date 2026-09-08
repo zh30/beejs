@@ -4,6 +4,7 @@
 use anyhow::{anyhow, Result};
 use clap::{Args, Parser, Subcommand};
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -320,14 +321,33 @@ enum Command {
         #[arg(default_value = "js")]
         template: String,
     },
-    /// Run a package without installing it (like bunx/npm exec)
-    Bunx {
+    /// Execute a package binary directly without local installation (like npx/bunx)
+    #[command(alias = "dlx", alias = "bunx")]
+    X {
         #[command(flatten)]
         permissions: PermissionCliOptions,
-        /// Package name (with optional version, e.g., "lodash@4.17.21")
+        /// Package name (with optional version, e.g., "cowsay@1.5.0")
         package: String,
         /// Arguments to pass to the package
         args: Vec<String>,
+    },
+    /// Generate production container (Docker), standalone binary, or Kubernetes deployment scaffolding
+    Deploy {
+        /// Target deployment environment (docker, standalone, k8s)
+        #[arg(short = 't', long = "target", default_value = "docker")]
+        target: String,
+        /// Output directory
+        #[arg(short = 'o', long = "output", default_value = ".")]
+        output: PathBuf,
+        /// Port to expose
+        #[arg(short = 'p', long = "port", default_value = "3000")]
+        port: u16,
+        /// Application name override
+        #[arg(long = "name")]
+        name: Option<String>,
+        /// Entrypoint script override
+        #[arg(long = "entry")]
+        entry: Option<PathBuf>,
     },
     /// Upgrade dependencies to latest versions
     Upgrade {
@@ -462,6 +482,755 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
         // Return JavaScript as-is
         Ok(source)
     }
+}
+
+fn bundle_local_static_imports(entry: &Path) -> Result<String> {
+    let mut seen = HashSet::new();
+    bundle_local_static_imports_inner(entry, &mut seen)
+}
+
+fn bundle_local_static_imports_inner(file: &Path, seen: &mut HashSet<PathBuf>) -> Result<String> {
+    let module_key = normalize_module_path(file)?;
+    if !seen.insert(module_key) {
+        return Ok(String::new());
+    }
+
+    let code = read_and_compile_source(file)?;
+    let mut dependencies = Vec::new();
+    let mut body = String::new();
+
+    for line in static_module_statements(&code) {
+        if let Some(specifier) = static_import_specifier(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                let dependency_bundle = bundle_local_static_imports_inner(&dependency_path, seen)?;
+                if !dependency_bundle.trim().is_empty() {
+                    dependencies.push(dependency_bundle);
+                }
+                body.push_str(&static_import_binding_rewrites(&line, &dependency_path)?);
+                continue;
+            }
+        }
+
+        if let Some(specifier) = static_export_from_specifier(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                let dependency_bundle = bundle_local_static_imports_inner(&dependency_path, seen)?;
+                if !dependency_bundle.trim().is_empty() {
+                    dependencies.push(dependency_bundle);
+                }
+                continue;
+            }
+        }
+
+        body.push_str(&line);
+        body.push('\n');
+    }
+
+    let mut bundled = String::new();
+    for dependency in dependencies {
+        bundled.push_str(&dependency);
+        if !dependency.ends_with('\n') {
+            bundled.push('\n');
+        }
+    }
+
+    bundled.push_str(&format!("// module: {}\n", file.display()));
+    bundled.push_str(&rewrite_esm_exports_for_bundle(file, &body)?);
+    Ok(bundled)
+}
+
+fn static_import_specifier(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    if !trimmed.starts_with("import ") || trimmed.starts_with("import(") {
+        return None;
+    }
+
+    if let Some(from_pos) = trimmed.rfind(" from ") {
+        return parse_quoted_module_specifier(&trimmed[from_pos + " from ".len()..]);
+    }
+
+    parse_quoted_module_specifier(trimmed.strip_prefix("import")?.trim_start())
+}
+
+fn static_export_from_specifier(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    if !trimmed.starts_with("export ") {
+        return None;
+    }
+
+    let from_pos = trimmed.rfind(" from ")?;
+    parse_quoted_module_specifier(&trimmed[from_pos + " from ".len()..])
+}
+
+fn parse_quoted_module_specifier(input: &str) -> Option<String> {
+    let trimmed = input.trim_start();
+    let quote = trimmed.chars().next()?;
+    if quote != '\'' && quote != '"' {
+        return None;
+    }
+
+    let rest = &trimmed[quote.len_utf8()..];
+    let end = rest.find(quote)?;
+    Some(rest[..end].to_string())
+}
+
+fn static_module_statements(code: &str) -> Vec<String> {
+    let mut statements = Vec::new();
+    let mut pending_static = None::<String>;
+
+    for line in code.lines() {
+        for segment in static_module_line_segments(line) {
+            let mut active_segment = Some(segment);
+            while let Some(segment) = active_segment.take() {
+                let trimmed = segment.trim();
+
+                if let Some(mut current) = pending_static.take() {
+                    if static_closed_export_list_waiting_for_optional_from(&current)
+                        && !trimmed.is_empty()
+                        && !trimmed.starts_with("from ")
+                    {
+                        statements.push(current);
+                        active_segment = Some(segment);
+                        continue;
+                    }
+
+                    if !trimmed.is_empty() {
+                        if !current.is_empty() {
+                            current.push(' ');
+                        }
+                        current.push_str(trimmed);
+                    }
+
+                    if static_multiline_statement_complete(&current) {
+                        statements.push(current);
+                    } else {
+                        pending_static = Some(current);
+                    }
+                    continue;
+                }
+
+                if starts_multiline_static_statement(trimmed)
+                    && !static_multiline_statement_complete(trimmed)
+                {
+                    pending_static = Some(trimmed.to_string());
+                } else {
+                    statements.push(segment.to_string());
+                }
+            }
+        }
+    }
+
+    if let Some(statement) = pending_static {
+        statements.push(statement);
+    }
+
+    statements
+}
+
+fn static_module_line_segments(line: &str) -> Vec<&str> {
+    let mut segments = Vec::new();
+    if line.is_empty() {
+        segments.push(line);
+        return segments;
+    }
+
+    let mut start = 0;
+    let mut quote = None;
+    let mut escaped = false;
+    let mut chars = line.char_indices().peekable();
+
+    while let Some((index, character)) = chars.next() {
+        if let Some(quote_character) = quote {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            if character == '\\' {
+                escaped = true;
+                continue;
+            }
+            if character == quote_character {
+                quote = None;
+            }
+            continue;
+        }
+
+        if character == '\'' || character == '"' || character == '`' {
+            quote = Some(character);
+            continue;
+        }
+
+        if character == '/' && matches!(chars.peek(), Some((_, '/'))) {
+            break;
+        }
+
+        if character != ';' {
+            continue;
+        }
+
+        let statement_end = index + character.len_utf8();
+        let rest = &line[statement_end..];
+        let whitespace_len = rest.len() - rest.trim_start().len();
+        let next_start = statement_end + whitespace_len;
+        let next = &line[next_start..];
+        let current = line[start..statement_end].trim_start();
+        if current.starts_with("import ")
+            || current.starts_with("export ")
+            || next.starts_with("import ")
+            || next.starts_with("export ")
+        {
+            segments.push(&line[start..statement_end]);
+            start = next_start;
+        }
+    }
+
+    if start < line.len() {
+        segments.push(&line[start..]);
+    }
+
+    segments
+}
+
+fn starts_multiline_static_statement(trimmed: &str) -> bool {
+    trimmed.starts_with("import ")
+        || trimmed.starts_with("export {")
+        || trimmed.starts_with("export *")
+}
+
+fn static_multiline_statement_complete(statement: &str) -> bool {
+    let trimmed = statement.trim();
+    trimmed.ends_with(';')
+        || static_import_specifier(trimmed).is_some()
+        || static_export_from_specifier(trimmed).is_some()
+}
+
+fn static_closed_export_list_waiting_for_optional_from(statement: &str) -> bool {
+    let trimmed = statement.trim();
+    let Some(rest) = trimmed.strip_prefix("export ") else {
+        return false;
+    };
+    let rest = rest.trim_start();
+    rest.starts_with('{')
+        && export_list_bindings(rest).is_some()
+        && !trimmed.ends_with(';')
+        && static_export_from_specifier(trimmed).is_none()
+}
+
+fn static_import_binding_rewrites(line: &str, dependency_path: &Path) -> Result<String> {
+    let mut rewrites = String::new();
+    let export_map = local_static_export_map(dependency_path)?;
+
+    if let Some(default_binding) = static_import_default_binding(line) {
+        let source = export_map
+            .iter()
+            .find_map(|(exported, source)| {
+                if exported == "default" {
+                    Some(source.as_str())
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                anyhow!(
+                    "Local module {} does not export default",
+                    dependency_path.display()
+                )
+            })?;
+        rewrites.push_str(&format!("const {} = {};\n", default_binding, source));
+    }
+
+    if let Some(named_imports) = static_import_named_clause(line) {
+        for item in named_imports.split(',') {
+            if let Some((imported, local)) = parse_named_import_binding(item) {
+                let source = export_map
+                    .iter()
+                    .find_map(|(exported, source)| {
+                        if exported == imported {
+                            Some(source.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "Local module {} does not export '{}'",
+                            dependency_path.display(),
+                            imported
+                        )
+                    })?;
+                if source != local {
+                    rewrites.push_str(&format!("const {} = {};\n", local, source));
+                }
+            }
+        }
+    }
+
+    if let Some(namespace_binding) = static_import_namespace_binding(line) {
+        let namespace_entries = export_map
+            .iter()
+            .map(|(exported, source)| format!("{exported}: {source}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        rewrites.push_str(&format!(
+            "const {} = {{ {} }};\n",
+            namespace_binding, namespace_entries
+        ));
+    }
+
+    Ok(rewrites)
+}
+
+fn parse_named_import_binding(item: &str) -> Option<(&str, &str)> {
+    let parts = item.split_whitespace().collect::<Vec<_>>();
+    match parts.as_slice() {
+        [imported] => Some((*imported, *imported)),
+        [imported, "as", local] => Some((*imported, *local)),
+        _ => None,
+    }
+}
+
+fn static_import_namespace_binding(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let from_pos = trimmed.rfind(" from ")?;
+    let import_clause = trimmed
+        .strip_prefix("import ")?
+        .get(..from_pos - "import ".len())?
+        .trim();
+    let namespace_start = import_clause.find("* as ")?;
+    let namespace_binding = import_clause[namespace_start + "* as ".len()..]
+        .split(',')
+        .next()?
+        .trim();
+    if namespace_binding.is_empty() {
+        return None;
+    }
+    Some(namespace_binding)
+}
+
+fn static_import_default_binding(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let from_pos = trimmed.rfind(" from ")?;
+    let import_clause = trimmed
+        .strip_prefix("import ")?
+        .get(..from_pos - "import ".len())?
+        .trim();
+    if import_clause.is_empty() || import_clause.starts_with('{') || import_clause.starts_with('*')
+    {
+        return None;
+    }
+
+    Some(import_clause.split(',').next()?.trim())
+}
+
+fn static_import_named_clause(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let from_pos = trimmed.rfind(" from ")?;
+    let import_clause = trimmed
+        .strip_prefix("import ")?
+        .get(..from_pos - "import ".len())?;
+    let named_start = import_clause.find('{')?;
+    let named_end = import_clause.rfind('}')?;
+    if named_end <= named_start {
+        return None;
+    }
+    Some(&import_clause[named_start + 1..named_end])
+}
+
+fn local_static_export_map(file: &Path) -> Result<Vec<(String, String)>> {
+    local_static_export_map_inner(file, &mut HashSet::new())
+}
+
+fn local_static_export_map_inner(
+    file: &Path,
+    seen: &mut HashSet<PathBuf>,
+) -> Result<Vec<(String, String)>> {
+    let module_key = normalize_module_path(file)?;
+    if !seen.insert(module_key) {
+        return Ok(Vec::new());
+    }
+
+    let code = read_and_compile_source(file)?;
+    let default_binding = default_export_binding_name(file)?;
+    let mut export_map = extract_static_export_map(file, &code, &default_binding)?;
+
+    for line in static_module_statements(&code) {
+        if let Some((specifier, re_exports)) = static_re_export_list_bindings(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                let dependency_export_map = local_static_export_map_inner(&dependency_path, seen)?;
+                for (exported, imported) in re_exports {
+                    let source = dependency_export_map
+                        .iter()
+                        .find_map(|(dependency_exported, dependency_source)| {
+                            if dependency_exported == &imported {
+                                Some(dependency_source.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "Local module {} does not export '{}' for re-export",
+                                dependency_path.display(),
+                                imported
+                            )
+                        })?;
+                    export_map.push((exported, source));
+                }
+            }
+        }
+
+        if let Some(specifier) = static_export_star_from_specifier(&line) {
+            if let Some(dependency_path) = resolve_local_static_import(file, &specifier)? {
+                export_map.extend(
+                    local_static_export_map_inner(&dependency_path, seen)?
+                        .into_iter()
+                        .filter(|(exported, _)| exported != "default"),
+                );
+            }
+        }
+    }
+
+    Ok(export_map)
+}
+
+fn extract_static_export_map(
+    file: &Path,
+    code: &str,
+    default_binding: &str,
+) -> Result<Vec<(String, String)>> {
+    let mut exports = Vec::new();
+    for line in static_module_statements(code) {
+        let Some(rest) = line.trim_start().strip_prefix("export ") else {
+            continue;
+        };
+        let rest = rest.trim_start();
+
+        if rest.starts_with("default ") {
+            exports.push(("default".to_string(), default_binding.to_string()));
+            continue;
+        }
+
+        if rest.starts_with('{') && rest.contains(" from ") {
+            continue;
+        }
+
+        if let Some(list_exports) = export_list_bindings(rest) {
+            for (exported, _) in list_exports {
+                let source = if exported == "default" {
+                    default_binding.to_string()
+                } else {
+                    exported_binding_name(file, &exported)?
+                };
+                exports.push((exported, source));
+            }
+            continue;
+        }
+
+        for keyword in ["const ", "let ", "var ", "function ", "class "] {
+            if let Some(name) = exported_declaration_name(rest, keyword) {
+                exports.push((name.clone(), exported_binding_name(file, &name)?));
+                break;
+            }
+        }
+    }
+    Ok(exports)
+}
+
+fn static_re_export_list_bindings(line: &str) -> Option<(String, Vec<(String, String)>)> {
+    let trimmed = line.trim();
+    let rest = trimmed.strip_prefix("export ")?.trim_start();
+    if !rest.starts_with('{') {
+        return None;
+    }
+
+    let specifier = static_export_from_specifier(line)?;
+    let bindings = export_list_bindings(rest)?;
+    Some((specifier, bindings))
+}
+
+fn static_export_star_from_specifier(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    let rest = trimmed.strip_prefix("export ")?.trim_start();
+    if !rest.starts_with("* from ") {
+        return None;
+    }
+
+    parse_quoted_module_specifier(rest.strip_prefix("* from ")?.trim_start())
+}
+
+fn export_list_bindings(rest: &str) -> Option<Vec<(String, String)>> {
+    let export_list = rest.strip_prefix('{')?;
+    let end = export_list.find('}')?;
+    let export_list = &export_list[..end];
+    let mut exports = Vec::new();
+
+    for item in export_list.split(',') {
+        let item = item.trim();
+        if item.is_empty() {
+            continue;
+        }
+
+        let parts = item.split_whitespace().collect::<Vec<_>>();
+        match parts.as_slice() {
+            [local] => exports.push(((*local).to_string(), (*local).to_string())),
+            [local, "as", exported] => {
+                exports.push(((*exported).to_string(), (*local).to_string()))
+            }
+            _ => {}
+        }
+    }
+
+    Some(exports)
+}
+
+fn exported_declaration_name(rest: &str, keyword: &str) -> Option<String> {
+    let declaration = rest.strip_prefix(keyword)?.trim_start();
+    let end = declaration
+        .char_indices()
+        .find_map(|(index, character)| {
+            if is_js_identifier_part(character) {
+                None
+            } else {
+                Some(index)
+            }
+        })
+        .unwrap_or(declaration.len());
+    if end == 0 {
+        return None;
+    }
+    Some(declaration[..end].to_string())
+}
+
+fn is_js_identifier_part(character: char) -> bool {
+    character == '_' || character == '$' || character.is_ascii_alphanumeric()
+}
+
+fn resolve_local_static_import(importer: &Path, specifier: &str) -> Result<Option<PathBuf>> {
+    if !specifier.starts_with("./") && !specifier.starts_with("../") {
+        return Ok(None);
+    }
+
+    let base_dir = importer.parent().unwrap_or_else(|| Path::new("."));
+    let candidate = base_dir.join(specifier);
+    for path in local_module_candidates(&candidate) {
+        if path.is_file() {
+            return Ok(Some(path));
+        }
+    }
+
+    Err(anyhow!(
+        "Failed to resolve local import '{}' from {}",
+        specifier,
+        importer.display()
+    ))
+}
+
+fn local_module_candidates(candidate: &Path) -> Vec<PathBuf> {
+    if candidate.extension().is_some() {
+        return vec![candidate.to_path_buf()];
+    }
+
+    vec![
+        candidate.to_path_buf(),
+        candidate.with_extension("js"),
+        candidate.with_extension("mjs"),
+        candidate.with_extension("ts"),
+        candidate.with_extension("tsx"),
+        candidate.join("index.js"),
+        candidate.join("index.ts"),
+    ]
+}
+
+fn normalize_module_path(path: &Path) -> Result<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+
+    let mut normalized = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                normalized.pop();
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    Ok(normalized)
+}
+
+fn module_binding_hash(file: &Path) -> Result<String> {
+    let normalized = normalize_module_path(file)?;
+    let normalized = normalized.to_string_lossy();
+    let digest = blake3::hash(normalized.as_bytes());
+    let hex = digest.to_hex();
+    Ok(hex.as_str()[..16].to_string())
+}
+
+fn default_export_binding_name(file: &Path) -> Result<String> {
+    Ok(format!(
+        "__beejs_default_export_{}",
+        module_binding_hash(file)?
+    ))
+}
+
+fn exported_binding_name(file: &Path, exported: &str) -> Result<String> {
+    if exported == "default" {
+        return default_export_binding_name(file);
+    }
+
+    Ok(format!(
+        "__beejs_export_{}_{}",
+        module_binding_hash(file)?,
+        sanitized_js_identifier_fragment(exported)
+    ))
+}
+
+fn sanitized_js_identifier_fragment(value: &str) -> String {
+    let mut sanitized = String::new();
+    for character in value.chars() {
+        if character == '_' || character == '$' || character.is_ascii_alphanumeric() {
+            sanitized.push(character);
+        } else {
+            sanitized.push('_');
+        }
+    }
+
+    if sanitized.is_empty() {
+        return "export".to_string();
+    }
+
+    if sanitized
+        .chars()
+        .next()
+        .is_some_and(|character| character.is_ascii_digit())
+    {
+        sanitized.insert(0, '_');
+    }
+
+    sanitized
+}
+
+fn static_default_export_declaration_exists(code: &str) -> bool {
+    static_module_statements(code).into_iter().any(|line| {
+        line.trim_start()
+            .strip_prefix("export ")
+            .is_some_and(|rest| rest.trim_start().starts_with("default "))
+    })
+}
+
+fn local_export_bindings(file: &Path, code: &str) -> Result<Vec<(String, String)>> {
+    let mut bindings = Vec::new();
+    for line in static_module_statements(code) {
+        let Some(rest) = line.trim_start().strip_prefix("export ") else {
+            continue;
+        };
+        let rest = rest.trim_start();
+
+        if rest.starts_with("default ") || rest.starts_with('{') && rest.contains(" from ") {
+            continue;
+        }
+
+        if let Some(list_exports) = export_list_bindings(rest) {
+            for (exported, local) in list_exports {
+                bindings.push((exported_binding_name(file, &exported)?, local));
+            }
+            continue;
+        }
+
+        for keyword in ["const ", "let ", "var ", "function ", "class "] {
+            if let Some(name) = exported_declaration_name(rest, keyword) {
+                bindings.push((exported_binding_name(file, &name)?, name));
+                break;
+            }
+        }
+    }
+
+    Ok(bindings)
+}
+
+fn rewrite_esm_exports_for_bundle(file: &Path, code: &str) -> Result<String> {
+    let mut output = String::new();
+    let default_binding = default_export_binding_name(file)?;
+    let export_bindings = local_export_bindings(file, code)?;
+    let mut declared_bindings = Vec::new();
+    let mut seen_bindings = HashSet::new();
+
+    if static_default_export_declaration_exists(code)
+        && seen_bindings.insert(default_binding.clone())
+    {
+        declared_bindings.push(default_binding.clone());
+    }
+
+    for (binding, _) in &export_bindings {
+        if seen_bindings.insert(binding.clone()) {
+            declared_bindings.push(binding.clone());
+        }
+    }
+
+    for binding in &declared_bindings {
+        output.push_str("let ");
+        output.push_str(binding);
+        output.push_str(";\n");
+    }
+    output.push_str("{\n");
+
+    for line in static_module_statements(code) {
+        let indent_len = line.len() - line.trim_start().len();
+        let indent = &line[..indent_len];
+        let trimmed = line.trim_start();
+
+        if let Some(rest) = trimmed.strip_prefix("export ") {
+            let rest = rest.trim_start();
+            if rest.starts_with('{') {
+                continue;
+            }
+
+            if let Some(default_rest) = rest.strip_prefix("default ") {
+                output.push_str(indent);
+                output.push_str(&default_binding);
+                output.push_str(" = ");
+                output.push_str(default_rest);
+                output.push('\n');
+                continue;
+            }
+
+            if starts_with_exportable_declaration(rest) {
+                output.push_str(indent);
+                output.push_str(rest);
+                output.push('\n');
+                continue;
+            }
+        }
+
+        output.push_str(&line);
+        output.push('\n');
+    }
+
+    for (binding, local) in export_bindings {
+        output.push_str(&binding);
+        output.push_str(" = ");
+        output.push_str(&local);
+        output.push_str(";\n");
+    }
+    output.push_str("}\n");
+
+    Ok(output)
+}
+
+fn starts_with_exportable_declaration(input: &str) -> bool {
+    ["const ", "let ", "var ", "function ", "class "]
+        .iter()
+        .any(|prefix| input.starts_with(prefix))
+}
+
+fn minify_bundle_source(code: &str) -> String {
+    code.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn normalize_create_args(name: String, template: String) -> (String, String) {
@@ -4564,12 +5333,13 @@ fn main() -> Result<()> {
             minify,
             sourcemap,
             target,
-            tree_shake: _,
+            tree_shake,
         }) => {
             apply_permission_cli_options(&permissions)?;
-            println!("🐝 Bundling JavaScript/TypeScript (Bundler 2.0)...");
+            println!("🐝 Bundling JavaScript/TypeScript...");
 
             check_file_read_permission(&entry)?;
+            let code = bundle_local_static_imports(&entry)?;
             let output_path = outfile.unwrap_or_else(|| {
                 let mut path = entry.clone();
                 path.set_extension("bundle.js");
@@ -4577,21 +5347,40 @@ fn main() -> Result<()> {
             });
             check_file_write_permission(&output_path)?;
 
-            let opts = beejs::tooling::bundler::BundleOptions {
-                entry: entry.clone(),
-                outfile: Some(output_path.clone()),
-                minify,
-                sourcemap,
-                target,
-                import_map: permissions.import_map.clone(),
+            let mut bundle = if minify {
+                minify_bundle_source(&code)
+            } else {
+                format!(
+                    "// Bundled by Beejs\n// target: {}\n// tree-shake: {}\n{}",
+                    target, tree_shake, code
+                )
             };
 
-            let out = beejs::tooling::bundler::bundle_project(&opts)?;
+            if sourcemap {
+                let map_name = output_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .map(|name| format!("{}.map", name))
+                    .unwrap_or_else(|| "bundle.js.map".to_string());
+                bundle.push_str(&format!("\n//# sourceMappingURL={}", map_name));
+                let map_path = output_path.with_file_name(&map_name);
+                let source = entry
+                    .to_string_lossy()
+                    .replace('\\', "\\\\")
+                    .replace('"', "\\\"");
+                let target_file = output_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("bundle.js");
+                let map = format!(
+                    "{{\"version\":3,\"file\":\"{}\",\"sources\":[\"{}\"],\"mappings\":\"\"}}",
+                    target_file, source
+                );
+                std::fs::write(&map_path, map)?;
+            }
+
+            std::fs::write(&output_path, bundle)?;
             println!("✅ Bundle created: {}", output_path.display());
-            println!(
-                "📦 Bundle size: {} bytes across {} module(s)",
-                out.total_bytes, out.module_count
-            );
             return Ok(());
         }
         Some(Command::Debug { permissions, file }) => {
@@ -5234,93 +6023,32 @@ globalThis.__beejs_handle_http__ = async function(method, url, headersJson, body
             println!("\nRun 'cd {} && bee run index.{}' to start", name, template);
             return Ok(());
         }
-        Some(Command::Bunx {
+        Some(Command::X {
             permissions,
             package,
             args,
         }) => {
             apply_permission_cli_options(&permissions)?;
-            println!("🚀 Running package: {}", package);
-            println!("  Args: {:?}", args);
-
-            let (name, version) = beejs::package_manager::parse_npm_package_spec(&package);
-
-            println!("  Package: {}", name);
-            println!("  Version: {}", version);
-
-            check_process_execute_permission(&name)?;
-
-            // Create temporary package manager
-            let config = beejs::package_manager::PackageManagerConfig::default();
-            let pm = beejs::package_manager::PackageManager::new(config)
-                .map_err(|e| anyhow!("Failed to create package manager: {}", e))?;
-
-            // Install and get the package bin
-            match pm.install_package(&name, &version) {
-                Ok(result) => {
-                    println!("✅ Installed {}@{}", name, result.package.version);
-
-                    // Find and run the bin
-                    let package_json_path = result.path.join("package.json");
-                    if package_json_path.exists() {
-                        let content = std::fs::read_to_string(&package_json_path)
-                            .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
-                        let package_info: serde_json::Value = serde_json::from_str(&content)
-                            .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
-
-                        // Get bin entry
-                        if let Some(bin) = package_info.get("bin") {
-                            let bin_path = if bin.is_string() {
-                                result.path.join(bin.as_str().unwrap())
-                            } else if let Some(bin_obj) = bin.as_object() {
-                                // Handle bin as object (multiple binaries)
-                                let bin_name =
-                                    bin_obj.keys().next().ok_or(anyhow!("No bin entry found"))?;
-                                let bin_value =
-                                    bin_obj.get(bin_name).and_then(|v| v.as_str()).unwrap_or("");
-                                result.path.join(bin_value)
-                            } else {
-                                return Err(anyhow!("Invalid bin format"));
-                            };
-
-                            if bin_path.exists() {
-                                println!("\n📦 Executing: {}", bin_path.display());
-                                println!("---");
-
-                                // Execute the binary
-                                let output = std::process::Command::new(&bin_path)
-                                    .args(&args)
-                                    .current_dir(&result.path)
-                                    .output()
-                                    .map_err(|e| anyhow!("Failed to execute: {}", e))?;
-
-                                // Print output
-                                if !output.stdout.is_empty() {
-                                    print!("{}", String::from_utf8_lossy(&output.stdout));
-                                }
-                                if !output.stderr.is_empty() {
-                                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
-                                }
-
-                                // Exit with the same code
-                                std::process::exit(output.status.code().unwrap_or(0));
-                            } else {
-                                return Err(anyhow!(
-                                    "Binary file not found: {}",
-                                    bin_path.display()
-                                ));
-                            }
-                        } else {
-                            return Err(anyhow!("Package {} has no bin entry", name));
-                        }
-                    } else {
-                        return Err(anyhow!("package.json not found in installed package"));
-                    }
-                }
-                Err(e) => {
-                    return Err(anyhow!("Failed to install package: {}", e));
-                }
-            }
+            check_process_execute_permission(&package)?;
+            let exit_code = beejs::tooling::dlx::run_dlx(&package, &args)?;
+            std::process::exit(exit_code);
+        }
+        Some(Command::Deploy {
+            target,
+            output,
+            port,
+            name,
+            entry,
+        }) => {
+            let deploy_target = beejs::tooling::deploy::DeployTarget::from_str(&target)?;
+            beejs::tooling::deploy::run_deploy(beejs::tooling::deploy::DeployOptions {
+                target: deploy_target,
+                output_dir: output,
+                port,
+                name,
+                entry,
+            })?;
+            return Ok(());
         }
         Some(Command::Upgrade {
             permissions,

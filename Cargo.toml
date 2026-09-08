@@ -1,6 +1,6 @@
 [package]
 name = "beejs"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 autobins = false
 authors = ["Henry Zhang"]
@@ -99,6 +99,9 @@ memmap2 = "0.9"
 
 # HTTP Server for Server mode
 tiny_http = "0.12"
+
+# Embedded SQLite for bee:db
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 # System calls for zero-copy network I/O
 libc = "0.2"

@@ -271,6 +271,16 @@ export const fr: TranslationSchema = {
         ],
       },
       {
+        title: 'Écosystème & Outils',
+        items: [
+          { id: 'embedded-db', label: 'Base de données & Vecteurs (bee:db & bee:vector)', badge: 'DB' },
+          { id: 'standard-library', label: 'Bibliothèque standard (bee:std)', badge: 'Std' },
+          { id: 'package-manager-dlx', label: 'Exécuteur de paquets (bee x / dlx)', badge: 'CLI' },
+          { id: 'deployment-docker', label: 'Déploiement & Conteneurs (bee deploy)', badge: 'Deploy' },
+          { id: 'ide-extension', label: 'Extension VS Code officielle', badge: 'IDE' },
+        ],
+      },
+      {
         title: 'Exploitation',
         items: [
           { id: 'cli-usage', label: 'Utilisation CLI' },

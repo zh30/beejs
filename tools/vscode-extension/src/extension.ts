@@ -37,6 +37,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('beejs.runScript', commands.runScript),
         vscode.commands.registerCommand('beejs.debugScript', commands.debugScript),
+        vscode.commands.registerCommand('beejs.formatDocument', commands.formatDocument),
+        vscode.commands.registerCommand('beejs.exportTypes', commands.exportTypes),
+        vscode.commands.registerCommand('beejs.deploy', commands.deploy),
         vscode.commands.registerCommand('beejs.showPerformanceReport', commands.showPerformanceReport),
         vscode.commands.registerCommand('beejs.installRuntime', commands.installRuntime),
         vscode.commands.registerCommand('beejs.selectRuntime', commands.selectRuntime)

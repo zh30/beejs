@@ -286,6 +286,16 @@ export const en: TranslationSchema = {
         ],
       },
       {
+        title: 'Ecosystem & Tooling',
+        items: [
+          { id: 'embedded-db', label: 'Embedded DB & Vector Engine (bee:db & bee:vector)', badge: 'DB' },
+          { id: 'standard-library', label: 'Modern Standard Library (bee:std)', badge: 'Std' },
+          { id: 'package-manager-dlx', label: 'Dynamic Package Runner (bee x / dlx)', badge: 'CLI' },
+          { id: 'deployment-docker', label: 'Deployment & Containerization (bee deploy)', badge: 'Deploy' },
+          { id: 'ide-extension', label: 'VS Code Official Extension', badge: 'IDE' },
+        ],
+      },
+      {
         title: 'Agent & Advanced',
         items: [
           { id: 'agent-sandbox', label: 'Deterministic Sandbox & Quotas', badge: 'Agent' },
@@ -410,6 +420,35 @@ export const en: TranslationSchema = {
           'src/testing/ - test framework',
           'src/package_manager.rs - package manager support',
         ],
+      },
+      'embedded-db': {
+        title: 'Embedded Database & Vector Engine',
+        subtitle: 'Native SQLite relational DB and vector similarity search.',
+        body: ['Native SQLite 3 and Rust-based high-dimensional vector search engine with zero external dependencies.'],
+        list: ['bee:db - in-process SQLite database', 'bee:vector - high-performance vector search engine'],
+      },
+      'standard-library': {
+        title: 'Modern Standard Library',
+        subtitle: 'Zero-dependency official standard library.',
+        body: ['Includes dotenv, terminal styling and tables, directory walking, UUID/JWT crypto, and assertions.'],
+        list: ['bee:std/dotenv', 'bee:std/cli', 'bee:std/fs', 'bee:std/crypto', 'bee:std/assert'],
+      },
+      'package-manager-dlx': {
+        title: 'Dynamic Package Runner',
+        subtitle: 'Execute remote npm packages and CLI tools without pre-installing.',
+        body: ['Fetches and executes CLI packages in isolated V8 environments with global cache and quota enforcement.'],
+        code: ['$ bee x cowsay "Hello Beejs!"'],
+      },
+      'deployment-docker': {
+        title: 'Deployment & Containerization',
+        subtitle: 'One-command generation of Docker, standalone SEA binary, and Kubernetes manifests.',
+        body: ['Generates hardened multi-stage Dockerfiles, compose stacks, and cloud-native Kubernetes manifests.'],
+        code: ['$ bee deploy --target docker', '$ bee deploy --target k8s'],
+      },
+      'ide-extension': {
+        title: 'VS Code Official Extension',
+        subtitle: 'Deep integration with LSP, CDP debugger, formatters, and deploy.',
+        body: ['First-class developer experience for Visual Studio Code with native completions, debugging, and format-on-save.'],
       },
     },
   },

@@ -285,6 +285,16 @@ export const zh: TranslationSchema = {
         ],
       },
       {
+        title: '生态与扩展',
+        items: [
+          { id: 'embedded-db', label: '嵌入式数据与向量引擎 (bee:db & bee:vector)', badge: 'DB' },
+          { id: 'standard-library', label: '现代官方标准库 (bee:std)', badge: 'Std' },
+          { id: 'package-manager-dlx', label: '动态包即时运行 (bee x / dlx)', badge: 'CLI' },
+          { id: 'deployment-docker', label: '全自动部署与容器编排 (bee deploy)', badge: 'Deploy' },
+          { id: 'ide-extension', label: 'VS Code 官方编辑器插件', badge: 'IDE' },
+        ],
+      },
+      {
         title: 'Agent 与高级特性',
         items: [
           { id: 'agent-sandbox', label: '确定性沙箱与资源硬配额', badge: 'Agent' },
@@ -390,6 +400,35 @@ export const zh: TranslationSchema = {
           'src/testing/ - 测试框架',
           'src/package_manager.rs - 包管理支持',
         ],
+      },
+      'embedded-db': {
+        title: '嵌入式数据与向量引擎',
+        subtitle: '原生的 SQLite 关系数据库与高维向量相似度检索。',
+        body: ['集成 SQLite 3 与基于 Rust 的高维向量相似度检索，提供零外部依赖的数据管理与本地 RAG 检索底座。'],
+        list: ['bee:db - 嵌入式 SQLite 数据库', 'bee:vector - 高性能向量检索数据库'],
+      },
+      'standard-library': {
+        title: '官方现代标准库',
+        subtitle: '零依赖、工程实用的现代标准库。',
+        body: ['提供 dotenv、终端样式与表格交互、高级文件系统遍历与拷贝、UUID/JWT 密码学、深度相等断言。'],
+        list: ['bee:std/dotenv', 'bee:std/cli', 'bee:std/fs', 'bee:std/crypto', 'bee:std/assert'],
+      },
+      'package-manager-dlx': {
+        title: '动态包运行器',
+        subtitle: '免安装即时运行远程 npm 包与 CLI 工具。',
+        body: ['无需事先 npm install，极速拉取并直接在 V8 隔离环境中执行，内置全局缓存与配额沙箱。'],
+        code: ['$ bee x cowsay "Hello Beejs!"'],
+      },
+      'deployment-docker': {
+        title: '全自动部署与容器编排',
+        subtitle: '一键生成 Docker、独立 SEA 二进制与 Kubernetes 清单。',
+        body: ['自动化分析项目入口，输出生产级多阶段 Dockerfile、极简 compose 文件与云原生 k8s 配置。'],
+        code: ['$ bee deploy --target docker', '$ bee deploy --target k8s'],
+      },
+      'ide-extension': {
+        title: 'VS Code 官方编辑器插件',
+        subtitle: '深度集成 LSP、CDP 调试、极速格式化与一键部署。',
+        body: ['为 Visual Studio Code 提供官方一站式开发体验，全面支持智能代码提示、单步断点调试与保存格式化。'],
       },
     },
   },

@@ -45,7 +45,12 @@ mod tests {
     fn test_types_definitions_available() {
         let types = get_type_definitions();
         assert!(types.contains("declare module \"bee:ai\""));
+        assert!(types.contains("declare module \"bee:db\""));
+        assert!(types.contains("declare module \"bee:vector\""));
+        assert!(types.contains("declare module \"bee:std\""));
         assert!(types.contains("class Tensor"));
+        assert!(types.contains("class Database"));
+        assert!(types.contains("class VectorDB"));
         assert!(types.contains("class LLM"));
         assert!(types.contains("declare namespace bee"));
     }

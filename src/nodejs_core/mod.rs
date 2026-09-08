@@ -77,6 +77,8 @@ pub fn setup_nodejs_core_apis(
     string_decoder::setup_string_decoder_api(scope, context)?;
     perf_hooks::setup_perf_hooks_api(scope, context)?;
     ai::setup_ai_api(scope, context)?;
+    crate::database::setup_db_api(scope, context)?;
+    crate::std_lib::setup_std_api(scope, context)?;
     // v0.3.54: 设置 CommonJS require 模块（必须最后设置，因为它依赖其他模块）
     require::setup_require_api(scope, context)?;
     Ok(())

@@ -1,8 +1,8 @@
 {
-  "name": "beejs-vscode",
-  "displayName": "Beejs Runtime Support",
-  "description": "VS Code extension for Beejs - High-performance JavaScript/TypeScript runtime",
-  "version": "0.1.0",
+  "name": "beejs-tools",
+  "displayName": "Beejs Developer Tools",
+  "description": "Language Server, CDP Debugger, oxc Formatter & Deployment Toolkit for Beejs",
+  "version": "1.2.0",
   "publisher": "beejs-team",
   "engines": {
     "vscode": "^1.74.0"
@@ -24,6 +24,10 @@
     "onLanguage:javascript",
     "onLanguage:typescript",
     "onCommand:beejs.runScript",
+    "onCommand:beejs.debugScript",
+    "onCommand:beejs.formatDocument",
+    "onCommand:beejs.exportTypes",
+    "onCommand:beejs.deploy",
     "onDebug:beejs"
   ],
   "main": "./out/extension.js",
@@ -87,6 +91,21 @@
       {
         "command": "beejs.debugScript",
         "title": "Debug Beejs Script",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.formatDocument",
+        "title": "Format Document with OXC (bee fmt)",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.exportTypes",
+        "title": "Export TypeScript Definitions (bee types)",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.deploy",
+        "title": "Deploy Application Scaffolding (bee deploy)",
         "category": "Beejs"
       },
       {
