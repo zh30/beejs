@@ -323,7 +323,7 @@ export const zh: TranslationSchema = {
         title: '参考与规范',
         items: [
           { id: 'cli-usage', label: 'CLI 命令行完整参考手册' },
-          { id: 'api-reference', label: 'Node & Web API 兼容' },
+          { id: 'api-reference', label: '完整 API 参考手册' },
           { id: 'modules', label: '模块解析与工程边界' },
         ],
       },
@@ -402,10 +402,14 @@ export const zh: TranslationSchema = {
         ],
       },
       'api-reference': {
-        title: 'API 表面',
-        subtitle: '以当前运行时行为为准。',
-        body: ['Beejs 暴露实用的 Node.js 和 Web 平台 API 子集。最稳妥的参考是可执行测试和 examples 目录。'],
-        list: ['console 与 timers', 'CommonJS require', 'fetch 与 URL', 'fs、path、crypto、buffer、process'],
+        title: '完整 API 参考手册',
+        subtitle: 'BeeJS 原生子系统 (bee:*)、Node.js 核心及 Web 标准 API 规范。',
+        body: ['系统化覆盖 BeeJS 全部 17 个原生模块（AI、Agent、DB、Vector、Wasm、安全沙箱等）、Node.js 51/51 核心模块兼容层与标准 Web API。'],
+        list: [
+          'BeeJS 原生子系统 (bee:ai, bee:db, bee:vector, bee:bus, bee:grammar, bee:checkpoint 等)',
+          'Node.js 兼容层 (fs, net, http, crypto, stream, worker_threads 等 51 个核心模块)',
+          'Web 标准 API (fetch, WebCrypto, Streams, WebSocket, Worker, structuredClone)',
+        ],
       },
       modules: {
         title: '模块',
