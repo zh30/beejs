@@ -197,7 +197,7 @@ pyo3 = { version = "0.24", features = ["auto-initialize"], optional = true }  # 
 pyo3-build-config = { version = "0.24", features = ["resolve-config"], optional = true }  # 支持前向兼容构建
 
 # Stage 91 Phase 4.2: Enhanced REPL dependencies
-rustyline = "14.0"  # Enhanced readline with tab completion and history
+rustyline = "18.0"  # Enhanced readline with tab completion and history
 syntect = "5.0"     # Syntax highlighting for code display
 colored = "2.0"     # Terminal colors and formatting
 
