@@ -825,4 +825,150 @@ declare module "permissions" {
   export * from "bee:permissions";
 }
 
+declare module "bee:kv" {
+  export interface KVSetOptions {
+    ttlMs?: number;
+  }
+
+  export interface KVScanOptions {
+    prefix?: string;
+    limit?: number;
+  }
+
+  export interface KVBatchOperation<T = any> {
+    type: "put" | "set" | "del" | "delete";
+    key: string;
+    value?: T;
+    ttlMs?: number;
+  }
+
+  export class KVStore {
+    readonly path: string | null;
+    readonly isClosed: boolean;
+
+    static open(path: string): KVStore;
+    static openMemory(): KVStore;
+
+    get<T = any>(key: string): T | undefined;
+    set<T = any>(key: string, value: T, options?: KVSetOptions | number): this;
+    delete(key: string): boolean;
+    has(key: string): boolean;
+    keys(prefix?: string | null): string[];
+    values<T = any>(): T[];
+    entries<T = any>(prefix?: string | null): Array<[string, T]>;
+    scan<T = any>(options?: KVScanOptions | string): Array<[string, T]>;
+    incr(key: string, delta?: number): number;
+    batch(operations: KVBatchOperation[]): this;
+    clear(): this;
+    compact(): boolean;
+    flush(): boolean;
+    close(): void;
+  }
+
+  export function open(path: string): KVStore;
+  export function openMemory(): KVStore;
+}
+
+declare module "kv" {
+  export * from "bee:kv";
+}
+
+declare module "bee:tools" {
+  export interface JSONSchemaProperty {
+    type: "string" | "number" | "integer" | "boolean" | "array" | "object";
+    description?: string;
+    enum?: any[];
+    default?: any;
+    items?: JSONSchemaProperty;
+    properties?: Record<string, JSONSchemaProperty>;
+    required?: string[];
+  }
+
+  export interface JSONSchemaDefinition {
+    type: "object";
+    properties: Record<string, JSONSchemaProperty>;
+    required?: string[];
+  }
+
+  export interface ToolDefinition<TArgs = any, TResult = any> {
+    name: string;
+    description?: string;
+    parameters?: JSONSchemaDefinition;
+    execute: (args: TArgs) => Promise<TResult> | TResult;
+  }
+
+  export interface ToolCall {
+    name: string;
+    arguments: Record<string, any>;
+  }
+
+  export class AgentTool<TArgs = any, TResult = any> {
+    readonly name: string;
+    readonly description: string;
+    readonly parameters: JSONSchemaDefinition;
+    constructor(def: ToolDefinition<TArgs, TResult>);
+    execute(args?: TArgs): Promise<TResult>;
+    toJSON(): {
+      type: "function";
+      function: {
+        name: string;
+        description: string;
+        parameters: JSONSchemaDefinition;
+      };
+    };
+  }
+
+  export function compileSchemaTool<TArgs = any, TResult = any>(
+    def: ToolDefinition<TArgs, TResult>
+  ): AgentTool<TArgs, TResult>;
+
+  export interface OpenAPIOptions {
+    baseUrl?: string;
+    headers?: Record<string, string>;
+  }
+
+  export type OpenAPIToolList = Array<AgentTool> & {
+    map: Record<string, AgentTool>;
+  };
+
+  export function fromOpenAPI(
+    specOrJson: string | Record<string, any>,
+    options?: OpenAPIOptions
+  ): OpenAPIToolList;
+
+  export function parseToolCalls(llmOutput: string | object): ToolCall[];
+
+  export function registerTools(pipeline: any, tools: AgentTool[] | Record<string, AgentTool>): any;
+}
+
+declare module "tools" {
+  export * from "bee:tools";
+}
+
+declare module "bee:sandbox" {
+  export interface EnclaveOptions {
+    context?: Record<string, any>;
+  }
+
+  export function isEnabled(): boolean;
+  export function isCow(): boolean;
+  export function enable(cow?: boolean): void;
+  export function disable(): void;
+  export function reset(): void;
+  export function listFiles(): string[];
+  export function snapshot(): any;
+  export function startAuditLog(path: string): boolean;
+  export function stopAuditLog(): boolean;
+  export function getAuditLogPath(): string | null;
+  export function createEnclave<T = any>(
+    codeOrFn: string | (() => T),
+    options?: EnclaveOptions
+  ): T;
+}
+
+declare module "sandbox" {
+  export * from "bee:sandbox";
+}
+
+
 

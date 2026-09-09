@@ -93,6 +93,7 @@ pub mod database; // Embedded SQLite and Vector similarity database
 pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
 pub mod ffi; // Native zero-dependency C ABI foreign function interface (bee:ffi)
+pub mod kv; // Embedded Persistent Key-Value & Durable State Engine (bee:kv)
 pub mod memory; // Memory management
 pub mod pool; // High-density multi-tenant IsolatePool for serverless & multi-agent execution (bee:pool)
 pub mod repl; // Enhanced interactive REPL
@@ -102,6 +103,7 @@ pub mod std_lib; // Modern standard library (dotenv, cli, fs, crypto, assert)
 pub mod task_runner; // Task runner for package.json scripts
 pub mod testing; // Testing framework support
 pub mod tooling; // Developer tooling (formatter, linter, benchmark, compiler, coverage, profiler)
+pub mod tools; // Agent Tool Auto-Synthesis & OpenAPI Schema Compiler (bee:tools)
 pub mod types_export; // TypeScript types exporter
 pub mod typescript;
 pub mod wasm; // WebAssembly 2.0 zero-copy shared memory bridge (bee:wasm)
