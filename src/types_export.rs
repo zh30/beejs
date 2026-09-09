@@ -60,6 +60,12 @@ mod tests {
         assert!(types.contains("declare module \"bee:kv\""));
         assert!(types.contains("declare module \"bee:tools\""));
         assert!(types.contains("declare module \"bee:sandbox\""));
+        assert!(types.contains("declare module \"bee:bus\""));
+        assert!(types.contains("declare module \"bee:grammar\""));
+        assert!(types.contains("declare module \"bee:checkpoint\""));
+        assert!(types.contains("class MessageBus"));
+        assert!(types.contains("parsePartialJSON"));
+        assert!(types.contains("class CheckpointManager"));
         assert!(types.contains("class Tensor"));
         assert!(types.contains("class Database"));
         assert!(types.contains("class VectorDB"));
