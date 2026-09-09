@@ -255,6 +255,35 @@ pub fn setup_ai_api(
                 return new Tensor(data, shape, dtype);
             }
 
+            static fromBuffer(buffer, shape = null, dtype = 'float32') {
+                let view;
+                switch (dtype) {
+                    case 'float64':
+                    case 'f64':
+                        view = new Float64Array(buffer);
+                        break;
+                    case 'int32':
+                    case 'i32':
+                        view = new Int32Array(buffer);
+                        break;
+                    case 'int8':
+                    case 'i8':
+                        view = new Int8Array(buffer);
+                        break;
+                    case 'uint8':
+                    case 'u8':
+                        view = new Uint8Array(buffer);
+                        break;
+                    case 'float32':
+                    case 'f32':
+                    default:
+                        view = new Float32Array(buffer);
+                        break;
+                }
+                const actualShape = shape || [view.length];
+                return new Tensor(view, actualShape, dtype);
+            }
+
             // 矩阵乘法 (2D)
             matmul(other) {
                 if (!(other instanceof Tensor)) {
@@ -517,7 +546,8 @@ pub fn setup_ai_api(
             LLM,
             AgentPipeline,
             cosineSimilarity,
-            version: '1.4.0'
+            version: '1.6.0',
+            get weights() { return globalThis.__bee_weights; }
         };
 
         // 绑定到全局

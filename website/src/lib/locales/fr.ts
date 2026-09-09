@@ -286,6 +286,9 @@ export const fr: TranslationSchema = {
         title: 'Agent & Sécurité',
         items: [
           { id: 'agent-sandbox', label: 'Bac à sable & Quotas de ressources', badge: 'Agent' },
+          { id: 'agent-replay', label: 'Moteur de Rejeu Déterministe (bee:replay)', badge: 'v1.6' },
+          { id: 'model-weights', label: 'Chargeur de Poids GGUF & SafeTensors (bee:weights)', badge: 'v1.6' },
+          { id: 'capability-security', label: 'Sécurité Basée sur les Capacités (bee:security)', badge: 'v1.6' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: 'Système de fichiers virtuel en RAM', badge: 'v1.3' },
           { id: 'ffi-native', label: 'FFI Natif C ABI (bee:ffi)', badge: 'v1.4' },

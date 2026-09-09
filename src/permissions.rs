@@ -18,7 +18,7 @@ pub enum PermissionKind {
 }
 
 impl PermissionKind {
-    fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Self::FileSystem => "FileSystem",
             Self::Environment => "Environment",
@@ -38,7 +38,7 @@ pub enum PermissionAction {
 }
 
 impl PermissionAction {
-    fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Self::Read => "Read",
             Self::Write => "Write",
@@ -58,7 +58,7 @@ pub enum ResourceId {
 }
 
 impl ResourceId {
-    fn display_for_audit(&self) -> String {
+    pub fn display_for_audit(&self) -> String {
         match self {
             Self::Any => "*".to_string(),
             Self::Path(path) => path.display().to_string(),
@@ -88,10 +88,22 @@ impl PermissionDecision {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct PermissionRule {
-    kind: PermissionKind,
-    action: PermissionAction,
-    resource: ResourceId,
+pub struct PermissionRule {
+    pub kind: PermissionKind,
+    pub action: PermissionAction,
+    pub resource: ResourceId,
+}
+
+impl PermissionRule {
+    pub fn kind(&self) -> &PermissionKind {
+        &self.kind
+    }
+    pub fn action(&self) -> &PermissionAction {
+        &self.action
+    }
+    pub fn resource(&self) -> &ResourceId {
+        &self.resource
+    }
 }
 
 #[derive(Debug, Error)]
@@ -111,6 +123,14 @@ pub struct ResourceBroker {
 }
 
 impl ResourceBroker {
+    pub fn allow_rules(&self) -> &HashSet<PermissionRule> {
+        &self.allow_rules
+    }
+
+    pub fn deny_rules(&self) -> &HashSet<PermissionRule> {
+        &self.deny_rules
+    }
+
     pub fn allow(&mut self, kind: PermissionKind, action: PermissionAction, resource: ResourceId) {
         let rule = PermissionRule {
             kind,
