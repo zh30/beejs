@@ -269,6 +269,7 @@ export const en: TranslationSchema = {
         title: 'Core Systems',
         items: [
           { id: 'v8-isolate-pool', label: 'Runtime & V8 Core' },
+          { id: 'isolate-pool', label: 'Multi-Tenant IsolatePool (bee:pool)', badge: 'v1.4' },
           { id: 'jit-optimization', label: 'TypeScript 6.0 & TSX' },
           { id: 'ai-engine', label: 'Native AI Engine (bee:ai)', badge: 'AI' },
           { id: 'ai-embeddings', label: 'Native Text Embeddings & Vectors', badge: 'v1.3' },
@@ -302,6 +303,10 @@ export const en: TranslationSchema = {
           { id: 'agent-sandbox', label: 'Deterministic Sandbox & Quotas', badge: 'Agent' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: 'Virtual Filesystem In-Memory Sandbox', badge: 'v1.3' },
+          { id: 'ffi-native', label: 'Native C ABI FFI (bee:ffi)', badge: 'v1.4' },
+          { id: 'wasm-interop', label: 'Wasm 2.0 Zero-Copy Bridge (bee:wasm)', badge: 'v1.5' },
+          { id: 'slm-inference', label: 'Edge SLM & JSON Decoding (bee:ai)', badge: 'v1.4' },
+          { id: 'framework-compat', label: 'npm Frameworks (Hono / Express / LangChain)', badge: 'v1.5' },
           { id: 'import-maps-native', label: 'WICG Import Maps & Addons', badge: 'v1.0' },
           { id: 'types-lsp', label: 'TypeScript Type Declarations', badge: 'Types' },
         ],

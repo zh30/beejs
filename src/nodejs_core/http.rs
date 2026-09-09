@@ -758,6 +758,14 @@ pub fn setup_http_api(
             this._eventsCount = 0;
             this._dataListeners = [];
             this._endListeners = [];
+            this.headers = Object.create(null);
+            this.rawHeaders = [];
+            this.url = '/';
+            this.method = 'GET';
+            this.httpVersion = '1.1';
+            this.complete = false;
+            this.socket = new Socket();
+            this.connection = this.socket;
         }
         IncomingMessage.prototype = Object.create(proto);
         IncomingMessage.prototype.constructor = IncomingMessage;
@@ -789,6 +797,8 @@ pub fn setup_http_api(
             this._asyncPending = false;
             this.headersSent = false;
             this._connectionId = 0;
+            this.socket = new Socket();
+            this.connection = this.socket;
         }
         ServerResponse.prototype = Object.create(proto);
         ServerResponse.prototype.constructor = ServerResponse;
@@ -854,6 +864,39 @@ pub fn setup_http_api(
                 this._body = (this._body || '') + String(chunk);
             }
             return true;
+        };
+        // Express & Hono compatibility helpers (v1.5.0)
+        ServerResponse.prototype.status = function(code) {
+            this.statusCode = code;
+            return this;
+        };
+        ServerResponse.prototype.set = ServerResponse.prototype.setHeader;
+        ServerResponse.prototype.header = ServerResponse.prototype.setHeader;
+        ServerResponse.prototype.get = ServerResponse.prototype.getHeader;
+        ServerResponse.prototype.json = function(body) {
+            if (!this.hasHeader('content-type')) {
+                this.setHeader('content-type', 'application/json');
+            }
+            const str = JSON.stringify(body);
+            if (typeof this.end === 'function') {
+                return this.end(str);
+            }
+            this.write(str);
+            this._ended = true;
+            return this;
+        };
+        ServerResponse.prototype.send = function(body) {
+            if (typeof body === 'object' && body !== null) {
+                return this.json(body);
+            }
+            if (typeof this.end === 'function') {
+                return this.end(body);
+            }
+            if (body !== undefined && body !== null) {
+                this.write(body);
+            }
+            this._ended = true;
+            return this;
         };
         http.ServerResponse = ServerResponse;
 

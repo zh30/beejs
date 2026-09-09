@@ -8530,6 +8530,9 @@ impl MinimalRuntime {
         crate::std_lib::setup_std_api(scope, context)?;
         crate::mcp::setup_mcp_api(scope, context)?;
         crate::sandbox::setup_sandbox_api(scope, context)?;
+        crate::ffi::setup_ffi_api(scope, context)?;
+        crate::pool::setup_pool_api(scope, context)?;
+        crate::wasm::setup_wasm_api(scope, context)?;
         Self::setup_module_system(scope, context, main_module_dir, main_module_filename)?;
         setup_timers_api(scope, context)?;
         setup_performance_api(scope, context)?;
@@ -8627,6 +8630,12 @@ impl MinimalRuntime {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
 
+        self.execute_code_unlocked(code)
+    }
+
+    /// Execute code directly on this isolate without locking process-global V8 execution lock.
+    /// Essential for parallel worker threads and multi-tenant Isolate pools.
+    pub fn execute_code_unlocked(&mut self, code: &str) -> Result<String> {
         crate::web_api::background_sync::reset_pending_wait_until();
 
         // Drop setImmediate callbacks left over from a previous execute_code
@@ -20724,12 +20733,86 @@ impl MinimalRuntime {
                     // v0.3.281: Added readline to the list of builtin modules
                     "os" | "crypto" | "events" | "net" | "http" | "http2" | "https" | "tls" | "util"
                     | "url" | "querystring" | "dns" | "child_process" | "tcp_async" | "stream"
+                    | "stream/promises" | "timers" | "timers/promises"
                     | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
                     | "zlib" | "vm" | "worker_threads" | "module" | "tty"
-                    | "diagnostics_channel" | "async_hooks" => {
+                    | "diagnostics_channel" | "async_hooks" | "wasm" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
+
+                        if module_id_str == "stream/promises" {
+                            let js = r#"
+                            (function() {
+                                const stream = globalThis.stream || require('stream');
+                                function pipeline(...args) {
+                                    return new Promise((resolve, reject) => {
+                                        stream.pipeline(...args, (err, val) => {
+                                            if (err) reject(err);
+                                            else resolve(val);
+                                        });
+                                    });
+                                }
+                                function finished(s, opts) {
+                                    return new Promise((resolve, reject) => {
+                                        if (stream.finished) {
+                                            stream.finished(s, opts, (err) => {
+                                                if (err) reject(err);
+                                                else resolve();
+                                            });
+                                        } else {
+                                            s.on('finish', () => resolve());
+                                            s.on('end', () => resolve());
+                                            s.on('close', () => resolve());
+                                            s.on('error', (err) => reject(err));
+                                        }
+                                    });
+                                }
+                                return { pipeline, finished, default: { pipeline, finished } };
+                            })()
+                            "#;
+                            if let Some(code) = v8::String::new(scope, js) {
+                                if let Some(s) = v8::Script::compile(scope, code, None) {
+                                    if let Some(val) = s.run(scope) {
+                                        retval.set(val);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+
+                        if module_id_str == "timers/promises" {
+                            let js = r#"
+                            (function() {
+                                function setTimeout(delay = 0, value, options) {
+                                    return new Promise((resolve, reject) => {
+                                        if (options && options.signal && options.signal.aborted) {
+                                            return reject(options.signal.reason || new Error('The operation was aborted'));
+                                        }
+                                        const timer = globalThis.setTimeout(() => resolve(value), delay);
+                                        if (options && options.signal) {
+                                            options.signal.addEventListener('abort', () => {
+                                                globalThis.clearTimeout(timer);
+                                                reject(options.signal.reason || new Error('The operation was aborted'));
+                                            });
+                                        }
+                                    });
+                                }
+                                function setImmediate(value, options) {
+                                    return setTimeout(0, value, options);
+                                }
+                                return { setTimeout, setImmediate, default: { setTimeout, setImmediate } };
+                            })()
+                            "#;
+                            if let Some(code) = v8::String::new(scope, js) {
+                                if let Some(s) = v8::Script::compile(scope, code, None) {
+                                    if let Some(val) = s.run(scope) {
+                                        retval.set(val);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
 
                         if module_id_str == "module" {
                             let module_exports = v8::Object::new(scope);
@@ -20890,6 +20973,15 @@ impl MinimalRuntime {
                                         module_obj.set(scope, default_key.into(), mod_val);
                                     }
                                 }
+                                retval.set(mod_val);
+                                return;
+                            }
+                        }
+
+                        let bee_mod_key =
+                            v8::String::new(scope, &format!("__bee_{}", module_id_str)).unwrap();
+                        if let Some(mod_val) = global_obj.get(scope, bee_mod_key.into()) {
+                            if !mod_val.is_undefined() {
                                 retval.set(mod_val);
                                 return;
                             }

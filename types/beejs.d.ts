@@ -149,6 +149,34 @@ declare module "bee:ai" {
    */
   export function cosineSimilarity(a: Float32Array | number[] | Tensor, b: Float32Array | number[] | Tensor): number;
 
+  export interface EdgeGenerateOptions {
+    maxTokens?: number;
+    temperature?: number;
+    topP?: number;
+    schema?: Record<string, unknown>;
+    responseFormat?: "text" | "json_object";
+    stopSequences?: string[];
+    model?: string;
+  }
+
+  export interface EdgeGenerateResult {
+    text: string;
+    tokens: number;
+    finishReason: string;
+    schemaValid?: boolean;
+    model: string;
+  }
+
+  /**
+   * Native Edge SLM text generation with optional constrained JSON schema decoding.
+   */
+  export function generate(prompt: string, options?: EdgeGenerateOptions): Promise<EdgeGenerateResult>;
+
+  /**
+   * Native Edge SLM token streaming generator.
+   */
+  export function generateStream(prompt: string, options?: EdgeGenerateOptions): AsyncIterableIterator<string>;
+
   export interface AgentTool {
     name: string;
     description: string;
@@ -470,3 +498,173 @@ declare module "bee:vfs" {
 declare module "bee:sandbox" {
   export * from "bee:vfs";
 }
+
+declare module "bee:ffi" {
+  export type FFIType =
+    | "void"
+    | "bool"
+    | "u8"
+    | "i8"
+    | "u16"
+    | "i16"
+    | "u32"
+    | "i32"
+    | "u64"
+    | "i64"
+    | "usize"
+    | "isize"
+    | "f32"
+    | "f64"
+    | "ptr"
+    | "pointer"
+    | "cstring"
+    | "string";
+
+  export interface FFIFunctionOptions {
+    args: FFIType[];
+    returns: FFIType;
+  }
+
+  export interface DynamicLibraryDefinition {
+    [symbol: string]: FFIFunctionOptions;
+  }
+
+  export interface DynamicLibrary<T extends DynamicLibraryDefinition = DynamicLibraryDefinition> {
+    readonly symbols: {
+      [K in keyof T]: (...args: any[]) => any;
+    };
+    close(): void;
+  }
+
+  /**
+   * Loads dynamic library with C ABI symbol bindings.
+   */
+  export function dlopen<T extends DynamicLibraryDefinition>(
+    path: string,
+    symbols: T
+  ): DynamicLibrary<T>;
+
+  /**
+   * Retrieves raw memory address pointer of ArrayBuffer or TypedArray.
+   */
+  export function ptr(bufferOrView: ArrayBuffer | ArrayBufferView): bigint;
+
+  /**
+   * Reads primitive type value directly from memory address.
+   */
+  export function read(
+    pointer: bigint | number,
+    offset: number,
+    type: string
+  ): number | bigint | null | undefined;
+
+  /**
+   * Writes primitive type value directly into memory address.
+   */
+  export function write(
+    pointer: bigint | number,
+    offset: number,
+    type: string,
+    value: number | bigint
+  ): boolean;
+
+  /**
+   * Reads null-terminated C string from memory pointer.
+   */
+  export function readCString(
+    pointer: bigint | number,
+    maxLen?: number
+  ): string | null;
+
+  export const FFIType: Record<string, string>;
+}
+
+declare module "ffi" {
+  export * from "bee:ffi";
+}
+
+declare module "bee:pool" {
+  export interface IsolatePoolOptions {
+    minIsolates?: number;
+    maxIsolates?: number;
+    maxMemoryMb?: number;
+    timeoutMs?: number;
+  }
+
+  export interface PoolStats {
+    active: number;
+    tasksCompleted: number;
+    tasksFailed: number;
+    totalCreated: number;
+  }
+
+  /**
+   * Multi-tenant high-density Isolate pool for sandboxed agent & microservice execution.
+   */
+  export class IsolatePool {
+    constructor(options?: IsolatePoolOptions);
+    run<T = any>(code: string, timeoutMs?: number): Promise<T>;
+    runFile<T = any>(filePath: string, timeoutMs?: number): Promise<T>;
+    stats(): PoolStats;
+    destroy(): void;
+  }
+}
+
+declare module "pool" {
+  export * from "bee:pool";
+}
+
+declare module "bee:wasm" {
+  export interface MemoryViewOptions {
+    target: any;
+    byteLength?: number;
+    byteOffset?: number;
+  }
+
+  export class MemoryView {
+    readonly ptr: bigint;
+    readonly byteLength: number;
+    constructor(target: any, byteLength?: number, byteOffset?: number);
+
+    getUint8(offset: number): number;
+    setUint8(offset: number, val: number): void;
+    getInt8(offset: number): number;
+    setInt8(offset: number, val: number): void;
+    getInt32(offset: number): number;
+    setInt32(offset: number, val: number): void;
+    getUint32(offset: number): number;
+    setUint32(offset: number, val: number): void;
+    getFloat32(offset: number): number;
+    setFloat32(offset: number, val: number): void;
+    getFloat64(offset: number): number;
+    setFloat64(offset: number, val: number): void;
+    getCString(offset?: number): string;
+    getString(offset: number, length: number): string;
+    setString(offset: number, str: string): number;
+    copyFrom(srcPtr: bigint | number | any, length: number, dstOffset?: number): boolean;
+    copyTo(dstPtr: bigint | number | any, length: number, srcOffset?: number): boolean;
+    fill(value: number, offset?: number, length?: number | null): boolean;
+  }
+
+  export function ptr(target: any): bigint;
+  export function copyMemory(srcPtr: bigint | number, dstPtr: bigint | number, length: number): boolean;
+  export function fillMemory(ptr: bigint | number, value: number, length: number): boolean;
+  export function compareMemory(ptr1: bigint | number, ptr2: bigint | number, length: number): number;
+  export function read(ptr: bigint | number, type?: string): number | bigint | null;
+  export function write(ptr: bigint | number, val: number | bigint, type?: string): boolean;
+  export function readCString(ptr: bigint | number): string | null;
+  export function readString(ptr: bigint | number, length: number): string | null;
+  export function writeString(ptr: bigint | number, str: string): number;
+  export function loadModuleMmap(filePath: string): Promise<WebAssembly.Module>;
+  export function createSharedMemory(options?: { initial?: number; maximum?: number }): WebAssembly.Memory;
+  export function wrapPointer(ptr: bigint | number, byteLength: number, type?: string): any;
+  export function linkTensor(tensor: any, memory: WebAssembly.Memory, byteOffset?: number): any;
+  export function createTensorFromMemory(memory: WebAssembly.Memory, byteOffset: number, shape: number[], dtype?: string): any;
+
+  export const version: string;
+}
+
+declare module "wasm" {
+  export * from "bee:wasm";
+}
+

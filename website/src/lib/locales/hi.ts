@@ -264,6 +264,7 @@ export const hi: TranslationSchema = {
         title: 'रनटाइम',
         items: [
           { id: 'v8-isolate-pool', label: 'रनटाइम कोर' },
+          { id: 'isolate-pool', label: 'आइसोलेट पूल (bee:pool)', badge: 'v1.4' },
           { id: 'jit-optimization', label: 'TypeScript' },
           { id: 'ai-engine', label: 'मूल एआई इंजन (bee:ai)' },
           { id: 'ai-embeddings', label: 'नेटिव एम्बेडिंग्स और वैक्टर', badge: 'v1.3' },
@@ -287,6 +288,10 @@ export const hi: TranslationSchema = {
           { id: 'agent-sandbox', label: 'सैंडबॉक्स और संसाधन कोटा', badge: 'Agent' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: 'मेमोरी-आधारित वर्चुअल फ़ाइल सिस्टम', badge: 'v1.3' },
+          { id: 'ffi-native', label: 'नेटिव C ABI FFI (bee:ffi)', badge: 'v1.4' },
+          { id: 'wasm-interop', label: 'Wasm 2.0 ज़ीरो-कॉपी शेयर्ड मेमोरी ब्रिज (bee:wasm)', badge: 'v1.5' },
+          { id: 'slm-inference', label: 'एज SLM और JSON डिकोडिंग (bee:ai)', badge: 'v1.4' },
+          { id: 'framework-compat', label: 'मुख्य npm फ्रेमवर्क संगतता (Hono / Express / LangChain)', badge: 'v1.5' },
         ],
       },
       {

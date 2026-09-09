@@ -87,6 +87,59 @@ pub fn setup_ai_api(
                     let sim = crate::ai_engine::cosine_similarity(&vec_a, &vec_b);
                     retval.set(v8::Number::new(scope, sim as f64).into());
                 }
+                "generate" => {
+                    let prompt = if args.length() > 1 {
+                        args.get(1).to_rust_string_lossy(scope)
+                    } else {
+                        String::new()
+                    };
+                    let opts_json = if args.length() > 2 && args.get(2).is_string() {
+                        args.get(2).to_rust_string_lossy(scope)
+                    } else {
+                        "{}".to_string()
+                    };
+                    let opts: crate::ai_engine::GenerateOptions =
+                        serde_json::from_str(&opts_json).unwrap_or_default();
+                    match crate::ai_engine::EdgeGenerator::generate(&prompt, &opts) {
+                        Ok(res) => {
+                            let res_json = serde_json::to_string(&res).unwrap_or_default();
+                            if let Some(s) = v8::String::new(scope, &res_json) {
+                                retval.set(s.into());
+                            }
+                        }
+                        Err(e) => {
+                            let err_msg = format!("AI generate failed: {}", e);
+                            let s = v8::String::new(scope, &err_msg).unwrap();
+                            let err = v8::Exception::error(scope, s);
+                            scope.throw_exception(err);
+                        }
+                    }
+                }
+                "generate_stream" => {
+                    let prompt = if args.length() > 1 {
+                        args.get(1).to_rust_string_lossy(scope)
+                    } else {
+                        String::new()
+                    };
+                    let opts_json = if args.length() > 2 && args.get(2).is_string() {
+                        args.get(2).to_rust_string_lossy(scope)
+                    } else {
+                        "{}".to_string()
+                    };
+                    let opts: crate::ai_engine::GenerateOptions =
+                        serde_json::from_str(&opts_json).unwrap_or_default();
+                    let mut chunks = Vec::new();
+                    let _ =
+                        crate::ai_engine::EdgeGenerator::generate_stream(&prompt, &opts, |chunk| {
+                            chunks.push(chunk.to_string());
+                            true
+                        });
+                    let chunks_json =
+                        serde_json::to_string(&chunks).unwrap_or_else(|_| "[]".to_string());
+                    if let Some(s) = v8::String::new(scope, &chunks_json) {
+                        retval.set(s.into());
+                    }
+                }
                 _ => {}
             }
         },
@@ -119,6 +172,33 @@ pub fn setup_ai_api(
                 throw new TypeError('Texts must be an array of strings');
             }
             return texts.map(t => embed(t, options));
+        }
+
+        // --- 顶层原生文本生成与结构化解码 (Edge SLM Generation) ---
+        async function generate(prompt, options = {}) {
+            if (typeof prompt !== 'string') {
+                throw new TypeError('Prompt must be a string');
+            }
+            const raw = globalThis.__bee_ai_native('generate', prompt, JSON.stringify(options));
+            const parsed = JSON.parse(raw);
+            return {
+                text: parsed.text,
+                tokens: parsed.tokens_generated,
+                finishReason: parsed.finish_reason,
+                schemaValid: options.schema ? true : false,
+                model: options.model || 'bee-slm-edge'
+            };
+        }
+
+        async function* generateStream(prompt, options = {}) {
+            if (typeof prompt !== 'string') {
+                throw new TypeError('Prompt must be a string');
+            }
+            const raw = globalThis.__bee_ai_native('generate_stream', prompt, JSON.stringify(options));
+            const chunks = JSON.parse(raw);
+            for (const chunk of chunks) {
+                yield chunk;
+            }
         }
         // --- Tensor: 高性能零拷贝多维张量 ---
         class Tensor {
@@ -356,17 +436,7 @@ pub fn setup_ai_api(
                 if (typeof prompt !== 'string') {
                     throw new TypeError('Prompt must be a string');
                 }
-                const tokens = [];
-                for await (const chunk of this.generateStream(prompt, options)) {
-                    tokens.push(chunk);
-                }
-                const text = tokens.join('');
-                return {
-                    text,
-                    tokens: tokens.length,
-                    model: this.model,
-                    finishReason: 'stop'
-                };
+                return generate(prompt, { ...options, model: this.model });
             }
 
             // 流式 Token 生成 (AsyncIterable)
@@ -374,21 +444,8 @@ pub fn setup_ai_api(
                 if (typeof prompt !== 'string') {
                     throw new TypeError('Prompt must be a string');
                 }
-                
-                // 本地轻量级 Deterministic Tokenizer & Response Generator
-                // 能够响应常见 prompt 并基于内容模拟 Token 流输出
-                const sampleWords = (function(p) {
-                    if (/hello|hi|bee/i.test(p)) {
-                        return ["Hello", " from", " Beejs", " v1.0.0", " AI-Native", " Runtime!"];
-                    }
-                    if (/reason|think|agent/i.test(p)) {
-                        return ["Analyzing", " task", " step", " by", " step...", " Completed", " successfully."];
-                    }
-                    return ["Beejs", " response", " to:", ` "${p.slice(0, 16)}..."`];
-                })(prompt);
-
-                for (const word of sampleWords) {
-                    yield word;
+                for await (const chunk of generateStream(prompt, { ...options, model: this.model })) {
+                    yield chunk;
                 }
             }
 
@@ -454,11 +511,13 @@ pub fn setup_ai_api(
         const beeAi = {
             embed,
             embedBatch,
+            generate,
+            generateStream,
             Tensor,
             LLM,
             AgentPipeline,
             cosineSimilarity,
-            version: '1.3.0'
+            version: '1.4.0'
         };
 
         // 绑定到全局
@@ -466,6 +525,8 @@ pub fn setup_ai_api(
         globalThis.bee_ai = beeAi;
         globalThis.embed = embed;
         globalThis.embedBatch = embedBatch;
+        globalThis.generate = generate;
+        globalThis.generateStream = generateStream;
     })();
     "#;
 

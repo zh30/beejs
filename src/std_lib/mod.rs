@@ -482,7 +482,7 @@ pub fn setup_std_api(
             assertEquals: assertModule.assertEquals,
             assertNotEquals: assertModule.assertNotEquals,
             assertThrows: assertModule.assertThrows,
-            version: '1.3.0'
+            version: '1.4.0'
         };
 
         globalThis.__bee_std = beeStd;

@@ -447,7 +447,7 @@ pub fn setup_db_api(
             cosineSimilarity,
             euclideanDistance,
             dotProduct,
-            version: '1.3.0'
+            version: '1.4.0'
         };
 
         const beeVector = {
@@ -455,7 +455,7 @@ pub fn setup_db_api(
             cosineSimilarity,
             euclideanDistance,
             dotProduct,
-            version: '1.3.0'
+            version: '1.4.0'
         };
 
         globalThis.__bee_db = beeDb;

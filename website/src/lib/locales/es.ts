@@ -264,6 +264,7 @@ export const es: TranslationSchema = {
         title: 'Runtime',
         items: [
           { id: 'v8-isolate-pool', label: 'Núcleo del Runtime' },
+          { id: 'isolate-pool', label: 'IsolatePool Multi-Tenant (bee:pool)', badge: 'v1.4' },
           { id: 'jit-optimization', label: 'TypeScript' },
           { id: 'ai-engine', label: 'Motor de IA (bee:ai)' },
           { id: 'ai-embeddings', label: 'Embeddings Nativos y Vectores', badge: 'v1.3' },
@@ -287,6 +288,10 @@ export const es: TranslationSchema = {
           { id: 'agent-sandbox', label: 'Sandbox y Cuotas de Recursos', badge: 'Agent' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: 'Sistema de Archivos Virtual en RAM', badge: 'v1.3' },
+          { id: 'ffi-native', label: 'FFI Nativo C ABI (bee:ffi)', badge: 'v1.4' },
+          { id: 'wasm-interop', label: 'Puente de Memoria Compartida Wasm 2.0 (bee:wasm)', badge: 'v1.5' },
+          { id: 'slm-inference', label: 'Edge SLM y Decodificación JSON (bee:ai)', badge: 'v1.4' },
+          { id: 'framework-compat', label: 'Compatibilidad de Frameworks npm (Hono / Express / LangChain)', badge: 'v1.5' },
         ],
       },
       {
