@@ -546,7 +546,7 @@ pub fn setup_ai_api(
             LLM,
             AgentPipeline,
             cosineSimilarity,
-            version: '1.9.0',
+            version: '__BEE_PKG_VERSION__',
             get weights() { return globalThis.__bee_weights; },
             get tools() { return globalThis.__bee_tools; },
             get kv() { return globalThis.__bee_kv; },
@@ -564,8 +564,9 @@ pub fn setup_ai_api(
         globalThis.generateStream = generateStream;
     })();
     "#;
+    let js_code = js_code.replace("__BEE_PKG_VERSION__", env!("CARGO_PKG_VERSION"));
 
-    let script_source = v8::String::new(scope, js_code).unwrap();
+    let script_source = v8::String::new(scope, &js_code).unwrap();
     if let Some(script) = v8::Script::compile(scope, script_source, None) {
         let _ = script.run(scope);
     }

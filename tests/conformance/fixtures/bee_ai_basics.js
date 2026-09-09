@@ -2,8 +2,8 @@ const assert = require('assert');
 const { Tensor, LLM, cosineSimilarity, AgentPipeline, version } = require('bee:ai');
 
 async function main() {
-    // 1. Version check
-    assert.strictEqual(version, '1.0.0');
+    // 1. Version check (crate version; do not pin a historical string)
+    assert.ok(typeof version === 'string' && /^\d+\.\d+\.\d+/.test(version));
 
     // 2. Tensor 1D creation and dot product
     const t1 = new Tensor([1, 2, 3]);

@@ -1,7 +1,12 @@
 const assert = require('node:assert');
+const fs = require('node:fs');
 const path = require('node:path');
 
 const fastifyPath = path.resolve(__dirname, '../../../benchmarks/idle_memory/node_modules/fastify');
+if (!fs.existsSync(fastifyPath)) {
+    console.log('CONFORMANCE_SKIP');
+    process.exit(0);
+}
 const Fastify = require(fastifyPath);
 
 const app = Fastify({ logger: false });
