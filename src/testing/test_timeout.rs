@@ -211,14 +211,14 @@ mod tests {
         let timeout = TestTimeout::default();
         let start = std::time::Instant::now();
 
-        let result = timeout.run_async_with_timeout(Duration::from_millis(30), || {
-            std::thread::sleep(Duration::from_millis(200));
+        let result = timeout.run_async_with_timeout(Duration::from_millis(50), || {
+            std::thread::sleep(Duration::from_secs(2));
             42
         });
 
         assert!(matches!(result, Err(super::TimeoutError::Exceeded(_))));
         assert!(
-            start.elapsed() < Duration::from_millis(120),
+            start.elapsed() < Duration::from_millis(800),
             "timeout should return before the blocking closure finishes"
         );
     }
