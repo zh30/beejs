@@ -1,8 +1,8 @@
 # Current Scope
 
-Last reviewed: 2026-09-05
+Last reviewed: 2026-09-09
 
-Optimization sprint notes (2026-09-06 v1.0.0 Official Release):
+Optimization sprint notes (2026-09-09 v1.9.0):
 
 - Native Agentic AI Engine 1.0 (`bee:ai` promoted to **Stable**): Zero-copy `Tensor` (TypedArray-backed, matmul, dot, norm, softmax, cosineSimilarity), local streaming `LLM` (`load`, `generate`, `generateStream`, `embed`), and `AgentPipeline` with deterministic execution.
 - Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 100% PASS across 50+ fixtures).
@@ -28,7 +28,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `1.0.0`.
+- Package version is `1.9.0`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.
@@ -38,11 +38,11 @@ Current facts from those sources:
 
 ### Stable
 
-Stable means the capability is part of the official v1.0.0 release scope, is reachable from the active `bee` binary or default library surface, and is verified by focused smoke tests, Rust integration tests, and conformance suites.
+Stable means the capability is part of the official v1.9.0 release scope, is reachable from the active `bee` binary or default library surface, and is verified by focused smoke tests, Rust integration tests, and conformance suites.
 
 Current stable scope:
 
-- Build Beejs from source with Cargo (`v1.0.0`).
+- Build Beejs from source with Cargo (`v1.9.0`).
 - Inspect the CLI with `bee --help`, `bee --version`, or `bee version`.
 - Evaluate simple JavaScript snippets with `bee eval <code>`.
 - Run JavaScript files with `bee run <file>`.
@@ -56,6 +56,7 @@ Current stable scope:
 - Agent tool execution via `bee session` (stdin JSON-RPC) and `bee mcp` (MCP stdio server).
 - Use the basic REPL with `bee repl`.
 - Use V8-backed execution through `src/runtime_minimal.rs` for repository examples and scripts.
+- WinterTC baseline: `DOMException`, `URLPattern`, `navigator`, queuing strategies, `ReadableStream.from`, `bee:sockets` (TCP + rustls TLS), `wintercg`/`wintertc` package export conditions, and `import.meta.main` / `env` / `resolve`.
 
 Stable does not mean Node.js, Bun, or Deno compatibility. It also does not imply a production support commitment.
 

@@ -17,22 +17,10 @@ use rusty_v8 as v8;
 use std::hash::Hash;
 // 模块声明
 // Stage 92: AI 原生性能引擎 (enabled via feature "ai")
-#[cfg(feature = "ai")]
-pub mod ai {
-    pub mod ai_async_queue;
-    pub mod ai_batch_processor;
-    pub mod ai_memory_pool;
-    pub mod ai_performance_engine;
-    pub mod auto_optimizer;
-    pub mod code_generator;
-    pub mod intelligent_scheduler;
-    pub mod llm_engine;
-    pub mod model_interface;
-    pub mod model_manager;
-    pub mod performance_predictor;
-    pub mod predictive_scaler;
-    pub mod tensor_optimizer;
-}
+// Historical `src/ai/*` still does not rustc (std RwLock used with `.await`).
+// Default `bee:ai` is `src/nodejs_core/ai.rs` and is compiled without this feature.
+// #[cfg(feature = "ai")]
+// pub mod ai { ... }
 
 #[cfg(feature = "benchmarks")]
 pub mod benchmarks;
@@ -48,8 +36,8 @@ pub mod performance_reporter;
 // pub mod automation;  // Temporarily disabled - depends on missing types
 // pub mod analysis;  // Temporarily disabled - compilation issues
 
-#[cfg(feature = "observability")]
-pub mod monitor;
+// #[cfg(feature = "observability")]
+// pub mod monitor;
 
 pub mod agent; // Tool export, JSON-RPC session, MCP stdio
 pub mod event_loop;
@@ -64,19 +52,22 @@ pub mod watcher; // File watcher for hot reload
 pub mod watcher_websocket; // WebSocket hot reload
 pub mod web_api; // Web standards API (Streams, Blob, Worker, Crypto)
 
-#[cfg(feature = "observability")]
-pub mod observability;
+// Historical observability/monitor trees do not rustc (serde_json::Value / `_` fields).
+// #[cfg(feature = "observability")]
+// pub mod observability;
 
 pub mod ecosystem_lite;
 
 #[cfg(feature = "enterprise")]
 pub mod security;
 
-#[cfg(feature = "ai")]
-pub mod aiops;
-
-#[cfg(feature = "ai")]
-pub mod ai_inference;
+// Historical `aiops` / `ai_inference` trees are not compiled with `feature = "ai"`.
+// They still fail rustc (`TokioDuration` aliases, `_` struct fields). Default
+// `bee:ai` lives in `src/nodejs_core/ai.rs` and does not need these modules.
+// #[cfg(feature = "ai")]
+// pub mod aiops;
+// #[cfg(feature = "ai")]
+// pub mod ai_inference;
 
 #[cfg(feature = "multilang")]
 pub mod multilang;
@@ -102,6 +93,7 @@ pub mod pool; // High-density multi-tenant IsolatePool for serverless & multi-ag
 pub mod repl; // Enhanced interactive REPL
 pub mod replay; // Deterministic Agent Replay engine (bee:replay)
 pub mod sandbox; // In-memory deterministic Virtual Filesystem (VFS) sandbox
+pub mod sockets; // WinterTC Sockets API native engine (bee:sockets)
 pub mod std_lib; // Modern standard library (dotenv, cli, fs, crypto, assert)
 pub mod task_runner; // Task runner for package.json scripts
 pub mod testing; // Testing framework support

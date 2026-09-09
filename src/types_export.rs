@@ -63,6 +63,9 @@ mod tests {
         assert!(types.contains("declare module \"bee:bus\""));
         assert!(types.contains("declare module \"bee:grammar\""));
         assert!(types.contains("declare module \"bee:checkpoint\""));
+        assert!(types.contains("declare module \"bee:sockets\""));
+        assert!(types.contains("class DOMException"));
+        assert!(types.contains("class URLPattern"));
         assert!(types.contains("class MessageBus"));
         assert!(types.contains("parsePartialJSON"));
         assert!(types.contains("class CheckpointManager"));

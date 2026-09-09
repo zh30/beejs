@@ -13,6 +13,18 @@ id: "installation"
 curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 ```
 
+Windows（PowerShell）：
+
+```powershell
+irm https://bee.zhanghe.dev/install.ps1 | iex
+```
+
+Homebrew（配方在 Beejs 仓库内；每次 GitHub Release 后填写 sha256）：
+
+```bash
+brew install zh30/tap/bee
+```
+
 ### 安装脚本执行过程说明
 1. **自动识别硬件与系统**：自动检测你的系统（macOS / Linux）与 CPU 架构（Apple Silicon `arm64`、Intel `x86_64`）；
 2. **下载预编译产物**：从官方发布源下载经过 `-O3` 生产优化的二进制压缩包并校验完整性；
@@ -50,11 +62,11 @@ bee 1.0.0
 | **macOS (Apple Silicon)** | `arm64` (M1/M2/M3/M4) | macOS 12.0+ (Monterey 及以上) | ✅ 官方支持 |
 | **macOS (Intel)** | `x86_64` | macOS 12.0+ | ✅ 官方支持 |
 | **Linux** | `x86_64` | Linux Kernel 4.18+, glibc 2.28+ | ✅ 官方支持 |
-| **Linux (ARM64)** | `aarch64` | Linux Kernel 4.18+ | 源码编译支持 |
-| **Windows** | `x86_64` | WSL 2 (Ubuntu / Debian) | ✅ 推荐 WSL 2 |
+| **Linux (ARM64)** | `aarch64` | Linux Kernel 4.18+, glibc 2.28+ | ✅ 官方支持 |
+| **Windows** | `x86_64` | Windows 10+ | ✅ `install.ps1` zip |
 
 > [!NOTE]
-> Windows 用户目前推荐使用 **WSL 2** 环境运行一键安装脚本，享受原生 Linux 内核的完整性能与零拷贝 I/O 支持。
+> Windows 也可在 **WSL 2** 下使用 Unix 的 `install.sh`。
 
 ---
 

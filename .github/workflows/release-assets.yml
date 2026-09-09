@@ -1,6 +1,8 @@
 name: Release Assets
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
@@ -10,10 +12,16 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  packages: write
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
   build-assets:
     name: Build Asset (${{ matrix.target }})
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -21,15 +29,29 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+            bin: bee
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+            bin: bee
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: macos-13
+            archive: tar.gz
+            bin: bee
+          - os: macos-15-intel
             target: x86_64-apple-darwin
+            archive: tar.gz
+            bin: bee
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+            bin: bee.exe
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -48,33 +70,63 @@ jobs:
             ${{ runner.os }}-${{ matrix.target }}-
             ${{ runner.os }}-cargo-
 
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: choco install openssl --no-progress -y
+
+      - name: Configure OpenSSL env (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dirs = @(
+            'C:\Program Files\OpenSSL-Win64',
+            'C:\Program Files\OpenSSL',
+            'C:\Program Files (x86)\OpenSSL-Win64'
+          )
+          $found = $dirs | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $found) { throw 'OpenSSL directory not found after choco install' }
+          echo "OPENSSL_DIR=$found" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$found\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$found\include" >> $env:GITHUB_ENV
+
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Create release archive
+        shell: bash
         env:
-          VERSION: ${{ inputs.tag }}
           TARGET: ${{ matrix.target }}
+          ARCHIVE: ${{ matrix.archive }}
+          BIN: ${{ matrix.bin }}
         run: |
-          mkdir -p release
-          cp "target/${TARGET}/release/bee" release/
-          tar -czf "bee-${VERSION}-${TARGET}.tar.gz" -C release bee
+          mkdir -p staging
+          src="target/${TARGET}/release/${BIN}"
+          if [ "${ARCHIVE}" = "zip" ]; then
+            cp "${src}" staging/bee.exe
+            python3 -c "import shutil; shutil.make_archive('bee-${RELEASE_TAG}-${TARGET}', 'zip', 'staging')"
+          else
+            cp "${src}" staging/bee
+            tar -czf "bee-${RELEASE_TAG}-${TARGET}.tar.gz" -C staging bee
+          fi
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: bee-${{ matrix.target }}
-          path: bee-${{ inputs.tag }}-${{ matrix.target }}.tar.gz
+          path: bee-${{ env.RELEASE_TAG }}-${{ matrix.target }}.${{ matrix.archive }}
 
   publish-release:
-    name: Publish Release and Notes
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: build-assets
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Download release artifacts
@@ -85,18 +137,58 @@ jobs:
       - name: Generate formal release notes and checksums
         run: |
           python3 scripts/generate_release_notes.py \
-            --tag "${{ inputs.tag }}" \
+            --tag "${RELEASE_TAG}" \
             --release-dir release \
             --output RELEASE_NOTES.md
 
-      - name: Upload to GitHub Release
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          artifact-name: bee-${{ env.RELEASE_TAG }}.cdx.json
+          output-file: bee-${{ env.RELEASE_TAG }}.cdx.json
+          upload-artifact: false
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign release blobs
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          set -euo pipefail
+          mapfile -t blobs < <(find release -type f \( -name 'bee-*.tar.gz' -o -name 'bee-*.zip' -o -name 'checksums.txt' \) ; ls -1 bee-*.cdx.json 2>/dev/null || true)
+          for f in "${blobs[@]}"; do
+            [ -f "$f" ] || continue
+            cosign sign-blob --yes --output-signature "${f}.sig" --output-certificate "${f}.pem" "$f"
+          done
+
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag }}
-          name: Release ${{ inputs.tag }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Release ${{ env.RELEASE_TAG }}
           body_path: RELEASE_NOTES.md
           files: |
             release/**/bee-*.tar.gz
+            release/**/bee-*.zip
             release/checksums.txt
+            bee-*.cdx.json
+            **/*.sig
+            **/*.pem
           draft: false
           prerelease: false
+
+      - name: Annotate skipped crates.io publish
+        if: env.CARGO_REGISTRY_TOKEN == ''
+        run: |
+          echo "::warning::CARGO_REGISTRY_TOKEN is not set; skipping crates.io publish for ${RELEASE_TAG}"
+
+      - name: Install Rust
+        if: env.CARGO_REGISTRY_TOKEN != ''
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        if: env.CARGO_REGISTRY_TOKEN != ''
+        run: cargo publish --locked --token "$CARGO_REGISTRY_TOKEN"

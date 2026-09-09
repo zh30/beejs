@@ -70,7 +70,11 @@ for fixture in "${fixtures[@]}"; do
     fi
   fi
   if [[ "$run_ok" -eq 1 ]]; then
-    if grep -q "^CONFORMANCE_PASS$" "$out"; then
+    if grep -q "^CONFORMANCE_SKIP$" "$out"; then
+      echo "SKIP  $name"
+      RESULTS+=("| $name | SKIP | optional fixture |")
+      SKIP=$((SKIP + 1))
+    elif grep -q "^CONFORMANCE_PASS$" "$out"; then
       echo "PASS  $name"
       RESULTS+=("| $name | PASS |")
       PASS=$((PASS + 1))

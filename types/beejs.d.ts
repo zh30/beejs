@@ -1207,6 +1207,149 @@ declare module "checkpoint" {
   export * from "bee:checkpoint";
 }
 
+/**
+ * WinterTC Sockets API (TC55 proposal-sockets-api)
+ */
+declare module "bee:sockets" {
+  export interface SocketInfo {
+    remoteAddress: string;
+    localAddress: string;
+    alpn: string | null;
+  }
 
+  export interface SocketOptions {
+    secureTransport?: "off" | "on" | "starttls";
+    allowHalfOpen?: boolean;
+    sni?: string;
+    alpn?: string[];
+  }
 
+  export interface SocketAddress {
+    hostname: string;
+    port: number;
+  }
 
+  export class Socket {
+    readonly readable: ReadableStream<Uint8Array>;
+    readonly writable: WritableStream<Uint8Array>;
+    readonly opened: Promise<SocketInfo>;
+    readonly closed: Promise<void>;
+    readonly upgraded: boolean;
+
+    constructor(address: string | SocketAddress, options?: SocketOptions);
+    close(reason?: any): Promise<void>;
+    startTls(): Socket;
+  }
+
+  export function connect(
+    address: string | SocketAddress,
+    options?: SocketOptions
+  ): Socket;
+}
+
+declare module "sockets" {
+  export * from "bee:sockets";
+}
+
+declare module "wintertc:sockets" {
+  export * from "bee:sockets";
+}
+
+// Global WinterTC Web APIs
+declare class DOMException extends Error {
+  readonly name: string;
+  readonly message: string;
+  readonly code: number;
+
+  static readonly INDEX_SIZE_ERR: 1;
+  static readonly DOMSTRING_SIZE_ERR: 2;
+  static readonly HIERARCHY_REQUEST_ERR: 3;
+  static readonly WRONG_DOCUMENT_ERR: 4;
+  static readonly INVALID_CHARACTER_ERR: 5;
+  static readonly NO_DATA_ALLOWED_ERR: 6;
+  static readonly NO_MODIFICATION_ALLOWED_ERR: 7;
+  static readonly NOT_FOUND_ERR: 8;
+  static readonly NOT_SUPPORTED_ERR: 9;
+  static readonly INUSE_ATTRIBUTE_ERR: 10;
+  static readonly INVALID_STATE_ERR: 11;
+  static readonly SYNTAX_ERR: 12;
+  static readonly INVALID_MODIFICATION_ERR: 13;
+  static readonly NAMESPACE_ERR: 14;
+  static readonly INVALID_ACCESS_ERR: 15;
+  static readonly VALIDATION_ERR: 16;
+  static readonly TYPE_MISMATCH_ERR: 17;
+  static readonly SECURITY_ERR: 18;
+  static readonly NETWORK_ERR: 19;
+  static readonly ABORT_ERR: 20;
+  static readonly URL_MISMATCH_ERR: 21;
+  static readonly QUOTA_EXCEEDED_ERR: 22;
+  static readonly TIMEOUT_ERR: 23;
+  static readonly INVALID_NODE_TYPE_ERR: 24;
+  static readonly DATA_CLONE_ERR: 25;
+
+  constructor(message?: string, name?: string);
+}
+
+declare interface URLPatternInit {
+  protocol?: string;
+  username?: string;
+  password?: string;
+  hostname?: string;
+  port?: string;
+  pathname?: string;
+  search?: string;
+  hash?: string;
+  baseURL?: string;
+}
+
+declare interface URLPatternComponentResult {
+  input: string;
+  groups: Record<string, string>;
+}
+
+declare interface URLPatternResult {
+  inputs: [string | URLPatternInit, string?];
+  protocol: URLPatternComponentResult;
+  username: URLPatternComponentResult;
+  password: URLPatternComponentResult;
+  hostname: URLPatternComponentResult;
+  port: URLPatternComponentResult;
+  pathname: URLPatternComponentResult;
+  search: URLPatternComponentResult;
+  hash: URLPatternComponentResult;
+}
+
+declare class URLPattern {
+  readonly protocol: string;
+  readonly username: string;
+  readonly password: string;
+  readonly hostname: string;
+  readonly port: string;
+  readonly pathname: string;
+  readonly search: string;
+  readonly hash: string;
+  readonly hasRegExpGroups: boolean;
+
+  constructor(input: string | URLPatternInit, baseURL?: string);
+  test(input: string | URLPatternInit, baseURL?: string): boolean;
+  exec(input: string | URLPatternInit, baseURL?: string): URLPatternResult | null;
+}
+
+declare class ByteLengthQueuingStrategy {
+  readonly highWaterMark: number;
+  constructor(options: { highWaterMark: number });
+  size(chunk?: any): number;
+}
+
+declare class CountQueuingStrategy {
+  readonly highWaterMark: number;
+  constructor(options: { highWaterMark: number });
+  size(chunk?: any): number;
+}
+
+declare function connect(
+  address: string | import("bee:sockets").SocketAddress,
+  options?: import("bee:sockets").SocketOptions
+): import("bee:sockets").Socket;
+
+declare function reportError(error: any): void;

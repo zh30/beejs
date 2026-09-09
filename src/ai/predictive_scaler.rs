@@ -1,7 +1,7 @@
 // AI 预测性扩展器
 // 提供基于机器学习的资源预测、自动扩展和智能调度功能
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};

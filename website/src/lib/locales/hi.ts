@@ -307,6 +307,7 @@ export const hi: TranslationSchema = {
         title: 'संचालन',
         items: [
           { id: 'cli-usage', label: 'CLI उपयोग' },
+          { id: 'wintertc-compliance', label: 'WinterTC अनुपालन' },
           { id: 'api-reference', label: 'API विवरण' },
           { id: 'modules', label: 'मॉड्यूल्स' },
         ],

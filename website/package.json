@@ -1,11 +1,11 @@
 {
   "name": "beejs-website",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "cp ../install.sh public/install.sh",
+    "prebuild": "cp ../install.sh public/install.sh && cp ../install.ps1 public/install.ps1",
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "wrangler deploy",

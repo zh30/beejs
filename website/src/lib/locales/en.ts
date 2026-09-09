@@ -324,6 +324,7 @@ export const en: TranslationSchema = {
         title: 'Reference & Specs',
         items: [
           { id: 'cli-usage', label: 'Complete CLI Command Reference' },
+          { id: 'wintertc-compliance', label: 'WinterTC Compliance' },
           { id: 'api-reference', label: 'Full API Reference' },
           { id: 'modules', label: 'Module Resolution & Architecture' },
         ],

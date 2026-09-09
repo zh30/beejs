@@ -278,7 +278,7 @@ checksum = "0e050f626429857a27ddccb31e0aca21356bfa709c04041aefddac081a8f068a"
 
 [[package]]
 name = "beejs"
-version = "1.8.0"
+version = "1.9.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -374,6 +374,7 @@ dependencies = [
  "wasmtime 38.0.4",
  "wasmtime-wasi 38.0.4",
  "wat",
+ "webpki-roots 0.25.4",
  "windows-sys 0.52.0",
 ]
 

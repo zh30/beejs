@@ -40,10 +40,22 @@ Install the latest release with the official one-line script:
 curl -fsSL https://bee.zhanghe.dev/install.sh | sh
 ```
 
+Windows (PowerShell):
+
+```powershell
+irm https://bee.zhanghe.dev/install.ps1 | iex
+```
+
+Homebrew:
+
+```bash
+brew install zh30/tap/bee
+```
+
 Or specify a custom version tag or installation directory:
 
 ```bash
-curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v0.4.0 sh
+curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v1.9.0 sh
 curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_INSTALL_DIR="$HOME/.local/bin" sh
 ```
 
