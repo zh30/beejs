@@ -8536,6 +8536,8 @@ impl MinimalRuntime {
         crate::replay::setup_replay_api(scope, context)?;
         crate::weights::setup_weights_api(scope, context)?;
         crate::capability::setup_security_api(scope, context)?;
+        crate::kv::setup_kv_api(scope, context)?;
+        crate::tools::setup_tools_api(scope, context)?;
         Self::setup_module_system(scope, context, main_module_dir, main_module_filename)?;
         setup_timers_api(scope, context)?;
         setup_performance_api(scope, context)?;
@@ -20740,7 +20742,8 @@ impl MinimalRuntime {
                     | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
                     | "diagnostics_channel" | "async_hooks" | "wasm"
                     | "ai" | "bee:ai" | "replay" | "bee:replay" | "weights" | "bee:weights"
-                    | "security" | "bee:security" | "permissions" | "bee:permissions" => {
+                    | "security" | "bee:security" | "permissions" | "bee:permissions"
+                    | "kv" | "bee:kv" | "tools" | "bee:tools" | "sandbox" | "bee:sandbox" | "vfs" | "bee:vfs" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);

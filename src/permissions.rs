@@ -403,11 +403,19 @@ struct AuditSink {
 }
 
 static AUDIT_SINK: Lazy<Mutex<Option<AuditSink>>> = Lazy::new(|| Mutex::new(None));
+static CURRENT_AUDIT_PATH: Lazy<RwLock<Option<PathBuf>>> = Lazy::new(|| RwLock::new(None));
+
+pub fn get_audit_log_path() -> Option<PathBuf> {
+    CURRENT_AUDIT_PATH.read().ok().and_then(|p| p.clone())
+}
 
 pub fn set_audit_log_path(path: Option<PathBuf>) -> Result<(), String> {
     let mut sink = AUDIT_SINK
         .lock()
         .map_err(|_| "audit log lock poisoned".to_string())?;
+    if let Ok(mut lock) = CURRENT_AUDIT_PATH.write() {
+        *lock = path.clone();
+    }
     match path {
         Some(path) => {
             if let Some(parent) = path.parent() {

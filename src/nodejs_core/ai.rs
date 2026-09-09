@@ -546,8 +546,10 @@ pub fn setup_ai_api(
             LLM,
             AgentPipeline,
             cosineSimilarity,
-            version: '1.6.0',
-            get weights() { return globalThis.__bee_weights; }
+            version: '1.7.0',
+            get weights() { return globalThis.__bee_weights; },
+            get tools() { return globalThis.__bee_tools; },
+            get kv() { return globalThis.__bee_kv; }
         };
 
         // 绑定到全局
