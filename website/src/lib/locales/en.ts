@@ -301,6 +301,9 @@ export const en: TranslationSchema = {
         title: 'Agent & Advanced',
         items: [
           { id: 'agent-sandbox', label: 'Deterministic Sandbox & Quotas', badge: 'Agent' },
+          { id: 'agent-replay', label: 'Deterministic Agent Replay Engine (bee:replay)', badge: 'v1.6' },
+          { id: 'model-weights', label: 'GGUF & SafeTensors Loader (bee:weights)', badge: 'v1.6' },
+          { id: 'capability-security', label: 'Enterprise Capability Security (bee:security)', badge: 'v1.6' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: 'Virtual Filesystem In-Memory Sandbox', badge: 'v1.3' },
           { id: 'ffi-native', label: 'Native C ABI FFI (bee:ffi)', badge: 'v1.4' },

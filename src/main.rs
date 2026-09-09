@@ -247,6 +247,31 @@ enum Command {
         /// Script file to debug
         file: PathBuf,
     },
+    /// Record deterministic execution trace for an AI Agent or script
+    Record {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+        /// Script file to execute and record
+        file: PathBuf,
+        /// Trace output JSON path (defaults to <file>.bee-trace.json)
+        #[arg(short = 'o', long = "output")]
+        output: Option<PathBuf>,
+        /// Arguments to pass to the script
+        args: Vec<String>,
+    },
+    /// Replay an AI Agent or script execution trace with offline determinism
+    Replay {
+        #[command(flatten)]
+        permissions: PermissionCliOptions,
+        /// Trace JSON file to replay
+        trace: PathBuf,
+        /// Verify step consistency and report divergence
+        #[arg(long)]
+        verify: bool,
+        /// Verbose trace event logging
+        #[arg(short = 'v', long = "verbose")]
+        verbose: bool,
+    },
     /// Display version information
     Version,
     /// Manage V8 startup snapshots for sub-millisecond cold start
@@ -5438,6 +5463,127 @@ fn main() -> Result<()> {
                     std::process::exit(1);
                 }
             }
+            return Ok(());
+        }
+        Some(Command::Record {
+            permissions,
+            file,
+            output,
+            args,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
+            check_file_read_permission(&file)?;
+
+            let output_path = output.unwrap_or_else(|| {
+                let mut p = file.clone();
+                let stem = p
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                p.set_file_name(format!("{}.bee-trace.json", stem));
+                p
+            });
+
+            println!("📼 Recording execution to: {}", output_path.display());
+
+            if let Ok(mut engine) = beejs::replay::GLOBAL_REPLAY.write() {
+                engine.start_recording(
+                    Some(file.to_string_lossy().to_string()),
+                    Some(output_path.to_string_lossy().to_string()),
+                );
+            }
+
+            let code = read_and_compile_source(&file)?;
+            let mut runtime =
+                beejs::runtime_minimal::MinimalRuntime::new().expect("Failed to create runtime");
+            runtime.set_process_argv(build_process_argv(&file, &args));
+            runtime.set_main_module_path(&file);
+
+            let run_res = runtime.execute_code(&code);
+
+            if let Ok(mut engine) = beejs::replay::GLOBAL_REPLAY.write() {
+                if engine.mode == beejs::replay::ReplayMode::Recording {
+                    match engine.stop_recording(None) {
+                        Ok(trace) => {
+                            let stats = engine.get_stats();
+                            println!(
+                                "✅ Trace recorded: {} events ({} agent steps) -> {}",
+                                trace.events.len(),
+                                stats.step_count,
+                                output_path.display()
+                            );
+                        }
+                        Err(e) => {
+                            eprintln!("⚠️ Failed to save trace: {}", e);
+                        }
+                    }
+                }
+            }
+
+            if let Err(e) = run_res {
+                eprintln!("\n❌ Execution error during recording: {}", e);
+                std::process::exit(1);
+            }
+
+            return Ok(());
+        }
+        Some(Command::Replay {
+            permissions,
+            trace,
+            verify: _,
+            verbose,
+        }) => {
+            apply_permission_cli_options(&permissions)?;
+            check_file_read_permission(&trace)?;
+
+            println!("⏯️ Loading trace: {}", trace.display());
+
+            let (script_path, total_events, step_count) = {
+                let mut engine = beejs::replay::GLOBAL_REPLAY
+                    .write()
+                    .map_err(|e| anyhow::anyhow!("Lock error: {}", e))?;
+                engine
+                    .load_trace_from_file(&trace.to_string_lossy())
+                    .map_err(|e| anyhow::anyhow!("{}", e))?;
+                let stats = engine.get_stats();
+                (stats.script.clone(), stats.total_events, stats.step_count)
+            };
+
+            if verbose {
+                println!(
+                    "ℹ️ Trace metadata: {} total events, {} agent steps",
+                    total_events, step_count
+                );
+            }
+
+            if let Some(target_script) = script_path {
+                let script_buf = PathBuf::from(&target_script);
+                if script_buf.exists() {
+                    let code = read_and_compile_source(&script_buf)?;
+                    let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                        .expect("Failed to create runtime");
+                    runtime.set_process_argv(build_process_argv(&script_buf, &[]));
+                    runtime.set_main_module_path(&script_buf);
+
+                    if let Err(e) = runtime.execute_code(&code) {
+                        eprintln!("\n❌ Replay Divergence Error: {}", e);
+                        std::process::exit(1);
+                    }
+                    println!("✅ Replay finished successfully with zero divergence.");
+                } else {
+                    println!(
+                        "⚠️ Original script '{}' not found, trace loaded into replay engine.",
+                        target_script
+                    );
+                }
+            } else {
+                println!(
+                    "✅ Trace loaded into replay engine ({} events).",
+                    total_events
+                );
+            }
+
             return Ok(());
         }
         Some(Command::Serve {

@@ -300,6 +300,9 @@ export const zh: TranslationSchema = {
         title: 'Agent 与高级特性',
         items: [
           { id: 'agent-sandbox', label: '确定性沙箱与资源硬配额', badge: 'Agent' },
+          { id: 'agent-replay', label: '确定性 Agent 回放引擎 (bee:replay)', badge: 'v1.6' },
+          { id: 'model-weights', label: '原生 GGUF / SafeTensors 权重加载 (bee:weights)', badge: 'v1.6' },
+          { id: 'capability-security', label: '企业级能力安全控制 (bee:security)', badge: 'v1.6' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: '纯内存隔离 Virtual Filesystem (VFS)', badge: 'v1.3' },
           { id: 'ffi-native', label: '原生 C ABI 外部接口 (bee:ffi)', badge: 'v1.4' },

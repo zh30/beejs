@@ -668,3 +668,161 @@ declare module "wasm" {
   export * from "bee:wasm";
 }
 
+declare module "bee:replay" {
+  export interface RecordOptions {
+    script?: string;
+    outputPath?: string;
+  }
+
+  export interface TraceStats {
+    version: number;
+    script: string;
+    totalEvents: number;
+    startTime: number;
+    endTime: number;
+    durationMs: number;
+    mode: "idle" | "recording" | "replaying";
+  }
+
+  export function startRecording(opts?: RecordOptions | string): boolean;
+  export function stopRecording(outputPath?: string): any;
+  export function loadTrace(traceOrPath: string | object): boolean;
+  export function step<T = any>(name: string, input: any, outputOrFn?: T | ((input: any) => T)): T;
+  export function isRecording(): boolean;
+  export function isReplaying(): boolean;
+  export function getTraceStats(): TraceStats;
+  export function reset(): boolean;
+}
+
+declare module "replay" {
+  export * from "bee:replay";
+}
+
+declare module "bee:weights" {
+  export interface GGUFTensorInfo {
+    name: string;
+    shape: number[];
+    dtype: string;
+    offset: number;
+    size_bytes: number;
+  }
+
+  export interface GGUFMetadata {
+    version: number;
+    tensor_count: number;
+    kv_count: number;
+    metadata: Record<string, any>;
+    tensors: GGUFTensorInfo[];
+  }
+
+  export interface SafeTensorItem {
+    name: string;
+    dtype: string;
+    shape: number[];
+    data_offsets: [number, number];
+    size_bytes: number;
+  }
+
+  export interface SafeTensorsMetadata {
+    header_size: number;
+    metadata: Record<string, any>;
+    tensors: SafeTensorItem[];
+  }
+
+  export interface LoadedTensor {
+    name: string;
+    dtype: string;
+    shape: number[];
+    buffer: ArrayBuffer;
+    byteLength: number;
+  }
+
+  export function readGGUFMetadata(filePath: string): GGUFMetadata;
+  export function readSafeTensorsMetadata(filePath: string): SafeTensorsMetadata;
+  export function loadTensor(filePath: string, tensorName: string): LoadedTensor;
+}
+
+declare module "weights" {
+  export * from "bee:weights";
+}
+
+declare module "bee:security" {
+  export interface PermissionDescriptor {
+    name: "read" | "write" | "net" | "listen" | "env" | "run";
+    path?: string;
+    host?: string;
+    varName?: string;
+    command?: string;
+  }
+
+  export interface PermissionStatus {
+    state: "granted" | "denied";
+    name: string;
+  }
+
+  export interface PermissionRuleItem {
+    kind: string;
+    action: string;
+    resource: string;
+  }
+
+  export interface PermissionListResult {
+    allow: PermissionRuleItem[];
+    deny: PermissionRuleItem[];
+  }
+
+  export interface SandboxPolicyRules {
+    allowRead?: string[];
+    allowWrite?: string[];
+    allowNet?: string[];
+    allowListen?: string[];
+    allowEnv?: string[];
+    allowRun?: string[];
+    denyFs?: boolean;
+    denyNet?: boolean;
+    denyEnv?: boolean;
+    denyRun?: boolean;
+  }
+
+  export interface SandboxPolicy {
+    readonly allowRead: string[];
+    readonly allowWrite: string[];
+    readonly allowNet: string[];
+    readonly allowListen: string[];
+    readonly allowEnv: string[];
+    readonly allowRun: string[];
+    readonly denyFs: boolean;
+    readonly denyNet: boolean;
+    readonly denyEnv: boolean;
+    readonly denyRun: boolean;
+    readonly isSandbox: boolean;
+  }
+
+  export namespace permissions {
+    export function query(descriptor: PermissionDescriptor): PermissionStatus;
+    export function has(descriptor: PermissionDescriptor): boolean;
+    export function list(): PermissionListResult;
+    export function revoke(descriptor: PermissionDescriptor): boolean;
+  }
+
+  export function createSandboxPolicy(rules?: SandboxPolicyRules): SandboxPolicy;
+  export function attenuate(basePolicy: SandboxPolicy, restPolicy: SandboxPolicy): SandboxPolicy;
+}
+
+declare module "security" {
+  export * from "bee:security";
+}
+
+declare module "bee:permissions" {
+  import { PermissionDescriptor, PermissionStatus, PermissionListResult } from "bee:security";
+  export function query(descriptor: PermissionDescriptor): PermissionStatus;
+  export function has(descriptor: PermissionDescriptor): boolean;
+  export function list(): PermissionListResult;
+  export function revoke(descriptor: PermissionDescriptor): boolean;
+}
+
+declare module "permissions" {
+  export * from "bee:permissions";
+}
+
+

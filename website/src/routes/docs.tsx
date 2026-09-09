@@ -32,6 +32,7 @@ import {
   ListTree,
   Database,
   Rocket,
+  RotateCcw,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -58,6 +59,9 @@ const iconMap: Record<string, ReactNode> = {
   'testing-benchmarking': <Gauge className="w-4 h-4" />,
   'debugging-lsp': <Terminal className="w-4 h-4" />,
   'agent-sandbox': <ShieldCheck className="w-4 h-4" />,
+  'agent-replay': <RotateCcw className="w-4 h-4" />,
+  'model-weights': <Cpu className="w-4 h-4" />,
+  'capability-security': <ShieldCheck className="w-4 h-4" />,
   'mcp-protocol': <Layers className="w-4 h-4" />,
   'virtual-fs-sandbox': <ShieldCheck className="w-4 h-4" />,
   'import-maps-native': <Binary className="w-4 h-4" />,

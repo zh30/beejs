@@ -590,6 +590,46 @@ pub fn setup_require_api(
                         return;
                     }
                 }
+                "wasm" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_wasm").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "replay" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_replay").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "weights" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_weights").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "security" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_security").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
+                "permissions" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_permissions").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
                 "ai" | "string_decoder" | "perf_hooks" => {
                     // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);

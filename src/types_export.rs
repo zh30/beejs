@@ -53,6 +53,10 @@ mod tests {
         assert!(types.contains("declare module \"bee:ffi\""));
         assert!(types.contains("declare module \"bee:pool\""));
         assert!(types.contains("declare module \"bee:wasm\""));
+        assert!(types.contains("declare module \"bee:replay\""));
+        assert!(types.contains("declare module \"bee:weights\""));
+        assert!(types.contains("declare module \"bee:security\""));
+        assert!(types.contains("declare module \"bee:permissions\""));
         assert!(types.contains("class Tensor"));
         assert!(types.contains("class Database"));
         assert!(types.contains("class VectorDB"));

@@ -8533,6 +8533,9 @@ impl MinimalRuntime {
         crate::ffi::setup_ffi_api(scope, context)?;
         crate::pool::setup_pool_api(scope, context)?;
         crate::wasm::setup_wasm_api(scope, context)?;
+        crate::replay::setup_replay_api(scope, context)?;
+        crate::weights::setup_weights_api(scope, context)?;
+        crate::capability::setup_security_api(scope, context)?;
         Self::setup_module_system(scope, context, main_module_dir, main_module_filename)?;
         setup_timers_api(scope, context)?;
         setup_performance_api(scope, context)?;
@@ -20735,8 +20738,9 @@ impl MinimalRuntime {
                     | "url" | "querystring" | "dns" | "child_process" | "tcp_async" | "stream"
                     | "stream/promises" | "timers" | "timers/promises"
                     | "readline" | "performance" | "perf_hooks" | "assert" | "assert/strict"
-                    | "zlib" | "vm" | "worker_threads" | "module" | "tty"
-                    | "diagnostics_channel" | "async_hooks" | "wasm" => {
+                    | "diagnostics_channel" | "async_hooks" | "wasm"
+                    | "ai" | "bee:ai" | "replay" | "bee:replay" | "weights" | "bee:weights"
+                    | "security" | "bee:security" | "permissions" | "bee:permissions" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
@@ -20961,7 +20965,8 @@ impl MinimalRuntime {
                         }
 
                         // Try to get the module from global
-                        let mod_key = v8::String::new(scope, &module_id_str).unwrap();
+                        let clean_id = module_id_str.strip_prefix("bee:").unwrap_or(&module_id_str);
+                        let mod_key = v8::String::new(scope, clean_id).unwrap();
                         if let Some(mod_val) = global_obj.get(scope, mod_key.into()) {
                             if !mod_val.is_undefined() {
                                 if module_id_str == "readline" {
@@ -20979,7 +20984,7 @@ impl MinimalRuntime {
                         }
 
                         let bee_mod_key =
-                            v8::String::new(scope, &format!("__bee_{}", module_id_str)).unwrap();
+                            v8::String::new(scope, &format!("__bee_{}", clean_id)).unwrap();
                         if let Some(mod_val) = global_obj.get(scope, bee_mod_key.into()) {
                             if !mod_val.is_undefined() {
                                 retval.set(mod_val);
@@ -21013,18 +21018,31 @@ impl MinimalRuntime {
                         ) {
                             Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::File(path)) => path,
                             Ok(crate::nodejs_core::commonjs_resolver::ResolvedModule::Builtin(name)) => {
-                                let lookup_key = v8::String::new(scope, &name).unwrap();
-                                if let Some(val) = global.get(scope, lookup_key.into()) {
-                                    if !val.is_undefined() && !val.is_null() {
-                                        retval.set(val);
-                                        return;
+                                let clean = name.strip_prefix("bee:").unwrap_or(&name);
+                                for candidate in &[
+                                    name.as_str(),
+                                    clean,
+                                ] {
+                                    let lookup_key = v8::String::new(scope, candidate).unwrap();
+                                    if let Some(val) = global.get(scope, lookup_key.into()) {
+                                        if !val.is_undefined() && !val.is_null() {
+                                            retval.set(val);
+                                            return;
+                                        }
                                     }
-                                }
-                                let bee_key = v8::String::new(scope, &format!("__{}", name)).unwrap();
-                                if let Some(val) = global.get(scope, bee_key.into()) {
-                                    if !val.is_undefined() && !val.is_null() {
-                                        retval.set(val);
-                                        return;
+                                    let bee_key = v8::String::new(scope, &format!("__{}", candidate)).unwrap();
+                                    if let Some(val) = global.get(scope, bee_key.into()) {
+                                        if !val.is_undefined() && !val.is_null() {
+                                            retval.set(val);
+                                            return;
+                                        }
+                                    }
+                                    let full_bee_key = v8::String::new(scope, &format!("__bee_{}", candidate)).unwrap();
+                                    if let Some(val) = global.get(scope, full_bee_key.into()) {
+                                        if !val.is_undefined() && !val.is_null() {
+                                            retval.set(val);
+                                            return;
+                                        }
                                     }
                                 }
                                 let error_msg = format!("Cannot load builtin module '{}' from file resolver", name);

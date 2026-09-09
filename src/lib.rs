@@ -88,6 +88,7 @@ pub mod platform;
 pub mod cloud_native;
 
 pub mod ai_engine; // Native text embeddings and semantic vector engine
+pub mod capability; // Enterprise capability-based security (bee:security / bee:permissions)
 pub mod database; // Embedded SQLite and Vector similarity database
 pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
@@ -95,6 +96,7 @@ pub mod ffi; // Native zero-dependency C ABI foreign function interface (bee:ffi
 pub mod memory; // Memory management
 pub mod pool; // High-density multi-tenant IsolatePool for serverless & multi-agent execution (bee:pool)
 pub mod repl; // Enhanced interactive REPL
+pub mod replay; // Deterministic Agent Replay engine (bee:replay)
 pub mod sandbox; // In-memory deterministic Virtual Filesystem (VFS) sandbox
 pub mod std_lib; // Modern standard library (dotenv, cli, fs, crypto, assert)
 pub mod task_runner; // Task runner for package.json scripts
@@ -102,7 +104,8 @@ pub mod testing; // Testing framework support
 pub mod tooling; // Developer tooling (formatter, linter, benchmark, compiler, coverage, profiler)
 pub mod types_export; // TypeScript types exporter
 pub mod typescript;
-pub mod wasm; // WebAssembly 2.0 zero-copy shared memory bridge (bee:wasm) // TypeScript transpilation support
+pub mod wasm; // WebAssembly 2.0 zero-copy shared memory bridge (bee:wasm)
+pub mod weights; // Native GGUF and SafeTensors model weights loader (bee:weights)
 
 pub use repl::{Repl, ReplConfig};
 // pub use wasm_integration::{initialize_wasm, check_wasm_support};

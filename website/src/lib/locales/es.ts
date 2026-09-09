@@ -286,6 +286,9 @@ export const es: TranslationSchema = {
         title: 'Agent y Sandbox',
         items: [
           { id: 'agent-sandbox', label: 'Sandbox y Cuotas de Recursos', badge: 'Agent' },
+          { id: 'agent-replay', label: 'Motor de Reproducción Determinista (bee:replay)', badge: 'v1.6' },
+          { id: 'model-weights', label: 'Cargador de Pesos GGUF y SafeTensors (bee:weights)', badge: 'v1.6' },
+          { id: 'capability-security', label: 'Seguridad Basada en Capacidades (bee:security)', badge: 'v1.6' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: 'Sistema de Archivos Virtual en RAM', badge: 'v1.3' },
           { id: 'ffi-native', label: 'FFI Nativo C ABI (bee:ffi)', badge: 'v1.4' },
