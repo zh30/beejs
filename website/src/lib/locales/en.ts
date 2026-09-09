@@ -324,7 +324,7 @@ export const en: TranslationSchema = {
         title: 'Reference & Specs',
         items: [
           { id: 'cli-usage', label: 'Complete CLI Command Reference' },
-          { id: 'api-reference', label: 'Node & Web API Compatibility' },
+          { id: 'api-reference', label: 'Full API Reference' },
           { id: 'modules', label: 'Module Resolution & Architecture' },
         ],
       },
@@ -420,12 +420,14 @@ export const en: TranslationSchema = {
         ],
       },
       'api-reference': {
-        title: 'API Surface',
-        subtitle: 'Check behavior against the current runtime.',
-        body: [
-          'Beejs exposes a practical subset of Node.js and Web platform APIs. The safest reference is the executable test suite and the examples directory.',
+        title: 'Full API Reference',
+        subtitle: 'Comprehensive specification of native BeeJS subsystems (bee:*), Node.js core, and Web APIs.',
+        body: ['Systematic documentation for all 17 native BeeJS modules (AI, Agent, DB, Vector, WASM, Security Sandbox, etc.), full Node.js 51/51 compatibility layer, and standard Web APIs.'],
+        list: [
+          'BeeJS Native Subsystems (bee:ai, bee:db, bee:vector, bee:bus, bee:grammar, bee:checkpoint, etc.)',
+          'Node.js Core Compatibility (fs, net, http, crypto, stream, worker_threads, etc. 51 modules)',
+          'Web Standard APIs (fetch, WebCrypto, Streams, WebSocket, Worker, structuredClone)',
         ],
-        list: ['console and timers', 'CommonJS require', 'fetch and URL', 'fs, path, crypto, buffer, process'],
       },
       modules: {
         title: 'Modules',
