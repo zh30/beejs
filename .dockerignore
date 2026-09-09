@@ -6,5 +6,7 @@
 !README.md
 !src/
 !src/**
+!benches/
+!benches/**
 !examples/
 !examples/**
