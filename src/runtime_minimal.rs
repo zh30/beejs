@@ -106,6 +106,33 @@ thread_local! {
     static CACHED_BUFFER_PROTOTYPE: RefCell<Option<v8::Global<v8::Object>>> = const { RefCell::new(None) };
 }
 
+thread_local! {
+    static IMPORT_META_PARENT_DIR: RefCell<PathBuf> = RefCell::new(PathBuf::from("."));
+}
+
+extern "C" fn promise_reject_callback(message: v8::PromiseRejectMessage) {
+    if message.get_event() != v8::PromiseRejectEvent::PromiseRejectWithNoHandler {
+        return;
+    }
+    let scope = &mut unsafe { v8::CallbackScope::new(&message) };
+    let context = scope.get_current_context();
+    let scope = &mut v8::ContextScope::new(scope, context);
+    let global = context.global(scope);
+    let key = v8::String::new(scope, "__bee_dispatch_unhandled_rejection").unwrap();
+    let Some(fn_val) = global.get(scope, key.into()) else {
+        return;
+    };
+    if !fn_val.is_function() {
+        return;
+    }
+    let func = v8::Local::<v8::Function>::try_from(fn_val).unwrap();
+    let promise: v8::Local<v8::Value> = message.get_promise().into();
+    let reason = message
+        .get_value()
+        .unwrap_or_else(|| v8::undefined(scope).into());
+    let _ = func.call(scope, global.into(), &[promise, reason]);
+}
+
 #[inline]
 pub fn set_buffer_prototype_fast(scope: &mut v8::HandleScope, u8_array: v8::Local<v8::Uint8Array>) {
     CACHED_BUFFER_PROTOTYPE.with(|p| {
@@ -4868,6 +4895,7 @@ impl MinimalRuntime {
         // microtasks 之前执行。
         isolate.set_microtasks_policy(v8::MicrotasksPolicy::Explicit);
         isolate.set_host_import_module_dynamically_callback(Self::esm_dynamic_import_callback);
+        isolate.set_promise_reject_callback(promise_reject_callback);
     }
 
     pub fn set_main_module_path(&mut self, path: impl AsRef<std::path::Path>) {
@@ -8627,6 +8655,70 @@ impl MinimalRuntime {
         use crate::web_api::clipboard::setup_clipboard_api;
         setup_clipboard_api(scope, context)?;
 
+        // WinterTC ECMA-429 & Sockets API initialization
+        crate::web_api::dom_exception::setup_dom_exception_api(scope, context)?;
+        crate::web_api::navigator::setup_navigator_api(scope, context)?;
+        crate::web_api::url_pattern::setup_url_pattern_api(scope, context)?;
+        crate::web_api::sockets::setup_sockets_api(scope, context)?;
+
+        let wintertc_helpers_js = r#"
+        (function() {
+            if (typeof globalThis.self === 'undefined') {
+                globalThis.self = globalThis;
+            }
+            if (typeof globalThis.reportError !== 'function') {
+                globalThis.reportError = function(error) {
+                    if (typeof globalThis.onerror === 'function') {
+                        try {
+                            const msg = (error && error.message) ? error.message : String(error);
+                            globalThis.onerror(msg, '', 0, 0, error);
+                            return;
+                        } catch (_) {}
+                    }
+                    console.error('Unhandled error:', error);
+                };
+            }
+            if (typeof globalThis.PromiseRejectionEvent === 'undefined') {
+                const Base = (typeof Event === 'function') ? Event : Object;
+                globalThis.PromiseRejectionEvent = class PromiseRejectionEvent extends Base {
+                    constructor(type, init = {}) {
+                        try { super(type, init); } catch (_) { super(); }
+                        this.type = type;
+                        this.promise = init.promise;
+                        this.reason = init.reason;
+                    }
+                };
+            }
+            globalThis.__bee_dispatch_unhandled_rejection = function(promise, reason) {
+                let event;
+                try {
+                    event = new PromiseRejectionEvent('unhandledrejection', {
+                        promise: promise,
+                        reason: reason,
+                        cancelable: true
+                    });
+                } catch (_) {
+                    event = { type: 'unhandledrejection', promise: promise, reason: reason };
+                }
+                try {
+                    if (typeof globalThis.onunhandledrejection === 'function') {
+                        globalThis.onunhandledrejection(event);
+                    }
+                } catch (_) {}
+                try {
+                    if (typeof globalThis.dispatchEvent === 'function') {
+                        globalThis.dispatchEvent(event);
+                    }
+                } catch (_) {}
+            };
+        })();
+        "#;
+        if let Some(code) = v8::String::new(scope, wintertc_helpers_js) {
+            if let Some(script) = v8::Script::compile(scope, code, None) {
+                let _ = script.run(scope);
+            }
+        }
+
         Ok(())
     }
 
@@ -8645,6 +8737,9 @@ impl MinimalRuntime {
     /// Essential for parallel worker threads and multi-tenant Isolate pools.
     pub fn execute_code_unlocked(&mut self, code: &str) -> Result<String> {
         crate::web_api::background_sync::reset_pending_wait_until();
+        IMPORT_META_PARENT_DIR.with(|dir| {
+            *dir.borrow_mut() = PathBuf::from(&self.main_module_dir);
+        });
 
         // Drop setImmediate callbacks left over from a previous execute_code
         // (e.g. after an early error return). They capture V8 handles from the
@@ -20747,7 +20842,8 @@ impl MinimalRuntime {
                     | "ai" | "bee:ai" | "replay" | "bee:replay" | "weights" | "bee:weights"
                     | "security" | "bee:security" | "permissions" | "bee:permissions"
                     | "kv" | "bee:kv" | "tools" | "bee:tools" | "sandbox" | "bee:sandbox" | "vfs" | "bee:vfs"
-                    | "bus" | "bee:bus" | "grammar" | "bee:grammar" | "checkpoint" | "bee:checkpoint" => {
+                    | "bus" | "bee:bus" | "grammar" | "bee:grammar" | "checkpoint" | "bee:checkpoint"
+                    | "sockets" | "bee:sockets" | "wintertc:sockets" | "std:cli" | "bee:std/cli" => {
                         // Get context and global object
                         let ctx = scope.get_current_context();
                         let global_obj = ctx.global(scope);
@@ -20969,6 +21065,19 @@ impl MinimalRuntime {
 
                             retval.set(url_module.into());
                             return;
+                        }
+
+                        if module_id_str == "sockets"
+                            || module_id_str == "bee:sockets"
+                            || module_id_str == "wintertc:sockets"
+                        {
+                            let sock_key = v8::String::new(scope, "__bee_sockets").unwrap();
+                            if let Some(sock_val) = global_obj.get(scope, sock_key.into()) {
+                                if !sock_val.is_undefined() {
+                                    retval.set(sock_val);
+                                    return;
+                                }
+                            }
                         }
 
                         // Try to get the module from global
@@ -21606,22 +21715,53 @@ require.resolve = function(specifier) {{
         let url_val = v8::String::new(scope, &meta_url).unwrap().into();
         import_meta_obj.set(scope, url_key, url_val);
 
-        // Add import.meta.resolve (basic implementation)
+        // WinterTC import.meta registry: import.meta.main
+        let main_key = v8::String::new(scope, "main").unwrap().into();
+        let main_val = v8::Boolean::new(scope, true);
+        import_meta_obj.set(scope, main_key, main_val.into());
+
+        // WinterTC import.meta registry: import.meta.env
+        let env_key = v8::String::new(scope, "env").unwrap().into();
+        let env_obj = v8::Object::new(scope);
+        for (k, v) in std::env::vars() {
+            if let Some(vk) = v8::String::new(scope, &k) {
+                if let Some(vv) = v8::String::new(scope, &v) {
+                    env_obj.set(scope, vk.into(), vv.into());
+                }
+            }
+        }
+        import_meta_obj.set(scope, env_key, env_obj.into());
+
+        // WinterTC import.meta.resolve — real ESM resolver (wintercg/wintertc conditions).
         let resolve_fn = v8::Function::new(
             scope,
             |scope: &mut v8::HandleScope,
              args: v8::FunctionCallbackArguments,
              mut retval: v8::ReturnValue| {
                 if args.length() >= 1 {
-                    let specifier = args.get(0);
-                    if let Some(s) = specifier.to_string(scope) {
+                    if let Some(s) = args.get(0).to_string(scope) {
                         let specifier_str = s.to_rust_string_lossy(scope);
-                        // Basic path resolution - just return the specifier as-is for now
-                        let resolved = if specifier_str.starts_with('.') {
-                            specifier_str
-                        } else {
-                            format!("/node_modules/{}", specifier_str)
-                        };
+                        let parent = IMPORT_META_PARENT_DIR.with(|d| d.borrow().clone());
+                        let resolved =
+                            match crate::nodejs_core::commonjs_resolver::resolve_esm_module(
+                                &specifier_str,
+                                &parent,
+                            ) {
+                                Ok(
+                                    crate::nodejs_core::commonjs_resolver::ResolvedModule::File(
+                                        path,
+                                    ),
+                                ) => {
+                                    let abs = path.canonicalize().unwrap_or(path);
+                                    format!("file://{}", abs.display())
+                                }
+                                Ok(
+                                    crate::nodejs_core::commonjs_resolver::ResolvedModule::Builtin(
+                                        name,
+                                    ),
+                                ) => name,
+                                Err(_) => specifier_str,
+                            };
                         let resolved_str = v8::String::new(scope, &resolved).unwrap();
                         retval.set(resolved_str.into());
                         return;

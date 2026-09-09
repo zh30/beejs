@@ -33,8 +33,11 @@ pub fn clear_module_resolution_cache() {
 }
 
 const JS_EXTENSIONS: &[&str] = &["js", "json", "ts", "mjs", "cjs", "tsx"];
-const COMMONJS_EXPORT_CONDITIONS: &[&str] = &["require", "node", "default"];
-const ESM_EXPORT_CONDITIONS: &[&str] = &["import", "node", "default"];
+const COMMONJS_EXPORT_CONDITIONS: &[&str] = &[
+    "require", "wintercg", "wintertc", "node", "beejs", "default",
+];
+const ESM_EXPORT_CONDITIONS: &[&str] =
+    &["import", "wintercg", "wintertc", "node", "beejs", "default"];
 const BUILTIN_MODULES: &[&str] = &[
     "ai",
     "assert",
@@ -54,6 +57,7 @@ const BUILTIN_MODULES: &[&str] = &[
     "bee:bus",
     "bee:grammar",
     "bee:checkpoint",
+    "bee:sockets",
     "bee:sqlite",
     "bee:vector",
     "bee:std",
@@ -79,6 +83,8 @@ const BUILTIN_MODULES: &[&str] = &[
     "bus",
     "grammar",
     "checkpoint",
+    "sockets",
+    "wintertc:sockets",
     "sqlite",
     "vector",
     "std",
@@ -399,6 +405,10 @@ fn normalize_builtin_specifier(specifier: &str) -> Option<&str> {
     let without_bee = specifier.strip_prefix("bee:").unwrap_or(specifier);
     if BUILTIN_MODULES.contains(&without_bee) {
         return Some(without_bee);
+    }
+    let without_wintertc = specifier.strip_prefix("wintertc:").unwrap_or(specifier);
+    if BUILTIN_MODULES.contains(&without_wintertc) {
+        return Some(without_wintertc);
     }
     None
 }

@@ -1,18 +1,26 @@
 name: Docker
 
 on:
+  push:
+    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: write
+  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  IMAGE: ghcr.io/zh30/beejs
+
 jobs:
   build:
-    name: Build Docker Image
+    name: Build and Publish Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,15 +29,47 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=ci,enable=${{ github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
       - name: Build image
         uses: docker/build-push-action@v5
         with:
           context: .
           target: runtime
           load: true
-          tags: beejs:ci
+          tags: ${{ env.IMAGE }}:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test image
-        run: docker run --rm beejs:ci --version
+        run: docker run --rm ${{ env.IMAGE }}:ci --version
+
+      - name: Push image
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: runtime
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

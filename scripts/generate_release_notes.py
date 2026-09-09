@@ -61,14 +61,19 @@ def format_bytes(size_bytes):
 
 
 def detect_target_platform(filename):
-    if "x86_64-unknown-linux-gnu" in filename or "linux" in filename:
+    # Triple matches must come before generic substrings like "linux".
+    if "aarch64-unknown-linux-gnu" in filename:
+        return "Linux (aarch64)"
+    if "x86_64-unknown-linux-gnu" in filename:
         return "Linux (x86_64)"
-    elif "aarch64-apple-darwin" in filename or "darwin-arm64" in filename:
+    if "aarch64-apple-darwin" in filename or "darwin-arm64" in filename:
         return "macOS Apple Silicon (ARM64)"
-    elif "x86_64-apple-darwin" in filename or "darwin-x64" in filename:
+    if "x86_64-apple-darwin" in filename or "darwin-x64" in filename:
         return "macOS Intel (x86_64)"
-    elif "windows" in filename:
+    if "x86_64-pc-windows-msvc" in filename or "windows" in filename:
         return "Windows (x86_64)"
+    if "linux" in filename:
+        return "Linux"
     return "Unknown Platform"
 
 
@@ -86,6 +91,9 @@ def find_release_doc(tag, repo_root):
         repo_root / "docs" / "releases" / f"{tag}.md",
         repo_root / "docs" / "releases" / f"v{clean_version}.md",
         repo_root / "docs" / "releases" / f"{clean_version}.md",
+        repo_root / "docs" / f"RELEASE_NOTES_{tag}.md",
+        repo_root / "docs" / f"RELEASE_NOTES_v{clean_version}.md",
+        repo_root / "docs" / f"RELEASE_NOTES_{clean_version}.md",
     ]
     for c in candidates:
         if c.exists():

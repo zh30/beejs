@@ -307,6 +307,7 @@ export const es: TranslationSchema = {
         title: 'Operaciones',
         items: [
           { id: 'cli-usage', label: 'Uso de CLI' },
+          { id: 'wintertc-compliance', label: 'Cumplimiento WinterTC' },
           { id: 'api-reference', label: 'Superficie de API' },
           { id: 'modules', label: 'Módulos' },
         ],

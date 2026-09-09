@@ -4,7 +4,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::num::NonZeroUsize;
-use std::sync::atomic::Ordering;
 use std::sync::{atomic::Ordering, Arc, RwLock};
 use std::time::Duration;
 

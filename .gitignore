@@ -24,6 +24,10 @@ Thumbs.db
 *.log
 test_results.txt
 
+# Python
+__pycache__/
+*.pyc
+
 # Temporary files
 tmp/
 temp/

@@ -8,6 +8,7 @@ pub mod clipboard; // v0.3.342: Clipboard API (copy/paste for AI workloads)
 pub mod compression; // v0.3.295: CompressionStream API (gzip/deflate)
 pub mod crypto;
 pub mod custom_event; // v0.3.337: CustomEvent API (custom event handling)
+pub mod dom_exception; // WinterTC ECMA-429: DOMException
 pub mod dom_parser; // v0.3.341: DOMParser API (HTML/XML document parsing for AI workloads)
 pub mod encoding; // Stage 74: TextEncoder/TextDecoder
 pub mod error_event; // v0.3.333: ErrorEvent API (script error handling)
@@ -16,15 +17,18 @@ pub mod events;
 pub mod fetch;
 pub mod form_data;
 pub mod message_channel; // v0.3.315: MessageChannel API (port-based communication)
+pub mod navigator; // WinterTC ECMA-429: navigator, userAgent
 pub mod notification; // v0.3.328: Notification API (system notifications)
 pub mod payment_request; // v0.3.328: Payment Request API (payment processing)
 pub mod performance; // Stage 74: Performance API
 pub mod service_worker; // v0.3.324: ServiceWorker API (background tasks, push, offline)
 pub mod shared_array_buffer; // v0.3.322: SharedArrayBuffer API (cross-Worker shared memory)
+pub mod sockets; // WinterTC Sockets API (connect, Socket)
 pub mod streams; // Stage 75: Web Streams API for AI workloads
 pub mod structured_clone; // v0.3.299: structuredClone global function
 pub mod timers; // Stage 74: Timer APIs
 pub mod url;
+pub mod url_pattern; // WinterTC ECMA-429: URLPattern
 pub mod url_search_params;
 pub mod wasm;
 pub mod websocket;
@@ -42,6 +46,7 @@ use clipboard::setup_clipboard_api;
 use compression::setup_compression_api;
 use crypto::setup_crypto_api;
 use custom_event::setup_custom_event_api;
+use dom_exception::setup_dom_exception_api;
 use dom_parser::setup_dom_parser_api;
 use encoding::setup_encoding_api;
 use error_event::setup_error_event_api;
@@ -49,14 +54,17 @@ use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
 use message_channel::setup_message_channel_api;
+use navigator::setup_navigator_api;
 use notification::setup_notification_api;
 use payment_request::setup_payment_request_api;
 use performance::setup_performance_api;
 use service_worker::setup_service_worker_api;
 use shared_array_buffer::setup_shared_array_buffer_api;
+use sockets::setup_sockets_api;
 use structured_clone::setup_structured_clone_api;
 use timers::setup_timer_api;
 use url::setup_url_api;
+use url_pattern::setup_url_pattern_api;
 use url_search_params::setup_url_search_params_api;
 use websocket::setup_websocket_api;
 use worker::setup_worker_api;
@@ -119,6 +127,78 @@ pub fn init_web_api(
     setup_clipboard_api(scope, context)?;
     // WebAssembly streaming APIs (compileStreaming, instantiateStreaming)
     wasm::setup_wasm_streaming_api(scope, context)?;
+
+    // WinterTC ECMA-429 & Sockets API initialization
+    setup_dom_exception_api(scope, context)?;
+    setup_navigator_api(scope, context)?;
+    setup_url_pattern_api(scope, context)?;
+    setup_sockets_api(scope, context)?;
+
+    // WinterTC ECMA-429 Section 5.2 / 6 global aliases and error reporting
+    let wintertc_helpers_js = r#"
+    (function() {
+        // globalThis.self requirement
+        if (typeof globalThis.self === 'undefined') {
+            globalThis.self = globalThis;
+        }
+
+        // reportError requirement
+        if (typeof globalThis.reportError !== 'function') {
+            globalThis.reportError = function(error) {
+                if (typeof globalThis.onerror === 'function') {
+                    try {
+                        const msg = (error && error.message) ? error.message : String(error);
+                        globalThis.onerror(msg, '', 0, 0, error);
+                        return;
+                    } catch (_) {}
+                }
+                console.error('Unhandled error:', error);
+            };
+        }
+
+        // PromiseRejectionEvent
+        if (typeof globalThis.PromiseRejectionEvent === 'undefined') {
+            const Base = (typeof Event === 'function') ? Event : Object;
+            globalThis.PromiseRejectionEvent = class PromiseRejectionEvent extends Base {
+                constructor(type, init = {}) {
+                    try { super(type, init); } catch (_) { super(); }
+                    this.type = type;
+                    this.promise = init.promise;
+                    this.reason = init.reason;
+                }
+            };
+        }
+
+        globalThis.__bee_dispatch_unhandled_rejection = function(promise, reason) {
+            let event;
+            try {
+                event = new PromiseRejectionEvent('unhandledrejection', {
+                    promise: promise,
+                    reason: reason,
+                    cancelable: true
+                });
+            } catch (_) {
+                event = { type: 'unhandledrejection', promise: promise, reason: reason };
+            }
+            try {
+                if (typeof globalThis.onunhandledrejection === 'function') {
+                    globalThis.onunhandledrejection(event);
+                }
+            } catch (_) {}
+            try {
+                if (typeof globalThis.dispatchEvent === 'function') {
+                    globalThis.dispatchEvent(event);
+                }
+            } catch (_) {}
+        };
+    })();
+    "#;
+    if let Some(code) = v8::String::new(scope, wintertc_helpers_js) {
+        if let Some(script) = v8::Script::compile(scope, code, None) {
+            let _ = script.run(scope);
+        }
+    }
+
     // Note: Streams API is initialized separately in runtime_minimal.rs
     // to avoid duplicate initialization
     Ok(())

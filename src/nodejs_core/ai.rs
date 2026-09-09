@@ -546,7 +546,7 @@ pub fn setup_ai_api(
             LLM,
             AgentPipeline,
             cosineSimilarity,
-            version: '1.8.0',
+            version: '1.9.0',
             get weights() { return globalThis.__bee_weights; },
             get tools() { return globalThis.__bee_tools; },
             get kv() { return globalThis.__bee_kv; },

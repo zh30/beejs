@@ -3,7 +3,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::Ordering;
 use std::sync::{atomic::Ordering, Arc, Mutex, RwLock};
 use std::time::SystemTime;
 use std::time::{Duration, Instant};

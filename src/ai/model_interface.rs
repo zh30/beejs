@@ -24,7 +24,7 @@ pub struct ModelInfo {
 }
 /// 模型管理器
 pub struct ModelManager {
-    models: std::collections::HashMap<String, _>,
+    models: std::collections::HashMap<String, Arc<dyn AIModelInterface>>,
 }
 impl ModelManager {
     pub fn new() -> Self {

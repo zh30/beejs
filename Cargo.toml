@@ -1,6 +1,6 @@
 [package]
 name = "beejs"
-version = "1.8.0"
+version = "1.9.0"
 edition = "2021"
 autobins = false
 authors = ["Henry Zhang"]
@@ -224,6 +224,7 @@ getrandom = { version = "0.2", features = ["js"] }
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
 rustls-pemfile = "2.0"
 tokio-rustls = "0.24"
+webpki-roots = "0.25"
 
 # Testing
 [dev-dependencies]

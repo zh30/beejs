@@ -2741,6 +2741,35 @@ pub fn setup_streams_api(
             };
             globalThis.TransformStream.prototype = OrigTS.prototype;
         }
+
+        // WinterTC ECMA-429 Queuing Strategies
+        if (typeof globalThis.ByteLengthQueuingStrategy === 'undefined') {
+            globalThis.ByteLengthQueuingStrategy = class ByteLengthQueuingStrategy {
+                constructor(options = {}) {
+                    if (typeof options.highWaterMark === 'undefined') {
+                        throw new TypeError("ByteLengthQueuingStrategy: highWaterMark is required");
+                    }
+                    this.highWaterMark = options.highWaterMark;
+                }
+                size(chunk) {
+                    return (chunk && chunk.byteLength !== undefined) ? chunk.byteLength : 0;
+                }
+            };
+        }
+
+        if (typeof globalThis.CountQueuingStrategy === 'undefined') {
+            globalThis.CountQueuingStrategy = class CountQueuingStrategy {
+                constructor(options = {}) {
+                    if (typeof options.highWaterMark === 'undefined') {
+                        throw new TypeError("CountQueuingStrategy: highWaterMark is required");
+                    }
+                    this.highWaterMark = options.highWaterMark;
+                }
+                size() {
+                    return 1;
+                }
+            };
+        }
     })();
     "#;
     if let Some(code) = v8::String::new(scope, streams_helper_js) {

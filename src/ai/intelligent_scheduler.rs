@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::RwLock;
 use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.0] - 2026-09-09
+
+### Added
+- WinterTC baseline on the default runtime: `DOMException`, `URLPattern`, `navigator`, queuing strategies, `ReadableStream.from`, `bee:sockets`, `wintercg`/`wintertc` export conditions, and `import.meta.main` / `env` / `resolve`.
+- Real rustls TLS for `secureTransport: "on"` and `startTls()`, including untrusted-certificate rejection.
+- `v*` GitHub Release archives for linux gnu x64/arm64, macOS arm64/x64, and Windows x64, with SHA-256 checksums, CycloneDX SBOM, and cosign signatures.
+- `install.sh` platform mapping for Darwin/Linux x64 and arm64, plus `install.ps1` for the Windows zip.
+- In-repo Homebrew formula `Formula/bee.rb` pointing at GitHub Release assets.
+- Website WinterTC docs (English and Chinese) in the docs nav.
+
+### Changed
+- PR CI fails closed on `cargo check --features` for `ai`, `benchmarks`, and `observability`.
+- CI runs WinterTC as its own test step, smokes Windows, and runs library tests on macOS.
+- `docker.yml` publishes `ghcr.io/zh30/beejs` on `v*` tags and `main`.
+- `import.meta.resolve` uses the real ESM resolver so `"wintercg"` exports win over `"node"`.
+- Unhandled promise rejections dispatch `PromiseRejectionEvent` / `onunhandledrejection`.
+
+## [1.8.0] - 2026-09-09
+
+### Added
+- Multi-Agent message bus (`bee:bus`) with topic wildcards, request-reply RPC, middleware, and DLQ.
+- Streaming structured JSON / token grammar engine (`bee:grammar`) including `parsePartialJSON` and SSE chunk parsing.
+- Agent state checkpoint / time-travel snapshots (`bee:checkpoint`).
+
 ## [0.4.0] - 2026-09-04
 
 ### Added

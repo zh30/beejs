@@ -67,9 +67,12 @@ jobs:
           set -e
           for feat in ai benchmarks observability; do
             echo "::group::cargo check --features $feat"
-            cargo check --features "$feat" || echo "::warning::feature $feat currently does not compile"
+            cargo check --features "$feat"
             echo "::endgroup::"
           done
+
+      - name: WinterTC compliance tests
+        run: cargo test --test wintertc_compliance_tests -- --test-threads=1
 
       - name: Node conformance scorecard
         run: |
@@ -120,29 +123,19 @@ jobs:
           ./target/release/bee --version
           ./target/release/bee eval "1 + 1"
 
-  release-assets:
-    name: Release Asset (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    needs: [release-build]
-    if: startsWith(github.ref, 'refs/tags/v')
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: macos-13
-            target: x86_64-apple-darwin
+      - name: Library tests on macOS
+        if: runner.os == 'macOS'
+        run: cargo test --lib --tests -- --test-threads=1
+
+  windows-smoke:
+    name: Windows Smoke
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -151,69 +144,31 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-windows-smoke-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.target }}-
+            ${{ runner.os }}-windows-smoke-
             ${{ runner.os }}-cargo-
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release
 
-      - name: Create release archive
+      - name: Smoke test
+        shell: pwsh
         run: |
-          version="${GITHUB_REF#refs/tags/}"
-          mkdir -p release
-          cp "target/${{ matrix.target }}/release/bee" release/
-          tar -czf "bee-${version}-${{ matrix.target }}.tar.gz" -C release bee
+          .\target\release\bee.exe --version
+          .\target\release\bee.exe eval "1 + 1"
 
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bee-${{ matrix.target }}
-          path: bee-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
-
-  release:
-    name: GitHub Release
+  audit:
+    name: cargo-audit
     runs-on: ubuntu-latest
-    needs: release-assets
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download release artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release
-
-      - name: Generate formal release notes and checksums
-        run: |
-          python3 scripts/generate_release_notes.py \
-            --tag "${GITHUB_REF#refs/tags/}" \
-            --release-dir release \
-            --output RELEASE_NOTES.md
-
-      - name: Create or Update GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Release ${{ github.ref_name }}
-          body_path: RELEASE_NOTES.md
-          files: |
-            release/**/bee-*.tar.gz
-            release/checksums.txt
-          draft: false
-          prerelease: false
 
       - name: Install Rust
-        if: env.CARGO_REGISTRY_TOKEN != ''
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Publish to crates.io
-        if: env.CARGO_REGISTRY_TOKEN != ''
-        run: cargo publish --locked --token "$CARGO_REGISTRY_TOKEN"
+      - name: cargo-audit
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

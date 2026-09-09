@@ -50,8 +50,8 @@ else
 fi
 
 resolve_platform() {
-  raw_os=$(uname -s)
-  raw_arch=$(uname -m)
+  raw_os="${BEEJS_UNAME_S:-$(uname -s)}"
+  raw_arch="${BEEJS_UNAME_M:-$(uname -m)}"
 
   case "$raw_os" in
     Darwin) os="apple-darwin" ;;
@@ -61,18 +61,17 @@ resolve_platform() {
 
   case "$raw_arch" in
     x86_64|amd64) arch="x86_64" ;;
-    arm64|aarch64)
-      if [ "$os" = "apple-darwin" ]; then
-        arch="aarch64"
-      else
-        fail "prebuilt Linux arm64 archive is not available yet; build from source"
-      fi
-      ;;
+    arm64|aarch64) arch="aarch64" ;;
     *) fail "unsupported architecture: $raw_arch" ;;
   esac
 
   echo "${arch}-${os}"
 }
+
+if [ "${1:-}" = "--print-platform" ]; then
+  resolve_platform
+  exit 0
+fi
 
 resolve_version() {
   if [ -n "${BEEJS_VERSION:-}" ]; then

@@ -323,6 +323,7 @@ export const zh: TranslationSchema = {
         title: '参考与规范',
         items: [
           { id: 'cli-usage', label: 'CLI 命令行完整参考手册' },
+          { id: 'wintertc-compliance', label: 'WinterTC 合规' },
           { id: 'api-reference', label: '完整 API 参考手册' },
           { id: 'modules', label: '模块解析与工程边界' },
         ],
