@@ -12,8 +12,114 @@ pub fn setup_ai_api(
 ) -> Result<()> {
     let global = context.global(scope);
 
+    // Register native AI callback for high-performance embeddings and vector math
+    let ai_native_fn = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            let action = if args.length() > 0 {
+                args.get(0).to_rust_string_lossy(scope)
+            } else {
+                String::new()
+            };
+
+            match action.as_str() {
+                "embed" => {
+                    let text = if args.length() > 1 {
+                        args.get(1).to_rust_string_lossy(scope)
+                    } else {
+                        String::new()
+                    };
+                    let dims = if args.length() > 2 && args.get(2).is_number() {
+                        args.get(2)
+                            .to_integer(scope)
+                            .map(|i| i.value() as usize)
+                            .unwrap_or(128)
+                    } else {
+                        128
+                    };
+                    let normalize = if args.length() > 3 && args.get(3).is_boolean() {
+                        args.get(3).boolean_value(scope)
+                    } else {
+                        true
+                    };
+
+                    let opts = crate::ai_engine::EmbedOptions {
+                        dimensions: dims,
+                        normalize,
+                    };
+                    let vec = crate::ai_engine::embed_text(&text, &opts);
+                    let arr = v8::Array::new(scope, vec.len() as i32);
+                    for (i, &val) in vec.iter().enumerate() {
+                        let num = v8::Number::new(scope, val as f64);
+                        arr.set_index(scope, i as u32, num.into());
+                    }
+                    retval.set(arr.into());
+                }
+                "similarity" => {
+                    let a_val = args.get(1);
+                    let b_val = args.get(2);
+                    let mut vec_a = Vec::new();
+                    let mut vec_b = Vec::new();
+
+                    if a_val.is_array() {
+                        let arr = v8::Local::<v8::Array>::try_from(a_val).unwrap();
+                        for i in 0..arr.length() {
+                            if let Some(item) = arr.get_index(scope, i) {
+                                if let Some(n) = item.to_number(scope) {
+                                    vec_a.push(n.value() as f32);
+                                }
+                            }
+                        }
+                    }
+                    if b_val.is_array() {
+                        let arr = v8::Local::<v8::Array>::try_from(b_val).unwrap();
+                        for i in 0..arr.length() {
+                            if let Some(item) = arr.get_index(scope, i) {
+                                if let Some(n) = item.to_number(scope) {
+                                    vec_b.push(n.value() as f32);
+                                }
+                            }
+                        }
+                    }
+
+                    let sim = crate::ai_engine::cosine_similarity(&vec_a, &vec_b);
+                    retval.set(v8::Number::new(scope, sim as f64).into());
+                }
+                _ => {}
+            }
+        },
+    )
+    .get_function(scope)
+    .unwrap();
+
+    let native_key = v8::String::new(scope, "__bee_ai_native").unwrap();
+    global.set(scope, native_key.into(), ai_native_fn.into());
+
     let js_code = r#"
     (function() {
+        // --- 顶层原生文本向量化 (Embeddings) ---
+        function embed(text, options = {}) {
+            if (typeof text !== 'string') {
+                throw new TypeError('Text must be a string');
+            }
+            const dims = options.dimensions || 64;
+            const norm = options.normalize !== false;
+            const raw = globalThis.__bee_ai_native('embed', text, dims, norm);
+            const floatArray = new Float32Array(raw);
+            if (options.asTensor && typeof Tensor !== 'undefined') {
+                return new Tensor(floatArray, [floatArray.length], 'float32');
+            }
+            return floatArray;
+        }
+
+        function embedBatch(texts, options = {}) {
+            if (!Array.isArray(texts)) {
+                throw new TypeError('Texts must be an array of strings');
+            }
+            return texts.map(t => embed(t, options));
+        }
         // --- Tensor: 高性能零拷贝多维张量 ---
         class Tensor {
             constructor(data, shape = null, dtype = 'float32') {
@@ -286,29 +392,9 @@ pub fn setup_ai_api(
                 }
             }
 
-            // 向量嵌入生成 (Embedding)
+            // 向量嵌入生成 (Embedding - backed by native Rust encoder)
             async embed(text) {
-                if (typeof text !== 'string') {
-                    throw new TypeError('Text must be a string');
-                }
-                // 使用确定性散列和三角函数为输入文本生成 64 维嵌入向量
-                const dim = 64;
-                const vec = new Float32Array(dim);
-                let seed = 0;
-                for (let i = 0; i < text.length; i++) {
-                    seed = (seed * 31 + text.charCodeAt(i)) & 0xFFFFFFFF;
-                }
-                for (let d = 0; d < dim; d++) {
-                    vec[d] = Math.sin((seed + d) * 0.1);
-                }
-                // 归一化为单位向量
-                let norm = 0;
-                for (let d = 0; d < dim; d++) norm += vec[d] * vec[d];
-                norm = Math.sqrt(norm);
-                if (norm > 0) {
-                    for (let d = 0; d < dim; d++) vec[d] /= norm;
-                }
-                return new Tensor(vec, [dim], 'float32');
+                return embed(text, { asTensor: true });
             }
 
             // 分词辅助
@@ -366,16 +452,20 @@ pub fn setup_ai_api(
 
         // 统一导出对象
         const beeAi = {
+            embed,
+            embedBatch,
             Tensor,
             LLM,
             AgentPipeline,
             cosineSimilarity,
-            version: '1.0.0'
+            version: '1.3.0'
         };
 
         // 绑定到全局
         globalThis.__bee_ai = beeAi;
         globalThis.bee_ai = beeAi;
+        globalThis.embed = embed;
+        globalThis.embedBatch = embedBatch;
     })();
     "#;
 

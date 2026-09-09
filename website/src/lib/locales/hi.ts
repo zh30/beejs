@@ -266,6 +266,7 @@ export const hi: TranslationSchema = {
           { id: 'v8-isolate-pool', label: 'रनटाइम कोर' },
           { id: 'jit-optimization', label: 'TypeScript' },
           { id: 'ai-engine', label: 'मूल एआई इंजन (bee:ai)' },
+          { id: 'ai-embeddings', label: 'नेटिव एम्बेडिंग्स और वैक्टर', badge: 'v1.3' },
           { id: 'server-mode', label: 'HTTP सर्वर और समवर्ती' },
           { id: 'memory-management', label: 'SIMD बफर और मेमोरी' },
         ],
@@ -278,6 +279,14 @@ export const hi: TranslationSchema = {
           { id: 'package-manager-dlx', label: 'पैकेज रनर (bee x / dlx)', badge: 'CLI' },
           { id: 'deployment-docker', label: 'तैनाती और कंटेनर (bee deploy)', badge: 'Deploy' },
           { id: 'ide-extension', label: 'VS Code एक्सटेंशन', badge: 'IDE' },
+        ],
+      },
+      {
+        title: 'एजेंट और सैंडबॉक्स',
+        items: [
+          { id: 'agent-sandbox', label: 'सैंडबॉक्स और संसाधन कोटा', badge: 'Agent' },
+          { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
+          { id: 'virtual-fs-sandbox', label: 'मेमोरी-आधारित वर्चुअल फ़ाइल सिस्टम', badge: 'v1.3' },
         ],
       },
       {

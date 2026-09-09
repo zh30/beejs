@@ -126,8 +126,28 @@ declare module "bee:ai" {
     /**
      * Computes dense vector embeddings for input text.
      */
-    embed(text: string): Promise<Tensor>;
+    embed(text: string, options?: EmbedOptions): Promise<Tensor | Float32Array>;
   }
+
+  export interface EmbedOptions {
+    dimensions?: 64 | 128 | 384 | number;
+    asTensor?: boolean;
+  }
+
+  /**
+   * Native zero-dependency deterministic text embedding function.
+   */
+  export function embed(text: string, options?: EmbedOptions): Float32Array | Tensor;
+
+  /**
+   * Batch native text embedding generator.
+   */
+  export function embedBatch(texts: string[], options?: EmbedOptions): Float32Array[] | Tensor[];
+
+  /**
+   * Semantic cosine similarity between two vector representations.
+   */
+  export function cosineSimilarity(a: Float32Array | number[] | Tensor, b: Float32Array | number[] | Tensor): number;
 
   export interface AgentTool {
     name: string;
@@ -365,4 +385,88 @@ declare module "bee:std" {
   export * as fs from "bee:std/fs";
   export * as crypto from "bee:std/crypto";
   export { assert, assertEquals, assertNotEquals, assertThrows } from "bee:std/assert";
+}
+
+declare module "bee:mcp" {
+  export interface ToolDefinition {
+    name: string;
+    description?: string;
+    inputSchema?: Record<string, unknown>;
+  }
+
+  export interface ResourceDefinition {
+    uri: string;
+    name: string;
+    description?: string;
+    mimeType?: string;
+  }
+
+  export interface PromptDefinition {
+    name: string;
+    description?: string;
+    arguments?: Array<{ name: string; description?: string; required?: boolean }>;
+  }
+
+  export interface McpServerOptions {
+    name: string;
+    version: string;
+  }
+
+  export class McpServer {
+    readonly name: string;
+    readonly version: string;
+
+    constructor(options?: McpServerOptions);
+
+    tool(
+      name: string,
+      descriptionOrSchema: string | Record<string, unknown>,
+      schemaOrHandler?: Record<string, unknown> | ((params: Record<string, unknown>) => unknown),
+      handler?: (params: Record<string, unknown>) => unknown
+    ): this;
+
+    resource(
+      uri: string,
+      name: string,
+      handler: (uri: string) => unknown,
+      mimeType?: string
+    ): this;
+
+    prompt(
+      name: string,
+      description: string,
+      args: Array<{ name: string; description?: string; required?: boolean }>,
+      handler: (params: Record<string, unknown>) => unknown
+    ): this;
+
+    handleMessage(message: Record<string, unknown> | string): Promise<Record<string, unknown>>;
+    connectLocal(): McpClient;
+    startStdio(): void;
+  }
+
+  export class McpClient {
+    constructor();
+    ping(): Promise<boolean>;
+    listTools(): Promise<ToolDefinition[]>;
+    callTool(name: string, args?: Record<string, unknown>): Promise<unknown>;
+    listResources(): Promise<ResourceDefinition[]>;
+    readResource(uri: string): Promise<unknown>;
+    listPrompts(): Promise<PromptDefinition[]>;
+    getPrompt(name: string, args?: Record<string, unknown>): Promise<unknown>;
+    handleMessage(message: Record<string, unknown> | string): Promise<Record<string, unknown>>;
+  }
+}
+
+declare module "bee:vfs" {
+  export function isEnabled(): boolean;
+  export function isCow(): boolean;
+  export function enable(cow?: boolean): void;
+  export function disable(): void;
+  export function reset(): void;
+  export function listFiles(): string[];
+  export function snapshot(): { enabled: boolean; cow: boolean; files: Record<string, string> };
+}
+
+declare module "bee:sandbox" {
+  export * from "bee:vfs";
 }

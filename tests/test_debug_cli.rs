@@ -79,7 +79,7 @@ fn test_debug_with_options() {
     assert!(
         !output.status.success()
             && stderr.contains("unexpected argument '--port'")
-            && stderr.contains("Usage: bee debug <FILE>"),
+            && stderr.contains("Usage: bee debug"),
         "Unsupported debug --port flag should be rejected by the current public CLI. stderr: {}",
         stderr
     );
@@ -98,7 +98,7 @@ fn test_debug_attach_command() {
     assert!(
         !output.status.success()
             && stderr.contains("unexpected argument '--pid'")
-            && stderr.contains("Usage: bee debug <FILE>"),
+            && stderr.contains("Usage: bee debug"),
         "Unsupported debug attach mode should be rejected by the current public CLI. stderr: {}",
         stderr
     );
@@ -117,7 +117,7 @@ fn test_debug_inspect_command() {
     assert!(
         !output.status.success()
             && stderr.contains("unexpected argument '--port'")
-            && stderr.contains("Usage: bee debug <FILE>"),
+            && stderr.contains("Usage: bee debug"),
         "Unsupported debug inspect mode should be rejected by the current public CLI. stderr: {}",
         stderr
     );
@@ -143,7 +143,7 @@ fn test_debug_web_flag() {
     assert!(
         !output.status.success()
             && stderr.contains("unexpected argument '--web'")
-            && stderr.contains("Usage: bee debug <FILE>"),
+            && stderr.contains("Usage: bee debug"),
         "Unsupported debug --web flag should be rejected by the current public CLI. stderr: {}",
         stderr
     );

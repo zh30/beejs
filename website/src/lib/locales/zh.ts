@@ -270,6 +270,7 @@ export const zh: TranslationSchema = {
           { id: 'v8-isolate-pool', label: '运行时与 V8 架构' },
           { id: 'jit-optimization', label: 'TypeScript 6.0 与 TSX' },
           { id: 'ai-engine', label: '原生 AI 引擎 (bee:ai)', badge: 'AI' },
+          { id: 'ai-embeddings', label: '零依赖原生 Embedding 与语义向量', badge: 'v1.3' },
           { id: 'server-mode', label: '现代 Web 服务与并发', badge: 'v1.0' },
           { id: 'memory-management', label: 'SIMD 与内存模型' },
         ],
@@ -298,6 +299,8 @@ export const zh: TranslationSchema = {
         title: 'Agent 与高级特性',
         items: [
           { id: 'agent-sandbox', label: '确定性沙箱与资源硬配额', badge: 'Agent' },
+          { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
+          { id: 'virtual-fs-sandbox', label: '纯内存隔离 Virtual Filesystem (VFS)', badge: 'v1.3' },
           { id: 'import-maps-native', label: 'WICG 导入映射与原生插件', badge: 'v1.0' },
           { id: 'types-lsp', label: '官方 TypeScript 类型定义', badge: 'Types' },
         ],

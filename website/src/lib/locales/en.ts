@@ -271,6 +271,7 @@ export const en: TranslationSchema = {
           { id: 'v8-isolate-pool', label: 'Runtime & V8 Core' },
           { id: 'jit-optimization', label: 'TypeScript 6.0 & TSX' },
           { id: 'ai-engine', label: 'Native AI Engine (bee:ai)', badge: 'AI' },
+          { id: 'ai-embeddings', label: 'Native Text Embeddings & Vectors', badge: 'v1.3' },
           { id: 'server-mode', label: 'Modern Web Server & Fetch', badge: 'v1.0' },
           { id: 'memory-management', label: 'SIMD & Memory Model' },
         ],
@@ -299,6 +300,8 @@ export const en: TranslationSchema = {
         title: 'Agent & Advanced',
         items: [
           { id: 'agent-sandbox', label: 'Deterministic Sandbox & Quotas', badge: 'Agent' },
+          { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
+          { id: 'virtual-fs-sandbox', label: 'Virtual Filesystem In-Memory Sandbox', badge: 'v1.3' },
           { id: 'import-maps-native', label: 'WICG Import Maps & Addons', badge: 'v1.0' },
           { id: 'types-lsp', label: 'TypeScript Type Declarations', badge: 'Types' },
         ],

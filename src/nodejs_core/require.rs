@@ -566,6 +566,14 @@ pub fn setup_require_api(
                         return;
                     }
                 }
+                "mcp" => {
+                    let global = scope.get_current_context().global(scope);
+                    let k = v8::String::new(scope, "__bee_mcp").unwrap().into();
+                    if let Some(val) = global.get(scope, k) {
+                        retval.set(val);
+                        return;
+                    }
+                }
                 "ai" | "string_decoder" | "perf_hooks" => {
                     // Get the global object and directly return the module from it
                     let global = scope.get_current_context().global(scope);

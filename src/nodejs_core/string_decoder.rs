@@ -16,6 +16,7 @@ pub fn setup_string_decoder_api(
             constructor(encoding = 'utf8') {
                 this.encoding = (encoding || 'utf8').toLowerCase();
                 if (this.encoding === 'utf-8') this.encoding = 'utf8';
+                this._encoding = this.encoding;
                 this._buffer = [];
                 this._decoder = new TextDecoder(this.encoding);
             }
