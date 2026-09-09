@@ -22,17 +22,13 @@ ENV CARGO_PROFILE_RELEASE_LTO=false
 ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
 ENV CARGO_BUILD_JOBS=1
 
-# 复制依赖文件
+# Manifest + benches must exist before `cargo fetch` (Cargo.toml lists [[bench]]).
 COPY Cargo.toml Cargo.lock ./
-
-# 预取依赖项（缓存层）
-RUN cargo fetch --locked
-
-# 复制源代码
+COPY benches ./benches
 COPY src ./src
 
-# 构建生产版本
-RUN cargo build --release
+RUN cargo fetch --locked
+RUN cargo build --release --bin bee
 
 # 阶段 2: 运行时阶段 - 最小化镜像
 FROM debian:bookworm-slim AS runtime
