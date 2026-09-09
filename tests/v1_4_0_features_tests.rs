@@ -16,28 +16,28 @@ fn test_v1_4_0_ffi_native_c_abi() {
     let script = r#"
         const { dlopen, ptr, read, write, readCString, FFIType } = require('bee:ffi');
 
-        // 1. Test math symbols from standard C library
-        // Passing null or libSystem.B.dylib on macOS / libc.so on Linux
-        const libPath = process.platform === 'darwin'
-            ? '/usr/lib/libSystem.B.dylib'
-            : (process.platform === 'win32' ? 'msvcrt.dll' : 'libc.so.6');
+        // 1. Test math symbols from the platform C library.
+        // glibc keeps cos/sin in libm; libc.so.6 does not always re-export them.
+        const specs = { cos: { args: ['f64'], returns: 'f64' }, sin: { args: ['f64'], returns: 'f64' } };
+        const candidates = process.platform === 'darwin'
+            ? ['/usr/lib/libSystem.B.dylib', null]
+            : (process.platform === 'win32'
+                ? ['msvcrt.dll', null]
+                : ['libm.so.6', 'libc.so.6', null]);
 
         let lib;
-        try {
-            lib = dlopen(libPath, {
-                symbols: {
-                    cos: { args: ['f64'], returns: 'f64' },
-                    sin: { args: ['f64'], returns: 'f64' }
-                }
-            });
-        } catch (e) {
-            // Fallback to default process lookup
-            lib = dlopen(null, {
-                symbols: {
-                    cos: { args: ['f64'], returns: 'f64' },
-                    sin: { args: ['f64'], returns: 'f64' }
-                }
-            });
+        let lastErr;
+        for (const libPath of candidates) {
+            try {
+                lib = dlopen(libPath, { symbols: specs });
+                lastErr = null;
+                break;
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        if (!lib) {
+            throw lastErr || new Error('dlopen failed for cos/sin');
         }
 
         const cosVal = lib.symbols.cos(0.0);

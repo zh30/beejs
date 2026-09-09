@@ -70,6 +70,25 @@ jobs:
             ${{ runner.os }}-${{ matrix.target }}-
             ${{ runner.os }}-cargo-
 
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        run: choco install openssl --no-progress -y
+
+      - name: Configure OpenSSL env (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dirs = @(
+            'C:\Program Files\OpenSSL-Win64',
+            'C:\Program Files\OpenSSL',
+            'C:\Program Files (x86)\OpenSSL-Win64'
+          )
+          $found = $dirs | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $found) { throw 'OpenSSL directory not found after choco install' }
+          echo "OPENSSL_DIR=$found" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$found\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$found\include" >> $env:GITHUB_ENV
+
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 

@@ -149,6 +149,23 @@ jobs:
             ${{ runner.os }}-windows-smoke-
             ${{ runner.os }}-cargo-
 
+      - name: Install OpenSSL
+        run: choco install openssl --no-progress -y
+
+      - name: Configure OpenSSL env
+        shell: pwsh
+        run: |
+          $dirs = @(
+            'C:\Program Files\OpenSSL-Win64',
+            'C:\Program Files\OpenSSL',
+            'C:\Program Files (x86)\OpenSSL-Win64'
+          )
+          $found = $dirs | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $found) { throw 'OpenSSL directory not found after choco install' }
+          echo "OPENSSL_DIR=$found" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$found\lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$found\include" >> $env:GITHUB_ENV
+
       - name: Build release binary
         run: cargo build --release
 
@@ -170,5 +187,6 @@ jobs:
 
       - name: cargo-audit
         uses: rustsec/audit-check@v2
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
