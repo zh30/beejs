@@ -970,5 +970,243 @@ declare module "sandbox" {
   export * from "bee:sandbox";
 }
 
+declare module "bee:bus" {
+  export interface Message<TPayload = any> {
+    id: string;
+    topic: string;
+    payload: TPayload;
+    headers?: Record<string, string>;
+    timestamp: number;
+    priority?: number;
+    replyTo?: string;
+    correlationId?: string;
+    reply(responsePayload: any): Message;
+  }
+
+  export interface Subscription {
+    id: string;
+    pattern: string;
+    priority: number;
+    once: boolean;
+    unsubscribe(): void;
+  }
+
+  export interface SubscribeOptions {
+    priority?: number;
+    once?: boolean;
+  }
+
+  export interface PublishOptions {
+    id?: string;
+    headers?: Record<string, string>;
+    priority?: number;
+    replyTo?: string;
+    correlationId?: string;
+  }
+
+  export interface RequestOptions extends PublishOptions {
+    timeoutMs?: number;
+  }
+
+  export interface BusMetrics {
+    published_count: number;
+    delivered_count: number;
+    dead_letter_count: number;
+    active_subscriptions: number;
+  }
+
+  export class MessageBus {
+    readonly id: number;
+    constructor(id?: number);
+    subscribe<T = any>(
+      pattern: string,
+      handler: (message: Message<T>) => void | Promise<void>,
+      options?: SubscribeOptions
+    ): Subscription;
+    once<T = any>(
+      pattern: string,
+      handler: (message: Message<T>) => void | Promise<void>,
+      options?: SubscribeOptions
+    ): Subscription;
+    unsubscribe(subId: string | Subscription): boolean;
+    use(middleware: (msg: Message, next: () => void) => void | boolean): this;
+    publish<T = any>(topic: string, payload: T, options?: PublishOptions): Message<T>;
+    broadcast<T = any>(topic: string, payload: T, options?: PublishOptions): Message<T>;
+    request<TResponse = any, TPayload = any>(
+      topic: string,
+      payload: TPayload,
+      options?: RequestOptions
+    ): Promise<TResponse>;
+    reply(originalMessage: Message, responsePayload: any): Message;
+    getMetrics(): BusMetrics;
+    getDeadLetters(): Message[];
+    clearDeadLetters(): boolean;
+    getTopics(): string[];
+    clear(): void;
+  }
+
+  export function createBus(id?: number): MessageBus;
+  export function getDefaultBus(): MessageBus;
+  export function subscribe<T = any>(
+    pattern: string,
+    handler: (message: Message<T>) => void | Promise<void>,
+    options?: SubscribeOptions
+  ): Subscription;
+  export function once<T = any>(
+    pattern: string,
+    handler: (message: Message<T>) => void | Promise<void>,
+    options?: SubscribeOptions
+  ): Subscription;
+  export function unsubscribe(subId: string | Subscription): boolean;
+  export function publish<T = any>(topic: string, payload: T, options?: PublishOptions): Message<T>;
+  export function broadcast<T = any>(topic: string, payload: T, options?: PublishOptions): Message<T>;
+  export function request<TResponse = any, TPayload = any>(
+    topic: string,
+    payload: TPayload,
+    options?: RequestOptions
+  ): Promise<TResponse>;
+  export function reply(originalMessage: Message, responsePayload: any): Message;
+  export function use(middleware: (msg: Message, next: () => void) => void | boolean): MessageBus;
+  export function getMetrics(): BusMetrics;
+  export function getDeadLetters(): Message[];
+  export function clearDeadLetters(): boolean;
+  export function getTopics(): string[];
+  export function topicMatches(pattern: string, topic: string): boolean;
+}
+
+declare module "bus" {
+  export * from "bee:bus";
+}
+
+declare module "bee:grammar" {
+  export interface SSEMessage {
+    event: string;
+    data: string;
+    id?: string;
+    retry?: number;
+    json<T = any>(): T;
+  }
+
+  export interface GrammarResult {
+    valid: boolean;
+    completed: boolean;
+    error?: string;
+    [key: string]: any;
+  }
+
+  export class Grammar {
+    readonly type: string;
+    validate(text: string): GrammarResult;
+    accept(prefix: string, nextToken: string): boolean;
+  }
+
+  export interface StreamDecoder<T = any> {
+    push(chunk: string): T;
+    finish(): T;
+    readonly current: T;
+    readonly raw: string;
+    reset(): void;
+  }
+
+  export interface StreamDecoderOptions<T = any> {
+    onChunk?: (parsed: T, isComplete: boolean) => void;
+  }
+
+  export function parsePartialJSON<T = any>(input: string): T;
+  export function createStreamDecoder<T = any>(
+    options?: StreamDecoderOptions<T>
+  ): StreamDecoder<T>;
+  export function parseSSEChunk(chunk: string): SSEMessage[];
+  export function createChoiceGrammar(choices: string[]): Grammar;
+  export function createRegexGrammar(pattern: string | RegExp): Grammar;
+  export function createJSONGrammar(schema?: any): Grammar;
+  export function createGrammar(spec: {
+    choices?: string[];
+    regex?: string | RegExp;
+    pattern?: string | RegExp;
+    schema?: any;
+    type?: string;
+  }): Grammar;
+}
+
+declare module "grammar" {
+  export * from "bee:grammar";
+}
+
+declare module "bee:checkpoint" {
+  export interface Checkpoint<TState = any> {
+    id: string;
+    parent_id?: string;
+    branch: string;
+    timestamp: number;
+    state: TState;
+    metadata?: Record<string, any>;
+  }
+
+  export interface ValueDiff {
+    from: any;
+    to: any;
+  }
+
+  export interface StateDiff {
+    added: Record<string, any>;
+    modified: Record<string, ValueDiff>;
+    deleted: string[];
+  }
+
+  export interface SaveCheckpointOptions<TState = any> {
+    id?: string;
+    state?: TState;
+    branch?: string;
+    metadata?: Record<string, any>;
+  }
+
+  export interface ListCheckpointOptions {
+    branch?: string;
+  }
+
+  export class CheckpointManager {
+    readonly id: number;
+    readonly currentBranch: string;
+    constructor(id?: number | null, branch?: string);
+    save<T = any>(
+      idOrOptions: string | SaveCheckpointOptions<T> | T,
+      state?: T,
+      metadata?: Record<string, any>
+    ): Checkpoint<T>;
+    get<T = any>(id: string): Checkpoint<T> | undefined;
+    restore<T = any>(id: string): T;
+    list(options?: ListCheckpointOptions): Checkpoint[];
+    diff(fromId: string, toId: string): StateDiff;
+    fork(fromId: string, branchName: string): CheckpointManager;
+    delete(id: string): boolean;
+    clear(): boolean;
+    persist(kvStore: any, prefix?: string): number;
+    restoreFromKV(kvStore: any, prefix?: string): number;
+  }
+
+  export function createCheckpointManager(
+    id?: number | null,
+    branch?: string
+  ): CheckpointManager;
+  export function getDefaultManager(): CheckpointManager;
+  export function save<T = any>(
+    idOrOptions: string | SaveCheckpointOptions<T> | T,
+    state?: T,
+    metadata?: Record<string, any>
+  ): Checkpoint<T>;
+  export function restore<T = any>(id: string): T;
+  export function get<T = any>(id: string): Checkpoint<T> | undefined;
+  export function list(options?: ListCheckpointOptions): Checkpoint[];
+  export function diff(fromId: string, toId: string): StateDiff;
+  export function fork(fromId: string, branchName: string): CheckpointManager;
+  export function clear(): boolean;
+}
+
+declare module "checkpoint" {
+  export * from "bee:checkpoint";
+}
+
+
 
 

@@ -88,11 +88,14 @@ pub mod platform;
 pub mod cloud_native;
 
 pub mod ai_engine; // Native text embeddings and semantic vector engine
+pub mod bus; // Multi-Agent Message Bus & PubSub Channel Fabric (bee:bus)
 pub mod capability; // Enterprise capability-based security (bee:security / bee:permissions)
+pub mod checkpoint; // Agent State Checkpoint & Time-Travel Snapshot Engine (bee:checkpoint)
 pub mod database; // Embedded SQLite and Vector similarity database
 pub mod error; // Unified error handling system
 pub mod fallback; // Fallback mechanisms
 pub mod ffi; // Native zero-dependency C ABI foreign function interface (bee:ffi)
+pub mod grammar; // Streaming Structured JSON & LLM Token Grammar Engine (bee:grammar)
 pub mod kv; // Embedded Persistent Key-Value & Durable State Engine (bee:kv)
 pub mod memory; // Memory management
 pub mod pool; // High-density multi-tenant IsolatePool for serverless & multi-agent execution (bee:pool)
