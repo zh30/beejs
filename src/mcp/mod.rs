@@ -543,7 +543,7 @@ pub fn setup_mcp_api(
             McpServer,
             McpClient,
             PROTOCOL_VERSION: MCP_PROTOCOL_VERSION,
-            version: '1.3.0'
+            version: '1.4.0'
         };
 
         globalThis.__bee_mcp = beeMcp;

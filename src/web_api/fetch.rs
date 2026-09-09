@@ -186,6 +186,46 @@ pub fn setup_fetch_api(
     let headers_constructor: _ = headers_template.get_function(scope).unwrap();
     let headers_key: _ = v8::String::new(scope, "Headers").unwrap();
     global.set(scope, headers_key.into(), headers_constructor.into());
+
+    // Inject Response static methods (Response.json, Response.redirect, Response.error) (v1.5.0)
+    let response_helpers_js = r#"
+    (function() {
+        if (typeof Response === 'undefined') return;
+
+        Response.json = function(data, init = {}) {
+            const headers = new Headers(init.headers);
+            if (!headers.has('content-type')) {
+                headers.set('content-type', 'application/json');
+            }
+            const body = JSON.stringify(data);
+            return new Response(body, {
+                ...init,
+                headers
+            });
+        };
+
+        Response.redirect = function(url, status = 302) {
+            const code = typeof status === 'number' ? status : 302;
+            if (![301, 302, 303, 307, 308].includes(code)) {
+                throw new RangeError('Invalid status code for redirect: ' + code);
+            }
+            return new Response(null, {
+                status: code,
+                headers: { location: String(url) }
+            });
+        };
+
+        Response.error = function() {
+            return new Response(null, { status: 0, statusText: '' });
+        };
+    })();
+    "#;
+    if let Some(code) = v8::String::new(scope, response_helpers_js) {
+        if let Some(script) = v8::Script::compile(scope, code, None) {
+            let _ = script.run(scope);
+        }
+    }
+
     Ok(())
 }
 /// Main fetch function callback
@@ -1726,6 +1766,30 @@ fn headers_constructor_callback(
     );
     let for_each_func = for_each_func_template.get_function(scope).unwrap();
     headers_obj.set(scope, for_each_key, for_each_func.into());
+
+    // Add getSetCookie() method (Web Standard & Node 18+)
+    let get_set_cookie_key = v8::String::new(scope, "getSetCookie").unwrap().into();
+    let get_set_cookie_func_template = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut rv: v8::ReturnValue| {
+            let entries = headers_entries_for_object(scope, args.this());
+            let cookies: Vec<String> = entries
+                .into_iter()
+                .filter(|(k, _)| k.eq_ignore_ascii_case("set-cookie"))
+                .map(|(_, v)| v)
+                .collect();
+            let arr = v8::Array::new(scope, cookies.len() as i32);
+            for (i, cookie) in cookies.iter().enumerate() {
+                let s = v8::String::new(scope, cookie).unwrap();
+                arr.set_index(scope, i as u32, s.into());
+            }
+            rv.set(arr.into());
+        },
+    );
+    let get_set_cookie_func = get_set_cookie_func_template.get_function(scope).unwrap();
+    headers_obj.set(scope, get_set_cookie_key, get_set_cookie_func.into());
 
     retval.set(headers_obj.into());
 }

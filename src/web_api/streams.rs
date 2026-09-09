@@ -2674,5 +2674,80 @@ pub fn setup_streams_api(
     setup_transform_stream(scope, *context);
     setup_text_decoder_stream(scope, *context);
     setup_text_encoder_stream(scope, *context);
+
+    // Modern Web Streams enhancements (ReadableStream.from, Symbol.asyncIterator) (v1.5.0)
+    let streams_helper_js = r#"
+    (function() {
+        if (typeof ReadableStream === 'undefined') return;
+
+        ReadableStream.from = function(iterable) {
+            if (!iterable) throw new TypeError('ReadableStream.from requires an iterable');
+            if (typeof iterable[Symbol.asyncIterator] === 'function') {
+                return new ReadableStream({
+                    async start(controller) {
+                        try {
+                            for await (const chunk of iterable) {
+                                controller.enqueue(chunk);
+                            }
+                            controller.close();
+                        } catch (err) {
+                            controller.error(err);
+                        }
+                    }
+                });
+            }
+            return new ReadableStream({
+                start(controller) {
+                    try {
+                        for (const chunk of iterable) {
+                            controller.enqueue(chunk);
+                        }
+                        controller.close();
+                    } catch (err) {
+                        controller.error(err);
+                    }
+                }
+            });
+        };
+
+        if (ReadableStream.prototype) {
+            ReadableStream.prototype[Symbol.asyncIterator] = async function*() {
+                const reader = this.getReader();
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        yield value;
+                    }
+                } finally {
+                    if (reader && typeof reader.releaseLock === 'function') {
+                        reader.releaseLock();
+                    }
+                }
+            };
+        }
+
+        if (typeof TransformStream !== 'undefined') {
+            const OrigTS = TransformStream;
+            globalThis.TransformStream = function(transformer) {
+                const ts = new OrigTS(transformer);
+                if (ts.readable && typeof ReadableStream !== 'undefined' && ReadableStream.prototype) {
+                    Object.setPrototypeOf(ts.readable, ReadableStream.prototype);
+                }
+                if (ts.writable && typeof WritableStream !== 'undefined' && WritableStream.prototype) {
+                    Object.setPrototypeOf(ts.writable, WritableStream.prototype);
+                }
+                return ts;
+            };
+            globalThis.TransformStream.prototype = OrigTS.prototype;
+        }
+    })();
+    "#;
+    if let Some(code) = v8::String::new(scope, streams_helper_js) {
+        if let Some(script) = v8::Script::compile(scope, code, None) {
+            let _ = script.run(scope);
+        }
+    }
+
     Ok(())
 }

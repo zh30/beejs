@@ -82,6 +82,17 @@ pub fn setup_abort_api(
                                 v8::Boolean::new(_scope, true).into();
                             signal_obj.set(_scope, aborted_key.into(), true_bool);
 
+                            // Set reason property (v1.5.0)
+                            let reason = if args.length() > 0 && !args.get(0).is_undefined() {
+                                args.get(0)
+                            } else {
+                                let msg =
+                                    v8::String::new(_scope, "The operation was aborted").unwrap();
+                                v8::Exception::error(_scope, msg)
+                            };
+                            let reason_key = v8::String::new(_scope, "reason").unwrap();
+                            signal_obj.set(_scope, reason_key.into(), reason);
+
                             // Trigger listeners
                             let list_key = v8::String::new(_scope, "_abortListeners").unwrap();
                             let event_type_key = v8::String::new(_scope, "type").unwrap();
@@ -146,6 +157,54 @@ pub fn setup_abort_api(
     // Expose AbortSignal as global (v0.3.340)
     let abort_signal_key: v8::Local<v8::String> = v8::String::new(scope, "AbortSignal").unwrap();
     global.set(scope, abort_signal_key.into(), abort_signal_obj.into());
+
+    // Inject AbortSignal static methods: timeout, any, abort (v1.5.0)
+    let helper_js = r#"
+    (function() {
+        if (typeof AbortSignal === 'undefined') return;
+
+        AbortSignal.timeout = function(ms) {
+            const controller = new AbortController();
+            const delay = typeof ms === 'number' ? ms : 0;
+            const timer = setTimeout(() => {
+                const err = new Error('The operation was aborted due to timeout');
+                err.name = 'TimeoutError';
+                controller.abort(err);
+            }, delay);
+            if (timer && typeof timer.unref === 'function') timer.unref();
+            return controller.signal;
+        };
+
+        AbortSignal.any = function(signals) {
+            const controller = new AbortController();
+            const sigList = Array.isArray(signals) ? signals : Array.from(signals || []);
+            for (const s of sigList) {
+                if (!s) continue;
+                if (s.aborted) {
+                    controller.abort(s.reason);
+                    return controller.signal;
+                }
+                if (typeof s.addEventListener === 'function') {
+                    s.addEventListener('abort', () => {
+                        controller.abort(s.reason);
+                    });
+                }
+            }
+            return controller.signal;
+        };
+
+        AbortSignal.abort = function(reason) {
+            const controller = new AbortController();
+            controller.abort(reason);
+            return controller.signal;
+        };
+    })();
+    "#;
+    if let Some(code) = v8::String::new(scope, helper_js) {
+        if let Some(script) = v8::Script::compile(scope, code, None) {
+            let _ = script.run(scope);
+        }
+    }
 
     Ok(())
 }

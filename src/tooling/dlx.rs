@@ -57,7 +57,7 @@ pub fn ensure_package_cached(pkg_spec: &str) -> Result<PathBuf> {
 
     // Download from npm registry
     let client = reqwest::blocking::Client::builder()
-        .user_agent("beejs-x/1.3.0")
+        .user_agent("beejs-x/1.4.0")
         .build()?;
 
     // 1. Resolve package metadata

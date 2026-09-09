@@ -50,10 +50,17 @@ mod tests {
         assert!(types.contains("declare module \"bee:std\""));
         assert!(types.contains("declare module \"bee:mcp\""));
         assert!(types.contains("declare module \"bee:vfs\""));
+        assert!(types.contains("declare module \"bee:ffi\""));
+        assert!(types.contains("declare module \"bee:pool\""));
+        assert!(types.contains("declare module \"bee:wasm\""));
         assert!(types.contains("class Tensor"));
         assert!(types.contains("class Database"));
         assert!(types.contains("class VectorDB"));
         assert!(types.contains("class LLM"));
+        assert!(types.contains("class IsolatePool"));
+        assert!(types.contains("class MemoryView"));
+        assert!(types.contains("function dlopen"));
+        assert!(types.contains("function copyMemory"));
         assert!(types.contains("class McpServer"));
         assert!(types.contains("class McpClient"));
         assert!(types.contains("embedBatch"));

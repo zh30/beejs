@@ -64,6 +64,11 @@ const iconMap: Record<string, ReactNode> = {
   'types-lsp': <FileCode className="w-4 h-4" />,
   'cli-usage': <Code className="w-4 h-4" />,
   'api-reference': <Book className="w-4 h-4" />,
+  'ffi-native': <Binary className="w-4 h-4" />,
+  'isolate-pool': <Cpu className="w-4 h-4" />,
+  'slm-inference': <Sparkles className="w-4 h-4" />,
+  'wasm-interop': <Zap className="w-4 h-4" />,
+  'framework-compat': <Layers className="w-4 h-4" />,
   modules: <Package className="w-4 h-4" />,
 }
 

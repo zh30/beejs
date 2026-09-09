@@ -55,25 +55,54 @@ pub fn setup_async_hooks_api(
                 return this._enabled ? this._store : undefined;
             }
             run(store, callback, ...args) {
+                if (!this._enabled) {
+                    return callback(...args);
+                }
                 const prev = this._store;
                 this._store = store;
                 try {
-                    return callback(...args);
-                } finally {
+                    const res = callback(...args);
+                    if (res && typeof res.then === 'function') {
+                        return Promise.resolve(res).finally(() => {
+                            this._store = prev;
+                        });
+                    }
                     this._store = prev;
+                    return res;
+                } catch (err) {
+                    this._store = prev;
+                    throw err;
                 }
             }
             exit(callback, ...args) {
+                if (!this._enabled) {
+                    return callback(...args);
+                }
                 const prev = this._store;
                 this._store = undefined;
                 try {
-                    return callback(...args);
-                } finally {
+                    const res = callback(...args);
+                    if (res && typeof res.then === 'function') {
+                        return Promise.resolve(res).finally(() => {
+                            this._store = prev;
+                        });
+                    }
                     this._store = prev;
+                    return res;
+                } catch (err) {
+                    this._store = prev;
+                    throw err;
                 }
             }
             enterWith(store) {
-                this._store = store;
+                if (this._enabled) {
+                    this._store = store;
+                }
+            }
+            static snapshot() {
+                return function(cb, ...args) {
+                    return cb(...args);
+                };
             }
         }
 

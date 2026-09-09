@@ -268,6 +268,7 @@ export const zh: TranslationSchema = {
         title: '核心系统',
         items: [
           { id: 'v8-isolate-pool', label: '运行时与 V8 架构' },
+          { id: 'isolate-pool', label: '多租户 IsolatePool (bee:pool)', badge: 'v1.4' },
           { id: 'jit-optimization', label: 'TypeScript 6.0 与 TSX' },
           { id: 'ai-engine', label: '原生 AI 引擎 (bee:ai)', badge: 'AI' },
           { id: 'ai-embeddings', label: '零依赖原生 Embedding 与语义向量', badge: 'v1.3' },
@@ -301,6 +302,10 @@ export const zh: TranslationSchema = {
           { id: 'agent-sandbox', label: '确定性沙箱与资源硬配额', badge: 'Agent' },
           { id: 'mcp-protocol', label: 'Model Context Protocol 2.0 (bee:mcp)', badge: 'v1.3' },
           { id: 'virtual-fs-sandbox', label: '纯内存隔离 Virtual Filesystem (VFS)', badge: 'v1.3' },
+          { id: 'ffi-native', label: '原生 C ABI 外部接口 (bee:ffi)', badge: 'v1.4' },
+          { id: 'wasm-interop', label: 'Wasm 2.0 零拷贝互通 (bee:wasm)', badge: 'v1.5' },
+          { id: 'slm-inference', label: '端侧 SLM 与约束 JSON 解码 (bee:ai)', badge: 'v1.4' },
+          { id: 'framework-compat', label: '主流 npm 框架兼容 (Hono / Express / LangChain)', badge: 'v1.5' },
           { id: 'import-maps-native', label: 'WICG 导入映射与原生插件', badge: 'v1.0' },
           { id: 'types-lsp', label: '官方 TypeScript 类型定义', badge: 'Types' },
         ],
