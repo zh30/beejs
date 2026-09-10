@@ -29,6 +29,138 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 use url::Url;
 
+thread_local! {
+    static ACTIVE_SOURCE_MAP: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Record the oxc source map for the script about to run so thrown stacks map to `.ts`.
+pub fn set_active_source_map(map_json: String) {
+    ACTIVE_SOURCE_MAP.with(|slot| {
+        *slot.borrow_mut() = Some(map_json);
+    });
+}
+
+fn active_source_map_url<'s>(scope: &mut v8::HandleScope<'s>) -> v8::Local<'s, v8::Value> {
+    ACTIVE_SOURCE_MAP.with(|slot| {
+        if let Some(map) = slot.borrow().as_ref() {
+            let url = format!(
+                "data:application/json;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(map.as_bytes())
+            );
+            v8::String::new(scope, &url)
+                .map(|s| s.into())
+                .unwrap_or_else(|| v8::undefined(scope).into())
+        } else {
+            v8::undefined(scope).into()
+        }
+    })
+}
+
+fn apply_active_source_map(stack: &str) -> String {
+    ACTIVE_SOURCE_MAP.with(|slot| match slot.borrow().as_deref() {
+        Some(map) => remap_stack_with_source_map(stack, map),
+        None => stack.to_string(),
+    })
+}
+
+fn remap_stack_with_source_map(stack: &str, map_json: &str) -> String {
+    let Ok(map) = serde_json::from_str::<serde_json::Value>(map_json) else {
+        return stack.to_string();
+    };
+    let Some(source_name) = map
+        .get("sources")
+        .and_then(|s| s.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|v| v.as_str())
+    else {
+        return stack.to_string();
+    };
+    let Some(mappings) = map.get("mappings").and_then(|m| m.as_str()) else {
+        return stack.to_string();
+    };
+    let line_map = decode_source_map_lines(mappings);
+    let mut out = String::new();
+    for line in stack.lines() {
+        if let Some(remapped) = remap_stack_line(line, source_name, &line_map) {
+            out.push_str(&remapped);
+        } else {
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    out
+}
+
+fn decode_source_map_lines(mappings: &str) -> Vec<Option<u32>> {
+    let mut generated_to_original: Vec<Option<u32>> = Vec::new();
+    let mut original_line: i32 = 0;
+    for (gen_line, segment_group) in mappings.split(';').enumerate() {
+        if generated_to_original.len() <= gen_line {
+            generated_to_original.resize(gen_line + 1, None);
+        }
+        let Some(first) = segment_group.split(',').next() else {
+            continue;
+        };
+        if first.is_empty() {
+            continue;
+        }
+        let decoded = decode_vlq_segment(first);
+        if decoded.len() >= 3 {
+            original_line += decoded[2];
+            generated_to_original[gen_line] = Some(original_line.max(0) as u32);
+        }
+    }
+    generated_to_original
+}
+
+fn decode_vlq_segment(seg: &str) -> Vec<i32> {
+    let table = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut values = Vec::new();
+    let mut result: u32 = 0;
+    let mut shift = 0;
+    for ch in seg.bytes() {
+        let Some(digit) = table.iter().position(|&c| c == ch).map(|i| i as u32) else {
+            break;
+        };
+        let has_cont = digit & 32 != 0;
+        result += (digit & 31) << shift;
+        if has_cont {
+            shift += 5;
+            continue;
+        }
+        let signed = if result & 1 != 0 {
+            -((result >> 1) as i32)
+        } else {
+            (result >> 1) as i32
+        };
+        values.push(signed);
+        result = 0;
+        shift = 0;
+    }
+    values
+}
+
+fn remap_stack_line(line: &str, source_name: &str, line_map: &[Option<u32>]) -> Option<String> {
+    let start = line.rfind(':')?;
+    let (prefix_col, _col) = line.split_at(start);
+    let line_start = prefix_col.rfind(':')?;
+    let (prefix, line_str) = prefix_col.split_at(line_start);
+    let gen_line: usize = line_str.trim_start_matches(':').parse().ok()?;
+    let orig = *line_map.get(gen_line.saturating_sub(1))?.as_ref()?;
+    let orig_line = orig + 1;
+    let file_end = prefix
+        .rfind(|c: char| c == '/' || c == ' ' || c == '(')
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let mut remapped = String::new();
+    remapped.push_str(&prefix[..file_end]);
+    remapped.push_str(source_name);
+    remapped.push(':');
+    remapped.push_str(&orig_line.to_string());
+    remapped.push_str(&line[start..]);
+    Some(remapped)
+}
+
 // v0.3.50: Import Node.js core modules for path and fs
 use crate::nodejs_core::crypto::setup_crypto_api;
 use crate::nodejs_core::fs::setup_fs_api;
@@ -421,18 +553,18 @@ fn get_rss_memory() -> u64 {
     }
     #[cfg(target_os = "windows")]
     {
-        // On Windows, use GetProcessMemoryInfo
-        use std::mem::MaybeUninit;
-        use windows_sys::Win32::System::Diagnostics::Debug::{
+        // windows-sys 0.52: GetCurrentProcess is Threading; counters are ProcessStatus.
+        use windows_sys::Win32::System::ProcessStatus::{
             GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
         };
+        use windows_sys::Win32::System::Threading::GetCurrentProcess;
 
         unsafe {
             let mut counters: PROCESS_MEMORY_COUNTERS = std::mem::zeroed();
             counters.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
 
             if GetProcessMemoryInfo(
-                windows_sys::Win32::System::SystemServices::GetCurrentProcess(),
+                GetCurrentProcess(),
                 &mut counters,
                 std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
             ) != 0
@@ -4637,7 +4769,9 @@ pub fn v8_exception_to_runtime_error(
         // Extract stack trace
         let stack_key = v8::String::new(scope, "stack").unwrap();
         let stack_trace = if let Some(stack_val) = error_obj.get(scope, stack_key.into()) {
-            Some(stack_val.to_rust_string_lossy(scope))
+            Some(apply_active_source_map(
+                &stack_val.to_rust_string_lossy(scope),
+            ))
         } else {
             None
         };
@@ -5353,7 +5487,7 @@ impl MinimalRuntime {
             .ok_or_else(|| format!("Failed to create V8 source for '{}'", path.display()))?;
         let resource_name = v8::String::new(scope, &path.to_string_lossy())
             .ok_or_else(|| format!("Failed to create V8 resource name for '{}'", path.display()))?;
-        let source_map_url = v8::undefined(scope);
+        let source_map_url = active_source_map_url(scope);
         let origin = v8::ScriptOrigin::new(
             scope,
             resource_name.into(),
@@ -5361,7 +5495,7 @@ impl MinimalRuntime {
             0,
             false,
             0,
-            source_map_url.into(),
+            source_map_url,
             false,
             false,
             true,
@@ -8766,11 +8900,18 @@ impl MinimalRuntime {
             } else {
                 "eval.ts"
             };
-            Cow::Owned(
-                crate::typescript::compile_typescript(code, filename)
-                    .map(|output| output.js_code)
-                    .map_err(|error| anyhow::anyhow!(error))?,
-            )
+            Cow::Owned({
+                let output = crate::typescript::compile_typescript(code, filename)
+                    .map_err(|error| anyhow::anyhow!(error))?;
+                if let Some(ref map) = output.source_map {
+                    set_active_source_map(map.clone());
+                }
+                let mut js = output.js_code;
+                if let Some(ref map) = output.source_map {
+                    js.push_str(&crate::typescript::source_mapping_url_comment(map));
+                }
+                js
+            })
         } else {
             Cow::Borrowed(code)
         };
@@ -8945,7 +9086,7 @@ impl MinimalRuntime {
                 .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
             let resource_name = v8::String::new(scope, &self.main_module_filename)
                 .ok_or_else(|| anyhow::anyhow!("Failed to create V8 script resource name"))?;
-            let source_map_url = v8::undefined(scope);
+            let source_map_url = active_source_map_url(scope);
             let script_origin = v8::ScriptOrigin::new(
                 scope,
                 resource_name.into(),
@@ -8953,7 +9094,7 @@ impl MinimalRuntime {
                 0,
                 false,
                 0,
-                source_map_url.into(),
+                source_map_url,
                 false,
                 false,
                 false,
@@ -22482,9 +22623,39 @@ require.resolve = function(specifier) {{
         let stdout_write_instance = stdout_write_fn.get_function(scope).unwrap();
         stdout_obj.set(scope, stdout_write_key.into(), stdout_write_instance.into());
 
-        let is_stdout_tty = unsafe { libc::isatty(1) == 1 };
-        let is_stderr_tty = unsafe { libc::isatty(2) == 1 };
-        let is_stdin_tty = unsafe { libc::isatty(0) == 1 };
+        let is_stdout_tty = {
+            #[cfg(unix)]
+            {
+                unsafe { libc::isatty(1) == 1 }
+            }
+            #[cfg(not(unix))]
+            {
+                use std::io::IsTerminal;
+                std::io::stdout().is_terminal()
+            }
+        };
+        let is_stderr_tty = {
+            #[cfg(unix)]
+            {
+                unsafe { libc::isatty(2) == 1 }
+            }
+            #[cfg(not(unix))]
+            {
+                use std::io::IsTerminal;
+                std::io::stderr().is_terminal()
+            }
+        };
+        let is_stdin_tty = {
+            #[cfg(unix)]
+            {
+                unsafe { libc::isatty(0) == 1 }
+            }
+            #[cfg(not(unix))]
+            {
+                use std::io::IsTerminal;
+                std::io::stdin().is_terminal()
+            }
+        };
 
         let fd_key = v8::String::new(scope, "fd").unwrap();
         let is_tty_key = v8::String::new(scope, "isTTY").unwrap();

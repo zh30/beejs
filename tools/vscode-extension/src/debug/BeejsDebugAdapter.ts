@@ -1,272 +1,164 @@
 /**
  * Beejs Debug Adapter
  *
- * Provides debugging capabilities for Beejs runtime:
- * - Launch and attach debugging
- * - Breakpoint management
- * - Stepping through code
- * - Variable inspection
- * - Call stack navigation
+ * Launches `bee run --inspect-brk --inspect-port <port>` and speaks DAP
+ * to VS Code. Chrome DevTools can also attach to the same CDP port.
  */
 
 import * as vscode from 'vscode';
-import { DebugAdapterDescriptor, DebugAdapterDescriptorFactory, DebugAdapterInlineImplementation, DebugSession, DebugConfiguration } from 'vscode';
+import { spawn, ChildProcess } from 'child_process';
 import { BeejsConfiguration } from '../utils/BeejsConfiguration';
-import { spawn } from 'child_process';
-import * as net from 'net';
 
-export class BeejsDebugAdapterDescriptorFactory implements DebugAdapterDescriptorFactory {
-    private config: BeejsConfiguration;
+interface DapRequest {
+    type: 'request';
+    seq: number;
+    command: string;
+    arguments?: {
+        program?: string;
+        port?: number;
+    };
+}
 
-    constructor(config: BeejsConfiguration) {
-        this.config = config;
-    }
+export class BeejsDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    constructor(private readonly config: BeejsConfiguration) {}
 
     public createDebugAdapterDescriptor(
-        session: DebugSession,
-        executable: vscode.DebugAdapterExecutable | undefined
-    ): DebugAdapterDescriptor {
-        // For inline implementation
-        return new DebugAdapterInlineImplementation(new BeejsDebugAdapter());
+        _session: vscode.DebugSession,
+        _executable: vscode.DebugAdapterExecutable | undefined
+    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+        return new vscode.DebugAdapterInlineImplementation(new BeejsDebugAdapter(this.config));
     }
 }
 
 class BeejsDebugAdapter implements vscode.DebugAdapter {
-    private socket: net.Socket | null = null;
-    private server: net.Server | null = null;
-    private messageQueue: string[] = [];
-    private outputChannel: vscode.OutputChannel;
+    private readonly sendEmitter = new vscode.EventEmitter<vscode.DebugProtocolMessage>();
+    readonly onDidSendMessage: vscode.Event<vscode.DebugProtocolMessage> = this.sendEmitter.event;
+    private child: ChildProcess | undefined;
+    private seq = 0;
+    private readonly outputChannel: vscode.OutputChannel;
 
-    constructor() {
+    constructor(private readonly config: BeejsConfiguration) {
         this.outputChannel = vscode.window.createOutputChannel('Beejs Debug');
     }
 
-    public handleMessage(message: vscode.ProtocolMessage): void {
-        this.outputChannel.appendLine(`Received: ${JSON.stringify(message, null, 2)}`);
-
-        if (message.type === 'request') {
-            this.handleRequest(message as vscode.Request);
-        }
-    }
-
-    private handleRequest(request: vscode.Request): void {
-        switch (request.command) {
-            case 'initialize':
-                this.sendResponse(request, {
-                    body: {
-                        supportsConfigurationDoneRequest: true,
-                        supportsEvaluateForHovers: true,
-                        supportsConditionalBreakpoints: true,
-                        supportsHitConditionalBreakpoints: true,
-                        supportsFunctionBreakpoints: true,
-                        supportsExceptionBreakpoints: true,
-                        supportsTerminateRequest: true,
-                    },
-                });
-                break;
-
-            case 'launch':
-                this.handleLaunch(request);
-                break;
-
-            case 'attach':
-                this.handleAttach(request);
-                break;
-
-            case 'disconnect':
-                this.handleDisconnect();
-                break;
-
-            case 'terminate':
-                this.handleTerminate();
-                break;
-
-            default:
-                this.sendErrorResponse(request, {
-                    id: 1,
-                    format: 'Unknown command: {command}',
-                    variables: { command: request.command },
-                });
-        }
-    }
-
-    private handleLaunch(request: vscode.Request): void {
-        const args = request.arguments as DebugConfiguration & { program?: string };
-
-        if (!args.program) {
-            this.sendErrorResponse(request, {
-                id: 1,
-                format: 'No program specified',
-            });
+    public handleMessage(message: vscode.DebugProtocolMessage): void {
+        const msg = message as DapRequest;
+        if (msg.type !== 'request') {
             return;
         }
+        switch (msg.command) {
+            case 'initialize':
+                this.respond(msg, {
+                    supportsConfigurationDoneRequest: true,
+                    supportsTerminateRequest: true,
+                });
+                this.emitEvent('initialized');
+                break;
+            case 'launch':
+                this.handleLaunch(msg);
+                break;
+            case 'attach':
+                this.handleAttach(msg);
+                break;
+            case 'disconnect':
+            case 'terminate':
+                this.stopChild();
+                this.respond(msg);
+                this.emitEvent('terminated');
+                break;
+            case 'configurationDone':
+            case 'threads':
+            case 'stackTrace':
+            case 'scopes':
+            case 'variables':
+            case 'continue':
+                this.respond(msg, msg.command === 'threads' ? { threads: [{ id: 1, name: 'bee' }] } : {});
+                break;
+            default:
+                this.respond(msg);
+                break;
+        }
+    }
 
-        // Spawn Beejs process with debug port
-        const beejsPath = vscode.workspace.getConfiguration('beejs').get('runtimePath', 'bee');
-        const debugPort = vscode.workspace.getConfiguration('beejs').get('debugPort', 9229);
-
-        this.outputChannel.appendLine(`Launching: ${beejsPath} debug ${args.program}`);
-
-        const child = spawn(beejsPath, ['debug', '--port', debugPort.toString(), args.program], {
-            stdio: ['pipe', 'pipe', 'pipe'],
+    private handleLaunch(request: DapRequest): void {
+        const program = request.arguments?.program;
+        if (!program) {
+            this.respondError(request, 'No program specified');
+            return;
+        }
+        const beejsPath = this.config.getRuntimePath();
+        const debugPort = this.config.getDebugPort();
+        this.outputChannel.appendLine(
+            `Launching: ${beejsPath} run --inspect-brk --inspect-port ${debugPort} ${program}`
+        );
+        this.child = spawn(beejsPath, [
+            'run',
+            '--inspect-brk',
+            '--inspect-port',
+            String(debugPort),
+            program,
+        ]);
+        this.child.stdout?.on('data', (data: Buffer) => {
+            this.outputChannel.append(data.toString());
         });
-
-        child.stdout.on('data', (data) => {
-            this.outputChannel.append(`stdout: ${data}`);
+        this.child.stderr?.on('data', (data: Buffer) => {
+            this.outputChannel.append(data.toString());
         });
-
-        child.stderr.on('data', (data) => {
-            this.outputChannel.append(`stderr: ${data}`);
-            // Parse debug messages from stderr
-            this.parseDebugMessages(data.toString());
-        });
-
-        child.on('exit', (code) => {
+        this.child.on('exit', (code) => {
             this.outputChannel.appendLine(`Process exited with code ${code}`);
-            this.sendEvent(new vscode.TerminatedEvent());
+            this.emitEvent('terminated');
         });
-
-        // Connect to debug port
-        this.connectToDebugger(debugPort);
-
-        this.sendResponse(request);
+        this.respond(request);
+        this.emitEvent('stopped', { reason: 'entry', threadId: 1 });
     }
 
-    private handleAttach(request: vscode.Request): void {
-        const args = request.arguments as DebugConfiguration & { port?: number };
-        const port = args.port || vscode.workspace.getConfiguration('beejs').get('debugPort', 9229);
-
-        this.outputChannel.appendLine(`Attaching to Beejs on port ${port}`);
-        this.connectToDebugger(port);
-
-        this.sendResponse(request);
+    private handleAttach(request: DapRequest): void {
+        const port = request.arguments?.port ?? this.config.getDebugPort();
+        this.outputChannel.appendLine(`Attach to bee inspector on port ${port} (bee run --inspect)`);
+        this.respond(request);
     }
 
-    private connectToDebugger(port: number): void {
-        this.server = net.createServer((socket) => {
-            this.socket = socket;
-            socket.on('data', (data) => {
-                const message = data.toString();
-                this.outputChannel.appendLine(`Debug message: ${message}`);
-
-                try {
-                    const event = JSON.parse(message);
-                    this.sendEvent(event);
-                } catch (e) {
-                    this.outputChannel.appendLine(`Failed to parse debug message: ${e}`);
-                }
-            });
-
-            socket.on('end', () => {
-                this.outputChannel.appendLine('Disconnected from debug session');
-            });
-        });
-
-        this.server.listen(port, () => {
-            this.outputChannel.appendLine(`Debug server listening on port ${port}`);
-        });
-    }
-
-    private parseDebugMessages(data: string): void {
-        // Parse Beejs debug protocol messages
-        // Format: DAP (Debug Adapter Protocol) compatible
-        const lines = data.split('\n');
-
-        for (const line of lines) {
-            if (line.trim().startsWith('BP:')) {
-                // Breakpoint hit
-                const [, file, lineStr] = line.split(':');
-                this.sendEvent(
-                    new vscode.StoppedEvent('breakpoint', 'main', {
-                        line: parseInt(lineStr, 10),
-                        source: {
-                            path: file,
-                        },
-                    })
-                );
-            } else if (line.trim().startsWith('EXC:')) {
-                // Exception
-                const [, message] = line.split(':', 2);
-                this.sendEvent(new vscode.StoppedEvent('exception', 'main', { text: message }));
-            }
-        }
-    }
-
-    private handleDisconnect(): void {
-        if (this.socket) {
-            this.socket.end();
-            this.socket = null;
-        }
-        if (this.server) {
-            this.server.close();
-            this.server = null;
-        }
-    }
-
-    private handleTerminate(): void {
-        this.handleDisconnect();
-        this.sendEvent(new vscode.TerminatedEvent());
-    }
-
-    private sendResponse(request: vscode.Request, body?: any): void {
-        const response: vscode.Response = {
+    private respond(request: DapRequest, body?: object): void {
+        this.sendEmitter.fire({
             type: 'response',
             request_seq: request.seq,
             success: true,
             command: request.command,
-            seq: this.getNextSeq(),
-        };
-
-        if (body) {
-            response.body = body;
-        }
-
-        this.sendMessage(response);
+            seq: ++this.seq,
+            body,
+        } as vscode.DebugProtocolMessage);
     }
 
-    private sendErrorResponse(request: vscode.Request, error: any): void {
-        const response: vscode.Response = {
+    private respondError(request: DapRequest, message: string): void {
+        this.sendEmitter.fire({
             type: 'response',
             request_seq: request.seq,
             success: false,
             command: request.command,
-            seq: this.getNextSeq(),
-            message: error.format,
-        };
-
-        if (error.variables) {
-            response.body = { error: { format: error.format, variables: error.variables } };
-        }
-
-        this.sendMessage(response);
+            seq: ++this.seq,
+            message,
+        } as vscode.DebugProtocolMessage);
     }
 
-    private sendEvent(event: vscode.Event): void {
-        const dapEvent: vscode.Event = {
+    private emitEvent(event: string, body?: object): void {
+        this.sendEmitter.fire({
             type: 'event',
-            event: event.event,
-            seq: this.getNextSeq(),
-            body: (event as any).body,
-        };
-
-        this.sendMessage(dapEvent);
+            event,
+            seq: ++this.seq,
+            body,
+        } as vscode.DebugProtocolMessage);
     }
 
-    private sendMessage(message: vscode.ProtocolMessage): void {
-        if (this.socket && this.socket.writable) {
-            this.socket.write(JSON.stringify(message) + '\n');
-        } else {
-            this.messageQueue.push(JSON.stringify(message));
+    private stopChild(): void {
+        if (this.child) {
+            this.child.kill();
+            this.child = undefined;
         }
-    }
-
-    private seqCounter = 0;
-    private getNextSeq(): number {
-        return ++this.seqCounter;
     }
 
     public dispose(): void {
-        this.handleDisconnect();
+        this.stopChild();
+        this.sendEmitter.dispose();
         this.outputChannel.dispose();
     }
 }

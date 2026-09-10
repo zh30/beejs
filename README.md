@@ -1,7 +1,7 @@
 # Beejs
 
 [![Website](https://img.shields.io/badge/website-bee.zhanghe.dev-amber)](https://bee.zhanghe.dev)
-[![Release](https://img.shields.io/badge/release-v1.0.0-green)](#current-status)
+[![Release](https://img.shields.io/badge/release-v1.9.1-green)](#current-status)
 [![Runtime](https://img.shields.io/badge/runtime-Rust%20%2B%20V8-orange)](#why-beejs)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -26,7 +26,7 @@ Official Website & Documentation: [https://bee.zhanghe.dev](https://bee.zhanghe.
 
 ## Current Status
 
-Package version is **`1.0.0`** (Official Stable Release). Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
+Package version is **`1.9.1`**. Treat [Current Scope](docs/CURRENT_SCOPE.md) as the only user-facing capability boundary. Historical `docs/STAGE_*` reports and old “357/357” / “1000-5000x” claims are not current facts.
 
 Compatibility progress is tracked by the Node conformance scorecard under `tests/conformance/` (100% pass rate). Performance claims require the scripts in `benchmarks/` against the binary you just built.
 
@@ -55,7 +55,7 @@ brew install zh30/tap/bee
 Or specify a custom version tag or installation directory:
 
 ```bash
-curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v1.9.0 sh
+curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_VERSION=v1.9.1 sh
 curl -fsSL https://bee.zhanghe.dev/install.sh | BEEJS_INSTALL_DIR="$HOME/.local/bin" sh
 ```
 

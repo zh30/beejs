@@ -71,7 +71,12 @@ export class BeejsCommands {
                 name: `Debug: ${path.basename(filePath)}`,
                 program: filePath,
                 runtimeExecutable: this.config.getRuntimePath(),
-                runtimeArgs: ['debug', '--port', this.config.getDebugPort().toString()],
+                runtimeArgs: [
+                    'run',
+                    '--inspect-brk',
+                    '--inspect-port',
+                    this.config.getDebugPort().toString(),
+                ],
                 port: this.config.getDebugPort(),
                 stopOnEntry: true,
                 console: 'integratedTerminal',

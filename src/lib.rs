@@ -89,6 +89,7 @@ pub mod ffi; // Native zero-dependency C ABI foreign function interface (bee:ffi
 pub mod grammar; // Streaming Structured JSON & LLM Token Grammar Engine (bee:grammar)
 pub mod kv; // Embedded Persistent Key-Value & Durable State Engine (bee:kv)
 pub mod memory; // Memory management
+pub mod napi; // Minimal N-API host for process.dlopen (hello addons)
 pub mod pool; // High-density multi-tenant IsolatePool for serverless & multi-agent execution (bee:pool)
 pub mod repl; // Enhanced interactive REPL
 pub mod replay; // Deterministic Agent Replay engine (bee:replay)

@@ -2,7 +2,7 @@
 
 > 目标：把 Beejs 从「项目 CI + 能发 GitHub Release」补成一套语言运行时该有的配套设施，并把还裸着的运行时能力收口。  
 > 事实来源：当前默认构建、`.github/workflows/`、`install.sh`、`Cargo.toml`、`src/main.rs`、`docs/GITHUB_ACTIONS_RUNTIME_INFRASTRUCTURE.md`。不引用历史 `STAGE_*` 报告。  
-> 状态：必须卡（1–12）已在本仓库落地。线上 `v*` Release / GHCR / Homebrew 安装仍需推 tag 与 secret，本地不可验证。
+> 状态：必须卡（1–12）已在本仓库落地。线上 `v*` Release / GHCR / Homebrew 安装仍需推 tag 与 secret，本地不可验证。第二波 P0–P2 见 [IMPLEMENTATION_PLAN_v1.9.1.md](./IMPLEMENTATION_PLAN_v1.9.1.md)。
 
 ## 已经有了、不要重做
 
@@ -238,8 +238,10 @@ flowchart LR
 | 10 | 官网 WinterTC 文档 | 3.4 | 必须 | 已落地 |
 | 11 | cosign + SBOM | 4.1–4.2 | 必须 | workflow 已落地；live 待 tag |
 | 12 | CURRENT_SCOPE / CHANGELOG 对齐 1.8.0 | 5.5 | 必须 | 已落地 |
-| 13 | Inspector 真 V8 / serve HTTPS / VS Code 扩展 / N-API | 5.1–5.4 | 可第二波 | 未做 |
-| 14 | CodeQL | 4.3 | 可第二波 | 未做 |
+| 13 | Inspector 真 V8 / serve HTTPS / VS Code 扩展 / N-API | 5.1–5.4 | 可第二波 | 未做，收口见 [IMPLEMENTATION_PLAN_v1.9.1.md](./IMPLEMENTATION_PLAN_v1.9.1.md) |
+| 14 | CodeQL | 4.3 | 可第二波 | 未做，收口见 [IMPLEMENTATION_PLAN_v1.9.1.md](./IMPLEMENTATION_PLAN_v1.9.1.md) |
+
+第二波（P0–P2，规划版本 v1.9.1）的可执行开发计划、PR 切分和发布门禁以 [IMPLEMENTATION_PLAN_v1.9.1.md](./IMPLEMENTATION_PLAN_v1.9.1.md) 为准。本文件保留第一波已完成卡的记录，避免重做。
 
 ---
 

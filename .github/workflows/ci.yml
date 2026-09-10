@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.97.1
         with:
           components: rustfmt, clippy
 
@@ -65,7 +65,7 @@ jobs:
       - name: Feature matrix (compile-only)
         run: |
           set -e
-          for feat in ai benchmarks observability; do
+          for feat in benchmarks observability; do
             echo "::group::cargo check --features $feat"
             cargo check --features "$feat"
             echo "::endgroup::"
@@ -101,7 +101,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.97.1
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -135,7 +135,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.97.1
 
       - name: Cache Rust dependencies
         uses: actions/cache@v4
@@ -173,10 +173,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.97.1
 
       - name: cargo-audit
         uses: rustsec/audit-check@v2
-        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories licenses

@@ -4,6 +4,9 @@ target/
 
 # Node / local package-manager output
 node_modules/
+*.vsix
+tools/vscode-extension/out/
+tools/vscode-extension/tsconfig.tsbuildinfo
 
 # IDE
 .vscode/

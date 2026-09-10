@@ -1,8 +1,18 @@
 # Current Scope
 
-Last reviewed: 2026-09-09
+Last reviewed: 2026-09-10
 
-Optimization sprint notes (2026-09-09 v1.9.0):
+Optimization sprint notes (2026-09-10 v1.9.1):
+
+- Windows MSVC is a fail-closed Release target (`bee-v*-x86_64-pc-windows-msvc.zip` with `bee.exe`); Unix-only libc is cfg-gated on the default Windows path.
+- `bee serve --https` uses rustls HTTP/1.1 (missing cert/key exits non-zero).
+- `bee run --inspect-brk` evaluates on the isolate (`Runtime.evaluate`) and waits until resume.
+- Minimal N-API hello loader (`process.dlopen` calls `napi_register_module_v1`). Experimental; not Prisma/sharp.
+- TypeScript thrown stacks map to `.ts` lines; `bee test --parallel` exits 2.
+- rustc pinned to 1.97.1; CI feature matrix is `benchmarks` + `observability` (empty `ai` feature is not in the matrix). `cargo-audit` is fail-closed; `cargo deny` checks advisories/licenses.
+- GHCR images are linux/amd64 only. Homebrew SHA256 is rewritten from Release archives. Winget manifest URL uses the Windows zip name.
+
+v1.9.0 notes (kept for history):
 
 - Native Agentic AI Engine 1.0 (`bee:ai` promoted to **Stable**): Zero-copy `Tensor` (TypedArray-backed, matmul, dot, norm, softmax, cosineSimilarity), local streaming `LLM` (`load`, `generate`, `generateStream`, `embed`), and `AgentPipeline` with deterministic execution.
 - Node conformance fixtures live in `tests/conformance/` (scorecard-driven, 100% PASS across 50+ fixtures).
@@ -28,7 +38,7 @@ Use these files and checks as the current fact sources:
 
 Current facts from those sources:
 
-- Package version is `1.9.0`.
+- Package version is `1.9.1`.
 - The active Cargo binary is `bee`, built from `src/main.rs`.
 - Default Cargo features are empty: `default = []`.
 - The default runtime path used by the CLI is `src/runtime_minimal.rs`.
@@ -38,11 +48,11 @@ Current facts from those sources:
 
 ### Stable
 
-Stable means the capability is part of the official v1.9.0 release scope, is reachable from the active `bee` binary or default library surface, and is verified by focused smoke tests, Rust integration tests, and conformance suites.
+Stable means the capability is part of the official v1.9.1 release scope, is reachable from the active `bee` binary or default library surface, and is verified by focused smoke tests, Rust integration tests, and conformance suites.
 
 Current stable scope:
 
-- Build Beejs from source with Cargo (`v1.9.0`).
+- Build Beejs from source with Cargo (`v1.9.1`).
 - Inspect the CLI with `bee --help`, `bee --version`, or `bee version`.
 - Evaluate simple JavaScript snippets with `bee eval <code>`.
 - Run JavaScript files with `bee run <file>`.
@@ -66,7 +76,9 @@ Preview means the capability is present in the default build and is useful for e
 
 Current preview scope:
 
-- TypeScript and TSX entry files are accepted by the CLI and pass through oxc before execution. This is transpile-only: types are erased, `using` / Stage 3 decorators are downleveled to ES2022, and TSX emits classic `React.createElement`. There is no project-wide `tsc` type-check.
+- TypeScript and TSX entry files are accepted by the CLI and pass through oxc before execution. This is transpile-only: types are erased, `using` / Stage 3 decorators are downleveled to ES2022, and TSX emits classic `React.createElement`. Thrown stacks map back to `.ts` lines when oxc emits a source map. There is no project-wide `tsc` type-check.
+- `bee serve --https` terminates TLS with rustls (HTTP/1.1 only). `--cert` and `--key` PEM files are required; missing material exits non-zero.
+- `bee run --inspect` / `--inspect-brk` expose CDP `/json/version` and `Runtime.evaluate` on the isolate. This is not a full Chrome DevTools / V8 Inspector on rusty_v8 0.22.
 - Node.js compatibility modules under `src/nodejs_core/` are installed into the runtime, including areas such as `fs`, `crypto`, `events`, `buffer`, `path`, `os`, `url`, `dns`, `process`, `child_process` (`execSync`, `spawnSync`), `util`, `zlib`, timers, streams, HTTP, networking, readline, and CommonJS `require`. Treat these as compatibility work in progress unless a behavior is covered by current executable tests.
 - Web API modules under `src/web_api/` are installed into the runtime, including areas such as fetch, WebSocket, Web Crypto, URL, events, FormData, Abort, Blob, timers, encoding, performance, streams, compression, structured clone, workers, service workers, broadcast channels, and message channels. Treat these as API-specific preview work, not blanket Web platform compatibility.
 - Watch and hot reload code paths exist through `bee run --watch`, `bee test --watch`, `src/watcher.rs`, and `src/watcher_websocket.rs`.
@@ -78,11 +90,13 @@ Experimental means the capability exists as code, command surface, module surfac
 
 Current experimental scope:
 
-- `bee bundle` (concatenates local static imports; not a bundler), `bee debug`, `bee serve` (health stub only), `bee init`, `bee create`, `bee add`, `bee remove`, `bee install`, `bee prune`, `bee bunx`, and `bee upgrade`.
-- N-API / native addons: researched only. There is no `napi` loader and no commitment to Prisma, sharp, or other native packages in this release.
+- `bee bundle` (concatenates local static imports; not a bundler), `bee debug`, `bee serve` HTTP health/fetch handler, `bee init`, `bee create`, `bee add`, `bee remove`, `bee install`, `bee prune`, `bee bunx`, and `bee upgrade`.
+- N-API hello loader: `process.dlopen` calls `napi_register_module_v1` so a C hello addon can export `hello()`. Not a Node ABI compatibility commitment; Prisma/sharp are out of scope.
+- `bee test --parallel` is rejected (exit code 2). V8 isolates are not shared across threads.
 - Lightweight package-management and project setup behavior, including resolver, lifecycle, supply-chain, and package execution paths.
 - V8 snapshot, benchmarking helpers, performance reporting, memory/fallback/error support modules, and ecosystem-lite helpers beyond the behaviors covered by current tests.
-- Optional Cargo features: `ai`, `benchmarks`, `cloudnative`, `enterprise`, `multilang`, `observability`, `tch`, and `verbose_logging`.
+- Optional Cargo features: `benchmarks` and `observability` are in the CI compile matrix. `cloudnative`, `enterprise`, `multilang`, and `tch` exist in `Cargo.toml` but are not CI-gated (they may not compile). `feature = "ai"` is empty and does not enable extra modules; default `bee:ai` compiles without it. `verbose_logging` is a debug flag only.
+- GHCR: `ghcr.io/zh30/beejs` is linux/amd64 only. Homebrew `Formula/bee.rb` hashes are filled by the Release job. Winget manifest is in-repo only (not submitted to microsoft/winget-pkgs). V8 remains `rusty_v8` 0.22 (upgrade deferred to 1.10.0).
 
 Experimental capabilities may be useful for contributors. They are not stable user promises.
 
@@ -123,12 +137,10 @@ Use focused checks such as:
 
 ```bash
 cargo check --features observability
-cargo check --features enterprise
-cargo check --features ai
-cargo check --features cloudnative
-cargo check --features multilang
 cargo check --features benchmarks
 ```
+
+`enterprise`, `cloudnative`, `multilang`, `tch`, and empty `ai` are not in the v1.9.1 CI matrix.
 
 If a feature build fails or has not been checked in the current branch, document the related capability as Experimental, not Stable.
 

@@ -55,6 +55,20 @@ fn tag_v_star_publishes_non_draft_release_with_five_bee_archives() {
         "Windows asset must be a zip containing bee.exe"
     );
     assert!(
+        !yaml.contains("continue-on-error: ${{ matrix.os == 'windows-latest' }}")
+            && !yaml.contains("continue-on-error: ${{ matrix.os == \"windows-latest\" }}"),
+        "Windows MSVC release job must not continue-on-error"
+    );
+    assert!(
+        yaml.contains("Windows zip bee-*-x86_64-pc-windows-msvc.zip")
+            || yaml.contains("x86_64-pc-windows-msvc.zip"),
+        "publish job must require the Windows zip"
+    );
+    assert!(
+        yaml.contains("bee.exe"),
+        "Windows zip must be checked for bee.exe"
+    );
+    assert!(
         yaml.contains("CARGO_REGISTRY_TOKEN is not set") || yaml.contains("skipping crates.io"),
         "missing crates.io token must be annotated, not silent success"
     );
@@ -88,8 +102,28 @@ fn macos_x86_64_asset_job_uses_live_intel_runner() {
 fn ci_gates_are_fail_closed_and_cover_oses() {
     let yaml = ci_yaml();
     assert!(
+        !yaml.contains("continue-on-error: true"),
+        "cargo-audit must fail closed"
+    );
+    assert!(
         !yaml.contains("::warning::feature"),
         "feature matrix must not swallow compile failures"
+    );
+    assert!(
+        yaml.contains("for feat in benchmarks observability"),
+        "feature matrix must list only features that currently compile (not empty ai)"
+    );
+    let scope =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/CURRENT_SCOPE.md"))
+            .unwrap();
+    assert!(
+        scope.contains("`benchmarks` and `observability` are in the CI compile matrix")
+            || scope.contains("benchmarks") && scope.contains("observability"),
+        "CURRENT_SCOPE must describe the CI feature matrix"
+    );
+    assert!(
+        yaml.contains("cargo-deny") || yaml.contains("deny-action"),
+        "CI must run cargo-deny"
     );
     assert!(
         yaml.contains("wintertc_compliance_tests"),
@@ -124,6 +158,14 @@ fn docker_workflow_publishes_ghcr_on_v_tags() {
     assert!(
         yaml.contains("--version"),
         "image job must smoke bee --version"
+    );
+    assert!(
+        yaml.contains("amd64-only") || yaml.contains("linux/amd64 only"),
+        "GHCR must document amd64-only rather than a fake dual-arch tag"
+    );
+    assert!(
+        !yaml.contains("linux/arm64"),
+        "do not advertise linux/arm64 unless a real arm64 build exists"
     );
 }
 
@@ -216,4 +258,193 @@ fn install_sh_maps_unix_platforms_to_release_targets() {
     let ps1_text = fs::read_to_string(&ps1).expect("install.ps1");
     assert!(ps1_text.contains("x86_64-pc-windows-msvc.zip"));
     assert!(ps1_text.contains("bee.exe"));
+}
+
+#[test]
+fn windows_sys_imports_match_v0_52_modules() {
+    let rss = fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/runtime_minimal.rs"),
+    )
+    .unwrap();
+    assert!(
+        rss.contains("use windows_sys::Win32::System::Threading::GetCurrentProcess"),
+        "GetCurrentProcess must come from Threading on windows-sys 0.52"
+    );
+    assert!(
+        rss.contains("use windows_sys::Win32::System::ProcessStatus::{")
+            && rss.contains("GetProcessMemoryInfo")
+            && rss.contains("PROCESS_MEMORY_COUNTERS"),
+        "GetProcessMemoryInfo/PROCESS_MEMORY_COUNTERS must come from ProcessStatus"
+    );
+    assert!(
+        !rss.contains("Win32::Foundation::GetCurrentProcess"),
+        "GetCurrentProcess is not in Foundation in windows-sys 0.52"
+    );
+    assert!(
+        !rss.contains("Diagnostics::Debug::{\n            GetProcessMemoryInfo"),
+        "GetProcessMemoryInfo is not in Diagnostics::Debug in windows-sys 0.52"
+    );
+
+    let cpu = fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/nodejs_core/process.rs"),
+    )
+    .unwrap();
+    assert!(
+        cpu.contains(
+            "use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetProcessTimes}"
+        ),
+        "GetProcessTimes must come from Threading"
+    );
+    assert!(
+        cpu.contains("use windows_sys::Win32::Foundation::FILETIME"),
+        "GetProcessTimes takes FILETIME pointers"
+    );
+    assert!(
+        !cpu.contains("Diagnostics::Process::GetProcessTimes"),
+        "Win32::System::Diagnostics::Process does not exist"
+    );
+}
+
+fn snippet_after(src: &str, needle: &str, len: usize) -> String {
+    let idx = src
+        .find(needle)
+        .unwrap_or_else(|| panic!("missing `{needle}`"));
+    src[idx..src.len().min(idx + len)].to_string()
+}
+
+#[test]
+fn windows_hmodule_is_isize_not_pointer() {
+    let napi =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/napi/mod.rs"))
+            .unwrap();
+    let napi_load = snippet_after(&napi, "LoadLibraryA", 280);
+    assert!(
+        napi_load.contains("if handle == 0"),
+        "LoadLibraryA HMODULE must be compared to 0: {napi_load}"
+    );
+    assert!(
+        !napi_load.contains("is_null()"),
+        "HMODULE (isize) has no is_null(): {napi_load}"
+    );
+
+    let ffi = fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/ffi/mod.rs"))
+        .unwrap();
+    assert!(
+        ffi.contains("handle: windows_sys::Win32::Foundation::HMODULE"),
+        "ffi DynamicLibrary stores HMODULE"
+    );
+    let ffi_load = snippet_after(&ffi, "LoadLibraryA", 420);
+    assert!(
+        ffi_load.contains("if handle == 0"),
+        "ffi LoadLibraryA HMODULE must be compared to 0: {ffi_load}"
+    );
+    assert!(
+        !ffi_load.contains("is_null()") && !ffi_load.contains("null_mut()"),
+        "ffi LoadLibraryA must not treat HMODULE as a pointer: {ffi_load}"
+    );
+    let ffi_free = snippet_after(&ffi, "FreeLibrary", 220);
+    assert!(
+        ffi.contains("if self.handle != 0") && ffi.contains("self.handle = 0"),
+        "ffi FreeLibrary path must use integer 0 for HMODULE"
+    );
+    assert!(
+        !ffi_free.contains("is_null()") && !ffi_free.contains("null_mut()"),
+        "ffi FreeLibrary must not treat HMODULE as a pointer: {ffi_free}"
+    );
+}
+
+#[test]
+fn debugger_docs_describe_inspect_not_stage59_debug() {
+    let debugger = fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/DEBUGGER_USAGE.md"),
+    )
+    .unwrap();
+    assert!(debugger.contains("bee run --inspect"));
+    assert!(debugger.contains("bee run --inspect-brk"));
+    assert!(debugger.contains("9229"));
+    assert!(
+        !debugger.contains("当前 public CLI 仅暴露 `bee debug"),
+        "DEBUGGER_USAGE.md must not claim bee debug is the public inspector"
+    );
+    assert!(
+        !debugger.contains("v0.1.0 Stage 59"),
+        "DEBUGGER_USAGE.md must not describe Stage 59 as current"
+    );
+
+    let cli = fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/CLI_USAGE_GUIDE.md"),
+    )
+    .unwrap();
+    assert!(cli.contains("--inspect-brk"));
+    assert!(cli.contains("--https"));
+    assert!(
+        cli.contains("退出码 **2**") || cli.contains("exit code 2") || cli.contains("退出码 **2**"),
+        "CLI guide must document --parallel exit 2"
+    );
+    assert!(cli.contains("--parallel"));
+}
+
+#[test]
+fn homebrew_updater_writes_nonzero_sha256_and_refuses_zeros() {
+    let script =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts/update_homebrew_formula.py");
+    let formula_src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Formula/bee.rb");
+    let dir = tempfile::tempdir().unwrap();
+    let release = dir.path().join("release");
+    fs::create_dir_all(&release).unwrap();
+    let formula = dir.path().join("bee.rb");
+    fs::copy(&formula_src, &formula).unwrap();
+
+    let version = "1.9.1";
+    for target in [
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu",
+    ] {
+        fs::write(
+            release.join(format!("bee-v{version}-{target}.tar.gz")),
+            format!("dummy-{target}-payload"),
+        )
+        .unwrap();
+    }
+
+    let output = Command::new("python3")
+        .args([
+            script.to_str().unwrap(),
+            "--formula",
+            formula.to_str().unwrap(),
+            "--release-dir",
+            release.to_str().unwrap(),
+            "--version",
+            version,
+            "--write",
+        ])
+        .output()
+        .expect("update_homebrew_formula.py");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "homebrew updater failed: {stderr}");
+    let text = fs::read_to_string(&formula).unwrap();
+    assert!(text.contains("version \"1.9.1\""));
+    assert!(!text.contains("0000000000000000000000000000000000000000000000000000000000000000"));
+    assert!(text.contains("sha256 \""));
+    for line in text.lines() {
+        if line.trim().starts_with("sha256") {
+            assert!(
+                !line.contains("\"0000"),
+                "sha256 must not be all zeros: {line}"
+            );
+        }
+    }
+}
+
+#[test]
+fn winget_manifest_installer_url_uses_windows_zip() {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("manifests/winget/zh30.bee.yaml");
+    let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    assert!(
+        text.contains("x86_64-pc-windows-msvc.zip"),
+        "winget InstallerUrl must use the Windows zip name"
+    );
+    assert!(text.contains("bee-v"));
 }

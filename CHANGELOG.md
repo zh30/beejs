@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.1] - 2026-09-10
+
+### Added
+- rustls HTTP/1.1 for `bee serve --https` (requires `--cert` / `--key` PEM).
+- Inspector `Runtime.evaluate` on the isolate and `--inspect-brk` pause until resume.
+- Minimal N-API hello loader (`process.dlopen` → `napi_register_module_v1`).
+- Homebrew formula SHA updater (`scripts/update_homebrew_formula.py`) run from Release Assets.
+- In-repo winget manifest `manifests/winget/zh30.bee.yaml`.
+- `cargo deny` advisories/licenses job; rustc pinned to 1.97.1.
+
+### Changed
+- Windows MSVC Release job is fail-closed and must attach `bee.exe` zip.
+- `cargo-audit` no longer `continue-on-error`.
+- CI feature matrix is `benchmarks` and `observability` only.
+- GHCR documented as linux/amd64 only.
+- `bee test --parallel` exits 2 instead of warning-and-succeeding.
+- TypeScript throw stacks map to original `.ts` lines.
+- VS Code extension launch uses `bee run --inspect-brk` and current GitHub Release asset names.
+
+### Fixed
+- Unix-only `libc` (`isatty`, `posix_memalign`/`madvise`) cfg-gated for the Windows default path.
+- `bee serve` health JSON version uses `CARGO_PKG_VERSION`.
+
 ## [1.9.0] - 2026-09-09
 
 ### Added

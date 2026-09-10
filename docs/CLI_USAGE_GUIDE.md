@@ -1,6 +1,6 @@
 # Beejs CLI 使用指南
 
-本文档描述 Beejs v0.1 默认二进制 `bee` 的当前 CLI 行为。
+本文档描述 Beejs v1.9.1 默认二进制 `bee` 的当前 CLI 行为。对照 [CURRENT_SCOPE.md](CURRENT_SCOPE.md) 看 Stable / Preview / Experimental。
 
 ## 基本命令
 
@@ -25,8 +25,17 @@ bee run script.js -- arg1 arg2
 bee run --preload ./setup.js app.js
 ```
 
-执行 `.ts` 或 `.tsx` 文件时，Beejs 会先调用内置 TypeScript 转译模块，再交给 V8 执行。Error 级 TypeScript diagnostics 会使命令在执行 JS 前失败；Warning/Info diagnostics 只报告，不阻断执行。
+执行 `.ts` 或 `.tsx` 文件时，Beejs 会先调用内置 TypeScript 转译模块，再交给 V8 执行。Error 级 TypeScript diagnostics 会使命令在执行 JS 前失败；Warning/Info diagnostics 只报告，不阻断执行。抛出的栈会尽量映射回 `.ts` 行号。
 `--preload`/`--require` 会在主脚本前通过 CommonJS 加载模块；文件型 preload 的相对 `require()` 以 preload 文件所在目录为基准。
+
+### Inspector（Preview）
+
+```bash
+bee run --inspect app.js
+bee run --inspect-brk --inspect-port 9229 app.ts
+```
+
+`--inspect` / `--inspect-brk` 在 `127.0.0.1:9229`（可用 `--inspect-port` 改）上提供 CDP：`GET /json/version`、`ws://127.0.0.1:9229/ws`。`--inspect-brk` 在收到 `Runtime.runIfWaitingForDebugger` 或 `Debugger.resume` 之前不执行用户脚本。`Runtime.evaluate` 在 isolate 上求值。详见 [DEBUGGER_USAGE.md](DEBUGGER_USAGE.md)。
 
 ## Eval
 
@@ -96,6 +105,8 @@ bee test examples/testing/math.test.js --timeout 10
 bee test examples/testing/math.test.js --update-snapshots
 ```
 
+`--parallel` **不是**可用选项。传入时立即以退出码 **2** 失败，并说明 V8 isolate 不能跨线程共享；不会降级为串行成功。
+
 `--update-snapshots` 会更新 file-mode 的 `expect(value).toMatchSnapshot()`，也会为缺失或不匹配的 `expect(value).toMatchInlineSnapshot()` 写回测试源文件。file snapshot 位于测试文件同目录的 `__snapshots__/<test-file>.snap`；snapshot 文件读取/写入和 inline snapshot 源文件写入都会进入文件系统权限 broker。
 
 ### 内置断言库 (Matchers)
@@ -129,6 +140,8 @@ bee serve --host localhost --port 3000
 bee serve --host localhost --port 3443 --https --cert cert.pem --key key.pem
 ```
 
+`--https` 使用 rustls 做 HTTP/1.1 TLS。必须同时提供存在的 `--cert` 与 `--key` PEM；缺文件或无法解析时以非 0 退出，不会打印成功监听横幅。不在本版本做 HTTP/2。无 `--https` 时行为仍是明文 HTTP。
+
 ## 项目与包管理
 
 ```bash
@@ -161,12 +174,15 @@ bee run app.js --watch --websocket-port 9999
 
 ## 调试
 
+Chrome DevTools / VS Code 附加请用 `bee run --inspect` 或 `bee run --inspect-brk`（默认端口 9229），不要用 `bee debug`。见 [DEBUGGER_USAGE.md](DEBUGGER_USAGE.md)。
+
 ```bash
+bee run --inspect-brk --inspect-port 9229 script.js
 bee debug script.js
 bee debug --deny-fs --allow-read script.js script.js
 ```
 
-调试命令会输出额外诊断信息，适合本地排查。`debug` 的目标文件读取会进入同一套文件系统权限 broker；使用 `--deny-fs` 时需要为目标脚本显式 `--allow-read`。
+`bee debug` 是 Experimental：多打印诊断，不是 Inspector。`debug` 的目标文件读取会进入同一套文件系统权限 broker；使用 `--deny-fs` 时需要为目标脚本显式 `--allow-read`。
 
 ## 开发验证
 
@@ -181,10 +197,12 @@ cargo build --release
 
 ## 平台范围
 
-v0.1 预编译包当前覆盖：
+v1.9.1 预编译包当前覆盖：
 
-- macOS x86_64
-- macOS arm64
-- Linux x86_64
+- macOS x86_64 (`bee-v<ver>-x86_64-apple-darwin.tar.gz`)
+- macOS arm64 (`bee-v<ver>-aarch64-apple-darwin.tar.gz`)
+- Linux x86_64 (`bee-v<ver>-x86_64-unknown-linux-gnu.tar.gz`)
+- Linux aarch64 (`bee-v<ver>-aarch64-unknown-linux-gnu.tar.gz`)
+- Windows x64 (`bee-v<ver>-x86_64-pc-windows-msvc.zip`)
 
-其他平台可尝试从源码构建。
+Homebrew `Formula/bee.rb` SHA256 由 GitHub Release job 从上述 tar.gz 回写。容器镜像 `ghcr.io/zh30/beejs` 仅为 linux/amd64。

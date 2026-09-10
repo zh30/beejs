@@ -501,11 +501,16 @@ fn read_and_compile_source(file: &Path) -> Result<String> {
                         error_messages.join("; ")
                     ));
                 }
-                Ok(format!(
+                let mut compiled = format!(
                     "{}\n//# sourceURL={}",
                     output.js_code,
                     file.to_string_lossy()
-                ))
+                );
+                if let Some(ref map) = output.source_map {
+                    compiled.push_str(&beejs::typescript::source_mapping_url_comment(map));
+                    beejs::runtime_minimal::set_active_source_map(map.clone());
+                }
+                Ok(compiled)
             }
             Err(e) => Err(anyhow!("TypeScript compilation failed: {}", e)),
         }
@@ -4564,17 +4569,17 @@ fn main() -> Result<()> {
             inspect_brk,
             inspect_port,
         }) => {
-            if inspect || inspect_brk {
+            let inspector = if inspect || inspect_brk {
                 let inspector = beejs::tooling::inspector::InspectorServer::new(
                     "127.0.0.1",
                     inspect_port,
                     &file.to_string_lossy(),
                 );
                 inspector.start()?;
-                if inspect_brk {
-                    inspector.wait_for_debugger();
-                }
-            }
+                Some(inspector)
+            } else {
+                None
+            };
             // Check if target is a package.json script name (e.g., `bee run build`)
             if !file.exists() {
                 if let Some(script_name) = file.to_str() {
@@ -4847,6 +4852,14 @@ fn main() -> Result<()> {
                     }
                 }
 
+                if inspect_brk {
+                    if let Some(ref inspector) = inspector {
+                        inspector.wait_while_evaluating(|expression| {
+                            runtime.execute_code(expression).map_err(|e| e.to_string())
+                        });
+                    }
+                }
+
                 let timeout_ms = permissions.timeout;
                 let watchdog = if let Some(ms) = timeout_ms {
                     let isolate_handle = runtime.isolate_handle();
@@ -4995,6 +5008,13 @@ fn main() -> Result<()> {
         }) => {
             apply_permission_cli_options(&permissions)?;
             let timeout = permissions.timeout;
+
+            if parallel {
+                eprintln!(
+                    "bee test --parallel is not supported: V8 isolates cannot be shared across threads"
+                );
+                std::process::exit(2);
+            }
 
             println!("🐝 Running tests...");
 
@@ -5601,12 +5621,90 @@ fn main() -> Result<()> {
             check_network_listen_permission(&bind_target)?;
 
             if https {
-                let cert_path = cert.unwrap_or_else(|| "cert.pem".to_string());
-                let key_path = key.unwrap_or_else(|| "key.pem".to_string());
-                println!("🔒 HTTPS serve requires TLS terminator integration");
-                println!("  Host: {}:{}", host, port);
-                println!("  Cert: {} Key: {}", cert_path, key_path);
-                println!("💡 For now, use HTTP serve or terminate TLS externally.");
+                let cert_path = match cert {
+                    Some(path) => path,
+                    None => {
+                        eprintln!(
+                            "error: bee serve --https requires --cert PATH (PEM certificate)"
+                        );
+                        std::process::exit(2);
+                    }
+                };
+                let key_path = match key {
+                    Some(path) => path,
+                    None => {
+                        eprintln!("error: bee serve --https requires --key PATH (PEM private key)");
+                        std::process::exit(2);
+                    }
+                };
+                if !Path::new(&cert_path).is_file() {
+                    eprintln!("error: TLS certificate not found: {cert_path} (pass --cert PATH)");
+                    std::process::exit(2);
+                }
+                if !Path::new(&key_path).is_file() {
+                    eprintln!("error: TLS private key not found: {key_path} (pass --key PATH)");
+                    std::process::exit(2);
+                }
+                let tls_cert =
+                    beejs::nodejs_core::http::load_tls_certificate(&cert_path, &key_path)
+                        .map_err(|e| anyhow!("invalid TLS material: {e}"))?;
+                let tls_config =
+                    beejs::nodejs_core::http::try_create_tls_server_config_http11(&tls_cert)
+                        .map_err(|e| anyhow!(e))?;
+
+                let effective_file = if let Some(f) = file {
+                    Some(f)
+                } else {
+                    [
+                        "app.ts",
+                        "app.js",
+                        "server.ts",
+                        "server.js",
+                        "index.ts",
+                        "index.js",
+                    ]
+                    .iter()
+                    .map(PathBuf::from)
+                    .find(|p| p.exists() && p.is_file())
+                };
+
+                let addr = format!("{}:{}", host, port);
+                let listener = std::net::TcpListener::bind(&addr)
+                    .map_err(|e| anyhow!("failed to bind {addr}: {e}"))?;
+                let bound = listener
+                    .local_addr()
+                    .unwrap_or_else(|_| addr.parse().unwrap());
+                println!("🚀 Starting Beejs Web Server on https://{}", bound);
+                if let Some(ref file_path) = effective_file {
+                    println!("📄 Serving application: {}", file_path.display());
+                    check_file_read_permission(file_path)?;
+                    let code = read_and_compile_source(file_path)?;
+                    let mut runtime = if let Some(mem_mb) = permissions.max_memory {
+                        beejs::runtime_minimal::MinimalRuntime::with_memory_limit(mem_mb)?
+                    } else {
+                        beejs::runtime_minimal::MinimalRuntime::new()?
+                    };
+                    runtime.set_main_module_path(file_path);
+                    runtime.execute_code(HTTPS_FETCH_BRIDGE)?;
+                    let wrapped_user_code = format!(
+                        r#"
+                    (function() {{
+                        const module = {{ exports: {{}} }};
+                        const exports = module.exports;
+                        {}
+                        globalThis.__beejs_app__ = (module.exports && (module.exports.default || module.exports.fetch)) ? module.exports : (typeof fetch !== 'undefined' ? {{ fetch }} : module.exports);
+                    }})();
+                    "#,
+                        code
+                    );
+                    let _ = runtime.execute_code(&wrapped_user_code);
+                    println!("✅ Listening on https://{} (Ctrl+C to stop)", bound);
+                    serve_https_fetch_loop(listener, tls_config, &mut runtime, &bound)?;
+                } else {
+                    println!("💡 No script specified, serving default health status");
+                    println!("✅ Listening on https://{} (Ctrl+C to stop)", bound);
+                    serve_https_health_loop(listener, tls_config)?;
+                }
                 return Ok(());
             }
 
@@ -5767,9 +5865,11 @@ globalThis.__beejs_handle_http__ = async function(method, url, headersJson, body
                     .map_err(|e| anyhow::anyhow!("failed to bind {}: {}", addr, e))?;
                 println!("✅ Listening on http://{} (Ctrl+C to stop)", addr);
                 for request in server.incoming_requests() {
-                    let response = tiny_http::Response::from_string(
-                        "{\"runtime\":\"beejs\",\"ok\":true,\"version\":\"1.0.0\"}\n",
-                    )
+                    let response = tiny_http::Response::from_string(concat!(
+                        "{\"runtime\":\"beejs\",\"ok\":true,\"version\":\"",
+                        env!("CARGO_PKG_VERSION"),
+                        "\"}\n"
+                    ))
                     .with_header(
                         tiny_http::Header::from_bytes(
                             &b"Content-Type"[..],
@@ -6607,7 +6707,7 @@ globalThis.__beejs_handle_http__ = async function(method, url, headersJson, body
             println!("  test [file]      Run tests (built-in or from file)");
             println!("  bundle <file>    Bundle code for production");
             println!("  debug <file>     Debug a script with detailed output");
-            println!("  serve [options]  Health stub (fixed JSON, not an app server)");
+            println!("  serve [options]  HTTP/HTTPS fetch-handler server");
             println!("  init [name]      Initialize new project");
             println!("  add <package>    Add dependency package");
             println!("  remove <package> Remove dependency package");
@@ -6633,4 +6733,160 @@ globalThis.__beejs_handle_http__ = async function(method, url, headersJson, body
             return Ok(());
         }
     }
+}
+
+const HTTPS_FETCH_BRIDGE: &str = r#"
+globalThis.__beejs_app__ = undefined;
+globalThis.__beejs_handle_http__ = async function(method, url, headersJson, bodyStr) {
+    try {
+        const headers = JSON.parse(headersJson);
+        const reqInit = { method, headers };
+        if (method !== "GET" && method !== "HEAD" && bodyStr && bodyStr.length > 0) {
+            reqInit.body = bodyStr;
+        }
+        const req = new Request(url, reqInit);
+        let handler = globalThis.__beejs_app__;
+        if (handler && typeof handler.default === 'object' && typeof handler.default.fetch === 'function') {
+            handler = handler.default.fetch.bind(handler.default);
+        } else if (handler && typeof handler.default === 'function') {
+            handler = handler.default;
+        } else if (handler && typeof handler.fetch === 'function') {
+            handler = handler.fetch;
+        } else if (typeof globalThis.fetchHandler === 'function') {
+            handler = globalThis.fetchHandler;
+        }
+        if (typeof handler !== 'function') {
+            return JSON.stringify({ status: 404, headers: { "content-type": "text/plain" }, body: "Not Found: No fetch handler exported" });
+        }
+        const res = await handler(req);
+        const status = (res && res.status) ? res.status : 200;
+        const resHeaders = {};
+        if (res && res.headers && typeof res.headers.forEach === 'function') {
+            res.headers.forEach((v, k) => { resHeaders[k] = v; });
+        }
+        let bodyText = "";
+        if (res) {
+            if (typeof res._bodyText === 'string') {
+                bodyText = res._bodyText;
+            } else if (typeof res.text === 'function') {
+                try { bodyText = await res.text(); } catch (_) { bodyText = res.body ? String(res.body) : ""; }
+            } else {
+                bodyText = res.body ? String(res.body) : "";
+            }
+        }
+        return JSON.stringify({ status, headers: resHeaders, body: bodyText });
+    } catch (e) {
+        return JSON.stringify({ status: 500, headers: { "content-type": "text/plain" }, body: "Internal Server Error: " + (e ? e.message : e) });
+    }
+};
+"#;
+
+fn serve_https_health_loop(
+    listener: std::net::TcpListener,
+    tls_config: std::sync::Arc<rustls::ServerConfig>,
+) -> Result<()> {
+    let body = format!(
+        "{{\"runtime\":\"beejs\",\"ok\":true,\"version\":\"{}\"}}\n",
+        env!("CARGO_PKG_VERSION")
+    );
+    for tcp in listener.incoming() {
+        let Ok(tcp) = tcp else { continue };
+        let Ok(conn) = rustls::ServerConnection::new(tls_config.clone()) else {
+            continue;
+        };
+        let mut stream = rustls::StreamOwned::new(conn, tcp);
+        let _ = read_http11_request(&mut stream);
+        let resp = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = std::io::Write::write_all(&mut stream, resp.as_bytes());
+    }
+    Ok(())
+}
+
+fn serve_https_fetch_loop(
+    listener: std::net::TcpListener,
+    tls_config: std::sync::Arc<rustls::ServerConfig>,
+    runtime: &mut beejs::runtime_minimal::MinimalRuntime,
+    bound: &std::net::SocketAddr,
+) -> Result<()> {
+    for tcp in listener.incoming() {
+        let Ok(tcp) = tcp else { continue };
+        let Ok(conn) = rustls::ServerConnection::new(tls_config.clone()) else {
+            continue;
+        };
+        let mut stream = rustls::StreamOwned::new(conn, tcp);
+        let Some((method, path, headers, body_str)) = read_http11_request(&mut stream) else {
+            continue;
+        };
+        let url = format!("https://{}{}", bound, path);
+        let headers_json = serde_json::to_string(&headers).unwrap_or_else(|_| "{}".to_string());
+        let dispatch_script = format!(
+            r#"globalThis.__beejs_handle_http__({}, {}, {}, {});"#,
+            serde_json::to_string(&method).unwrap(),
+            serde_json::to_string(&url).unwrap(),
+            serde_json::to_string(&headers_json).unwrap(),
+            serde_json::to_string(&body_str).unwrap(),
+        );
+        let resp_json = match runtime.execute_code(&dispatch_script) {
+            Ok(raw_json) => raw_json,
+            Err(e) => format!(
+                r#"{{"status":500,"headers":{{"content-type":"text/plain"}},"body":"Handler error: {}"}}"#,
+                e
+            ),
+        };
+        let val: serde_json::Value = serde_json::from_str(resp_json.trim()).unwrap_or_default();
+        let status_code = val.get("status").and_then(|s| s.as_u64()).unwrap_or(200);
+        let body_text = val.get("body").and_then(|b| b.as_str()).unwrap_or("");
+        let mut header_lines = String::from("Content-Type: text/plain\r\n");
+        if let Some(headers_obj) = val.get("headers").and_then(|h| h.as_object()) {
+            header_lines.clear();
+            for (k, v) in headers_obj {
+                if let Some(v_str) = v.as_str() {
+                    header_lines.push_str(&format!("{k}: {v_str}\r\n"));
+                }
+            }
+        }
+        let resp = format!(
+            "HTTP/1.1 {status_code} OK\r\n{header_lines}Content-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body_text.len(),
+            body_text
+        );
+        let _ = std::io::Write::write_all(&mut stream, resp.as_bytes());
+    }
+    Ok(())
+}
+
+fn read_http11_request<S: std::io::Read>(
+    stream: &mut S,
+) -> Option<(
+    String,
+    String,
+    std::collections::HashMap<String, String>,
+    String,
+)> {
+    let mut buf = Vec::new();
+    let mut tmp = [0u8; 1024];
+    loop {
+        let n = stream.read(&mut tmp).ok()?;
+        if n == 0 {
+            break;
+        }
+        buf.extend_from_slice(&tmp[..n]);
+        if buf.windows(4).any(|w| w == b"\r\n\r\n") {
+            break;
+        }
+        if buf.len() > 1024 * 1024 {
+            break;
+        }
+    }
+    let req = beejs::nodejs_core::http::parse_http_request(&buf)?;
+    Some((
+        req.method,
+        req.url,
+        req.headers,
+        String::from_utf8_lossy(&req.body).into_owned(),
+    ))
 }

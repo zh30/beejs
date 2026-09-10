@@ -3793,6 +3793,19 @@ pub fn create_tls_server_config(
     Arc::new(tls_config)
 }
 
+/// rustls server config for `bee serve --https` (HTTP/1.1 only).
+pub fn try_create_tls_server_config_http11(
+    cert: &TlsCertificate,
+) -> Result<Arc<rustls::ServerConfig>, String> {
+    let mut tls_config = rustls::ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(cert.cert_chain.clone(), cert.private_key.clone())
+        .map_err(|e| format!("Failed to create TLS config: {e}"))?;
+    tls_config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    Ok(Arc::new(tls_config))
+}
+
 /// HTTPS 服务器状态
 /// v0.3.98: 新增
 #[derive(Debug, Clone)]

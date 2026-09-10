@@ -1,26 +1,27 @@
 /**
  * Beejs Language Service
  *
- * Provides language intelligence for JavaScript/TypeScript files
- * with Beejs-specific enhancements:
- * - Code completion
- * - Hover information
- * - Diagnostics
- * - Code actions
+ * Starts `bee lsp` via vscode-languageclient and adds a few Beejs completions.
  */
 
 import * as vscode from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient';
+import {
+    LanguageClient,
+    LanguageClientOptions,
+    ServerOptions,
+} from 'vscode-languageclient/node';
 import { BeejsConfiguration } from '../utils/BeejsConfiguration';
 
 export class BeejsLanguageService {
-    private context: vscode.ExtensionContext;
-    private config: BeejsConfiguration;
     private client: LanguageClient | undefined;
+    private readonly diagnostics: vscode.DiagnosticCollection;
 
-    constructor(context: vscode.ExtensionContext, config: BeejsConfiguration) {
-        this.context = context;
-        this.config = config;
+    constructor(
+        private readonly context: vscode.ExtensionContext,
+        private readonly config: BeejsConfiguration
+    ) {
+        this.diagnostics = vscode.languages.createDiagnosticCollection('beejs');
+        this.context.subscriptions.push(this.diagnostics);
     }
 
     public initialize(): LanguageClient {
@@ -58,143 +59,57 @@ export class BeejsLanguageService {
             clientOptions
         );
 
-        // Start the client
-        this.client.start();
-
-        // Register additional providers
+        void this.client.start();
         this.registerProviders();
-
         return this.client;
     }
 
-    private registerProviders() {
-        if (!this.client) return;
+    private registerProviders(): void {
+        this.context.subscriptions.push(
+            vscode.languages.registerCompletionItemProvider(
+                ['javascript', 'typescript', 'beejs'],
+                {
+                    provideCompletionItems: (document: vscode.TextDocument) => {
+                        const completions: vscode.CompletionItem[] = [];
+                        const run = new vscode.CompletionItem('beejs.run', vscode.CompletionItemKind.Function);
+                        run.detail = 'Execute a Beejs script';
+                        run.insertText = new vscode.SnippetString('beejs.run(${1:script})');
+                        completions.push(run);
 
-        // Completion provider
-        vscode.languages.registerCompletionItemProvider(
-            ['javascript', 'typescript', 'beejs'],
-            {
-                provideCompletionItems: (document: vscode.TextDocument, position: vscode.Position) => {
-                    // Provide Beejs-specific completions
-                    const completions: vscode.CompletionItem[] = [];
+                        const test = new vscode.CompletionItem('beejs.test', vscode.CompletionItemKind.Function);
+                        test.detail = 'Run tests with Beejs';
+                        test.insertText = new vscode.SnippetString('beejs.test(${1:pattern})');
+                        completions.push(test);
 
-                    // Beejs global API completions
-                    completions.push({
-                        label: 'beejs.run',
-                        kind: vscode.CompletionItemKind.Function,
-                        insertText: 'beejs.run(${1:script})',
-                        detail: 'Execute a Beejs script',
-                        documentation: 'Run a JavaScript/TypeScript script using Beejs runtime',
-                        command: { command: 'editor.action.triggerSuggest', title: 'Re-trigger completions...' },
-                    });
-
-                    completions.push({
-                        label: 'beejs.bundle',
-                        kind: vscode.CompletionItemKind.Function,
-                        insertText: 'beejs.bundle(${1:entry}, ${2:output})',
-                        detail: 'Bundle scripts with Beejs',
-                        documentation: 'Bundle JavaScript/TypeScript files into a single output',
-                    });
-
-                    completions.push({
-                        label: 'beejs.test',
-                        kind: vscode.CompletionItemKind.Function,
-                        insertText: 'beejs.test(${1:pattern})',
-                        detail: 'Run tests with Beejs',
-                        documentation: 'Execute tests using Beejs test runner',
-                    });
-
-                    // Performance API
-                    completions.push({
-                        label: 'beejs.profile',
-                        kind: vscode.CompletionItemKind.Function,
-                        insertText: 'beejs.profile(() => {\n\t${1:// code}\n})',
-                        detail: 'Profile code execution',
-                        documentation: 'Profile code execution and get performance metrics',
-                    });
-
-                    completions.push({
-                        label: 'beejs.benchmark',
-                        kind: vscode.CompletionItemKind.Function,
-                        insertText: 'beejs.benchmark(${1:fn}, ${2:iterations})',
-                        detail: 'Benchmark function performance',
-                        documentation: 'Benchmark a function with specified iterations',
-                    });
-
-                    // TypeScript-specific completions
-                    if (document.languageId === 'typescript') {
-                        completions.push({
-                            label: 'beejs.compile',
-                            kind: vscode.CompletionItemKind.Function,
-                            insertText: 'beejs.compile(source, options)',
-                            detail: 'Compile TypeScript with Beejs',
-                            documentation: 'Compile TypeScript code using Beejs compiler',
-                        });
-                    }
-
-                    return { completions };
+                        if (document.languageId === 'typescript') {
+                            const compile = new vscode.CompletionItem(
+                                'beejs.compile',
+                                vscode.CompletionItemKind.Function
+                            );
+                            compile.detail = 'Compile TypeScript with Beejs';
+                            completions.push(compile);
+                        }
+                        return completions;
+                    },
                 },
-            },
-            '.' // Trigger on dot
-        );
-
-        // Hover provider
-        vscode.languages.registerHoverProvider(
-            ['javascript', 'typescript', 'beejs'],
-            {
+                '.'
+            ),
+            vscode.languages.registerHoverProvider(['javascript', 'typescript', 'beejs'], {
                 provideHover: (document: vscode.TextDocument, position: vscode.Position) => {
-                    const word = document.getText(document.getWordRangeAtPosition(position));
-
-                    if (word === 'beejs') {
-                        return new vscode.Hover({
-                            value: '**Beejs Runtime**\n\nHigh-performance JavaScript/TypeScript runtime',
-                        });
+                    const range = document.getWordRangeAtPosition(position);
+                    const word = range ? document.getText(range) : '';
+                    if (word === 'beejs' || word.startsWith('beejs')) {
+                        return new vscode.Hover(
+                            new vscode.MarkdownString('**Beejs Runtime** — `bee run` / `bee lsp` / `bee run --inspect-brk`')
+                        );
                     }
-
-                    if (word.startsWith('beejs.')) {
-                        return new vscode.Hover({
-                            value: `**${word}**\n\nBeejs API - [Learn more](https://beejs.dev/docs)`,
-                        });
-                    }
-
                     return undefined;
                 },
-            }
-        );
-
-        // Diagnostics provider
-        vscode.languages.registerDiagnosticCollection(
-            'beejs',
-            vscode.window.activeTextEditor?.document.languageId === 'typescript'
-        );
-
-        // Code action provider
-        vscode.languages.registerCodeActionsProvider(
-            ['javascript', 'typescript', 'beejs'],
-            {
-                provideCodeActions: (document: vscode.TextDocument, range: vscode.Range) => {
-                    const actions: vscode.CodeAction[] = [];
-
-                    // Convert to Beejs script action
-                    const convertAction = new vscode.CodeAction(
-                        'Convert to Beejs format',
-                        vscode.CodeActionKind.Refactor
-                    );
-                    convertAction.command = {
-                        command: 'beejs.convertScript',
-                        title: 'Convert to Beejs format',
-                    };
-                    actions.push(convertAction);
-
-                    return actions;
-                },
-            }
+            })
         );
     }
 
-    public dispose() {
-        if (this.client) {
-            this.client.stop();
-        }
+    public dispose(): Thenable<void> | undefined {
+        return this.client?.stop();
     }
 }
