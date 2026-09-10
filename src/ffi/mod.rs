@@ -160,7 +160,8 @@ impl DynamicLibrary {
         }
         #[cfg(windows)]
         {
-            use windows_sys::Win32::System::LibraryLoader::FreeLibrary;
+            // windows-sys 0.52: FreeLibrary is in Foundation, not LibraryLoader.
+            use windows_sys::Win32::Foundation::FreeLibrary;
             if self.handle != 0 {
                 unsafe { FreeLibrary(self.handle) };
                 self.handle = 0;

@@ -366,15 +366,26 @@ fn os_uptime_callback(
     _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let uptime = match sys_info::boottime() {
-        Ok(bt) => {
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
-            now.saturating_sub(bt.tv_sec as u64)
+    let uptime = {
+        #[cfg(windows)]
+        {
+            // sys_info::boottime is cfg(not(windows)); GetTickCount64 is ms since boot.
+            use windows_sys::Win32::System::SystemInformation::GetTickCount64;
+            unsafe { GetTickCount64() / 1000 }
         }
-        Err(_) => 0,
+        #[cfg(not(windows))]
+        {
+            match sys_info::boottime() {
+                Ok(bt) => {
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    now.saturating_sub(bt.tv_sec as u64)
+                }
+                Err(_) => 0,
+            }
+        }
     };
     retval.set(v8::Number::new(scope, uptime as f64).into());
 }

@@ -352,12 +352,42 @@ fn windows_hmodule_is_isize_not_pointer() {
     );
     let ffi_free = snippet_after(&ffi, "FreeLibrary", 220);
     assert!(
+        ffi.contains("use windows_sys::Win32::Foundation::FreeLibrary"),
+        "windows-sys 0.52 FreeLibrary is in Foundation, not LibraryLoader: {ffi_free}"
+    );
+    assert!(
+        !ffi.contains("LibraryLoader::FreeLibrary"),
+        "LibraryLoader has FreeLibraryAndExitThread, not FreeLibrary: {ffi_free}"
+    );
+    assert!(
         ffi.contains("if self.handle != 0") && ffi.contains("self.handle = 0"),
         "ffi FreeLibrary path must use integer 0 for HMODULE"
     );
     assert!(
         !ffi_free.contains("is_null()") && !ffi_free.contains("null_mut()"),
         "ffi FreeLibrary must not treat HMODULE as a pointer: {ffi_free}"
+    );
+}
+
+#[test]
+fn windows_os_uptime_uses_gettickcount64_not_sys_info_boottime() {
+    let os =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/nodejs_core/os.rs"))
+            .unwrap();
+    let uptime = snippet_after(&os, "fn os_uptime_callback", 900);
+    assert!(
+        uptime.contains("GetTickCount64"),
+        "Windows os.uptime must use GetTickCount64: {uptime}"
+    );
+    assert!(
+        uptime.contains("cfg(windows)") && uptime.contains("sys_info::boottime"),
+        "sys_info::boottime is cfg(not(windows)) and must stay off the Windows path: {uptime}"
+    );
+    let cargo =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml")).unwrap();
+    assert!(
+        cargo.contains("Win32_System_SystemInformation"),
+        "GetTickCount64 needs windows-sys feature Win32_System_SystemInformation"
     );
 }
 
