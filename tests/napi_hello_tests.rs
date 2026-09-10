@@ -73,3 +73,22 @@ console.log(result);
         "expected world on stdout: {stdout} {stderr}"
     );
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn bee_dynsym_exports_napi_create_function() {
+    let output = Command::new("nm")
+        .args(["-D", "--defined-only", bee()])
+        .output()
+        .expect("nm -D");
+    assert!(
+        output.status.success(),
+        "nm -D failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("napi_create_function"),
+        "Linux dlopen of hello.node needs napi_create_function in bee dynsym: {stdout}"
+    );
+}

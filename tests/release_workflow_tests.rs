@@ -362,6 +362,27 @@ fn windows_hmodule_is_isize_not_pointer() {
 }
 
 #[test]
+fn linux_bee_exports_napi_symbols_via_per_binary_flag() {
+    let build = fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build.rs"))
+        .expect("build.rs");
+    assert!(
+        build.contains("cargo:rustc-link-arg-bin=bee=-Wl,--export-dynamic"),
+        "Linux N-API addons resolve napi_* from bee dynsym; flag must be per-binary: {build}"
+    );
+    assert!(
+        build.contains("linux"),
+        "export-dynamic is an ELF requirement, not a global rustflag: {build}"
+    );
+    let cargo_config =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".cargo/config.toml"))
+            .unwrap_or_default();
+    assert!(
+        !cargo_config.contains("rdynamic") && !cargo_config.contains("export-dynamic"),
+        "do not put -rdynamic in .cargo/config.toml (breaks rust-crypto): {cargo_config}"
+    );
+}
+
+#[test]
 fn debugger_docs_describe_inspect_not_stage59_debug() {
     let debugger = fs::read_to_string(
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs/DEBUGGER_USAGE.md"),
