@@ -135,7 +135,9 @@ fn ci_gates_are_fail_closed_and_cover_oses() {
         "macOS must run tests, not only --version"
     );
     assert!(
-        yaml.contains("run: cargo audit") || yaml.contains("audit-check") || yaml.contains("cargo deny"),
+        yaml.contains("run: cargo audit")
+            || yaml.contains("audit-check")
+            || yaml.contains("cargo deny"),
         "CI must run cargo-audit or cargo-deny"
     );
     assert!(
