@@ -135,8 +135,14 @@ fn ci_gates_are_fail_closed_and_cover_oses() {
         "macOS must run tests, not only --version"
     );
     assert!(
-        yaml.contains("audit-check") || yaml.contains("cargo audit") || yaml.contains("cargo deny"),
+        yaml.contains("run: cargo audit") || yaml.contains("audit-check") || yaml.contains("cargo deny"),
         "CI must run cargo-audit or cargo-deny"
+    );
+    assert!(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join(".cargo/audit.toml")
+            .is_file(),
+        "pre-existing advisories must be listed in .cargo/audit.toml so new IDs still fail CI"
     );
 }
 
