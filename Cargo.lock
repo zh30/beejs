@@ -374,7 +374,7 @@ dependencies = [
  "wasmtime 38.0.4",
  "wasmtime-wasi 38.0.4",
  "wat",
- "webpki-roots 0.25.4",
+ "webpki-roots 1.0.4",
  "windows-sys 0.52.0",
 ]
 

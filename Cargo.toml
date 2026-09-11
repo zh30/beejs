@@ -235,7 +235,7 @@ getrandom = { version = "0.2", features = ["js"] }
 rustls = { version = "0.21", features = ["dangerous_configuration"] }
 rustls-pemfile = "2.0"
 tokio-rustls = "0.24"
-webpki-roots = "0.25"
+webpki-roots = "1.0"
 
 # Testing
 [dev-dependencies]
