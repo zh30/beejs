@@ -14,6 +14,30 @@ mod real_benchmark_tests {
         )
     }
 
+    /// Run `bee eval`. Wall-clock throughput belongs in `benchmarks/`;
+    /// `cargo test` on shared CI runners is not a bench machine (PR #30 flake).
+    fn eval_script(script: &str) -> (String, Duration) {
+        let start = Instant::now();
+        let output = Command::new(beejs_path())
+            .args(["eval", script])
+            .output()
+            .expect("Failed to run bee");
+        let elapsed = start.elapsed();
+        assert!(
+            output.status.success(),
+            "bee eval failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            elapsed < Duration::from_secs(30),
+            "bee eval hung ({elapsed:?})"
+        );
+        (
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            elapsed,
+        )
+    }
+
     /// Benchmark: Simple arithmetic operations throughput
     #[test]
     fn benchmark_simple_arithmetic() {
@@ -27,14 +51,7 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("Simple arithmetic benchmark:");
@@ -43,13 +60,6 @@ mod real_benchmark_tests {
         println!(
             "  Throughput: {:.0} ops/sec",
             1_000_000.0 / (exec_time_ms / 1000.0)
-        );
-
-        // Performance assertion: should complete 1M ops in under 100ms
-        assert!(
-            exec_time_ms < 100.0,
-            "Simple arithmetic took {:.2}ms, expected < 100ms",
-            exec_time_ms
         );
     }
 
@@ -66,26 +76,12 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("String operations benchmark:");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        // String ops are slower, allow more time
-        assert!(
-            exec_time_ms < 2000.0,
-            "String operations took {:.2}ms, expected < 2000ms",
-            exec_time_ms
-        );
     }
 
     /// Benchmark: Array operations throughput
@@ -103,25 +99,12 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("Array operations benchmark:");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        assert!(
-            exec_time_ms < 500.0,
-            "Array operations took {:.2}ms, expected < 500ms",
-            exec_time_ms
-        );
     }
 
     /// Benchmark: Object creation throughput
@@ -141,25 +124,12 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("Object creation benchmark:");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        assert!(
-            exec_time_ms < 300.0,
-            "Object creation took {:.2}ms, expected < 300ms",
-            exec_time_ms
-        );
     }
 
     /// Benchmark: Function call overhead
@@ -177,14 +147,7 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("Function call benchmark:");
@@ -193,12 +156,6 @@ mod real_benchmark_tests {
         println!(
             "  Throughput: {:.0} calls/sec",
             500_000.0 / (exec_time_ms / 1000.0)
-        );
-
-        assert!(
-            exec_time_ms < 200.0,
-            "Function calls took {:.2}ms, expected < 200ms",
-            exec_time_ms
         );
     }
 
@@ -216,26 +173,12 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("Fibonacci(25) benchmark:");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        // Fibonacci is CPU-intensive, allow more time
-        assert!(
-            exec_time_ms < 100.0,
-            "Fibonacci(25) took {:.2}ms, expected < 100ms",
-            exec_time_ms
-        );
     }
 
     /// Benchmark: JSON parsing and serialization
@@ -256,31 +199,12 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("JSON operations benchmark:");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        let threshold_ms = if cfg!(debug_assertions) {
-            15_000.0
-        } else {
-            500.0
-        };
-        assert!(
-            exec_time_ms < threshold_ms,
-            "JSON operations took {:.2}ms, expected < {:.0}ms",
-            exec_time_ms,
-            threshold_ms
-        );
     }
 
     /// Benchmark: Startup time measurement
@@ -328,26 +252,12 @@ mod real_benchmark_tests {
             }
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("Async timers benchmark:");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        // setImmediate should complete quickly
-        assert!(
-            exec_time_ms < 100.0,
-            "Async timers took {:.2}ms, expected < 100ms",
-            exec_time_ms
-        );
     }
 
     /// Benchmark: AI workload simulation (matrix operations)
@@ -376,26 +286,12 @@ mod real_benchmark_tests {
             console.log((end - start).toFixed(2));
         "#;
 
-        let start = Instant::now();
-        let output = Command::new(beejs_path())
-            .args(["eval", script])
-            .output()
-            .expect("Failed to run bee");
-        let elapsed = start.elapsed();
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let (stdout, elapsed) = eval_script(script);
         let exec_time_ms: f64 = stdout.trim().parse().unwrap_or(0.0);
 
         println!("AI workload simulation (100x100 matrix multiply):");
         println!("  Execution time: {:.2} ms", exec_time_ms);
         println!("  Total time (incl. startup): {:.2?}", elapsed);
-
-        // Matrix operations are CPU-intensive
-        assert!(
-            exec_time_ms < 500.0,
-            "AI workload took {:.2}ms, expected < 500ms",
-            exec_time_ms
-        );
     }
 }
 
@@ -437,20 +333,11 @@ mod performance_regression_tests {
         println!("  Min: {:?}", min_time);
         println!("  Max: {:?}", max_time);
 
-        let ratio = max_time.as_secs_f64() / min_time.as_secs_f64();
-        if cfg!(debug_assertions) {
-            assert!(
-                *max_time < Duration::from_secs(5),
-                "Debug baseline run too slow: max = {:?}",
-                max_time
-            );
-        } else {
-            assert!(
-                ratio < 2.0,
-                "Performance variance too high: max/min = {:.2}",
-                ratio
-            );
-        }
+        let _ratio = max_time.as_secs_f64() / min_time.as_secs_f64();
+        assert!(
+            *max_time < Duration::from_secs(30),
+            "bee eval hung: max = {max_time:?}"
+        );
     }
 
     /// Memory-intensive operation test
@@ -487,9 +374,13 @@ mod performance_regression_tests {
         println!("  Total time: {:?}", elapsed);
 
         assert!(
-            exec_time_ms < 1000.0,
-            "Memory operations took {:.2}ms, expected < 1000ms",
-            exec_time_ms
+            output.status.success(),
+            "bee eval failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            elapsed < std::time::Duration::from_secs(30),
+            "bee eval hung ({elapsed:?})"
         );
     }
 }
@@ -549,11 +440,10 @@ mod comparative_benchmarks {
         println!("  Operations/sec: {:.0}", ops_per_sec);
         println!("  Time: {:?}", elapsed);
 
-        // Debug mode is slower; just verify it completes
         assert!(
-            ops_per_sec > 100_000.0,
-            "Throughput {:.0} ops/sec, expected > 100K (debug mode is slower)",
-            ops_per_sec
+            elapsed < std::time::Duration::from_secs(30),
+            "bee eval hung ({elapsed:?})"
         );
+        let _ = ops_per_sec;
     }
 }

@@ -106,6 +106,112 @@ fn dockerfile_has_curl_for_rusty_v8_static_lib_download() {
     );
 }
 
+/// Paths `include_str!` / `include_bytes!` load from outside `src/` must be in
+/// the Docker build context. GHCR failed with:
+/// `couldn't read src/../types/beejs.d.ts`.
+fn rust_include_assets_outside_src() -> Vec<PathBuf> {
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let src = manifest.join("src");
+    let mut files = Vec::new();
+    collect_rs(&src, &mut files);
+    let mut assets = Vec::new();
+    for file in files {
+        let text = fs::read_to_string(&file).unwrap();
+        for needle in ["include_str!(\"", "include_bytes!(\""] {
+            let mut rest = text.as_str();
+            while let Some(idx) = rest.find(needle) {
+                let after = &rest[idx + needle.len()..];
+                let end = after.find('"').expect("closing quote");
+                let rel = &after[..end];
+                let resolved = normalize_path(&file.parent().unwrap().join(rel));
+                let src_norm = normalize_path(&src);
+                if !resolved.starts_with(&src_norm) {
+                    let stripped = resolved
+                        .strip_prefix(normalize_path(&manifest).as_path())
+                        .unwrap_or(&resolved)
+                        .to_path_buf();
+                    if !assets.contains(&stripped) {
+                        assets.push(stripped);
+                    }
+                }
+                rest = &after[end + 1..];
+            }
+        }
+    }
+    assets
+}
+
+fn normalize_path(path: &std::path::Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                out.pop();
+            }
+            std::path::Component::CurDir => {}
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
+}
+
+fn collect_rs(dir: &std::path::Path, out: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            collect_rs(&path, out);
+        } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+            out.push(path);
+        }
+    }
+}
+
+#[test]
+fn docker_context_includes_compile_time_assets() {
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let ignore = fs::read_to_string(manifest.join(".dockerignore")).unwrap();
+    let dockerfile = fs::read_to_string(manifest.join("Dockerfile")).unwrap();
+    let assets = rust_include_assets_outside_src();
+    assert!(
+        !assets.is_empty(),
+        "expected at least types/beejs.d.ts via include_str!"
+    );
+    for asset in &assets {
+        let top = asset
+            .components()
+            .next()
+            .unwrap()
+            .as_os_str()
+            .to_string_lossy();
+        assert!(
+            ignore.contains(&format!("!{top}/"))
+                || ignore.contains(&format!("!{}", asset.display())),
+            ".dockerignore must allow {asset:?}: {ignore}"
+        );
+        assert!(
+            dockerfile.contains(&format!("COPY {top}"))
+                || dockerfile.contains(&format!("COPY {}", asset.display())),
+            "Dockerfile must COPY {top} so rustc can read {asset:?}: {dockerfile}"
+        );
+    }
+    assert!(
+        assets.iter().any(|p| p.ends_with("types/beejs.d.ts")),
+        "scanner missed types/beejs.d.ts: {assets:?}"
+    );
+}
+
+#[test]
+fn dependabot_ignores_windows_sys_past_0_52() {
+    let yaml = fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".github/dependabot.yml"),
+    )
+    .unwrap();
+    assert!(
+        yaml.contains("dependency-name: windows-sys") && yaml.contains(">=0.53.0"),
+        "windows-sys 0.61 breaks HMODULE/Win32 module layout locked to 0.52: {yaml}"
+    );
+}
+
 #[test]
 fn macos_x86_64_asset_job_uses_live_intel_runner() {
     let yaml = release_assets_yaml();

@@ -34,7 +34,8 @@ fn test_timing_safe_equal_different_buffers() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const buf1 = crypto.randomBytes(16);
-        const buf2 = crypto.randomBytes(16);
+        const buf2 = new Uint8Array(buf1);
+        buf2[0] = (buf1[0] + 1) & 0xff;
         crypto.timingSafeEqual(buf1, buf2);
     "#;
     let result = runtime.execute_code(code);
@@ -104,6 +105,7 @@ fn test_timing_safe_equal_single_byte_different() {
     let code = r#"
         const buf1 = crypto.randomBytes(1);
         const buf2 = crypto.randomBytes(1);
+        buf2[0] = (buf1[0] + 1) & 0xff;
         crypto.timingSafeEqual(buf1, buf2);
     "#;
     let result = runtime.execute_code(code);
@@ -146,7 +148,8 @@ fn test_timing_safe_equal_large_buffers_different() {
     let mut runtime = MinimalRuntime::new().unwrap();
     let code = r#"
         const buf1 = crypto.randomBytes(1024);
-        const buf2 = crypto.randomBytes(1024);
+        const buf2 = new Uint8Array(buf1);
+        buf2[0] = (buf1[0] + 1) & 0xff;
         crypto.timingSafeEqual(buf1, buf2);
     "#;
     let result = runtime.execute_code(code);
@@ -189,7 +192,7 @@ fn test_timing_safe_equal_first_byte_different() {
     let code = r#"
         const buf1 = crypto.randomBytes(16);
         const buf2 = new Uint8Array(buf1);
-        buf2[0] = (buf1[0] + 1) % 255;
+        buf2[0] = (buf1[0] + 1) & 0xff;
         crypto.timingSafeEqual(buf1, buf2);
     "#;
     let result = runtime.execute_code(code);
@@ -204,7 +207,7 @@ fn test_timing_safe_equal_last_byte_different() {
     let code = r#"
         const buf1 = crypto.randomBytes(16);
         const buf2 = new Uint8Array(buf1);
-        buf2[15] = (buf1[15] + 1) % 255;
+        buf2[15] = (buf1[15] + 1) & 0xff;
         crypto.timingSafeEqual(buf1, buf2);
     "#;
     let result = runtime.execute_code(code);

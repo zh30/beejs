@@ -30,6 +30,8 @@ ENV CARGO_BUILD_JOBS=1
 COPY Cargo.toml Cargo.lock build.rs ./
 COPY benches ./benches
 COPY src ./src
+# types_export.rs embed: include_str!("../types/beejs.d.ts")
+COPY types ./types
 
 RUN cargo fetch --locked
 RUN cargo build --release --bin bee
