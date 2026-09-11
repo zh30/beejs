@@ -1,0 +1,18 @@
+[package]
+name = "zed-beejs"
+version = "1.9.1"
+edition = "2021"
+license = "MIT"
+publish = false
+description = "Zed extension that launches Beejs `bee lsp`"
+repository = "https://github.com/zh30/beejs"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+zed_extension_api = "0.7.0"
+
+[dev-dependencies]
+tempfile = "3.0"
