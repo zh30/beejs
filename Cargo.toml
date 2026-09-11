@@ -173,7 +173,7 @@ prometheus = { version = "0.13", optional = true }
 opentelemetry = { version = "0.21", optional = true }
 opentelemetry_sdk = { version = "0.21", optional = true }
 opentelemetry-prometheus = { version = "0.14", optional = true }
-opentelemetry-jaeger = { version = "0.20", optional = true }
+opentelemetry-jaeger = { version = "0.22", optional = true }
 opentelemetry-http = { version = "0.10", optional = true }
 tracing-appender = "0.2"
 tracing-opentelemetry = { version = "0.22", optional = true }
