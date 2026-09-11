@@ -104,10 +104,11 @@ impl DynamicLibrary {
                 let c_path = CString::new(p)?;
                 unsafe { LoadLibraryA(c_path.as_ptr() as *const u8) }
             } else {
-                std::ptr::null_mut()
+                0
             };
 
-            if handle.is_null() {
+            // windows-sys 0.52: HMODULE is isize, not a pointer.
+            if handle == 0 {
                 return Err(anyhow!("Failed to open library on Windows"));
             }
 
@@ -159,10 +160,11 @@ impl DynamicLibrary {
         }
         #[cfg(windows)]
         {
-            use windows_sys::Win32::System::LibraryLoader::FreeLibrary;
-            if !self.handle.is_null() {
+            // windows-sys 0.52: FreeLibrary is in Foundation, not LibraryLoader.
+            use windows_sys::Win32::Foundation::FreeLibrary;
+            if self.handle != 0 {
                 unsafe { FreeLibrary(self.handle) };
-                self.handle = std::ptr::null_mut();
+                self.handle = 0;
             }
         }
     }

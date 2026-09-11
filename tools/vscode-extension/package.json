@@ -2,8 +2,8 @@
   "name": "beejs-tools",
   "displayName": "Beejs Developer Tools",
   "description": "Language Server, CDP Debugger, oxc Formatter & Deployment Toolkit for Beejs",
-  "version": "1.4.0",
-  "publisher": "beejs-team",
+  "version": "1.9.1",
+  "publisher": "zh30",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -195,16 +195,15 @@
   "dependencies": {
     "@vscode/debugadapter": "^1.61.0",
     "@vscode/debugprotocol": "^1.61.0",
-    "vscode-languageclient": "^8.1.0",
-    "vscode-languageprotocol": "^1.0.1"
+    "vscode-languageclient": "^8.1.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/beejs-team/beejs-vscode.git"
+    "url": "https://github.com/zh30/beejs.git"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/beejs-team/beejs-vscode/issues"
+    "url": "https://github.com/zh30/beejs/issues"
   },
-  "homepage": "https://github.com/beejs-team/beejs-vscode#readme"
+  "homepage": "https://github.com/zh30/beejs"
 }

@@ -5,6 +5,7 @@
 
 use super::SendPtr;
 use anyhow::{anyhow, Result};
+#[cfg(unix)]
 use libc::{c_void, madvise, posix_memalign, MADV_WILLNEED};
 use memmap2::{Mmap, MmapOptions};
 use rand::Rng;
@@ -244,20 +245,27 @@ impl EnhancedZeroCopy {
         self.prefetch_stats
             .total_prefetches
             .fetch_add(1, Ordering::Relaxed);
-        // 使用 madvise 进行预取
-        unsafe {
-            let result: _ = madvise(addr.as_ptr() as *mut libc::c_void, size, MADV_WILLNEED);
-            if result == 0 {
-                self.prefetch_stats
-                    .successful_prefetches
-                    .fetch_add(1, Ordering::Relaxed);
-                self.performance_stats
-                    .prefetch_operations
-                    .fetch_add(1, Ordering::Relaxed);
-                Ok(())
-            } else {
-                Err(anyhow!("madvise failed with error code: {}", result))
+        #[cfg(unix)]
+        {
+            unsafe {
+                let result: _ = madvise(addr.as_ptr() as *mut libc::c_void, size, MADV_WILLNEED);
+                if result == 0 {
+                    self.prefetch_stats
+                        .successful_prefetches
+                        .fetch_add(1, Ordering::Relaxed);
+                    self.performance_stats
+                        .prefetch_operations
+                        .fetch_add(1, Ordering::Relaxed);
+                    Ok(())
+                } else {
+                    Err(anyhow!("madvise failed with error code: {}", result))
+                }
             }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = (addr, size);
+            Ok(())
         }
     }
     /// 预测性预取
@@ -368,6 +376,7 @@ impl EnhancedZeroCopy {
         if !alignment.is_power_of_two() {
             return Err(anyhow!("Alignment must be a power of two"));
         }
+        #[cfg(unix)]
         unsafe {
             let mut ptr: *mut c_void = std::ptr::null_mut();
             let result: _ = posix_memalign(&mut ptr, alignment, size);
@@ -376,6 +385,13 @@ impl EnhancedZeroCopy {
             } else {
                 Err(anyhow!("posix_memalign failed with error code: {}", result))
             }
+        }
+        #[cfg(not(unix))]
+        {
+            let layout = std::alloc::Layout::from_size_align(size, alignment)
+                .map_err(|e| anyhow!("invalid alignment: {e}"))?;
+            let ptr = unsafe { std::alloc::alloc(layout) };
+            NonNull::new(ptr).ok_or_else(|| anyhow!("aligned alloc returned null"))
         }
     }
     /// 创建内存映射

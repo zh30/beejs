@@ -385,66 +385,18 @@ pub fn process_dlopen_callback(
         return;
     }
 
-    #[cfg(unix)]
-    unsafe {
-        use std::ffi::CString;
-        if let Ok(c_path) = CString::new(filename.as_str()) {
-            let handle = libc::dlopen(c_path.as_ptr(), libc::RTLD_LAZY | libc::RTLD_GLOBAL);
-            if handle.is_null() {
-                let err_ptr = libc::dlerror();
-                let err_msg = if !err_ptr.is_null() {
-                    std::ffi::CStr::from_ptr(err_ptr)
-                        .to_string_lossy()
-                        .to_string()
-                } else {
-                    "unknown dlopen error".to_string()
-                };
-                let msg = v8::String::new(
-                    scope,
-                    &format!("Failed to load native module '{}': {}", filename, err_msg),
-                )
-                .unwrap();
-                let err = v8::Exception::error(scope, msg);
-                scope.throw_exception(err);
-                return;
-            }
-
-            let napi_sym = CString::new("napi_register_module_v1").unwrap();
-            let node_sym = CString::new("node_module_register").unwrap();
-
-            let has_napi = !libc::dlsym(handle, napi_sym.as_ptr()).is_null();
-            let has_node = !libc::dlsym(handle, node_sym.as_ptr()).is_null();
-
-            if !has_napi && !has_node {
-                libc::dlclose(handle);
-                let msg = v8::String::new(
-                    scope,
-                    &format!(
-                        "Native module '{}' does not export napi_register_module_v1 or node_module_register",
-                        filename
-                    ),
-                )
-                .unwrap();
-                let err = v8::Exception::error(scope, msg);
-                scope.throw_exception(err);
-                return;
-            }
-
-            retval.set(v8::undefined(scope).into());
+    let module_obj = match v8::Local::<v8::Object>::try_from(module_val) {
+        Ok(obj) => obj,
+        Err(_) => {
+            let msg = v8::String::new(scope, "process.dlopen module must be an object").unwrap();
+            let err = v8::Exception::type_error(scope, msg);
+            scope.throw_exception(err);
             return;
         }
-    }
+    };
 
-    #[cfg(not(unix))]
-    {
-        let msg = v8::String::new(
-            scope,
-            "process.dlopen is only supported on Unix-like operating systems currently",
-        )
-        .unwrap();
-        let err = v8::Exception::error(scope, msg);
-        scope.throw_exception(err);
-    }
+    crate::napi::load_napi_addon(scope, module_obj, &filename);
+    retval.set(v8::undefined(scope).into());
 }
 
 /// v0.3.239: process.nextTick() 回调
@@ -813,35 +765,47 @@ fn fallback_cpu_time() -> (u64, u64) {
 
 #[cfg(target_family = "windows")]
 fn get_cpu_times() -> (u64, u64) {
-    // Windows 实现 - 使用 GetProcessTimes
-    use std::mem::MaybeUninit;
-    use std::ptr::null_mut;
-    use windows_sys::Win32::System::Diagnostics::Process::GetProcessTimes;
+    use windows_sys::Win32::Foundation::FILETIME;
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetProcessTimes};
 
-    let mut creation_time = MaybeUninit::<u64>::uninit();
-    let mut exit_time = MaybeUninit::<u64>::uninit();
-    let mut kernel_time = MaybeUninit::<i64>::uninit();
-    let mut user_time = MaybeUninit::<i64>::uninit();
+    fn filetime_to_micros(time: FILETIME) -> u64 {
+        let ticks = ((time.dwHighDateTime as u64) << 32) | (time.dwLowDateTime as u64);
+        ticks / 10
+    }
 
-    let current_process = windows_sys::Win32::System::Threading::GetCurrentProcess();
+    let mut creation_time = FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    let mut exit_time = FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    let mut kernel_time = FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
+    let mut user_time = FILETIME {
+        dwLowDateTime: 0,
+        dwHighDateTime: 0,
+    };
 
     unsafe {
         if GetProcessTimes(
-            current_process,
-            creation_time.as_mut_ptr(),
-            exit_time.as_mut_ptr(),
-            kernel_time.as_mut_ptr(),
-            user_time.as_mut_ptr(),
+            GetCurrentProcess(),
+            &mut creation_time,
+            &mut exit_time,
+            &mut kernel_time,
+            &mut user_time,
         ) != 0
         {
-            // 转换为微秒
-            let user_micros = user_time.assume_init() / 10;
-            let kernel_micros = kernel_time.assume_init() / 10;
-            return (user_micros as u64, kernel_micros as u64);
+            return (
+                filetime_to_micros(user_time),
+                filetime_to_micros(kernel_time),
+            );
         }
     }
 
-    // 回退
     (0, 0)
 }
 
@@ -1125,7 +1089,7 @@ fn send_signal_to_process(pid: u32, signal: u32) -> bool {
     {
         // Windows 不支持 Unix 信号，这里简化处理
         // 对于当前进程，标记退出
-        if pid == std::process::id() as i32 {
+        if pid == std::process::id() {
             if signal == 15 || signal == 2 || signal == 1 {
                 // SIGTERM, SIGINT, SIGHUP
                 // 标记退出（实际退出由运行时处理）

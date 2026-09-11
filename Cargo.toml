@@ -1,6 +1,6 @@
 [package]
 name = "beejs"
-version = "1.9.0"
+version = "1.9.1"
 edition = "2021"
 autobins = false
 authors = ["Henry Zhang"]
@@ -17,7 +17,9 @@ include = [
     "/Cargo.lock",
     "/README.md",
     "/LICENSE",
+    "/build.rs",
     "/src/lib.rs",
+    "/src/napi/*.rs",
     "/src/main.rs",
     "/src/event_loop.rs",
     "/src/runtime_minimal.rs",
@@ -106,7 +108,15 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 # System calls for zero-copy network I/O
 libc = "0.2"
 nix = { version = "0.29", features = ["uio", "socket"] }
-windows-sys = { version = "0.52", features = ["Win32_System_Diagnostics_Debug"] }
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_ProcessStatus",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_System_Console",
+    "Win32_System_SystemInformation",
+] }
 
 # Temporary file support
 tempfile = "3.0"
@@ -230,6 +240,7 @@ webpki-roots = "0.25"
 [dev-dependencies]
 tempfile = "3.0"
 futures = "0.3"
+tungstenite = "0.21"
 
 # Async runtime
 futures-util = "0.3"

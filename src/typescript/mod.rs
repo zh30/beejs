@@ -13,6 +13,15 @@ pub use compiler::{
 };
 pub use detect::{looks_like_jsx_source, looks_like_typescript_source};
 
+/// `//# sourceMappingURL=data:...` comment so V8 can attribute stacks to `.ts`.
+pub fn source_mapping_url_comment(map_json: &str) -> String {
+    use base64::Engine;
+    format!(
+        "\n//# sourceMappingURL=data:application/json;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(map_json.as_bytes())
+    )
+}
+
 /// 快速编译 TypeScript 源代码（oxc 后端，带内容哈希缓存）
 pub fn compile_typescript(source: &str, file_name: &str) -> Result<CompilationOutput, String> {
     if let Some(hit) = cache::get_cached(source, file_name) {

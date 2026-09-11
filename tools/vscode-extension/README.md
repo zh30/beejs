@@ -37,34 +37,40 @@ This extension provides comprehensive support for the Beejs runtime in Visual St
 
 ### From Package
 ```bash
-code --install-extension beejs-vscode-0.1.0.vsix
+npx @vscode/vsce package
+code --install-extension beejs-tools-1.9.1.vsix
 ```
 
 ### From Source
 ```bash
-git clone https://github.com/beejs-team/beejs-vscode.git
-cd beejs-vscode
+git clone https://github.com/zh30/beejs.git
+cd beejs/tools/vscode-extension
 npm install
 npm run compile
-code --install-extension .
+npx @vscode/vsce package
 ```
+
+The extension is unlisted; install the `.vsix` locally. Marketplace publishing is not part of the 1.9.1 runtime release.
 
 ## Setup
 
 ### 1. Install Beejs Runtime
-Ensure Beejs is installed on your system:
+Ensure the `bee` binary is on your PATH. GitHub Release asset names match `.github/workflows/release-assets.yml`:
 
 ```bash
-# Option 1: Download from GitHub
-curl -L https://github.com/beejs-team/beejs/releases/download/v0.1.0/bee-linux-x64.tar.gz
-tar -xzf bee-linux-x64.tar.gz
-sudo mv bee /usr/local/bin/
+# macOS Apple Silicon
+curl -fsSL https://github.com/zh30/beejs/releases/download/v1.9.1/bee-v1.9.1-aarch64-apple-darwin.tar.gz | tar -xz
+# macOS Intel
+curl -fsSL https://github.com/zh30/beejs/releases/download/v1.9.1/bee-v1.9.1-x86_64-apple-darwin.tar.gz | tar -xz
+# Linux x64
+curl -fsSL https://github.com/zh30/beejs/releases/download/v1.9.1/bee-v1.9.1-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+# Linux arm64
+curl -fsSL https://github.com/zh30/beejs/releases/download/v1.9.1/bee-v1.9.1-aarch64-unknown-linux-gnu.tar.gz | tar -xz
+# Windows x64
+# bee-v1.9.1-x86_64-pc-windows-msvc.zip  (see install.ps1)
 
-# Option 2: Using npm
-npm install -g @beejs/runtime
-
-# Option 3: Using the extension command
-# Press Ctrl+Shift+P and run "Beejs: Install Runtime"
+curl -fsSL https://bee.zhanghe.dev/install.sh | sh
+brew install zh30/tap/bee
 ```
 
 ### 2. Configure Extension
@@ -121,15 +127,25 @@ Create `.vscode/launch.json`:
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "beejs",
+      "type": "node",
       "request": "launch",
-      "name": "Debug Current File",
-      "program": "${file}",
-      "runtimeExecutable": "bee"
+      "name": "Debug Current File with bee",
+      "runtimeExecutable": "bee",
+      "runtimeArgs": ["run", "--inspect-brk", "--inspect-port", "9229"],
+      "args": ["${file}"],
+      "port": 9229
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to bee --inspect",
+      "port": 9229
     }
   ]
 }
 ```
+
+Launch is equivalent to `bee run --inspect-brk --inspect-port 9229 ${file}`.
 
 ## API Reference
 
