@@ -12,8 +12,28 @@ updates:
         versions: [">=0.53.0"]
       # rusty_v8 0.32 is a dedicated upgrade branch (docs/V8_UPGRADE.md).
       - dependency-name: "rusty_v8"
+      # TLS stack: tokio-rustls 0.26 / reqwest 0.12 / webpki-roots 1 need rustls 0.23 together.
+      - dependency-name: tokio-rustls
+      - dependency-name: reqwest
+      - dependency-name: webpki-roots
+      # REPL major.
+      - dependency-name: rustyline
+      # oxc 0.149 dropped ParserReturn.panicked; TS pipeline needs a dedicated bump.
+      - dependency-name: oxc
+      # Feature-gated majors.
+      - dependency-name: kube
+      - dependency-name: opentelemetry_sdk
+      - dependency-name: javy-codegen
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Keep upload/download/cache on v4 as a matched set.
+      - dependency-name: actions/upload-artifact
+        versions: [">=5"]
+      - dependency-name: actions/download-artifact
+        versions: [">=5"]
+      - dependency-name: actions/cache
+        versions: [">=5"]
