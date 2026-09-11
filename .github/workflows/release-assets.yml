@@ -160,26 +160,6 @@ jobs:
             --version "${RELEASE_TAG}" \
             --write
 
-      - name: Commit Homebrew formula
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          default_branch="${{ github.event.repository.default_branch }}"
-          default_branch="${default_branch:-main}"
-          git fetch origin "${default_branch}"
-          formula_copy="$(mktemp)"
-          cp Formula/bee.rb "${formula_copy}"
-          git checkout -B "homebrew-${RELEASE_TAG}" "origin/${default_branch}"
-          cp "${formula_copy}" Formula/bee.rb
-          git add Formula/bee.rb
-          if git diff --cached --quiet; then
-            echo "Formula/bee.rb unchanged"
-          else
-            git commit -m "chore(release): update Formula/bee.rb hashes for ${RELEASE_TAG}"
-            git push origin "HEAD:${default_branch}"
-          fi
-
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -218,6 +198,29 @@ jobs:
             **/*.pem
           draft: false
           prerelease: false
+
+      # Direct push to main may be blocked by the required-status-checks ruleset.
+      # Do not fail the GitHub Release if that happens; hashes are already in Formula/bee.rb.
+      - name: Commit Homebrew formula
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          default_branch="${{ github.event.repository.default_branch }}"
+          default_branch="${default_branch:-main}"
+          git fetch origin "${default_branch}"
+          formula_copy="$(mktemp)"
+          cp Formula/bee.rb "${formula_copy}"
+          git checkout -B "homebrew-${RELEASE_TAG}" "origin/${default_branch}"
+          cp "${formula_copy}" Formula/bee.rb
+          git add Formula/bee.rb
+          if git diff --cached --quiet; then
+            echo "Formula/bee.rb unchanged"
+          else
+            git commit -m "chore(release): update Formula/bee.rb hashes for ${RELEASE_TAG}"
+            git push origin "HEAD:${default_branch}"
+          fi
 
       - name: Annotate skipped crates.io publish
         if: env.CARGO_REGISTRY_TOKEN == ''

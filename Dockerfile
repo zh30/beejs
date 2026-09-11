@@ -12,6 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
     ca-certificates \
+    curl \
+    python3 \
+    git \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
@@ -23,7 +27,7 @@ ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
 ENV CARGO_BUILD_JOBS=1
 
 # Manifest + benches must exist before `cargo fetch` (Cargo.toml lists [[bench]]).
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock build.rs ./
 COPY benches ./benches
 COPY src ./src
 

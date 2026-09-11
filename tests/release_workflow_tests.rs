@@ -75,6 +75,38 @@ fn tag_v_star_publishes_non_draft_release_with_five_bee_archives() {
 }
 
 #[test]
+fn homebrew_formula_push_must_not_block_github_release() {
+    let yaml = release_assets_yaml();
+    let release_at = yaml
+        .find("uses: softprops/action-gh-release")
+        .expect("GitHub Release step");
+    let commit_at = yaml
+        .find("git push origin \"HEAD:${default_branch}\"")
+        .expect("Homebrew formula push");
+    assert!(
+        commit_at > release_at,
+        "Homebrew git push must run after action-gh-release so a ruleset block cannot drop the Release"
+    );
+}
+
+#[test]
+fn dockerfile_has_curl_for_rusty_v8_static_lib_download() {
+    let docker =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Dockerfile")).unwrap();
+    assert!(
+        docker.contains("curl") && docker.contains("python3"),
+        "rusty_v8 0.22 build.rs downloads librusty_v8 with python then curl"
+    );
+    let ignore =
+        fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".dockerignore"))
+            .unwrap();
+    assert!(
+        ignore.contains("!build.rs"),
+        "Docker context must include build.rs"
+    );
+}
+
+#[test]
 fn macos_x86_64_asset_job_uses_live_intel_runner() {
     let yaml = release_assets_yaml();
 

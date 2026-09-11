@@ -2,6 +2,7 @@
 
 !Cargo.toml
 !Cargo.lock
+!build.rs
 !Dockerfile
 !README.md
 !src/
