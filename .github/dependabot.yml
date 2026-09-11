@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # windows-sys 0.52: HMODULE is isize; 0.61 moves Win32 modules and breaks
+      # the imports locked in tests/release_workflow_tests.rs.
+      - dependency-name: windows-sys
+        versions: [">=0.53.0"]
+      # rusty_v8 0.32 is a dedicated upgrade branch (docs/V8_UPGRADE.md).
+      - dependency-name: "rusty_v8"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

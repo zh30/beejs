@@ -49,6 +49,7 @@ include = [
     "/src/typescript/*.rs",
     "/src/v8_snapshot/*.rs",
     "/src/web_api/*.rs",
+    "/types/*.d.ts",
     "/tests/*.rs",
     "/tests/integration/*.rs",
     "/examples/basics/*.js",
