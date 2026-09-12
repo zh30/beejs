@@ -198,7 +198,7 @@ encoding_rs = "0.8"
 # candle-nn = "0.7"        # 暂时禁用，版本冲突
 
 # Stage 54.3: PyTorch TorchScript dependencies
-tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
+tch = { version = "0.26", optional = true }  # 可选依赖，支持条件编译
 
 # Stage 88: Multi-language support
 pyo3 = { version = "0.24", features = ["auto-initialize"], optional = true }  # Python integration
