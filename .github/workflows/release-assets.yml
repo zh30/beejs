@@ -54,7 +54,7 @@ jobs:
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.97.1
+        uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: ${{ matrix.target }}
 
@@ -229,7 +229,7 @@ jobs:
 
       - name: Install Rust
         if: env.CARGO_REGISTRY_TOKEN != ''
-        uses: dtolnay/rust-toolchain@1.97.1
+        uses: dtolnay/rust-toolchain@1.120.0
 
       - name: Publish to crates.io
         if: env.CARGO_REGISTRY_TOKEN != ''
